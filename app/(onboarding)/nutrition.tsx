@@ -53,10 +53,10 @@ export default function NutritionScreen() {
               style={({ pressed }) => ({
                 flex: 1,
                 height: 60,
-                backgroundColor: focusedOnNutrition === option.value ? '#E8F0FE' : '#F8F8F8',
+                backgroundColor: focusedOnNutrition === option.value ? '#99E86C' : '#FFFFFF',
                 borderRadius: 12,
                 borderWidth: 2,
-                borderColor: focusedOnNutrition === option.value ? '#007AFF' : '#E5E5E5',
+                borderColor: focusedOnNutrition === option.value ? '#99E86C' : '#E5E5E5',
                 justifyContent: 'center',
                 alignItems: 'center',
                 opacity: pressed ? 0.9 : 1,
@@ -64,7 +64,7 @@ export default function NutritionScreen() {
             >
               <Text style={{
                 fontSize: 18,
-                color: focusedOnNutrition === option.value ? '#007AFF' : '#000000',
+                color: '#000000',
                 fontWeight: '500',
               }}>
                 {option.label}

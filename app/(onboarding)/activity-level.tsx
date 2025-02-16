@@ -47,7 +47,7 @@ export default function ActivityLevelScreen() {
       }}
     >
       <OnboardingHeader 
-        currentStep={3}
+        currentStep={4}
         totalSteps={5}
       />
       
@@ -64,7 +64,7 @@ export default function ActivityLevelScreen() {
           textAlign: 'center',
           marginBottom: 20,
         }}>
-          What's your activity level including football?
+          What's your activity level?
         </Text>
 
         <View style={{
@@ -78,16 +78,16 @@ export default function ActivityLevelScreen() {
               style={({ pressed }) => ({
                 width: '100%',
                 padding: 16,
-                backgroundColor: selectedLevel === level.id ? '#E8F0FE' : '#F8F8F8',
+                backgroundColor: selectedLevel === level.id ? '#99E86C' : '#FFFFFF',
                 borderRadius: 12,
                 borderWidth: 2,
-                borderColor: selectedLevel === level.id ? '#007AFF' : '#E5E5E5',
+                borderColor: selectedLevel === level.id ? '#99E86C' : '#E5E5E5',
                 opacity: pressed ? 0.9 : 1,
               })}
             >
               <Text style={{
                 fontSize: 18,
-                color: selectedLevel === level.id ? '#007AFF' : '#000000',
+                color: '#000000',
                 fontWeight: '600',
                 marginBottom: 4,
               }}>
@@ -107,7 +107,7 @@ export default function ActivityLevelScreen() {
           title="Continue" 
           onPress={() => {
             if (selectedLevel) {
-              router.push('./sleep-hours');
+              router.push('/sleep-hours');
             }
           }}
         />

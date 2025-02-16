@@ -1,4 +1,4 @@
-import { View, Text, TextInput, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, ScrollView } from 'react-native';
+import { View, Text, TextInput, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Button from '../components/Button';
@@ -54,20 +54,28 @@ export default function AgeScreen() {
               <View style={{
                 width: '100%',
                 height: 200,
-                backgroundColor: '#F8F8F8',
+                backgroundColor: '#FFFFFF',
                 borderRadius: 16,
                 overflow: 'hidden',
+                borderWidth: 2,
+                borderColor: '#E5E5E5',
               }}>
                 <Picker
                   selectedValue={age}
                   onValueChange={(itemValue) => setAge(itemValue)}
-                  style={{
-                    width: '100%',
-                    height: '100%',
+                  style={[styles.picker, { backgroundColor: 'transparent' }]}
+                  itemStyle={{
+                    color: '#000000',
+                    height: 150,
                   }}
                 >
                   {Array.from({ length: 83 }, (_, i) => i + 8).map((num) => (
-                    <Picker.Item key={num} label={num.toString()} value={num.toString()} />
+                    <Picker.Item
+                      key={num}
+                      label={num.toString()}
+                      value={num.toString()}
+                      color={num.toString() === age ? '#99E86C' : '#000000'}
+                    />
                   ))}
                 </Picker>
               </View>
@@ -86,4 +94,11 @@ export default function AgeScreen() {
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
-} 
+}
+
+const styles = StyleSheet.create({
+  picker: {
+    width: '100%',
+    height: 200,
+  },
+}); 

@@ -1,4 +1,4 @@
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,10 +6,26 @@ import Button from '../components/Button';
 import BackButton from '../components/BackButton';
 import { useState } from 'react';
 import OnboardingHeader from '../components/OnboardingHeader';
+import { StyleSheet } from 'react-native';
+
+const GENDERS = [
+  {
+    id: 'male',
+    title: 'Male',
+  },
+  {
+    id: 'female',
+    title: 'Female',
+  },
+  {
+    id: 'other',
+    title: 'Other',
+  },
+];
 
 export default function GenderScreen() {
   const router = useRouter();
-  const [selectedGender, setSelectedGender] = useState<'male' | 'female' | null>(null);
+  const [selectedGender, setSelectedGender] = useState<string | null>(null);
 
   return (
     <Animated.View 
@@ -17,7 +33,6 @@ export default function GenderScreen() {
       style={{
         flex: 1,
         backgroundColor: '#ffffff',
-        padding: 24,
       }}
     >
       <OnboardingHeader 
@@ -27,6 +42,7 @@ export default function GenderScreen() {
       
       <View style={{
         flex: 1,
+        paddingHorizontal: 24,
         justifyContent: 'center',
         alignItems: 'center',
         gap: 32,
@@ -42,37 +58,37 @@ export default function GenderScreen() {
         </Text>
 
         <View style={{
-          flexDirection: 'row',
-          gap: 16,
+          width: '100%',
+          gap: 12,
         }}>
-          {['male', 'female'].map((gender) => (
+          {GENDERS.map((gender) => (
             <Pressable
-              key={gender}
-              onPress={() => setSelectedGender(gender as 'male' | 'female')}
+              key={gender.id}
+              onPress={() => setSelectedGender(gender.id)}
               style={({ pressed }) => ({
-                width: 150,
-                height: 180,
-                backgroundColor: selectedGender === gender ? '#E8F0FE' : '#F8F8F8',
-                borderRadius: 16,
+                width: '100%',
+                padding: 20,
+                backgroundColor: selectedGender === gender.id ? '#99E86C' : '#FFFFFF',
+                borderRadius: 12,
                 borderWidth: 2,
-                borderColor: selectedGender === gender ? '#007AFF' : '#E5E5E5',
-                justifyContent: 'center',
-                alignItems: 'center',
+                borderColor: selectedGender === gender.id ? '#99E86C' : '#E5E5E5',
                 opacity: pressed ? 0.9 : 1,
+                shadowColor: '#000000',
+                shadowOffset: {
+                  width: 0,
+                  height: 2,
+                },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 3,
               })}
             >
-              <Ionicons 
-                name={gender === 'male' ? 'male' : 'female'} 
-                size={64} 
-                color={selectedGender === gender ? '#007AFF' : '#666666'} 
-              />
               <Text style={{
-                marginTop: 16,
                 fontSize: 18,
-                color: selectedGender === gender ? '#007AFF' : '#000000',
-                fontWeight: '500',
+                color: '#000000',
+                fontWeight: '600',
               }}>
-                {gender.charAt(0).toUpperCase() + gender.slice(1)}
+                {gender.title}
               </Text>
             </Pressable>
           ))}
@@ -89,4 +105,35 @@ export default function GenderScreen() {
       </View>
     </Animated.View>
   );
-} 
+}
+
+const styles = StyleSheet.create({
+  buttonContainer: {
+    width: '100%',
+    marginTop: 20,
+  },
+  button: {
+    width: '100%',
+    padding: 15,
+    borderRadius: 10,
+    marginVertical: 5,
+    alignItems: 'center',
+  },
+  buttonOutline: {
+    backgroundColor: 'transparent',
+    borderColor: '#2C2C2E',
+    borderWidth: 1,
+  },
+  buttonOutlineText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  selectedOption: {
+    backgroundColor: '#99E86C',
+    borderColor: '#99E86C',
+  },
+  selectedText: {
+    color: '#000000',
+  },
+}); 

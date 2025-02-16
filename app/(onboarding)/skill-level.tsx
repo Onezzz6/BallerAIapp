@@ -40,7 +40,6 @@ export default function SkillLevelScreen() {
       style={{
         flex: 1,
         backgroundColor: '#ffffff',
-        padding: 24,
       }}
     >
       <OnboardingHeader 
@@ -50,6 +49,7 @@ export default function SkillLevelScreen() {
       
       <View style={{
         flex: 1,
+        paddingHorizontal: 24,
         justifyContent: 'center',
         alignItems: 'center',
         gap: 32,
@@ -75,11 +75,19 @@ export default function SkillLevelScreen() {
               style={({ pressed }) => ({
                 width: '100%',
                 padding: 20,
-                backgroundColor: selectedLevel === level.id ? '#E8F0FE' : '#F8F8F8',
+                backgroundColor: selectedLevel === level.id ? '#E8F0FE' : '#FFFFFF',
                 borderRadius: 12,
                 borderWidth: 2,
                 borderColor: selectedLevel === level.id ? '#007AFF' : '#E5E5E5',
                 opacity: pressed ? 0.9 : 1,
+                shadowColor: '#000000',
+                shadowOffset: {
+                  width: 0,
+                  height: 2,
+                },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 3,
               })}
             >
               <Text style={{

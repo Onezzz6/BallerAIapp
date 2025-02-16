@@ -6,10 +6,22 @@ import OnboardingHeader from '../components/OnboardingHeader';
 import { useState } from 'react';
 
 const POSITIONS = [
-  'Goalkeeper',
-  'Defender',
-  'Midfielder',
-  'Attacker',
+  {
+    id: 'striker',
+    title: 'Striker',
+  },
+  {
+    id: 'midfielder',
+    title: 'Midfielder',
+  },
+  {
+    id: 'defender',
+    title: 'Defender',
+  },
+  {
+    id: 'goalkeeper',
+    title: 'Goalkeeper',
+  },
 ];
 
 export default function PositionScreen() {
@@ -22,16 +34,16 @@ export default function PositionScreen() {
       style={{
         flex: 1,
         backgroundColor: '#ffffff',
-        padding: 24,
       }}
     >
       <OnboardingHeader 
-        currentStep={3}
+        currentStep={5}
         totalSteps={5}
       />
       
       <View style={{
         flex: 1,
+        paddingHorizontal: 24,
         justifyContent: 'center',
         alignItems: 'center',
         gap: 32,
@@ -43,7 +55,7 @@ export default function PositionScreen() {
           textAlign: 'center',
           marginBottom: 20,
         }}>
-          What's your primary position?
+          What's your position?
         </Text>
 
         <View style={{
@@ -52,26 +64,32 @@ export default function PositionScreen() {
         }}>
           {POSITIONS.map((position) => (
             <Pressable
-              key={position}
-              onPress={() => setSelectedPosition(position)}
+              key={position.id}
+              onPress={() => setSelectedPosition(position.id)}
               style={({ pressed }) => ({
                 width: '100%',
-                height: 60,
-                backgroundColor: selectedPosition === position ? '#E8F0FE' : '#F8F8F8',
+                padding: 20,
+                backgroundColor: selectedPosition === position.id ? '#99E86C' : '#FFFFFF',
                 borderRadius: 12,
                 borderWidth: 2,
-                borderColor: selectedPosition === position ? '#007AFF' : '#E5E5E5',
-                justifyContent: 'center',
-                alignItems: 'center',
+                borderColor: selectedPosition === position.id ? '#99E86C' : '#E5E5E5',
                 opacity: pressed ? 0.9 : 1,
+                shadowColor: '#000000',
+                shadowOffset: {
+                  width: 0,
+                  height: 2,
+                },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 3,
               })}
             >
               <Text style={{
                 fontSize: 18,
-                color: selectedPosition === position ? '#007AFF' : '#000000',
-                fontWeight: '500',
+                color: '#000000',
+                fontWeight: '600',
               }}>
-                {position}
+                {position.title}
               </Text>
             </Pressable>
           ))}
@@ -81,7 +99,7 @@ export default function PositionScreen() {
           title="Continue" 
           onPress={() => {
             if (selectedPosition) {
-              router.push('/team-status');
+              router.push('/analyzing');
             }
           }}
         />
