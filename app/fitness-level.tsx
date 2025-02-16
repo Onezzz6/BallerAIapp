@@ -5,34 +5,28 @@ import Button from './components/Button';
 import BackButton from './components/BackButton';
 import { useState } from 'react';
 
-const SKILL_LEVELS = [
+const FITNESS_LEVELS = [
   {
-    id: 'beginner',
-    title: 'Starting out',
-    description: 'New to football',
+    id: 'out-of-shape',
+    title: 'Out of shape',
   },
   {
     id: 'average',
     title: 'Average',
-    description: 'Average for your age group',
+  },
+  {
+    id: 'athletic',
+    title: 'Athletic',
   },
   {
     id: 'elite',
     title: 'Elite',
-    description: 'Elite for your age group',
   },
 ];
 
-export default function SkillLevelScreen() {
+export default function FitnessLevelScreen() {
   const router = useRouter();
   const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
-
-  const handleContinue = () => {
-    if (selectedLevel) {
-      console.log('Navigating to position screen...');
-      router.push('/position');
-    }
-  };
 
   return (
     <Animated.View 
@@ -58,40 +52,35 @@ export default function SkillLevelScreen() {
           textAlign: 'center',
           marginBottom: 20,
         }}>
-          What's your current level in football?
+          What's your current fitness level?
         </Text>
 
         <View style={{
           width: '100%',
           gap: 12,
         }}>
-          {SKILL_LEVELS.map((level) => (
+          {FITNESS_LEVELS.map((level) => (
             <Pressable
               key={level.id}
               onPress={() => setSelectedLevel(level.id)}
               style={({ pressed }) => ({
                 width: '100%',
-                padding: 20,
+                height: 60,
                 backgroundColor: selectedLevel === level.id ? '#E8F0FE' : '#F8F8F8',
                 borderRadius: 12,
                 borderWidth: 2,
                 borderColor: selectedLevel === level.id ? '#007AFF' : '#E5E5E5',
+                justifyContent: 'center',
+                alignItems: 'center',
                 opacity: pressed ? 0.9 : 1,
               })}
             >
               <Text style={{
                 fontSize: 18,
                 color: selectedLevel === level.id ? '#007AFF' : '#000000',
-                fontWeight: '600',
-                marginBottom: 4,
+                fontWeight: '500',
               }}>
                 {level.title}
-              </Text>
-              <Text style={{
-                fontSize: 14,
-                color: '#666666',
-              }}>
-                {level.description}
               </Text>
             </Pressable>
           ))}
@@ -99,7 +88,11 @@ export default function SkillLevelScreen() {
 
         <Button 
           title="Continue" 
-          onPress={handleContinue}
+          onPress={() => {
+            if (selectedLevel) {
+              router.push('/activity-level');
+            }
+          }}
         />
       </View>
     </Animated.View>

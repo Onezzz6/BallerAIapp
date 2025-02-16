@@ -54,7 +54,7 @@ export default function AnalysisCompleteScreen() {
         <Button 
           title="Let's Continue" 
           onPress={() => {
-            router.push('/dashboard'); // Or wherever you want to go next
+            router.push('/fitness-level');
           }}
         />
       </View>
