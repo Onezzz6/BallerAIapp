@@ -1,32 +1,13 @@
 import { View, Text, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import Button from './components/Button';
-import BackButton from './components/BackButton';
+import Button from '../components/Button';
+import OnboardingHeader from '../components/OnboardingHeader';
 import { useState } from 'react';
 
-const FITNESS_LEVELS = [
-  {
-    id: 'out-of-shape',
-    title: 'Out of shape',
-  },
-  {
-    id: 'average',
-    title: 'Average',
-  },
-  {
-    id: 'athletic',
-    title: 'Athletic',
-  },
-  {
-    id: 'elite',
-    title: 'Elite',
-  },
-];
-
-export default function FitnessLevelScreen() {
+export default function DominantFootScreen() {
   const router = useRouter();
-  const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
+  const [selectedFoot, setSelectedFoot] = useState<'Right' | 'Left' | 'Both' | null>(null);
 
   return (
     <Animated.View 
@@ -37,7 +18,10 @@ export default function FitnessLevelScreen() {
         padding: 24,
       }}
     >
-      <BackButton />
+      <OnboardingHeader 
+        currentStep={3}
+        totalSteps={5}
+      />
       
       <View style={{
         flex: 1,
@@ -52,24 +36,24 @@ export default function FitnessLevelScreen() {
           textAlign: 'center',
           marginBottom: 20,
         }}>
-          What's your current fitness level?
+          What's your dominant foot?
         </Text>
 
         <View style={{
           width: '100%',
           gap: 12,
         }}>
-          {FITNESS_LEVELS.map((level) => (
+          {['Right', 'Left', 'Both'].map((foot) => (
             <Pressable
-              key={level.id}
-              onPress={() => setSelectedLevel(level.id)}
+              key={foot}
+              onPress={() => setSelectedFoot(foot as 'Right' | 'Left' | 'Both')}
               style={({ pressed }) => ({
                 width: '100%',
                 height: 60,
-                backgroundColor: selectedLevel === level.id ? '#E8F0FE' : '#F8F8F8',
+                backgroundColor: selectedFoot === foot ? '#E8F0FE' : '#F8F8F8',
                 borderRadius: 12,
                 borderWidth: 2,
-                borderColor: selectedLevel === level.id ? '#007AFF' : '#E5E5E5',
+                borderColor: selectedFoot === foot ? '#007AFF' : '#E5E5E5',
                 justifyContent: 'center',
                 alignItems: 'center',
                 opacity: pressed ? 0.9 : 1,
@@ -77,10 +61,10 @@ export default function FitnessLevelScreen() {
             >
               <Text style={{
                 fontSize: 18,
-                color: selectedLevel === level.id ? '#007AFF' : '#000000',
+                color: selectedFoot === foot ? '#007AFF' : '#000000',
                 fontWeight: '500',
               }}>
-                {level.title}
+                {foot}
               </Text>
             </Pressable>
           ))}
@@ -89,8 +73,8 @@ export default function FitnessLevelScreen() {
         <Button 
           title="Continue" 
           onPress={() => {
-            if (selectedLevel) {
-              router.push('/activity-level');
+            if (selectedFoot) {
+              router.push('/injury-history');
             }
           }}
         />

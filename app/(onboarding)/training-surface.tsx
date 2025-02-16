@@ -1,13 +1,33 @@
 import { View, Text, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import Button from './components/Button';
-import BackButton from './components/BackButton';
+import Button from '../components/Button';
+import OnboardingHeader from '../components/OnboardingHeader';
 import { useState } from 'react';
 
-export default function TeamStatusScreen() {
+const SURFACES = [
+  'Grass',
+  'Artificial',
+  'Indoor',
+  'Sand',
+];
+
+export default function TrainingSurfaceScreen() {
   const router = useRouter();
-  const [trainsWithTeam, setTrainsWithTeam] = useState<boolean | null>(null);
+  const [selectedSurface, setSelectedSurface] = useState<string | null>(null);
+
+  const handleContinue = () => {
+    console.log('Selected surface:', selectedSurface);
+    if (selectedSurface) {
+      console.log('Attempting navigation to analyzing screen...');
+      try {
+        router.push('../analyzing');
+        console.log('Navigation called');
+      } catch (error) {
+        console.error('Navigation error:', error);
+      }
+    }
+  };
 
   return (
     <Animated.View 
@@ -18,7 +38,10 @@ export default function TeamStatusScreen() {
         padding: 24,
       }}
     >
-      <BackButton />
+      <OnboardingHeader 
+        currentStep={3}
+        totalSteps={5}
+      />
       
       <View style={{
         flex: 1,
@@ -33,27 +56,24 @@ export default function TeamStatusScreen() {
           textAlign: 'center',
           marginBottom: 20,
         }}>
-          Do you train with a team?
+          What kind of surface do you train on most?
         </Text>
 
         <View style={{
-          flexDirection: 'row',
-          gap: 16,
+          width: '100%',
+          gap: 12,
         }}>
-          {[
-            { value: true, label: 'Yes' },
-            { value: false, label: 'No' },
-          ].map((option) => (
+          {SURFACES.map((surface) => (
             <Pressable
-              key={option.label}
-              onPress={() => setTrainsWithTeam(option.value)}
+              key={surface}
+              onPress={() => setSelectedSurface(surface)}
               style={({ pressed }) => ({
-                flex: 1,
+                width: '100%',
                 height: 60,
-                backgroundColor: trainsWithTeam === option.value ? '#E8F0FE' : '#F8F8F8',
+                backgroundColor: selectedSurface === surface ? '#E8F0FE' : '#F8F8F8',
                 borderRadius: 12,
                 borderWidth: 2,
-                borderColor: trainsWithTeam === option.value ? '#007AFF' : '#E5E5E5',
+                borderColor: selectedSurface === surface ? '#007AFF' : '#E5E5E5',
                 justifyContent: 'center',
                 alignItems: 'center',
                 opacity: pressed ? 0.9 : 1,
@@ -61,10 +81,10 @@ export default function TeamStatusScreen() {
             >
               <Text style={{
                 fontSize: 18,
-                color: trainsWithTeam === option.value ? '#007AFF' : '#000000',
+                color: selectedSurface === surface ? '#007AFF' : '#000000',
                 fontWeight: '500',
               }}>
-                {option.label}
+                {surface}
               </Text>
             </Pressable>
           ))}
@@ -72,11 +92,7 @@ export default function TeamStatusScreen() {
 
         <Button 
           title="Continue" 
-          onPress={() => {
-            if (trainsWithTeam !== null) {
-              router.push('/training-surface');
-            }
-          }}
+          onPress={handleContinue}
         />
       </View>
     </Animated.View>

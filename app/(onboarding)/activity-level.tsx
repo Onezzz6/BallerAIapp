@@ -2,7 +2,7 @@ import { View, Text, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Button from '../components/Button';
-import BackButton from '../components/BackButton';
+import OnboardingHeader from '../components/OnboardingHeader';
 import { useState } from 'react';
 
 const ACTIVITY_LEVELS = [
@@ -46,7 +46,10 @@ export default function ActivityLevelScreen() {
         padding: 24,
       }}
     >
-      <BackButton />
+      <OnboardingHeader 
+        currentStep={3}
+        totalSteps={5}
+      />
       
       <View style={{
         flex: 1,
@@ -104,7 +107,7 @@ export default function ActivityLevelScreen() {
           title="Continue" 
           onPress={() => {
             if (selectedLevel) {
-              router.push('sleep-hours');
+              router.push('./sleep-hours');
             }
           }}
         />

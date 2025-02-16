@@ -2,7 +2,7 @@ import { View, Text, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Button from '../components/Button';
-import BackButton from '../components/BackButton';
+import OnboardingHeader from '../components/OnboardingHeader';
 import { useState } from 'react';
 
 const SKILL_LEVELS = [
@@ -30,7 +30,7 @@ export default function SkillLevelScreen() {
   const handleContinue = () => {
     if (selectedLevel) {
       console.log('Navigating to position screen...');
-      router.push('position');
+      router.push('./position');
     }
   };
 
@@ -43,7 +43,10 @@ export default function SkillLevelScreen() {
         padding: 24,
       }}
     >
-      <BackButton />
+      <OnboardingHeader 
+        currentStep={3}
+        totalSteps={5}
+      />
       
       <View style={{
         flex: 1,

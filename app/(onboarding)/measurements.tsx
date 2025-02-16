@@ -1,8 +1,8 @@
 import { View, Text, TextInput, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import Button from './components/Button';
-import BackButton from './components/BackButton';
+import Button from '../components/Button';
+import OnboardingHeader from '../components/OnboardingHeader';
 import { useState } from 'react';
 
 export default function MeasurementsScreen() {
@@ -30,7 +30,10 @@ export default function MeasurementsScreen() {
             }}
             keyboardShouldPersistTaps="handled"
           >
-            <BackButton />
+            <OnboardingHeader 
+              currentStep={3}
+              totalSteps={5}
+            />
             
             <View style={{
               flex: 1,

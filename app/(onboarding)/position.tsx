@@ -1,33 +1,20 @@
 import { View, Text, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import Button from './components/Button';
-import BackButton from './components/BackButton';
+import Button from '../components/Button';
+import OnboardingHeader from '../components/OnboardingHeader';
 import { useState } from 'react';
 
-const SURFACES = [
-  'Grass',
-  'Artificial',
-  'Indoor',
-  'Sand',
+const POSITIONS = [
+  'Goalkeeper',
+  'Defender',
+  'Midfielder',
+  'Attacker',
 ];
 
-export default function TrainingSurfaceScreen() {
+export default function PositionScreen() {
   const router = useRouter();
-  const [selectedSurface, setSelectedSurface] = useState<string | null>(null);
-
-  const handleContinue = () => {
-    console.log('Selected surface:', selectedSurface);
-    if (selectedSurface) {
-      console.log('Attempting navigation to analyzing screen...');
-      try {
-        router.push('analyzing');
-        console.log('Navigation called');
-      } catch (error) {
-        console.error('Navigation error:', error);
-      }
-    }
-  };
+  const [selectedPosition, setSelectedPosition] = useState<string | null>(null);
 
   return (
     <Animated.View 
@@ -38,7 +25,10 @@ export default function TrainingSurfaceScreen() {
         padding: 24,
       }}
     >
-      <BackButton />
+      <OnboardingHeader 
+        currentStep={3}
+        totalSteps={5}
+      />
       
       <View style={{
         flex: 1,
@@ -53,24 +43,24 @@ export default function TrainingSurfaceScreen() {
           textAlign: 'center',
           marginBottom: 20,
         }}>
-          What kind of surface do you train on most?
+          What's your primary position?
         </Text>
 
         <View style={{
           width: '100%',
           gap: 12,
         }}>
-          {SURFACES.map((surface) => (
+          {POSITIONS.map((position) => (
             <Pressable
-              key={surface}
-              onPress={() => setSelectedSurface(surface)}
+              key={position}
+              onPress={() => setSelectedPosition(position)}
               style={({ pressed }) => ({
                 width: '100%',
                 height: 60,
-                backgroundColor: selectedSurface === surface ? '#E8F0FE' : '#F8F8F8',
+                backgroundColor: selectedPosition === position ? '#E8F0FE' : '#F8F8F8',
                 borderRadius: 12,
                 borderWidth: 2,
-                borderColor: selectedSurface === surface ? '#007AFF' : '#E5E5E5',
+                borderColor: selectedPosition === position ? '#007AFF' : '#E5E5E5',
                 justifyContent: 'center',
                 alignItems: 'center',
                 opacity: pressed ? 0.9 : 1,
@@ -78,10 +68,10 @@ export default function TrainingSurfaceScreen() {
             >
               <Text style={{
                 fontSize: 18,
-                color: selectedSurface === surface ? '#007AFF' : '#000000',
+                color: selectedPosition === position ? '#007AFF' : '#000000',
                 fontWeight: '500',
               }}>
-                {surface}
+                {position}
               </Text>
             </Pressable>
           ))}
@@ -89,7 +79,11 @@ export default function TrainingSurfaceScreen() {
 
         <Button 
           title="Continue" 
-          onPress={handleContinue}
+          onPress={() => {
+            if (selectedPosition) {
+              router.push('/team-status');
+            }
+          }}
         />
       </View>
     </Animated.View>

@@ -1,13 +1,15 @@
 import { View, Text, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import Button from './components/Button';
-import BackButton from './components/BackButton';
+import { Ionicons } from '@expo/vector-icons';
+import Button from '../components/Button';
+import BackButton from '../components/BackButton';
 import { useState } from 'react';
+import OnboardingHeader from '../components/OnboardingHeader';
 
-export default function DominantFootScreen() {
+export default function GenderScreen() {
   const router = useRouter();
-  const [selectedFoot, setSelectedFoot] = useState<'Right' | 'Left' | 'Both' | null>(null);
+  const [selectedGender, setSelectedGender] = useState<'male' | 'female' | null>(null);
 
   return (
     <Animated.View 
@@ -18,7 +20,10 @@ export default function DominantFootScreen() {
         padding: 24,
       }}
     >
-      <BackButton />
+      <OnboardingHeader 
+        currentStep={2}
+        totalSteps={5}
+      />
       
       <View style={{
         flex: 1,
@@ -33,35 +38,41 @@ export default function DominantFootScreen() {
           textAlign: 'center',
           marginBottom: 20,
         }}>
-          What's your dominant foot?
+          What's your gender?
         </Text>
 
         <View style={{
-          width: '100%',
-          gap: 12,
+          flexDirection: 'row',
+          gap: 16,
         }}>
-          {['Right', 'Left', 'Both'].map((foot) => (
+          {['male', 'female'].map((gender) => (
             <Pressable
-              key={foot}
-              onPress={() => setSelectedFoot(foot as 'Right' | 'Left' | 'Both')}
+              key={gender}
+              onPress={() => setSelectedGender(gender as 'male' | 'female')}
               style={({ pressed }) => ({
-                width: '100%',
-                height: 60,
-                backgroundColor: selectedFoot === foot ? '#E8F0FE' : '#F8F8F8',
-                borderRadius: 12,
+                width: 150,
+                height: 180,
+                backgroundColor: selectedGender === gender ? '#E8F0FE' : '#F8F8F8',
+                borderRadius: 16,
                 borderWidth: 2,
-                borderColor: selectedFoot === foot ? '#007AFF' : '#E5E5E5',
+                borderColor: selectedGender === gender ? '#007AFF' : '#E5E5E5',
                 justifyContent: 'center',
                 alignItems: 'center',
                 opacity: pressed ? 0.9 : 1,
               })}
             >
+              <Ionicons 
+                name={gender === 'male' ? 'male' : 'female'} 
+                size={64} 
+                color={selectedGender === gender ? '#007AFF' : '#666666'} 
+              />
               <Text style={{
+                marginTop: 16,
                 fontSize: 18,
-                color: selectedFoot === foot ? '#007AFF' : '#000000',
+                color: selectedGender === gender ? '#007AFF' : '#000000',
                 fontWeight: '500',
               }}>
-                {foot}
+                {gender.charAt(0).toUpperCase() + gender.slice(1)}
               </Text>
             </Pressable>
           ))}
@@ -70,8 +81,8 @@ export default function DominantFootScreen() {
         <Button 
           title="Continue" 
           onPress={() => {
-            if (selectedFoot) {
-              router.push('/injury-history');
+            if (selectedGender) {
+              router.push('/age');
             }
           }}
         />

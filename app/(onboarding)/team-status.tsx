@@ -1,13 +1,13 @@
 import { View, Text, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import Button from './components/Button';
-import BackButton from './components/BackButton';
+import Button from '../components/Button';
+import OnboardingHeader from '../components/OnboardingHeader';
 import { useState } from 'react';
 
-export default function NutritionScreen() {
+export default function TeamStatusScreen() {
   const router = useRouter();
-  const [focusedOnNutrition, setFocusedOnNutrition] = useState<boolean | null>(null);
+  const [trainsWithTeam, setTrainsWithTeam] = useState<boolean | null>(null);
 
   return (
     <Animated.View 
@@ -18,7 +18,10 @@ export default function NutritionScreen() {
         padding: 24,
       }}
     >
-      <BackButton />
+      <OnboardingHeader 
+        currentStep={3}
+        totalSteps={5}
+      />
       
       <View style={{
         flex: 1,
@@ -33,7 +36,7 @@ export default function NutritionScreen() {
           textAlign: 'center',
           marginBottom: 20,
         }}>
-          Have you focused on your nutrition yet?
+          Do you train with a team?
         </Text>
 
         <View style={{
@@ -46,14 +49,14 @@ export default function NutritionScreen() {
           ].map((option) => (
             <Pressable
               key={option.label}
-              onPress={() => setFocusedOnNutrition(option.value)}
+              onPress={() => setTrainsWithTeam(option.value)}
               style={({ pressed }) => ({
                 flex: 1,
                 height: 60,
-                backgroundColor: focusedOnNutrition === option.value ? '#E8F0FE' : '#F8F8F8',
+                backgroundColor: trainsWithTeam === option.value ? '#E8F0FE' : '#F8F8F8',
                 borderRadius: 12,
                 borderWidth: 2,
-                borderColor: focusedOnNutrition === option.value ? '#007AFF' : '#E5E5E5',
+                borderColor: trainsWithTeam === option.value ? '#007AFF' : '#E5E5E5',
                 justifyContent: 'center',
                 alignItems: 'center',
                 opacity: pressed ? 0.9 : 1,
@@ -61,7 +64,7 @@ export default function NutritionScreen() {
             >
               <Text style={{
                 fontSize: 18,
-                color: focusedOnNutrition === option.value ? '#007AFF' : '#000000',
+                color: trainsWithTeam === option.value ? '#007AFF' : '#000000',
                 fontWeight: '500',
               }}>
                 {option.label}
@@ -73,8 +76,8 @@ export default function NutritionScreen() {
         <Button 
           title="Continue" 
           onPress={() => {
-            if (focusedOnNutrition !== null) {
-              router.push('/smartwatch');
+            if (trainsWithTeam !== null) {
+              router.push('/training-surface');
             }
           }}
         />

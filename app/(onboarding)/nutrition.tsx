@@ -1,14 +1,13 @@
 import { View, Text, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { Ionicons } from '@expo/vector-icons';
-import Button from './components/Button';
-import BackButton from './components/BackButton';
+import Button from '../components/Button';
+import OnboardingHeader from '../components/OnboardingHeader';
 import { useState } from 'react';
 
-export default function GenderScreen() {
+export default function NutritionScreen() {
   const router = useRouter();
-  const [selectedGender, setSelectedGender] = useState<'male' | 'female' | null>(null);
+  const [focusedOnNutrition, setFocusedOnNutrition] = useState<boolean | null>(null);
 
   return (
     <Animated.View 
@@ -19,7 +18,10 @@ export default function GenderScreen() {
         padding: 24,
       }}
     >
-      <BackButton />
+      <OnboardingHeader 
+        currentStep={3}
+        totalSteps={5}
+      />
       
       <View style={{
         flex: 1,
@@ -34,41 +36,38 @@ export default function GenderScreen() {
           textAlign: 'center',
           marginBottom: 20,
         }}>
-          What's your gender?
+          Have you focused on your nutrition yet?
         </Text>
 
         <View style={{
           flexDirection: 'row',
           gap: 16,
         }}>
-          {['male', 'female'].map((gender) => (
+          {[
+            { value: true, label: 'Yes' },
+            { value: false, label: 'No' },
+          ].map((option) => (
             <Pressable
-              key={gender}
-              onPress={() => setSelectedGender(gender as 'male' | 'female')}
+              key={option.label}
+              onPress={() => setFocusedOnNutrition(option.value)}
               style={({ pressed }) => ({
-                width: 150,
-                height: 180,
-                backgroundColor: selectedGender === gender ? '#E8F0FE' : '#F8F8F8',
-                borderRadius: 16,
+                flex: 1,
+                height: 60,
+                backgroundColor: focusedOnNutrition === option.value ? '#E8F0FE' : '#F8F8F8',
+                borderRadius: 12,
                 borderWidth: 2,
-                borderColor: selectedGender === gender ? '#007AFF' : '#E5E5E5',
+                borderColor: focusedOnNutrition === option.value ? '#007AFF' : '#E5E5E5',
                 justifyContent: 'center',
                 alignItems: 'center',
                 opacity: pressed ? 0.9 : 1,
               })}
             >
-              <Ionicons 
-                name={gender === 'male' ? 'male' : 'female'} 
-                size={64} 
-                color={selectedGender === gender ? '#007AFF' : '#666666'} 
-              />
               <Text style={{
-                marginTop: 16,
                 fontSize: 18,
-                color: selectedGender === gender ? '#007AFF' : '#000000',
+                color: focusedOnNutrition === option.value ? '#007AFF' : '#000000',
                 fontWeight: '500',
               }}>
-                {gender.charAt(0).toUpperCase() + gender.slice(1)}
+                {option.label}
               </Text>
             </Pressable>
           ))}
@@ -77,8 +76,8 @@ export default function GenderScreen() {
         <Button 
           title="Continue" 
           onPress={() => {
-            if (selectedGender) {
-              router.push('/age');
+            if (focusedOnNutrition !== null) {
+              router.push('/smartwatch');
             }
           }}
         />
