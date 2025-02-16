@@ -1,9 +1,9 @@
 import { View, Text, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import Button from './Button';
+import Button from './components/Button';
 
-export default function WelcomeScreen() {
+export default function IntroScreen() {
   const router = useRouter();
 
   return (
@@ -22,10 +22,10 @@ export default function WelcomeScreen() {
         gap: 24,
       }}>
         <Image
-          source={require('../../assets/images/BallerAILogo.png')}
+          source={require('../assets/images/mascot.png')}
           style={{
-            width: 120,
-            height: 120,
+            width: 200,
+            height: 200,
             resizeMode: 'contain',
             marginBottom: 20,
           }}
@@ -38,7 +38,7 @@ export default function WelcomeScreen() {
           textAlign: 'center',
           marginBottom: 12,
         }}>
-          Ready to start your journey to becoming professional?
+          Hi, I'm BallerAI, your AI football partner!
         </Text>
 
         <Text style={{
@@ -46,13 +46,14 @@ export default function WelcomeScreen() {
           color: '#000000',
           opacity: 0.8,
           textAlign: 'center',
+          marginBottom: 32,
         }}>
-          Prevent, Perform, and Excel.
+          I will guide you to your goals. Before we start, answer a few quick questions to make sure I can customize everything just for you!
         </Text>
 
         <Button 
-          title="Get Started" 
-          onPress={() => router.push('/intro')} 
+          title="Let's Go!" 
+          onPress={() => router.push('/username')} 
         />
       </View>
     </Animated.View>

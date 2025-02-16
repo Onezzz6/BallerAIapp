@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Button from './Button';
 
-export default function WelcomeScreen() {
+export default function AnalysisCompleteScreen() {
   const router = useRouter();
 
   return (
@@ -19,13 +19,13 @@ export default function WelcomeScreen() {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        gap: 24,
+        gap: 32,
       }}>
         <Image
-          source={require('../../assets/images/BallerAILogo.png')}
+          source={require('../../assets/images/mascot.png')}
           style={{
-            width: 120,
-            height: 120,
+            width: 200,
+            height: 200,
             resizeMode: 'contain',
             marginBottom: 20,
           }}
@@ -38,21 +38,24 @@ export default function WelcomeScreen() {
           textAlign: 'center',
           marginBottom: 12,
         }}>
-          Ready to start your journey to becoming professional?
+          Great job!
         </Text>
 
         <Text style={{
           fontSize: 18,
-          color: '#000000',
-          opacity: 0.8,
+          color: '#666666',
           textAlign: 'center',
+          lineHeight: 24,
+          marginBottom: 20,
         }}>
-          Prevent, Perform, and Excel.
+          You're getting closer to your goals!
         </Text>
 
         <Button 
-          title="Get Started" 
-          onPress={() => router.push('/intro')} 
+          title="Let's Continue" 
+          onPress={() => {
+            router.push('/dashboard'); // Or wherever you want to go next
+          }}
         />
       </View>
     </Animated.View>
