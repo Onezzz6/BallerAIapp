@@ -57,7 +57,7 @@ export default function AccountReadyScreen() {
         <Button 
           title="Take the first step to becoming a pro!" 
           onPress={() => {
-            router.push('/analyzing');
+            router.push('/sign-up');
           }}
         />
       </View>
