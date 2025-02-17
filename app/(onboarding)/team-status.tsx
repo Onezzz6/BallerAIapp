@@ -9,7 +9,7 @@ import { useState } from 'react';
 export default function TeamStatusScreen() {
   const router = useRouter();
   const { onboardingData, updateOnboardingData } = useOnboarding();
-  const [selected, setSelected] = useState<boolean | null>(onboardingData.teamStatus || null);
+  const [selected, setSelected] = useState<boolean | null>(onboardingData.teamStatus === 'true' ? true : onboardingData.teamStatus === 'false' ? false : null);
 
   return (
     <Animated.View 
@@ -22,7 +22,7 @@ export default function TeamStatusScreen() {
     >
       <OnboardingHeader 
         currentStep={9}
-        totalSteps={12}
+        totalSteps={14}
       />
       
       <View style={{
@@ -79,7 +79,7 @@ export default function TeamStatusScreen() {
           title="Continue" 
           onPress={async () => {
             if (selected !== null) {
-              await updateOnboardingData({ teamStatus: selected });
+              await updateOnboardingData({ teamStatus: selected.toString() });
               router.push('/training-surface');
             }
           }}

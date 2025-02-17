@@ -34,13 +34,6 @@ export default function ImprovementFocusScreen() {
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(onboardingData.improvementFocus);
 
-  const handleContinue = async () => {
-    if (selected) {
-      await updateOnboardingData({ improvementFocus: selected });
-      router.push('/training-frequency');
-    }
-  };
-
   return (
     <Animated.View 
       entering={FadeIn.duration(500)}
@@ -102,7 +95,12 @@ export default function ImprovementFocusScreen() {
 
         <Button 
           title="Continue" 
-          onPress={handleContinue}
+          onPress={async () => {
+            if (selected) {
+              await updateOnboardingData({ improvementFocus: selected });
+              router.push('/ambition-transition');
+            }
+          }}
           buttonStyle={{
             backgroundColor: '#007AFF',
             opacity: !selected ? 0.5 : 1,
