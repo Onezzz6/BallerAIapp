@@ -4,12 +4,44 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import Button from '../components/Button';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import authService from '../../app/services/auth';
+import { useOnboarding } from '../../app/context/OnboardingContext';
 
 export default function SignUpScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { onboardingData } = useOnboarding();
+
+  const handleSignUp = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      await authService.signUpWithEmail(email, password, onboardingData);
+      router.push('/paywall');
+    } catch (error: any) {
+      setError(error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSignUp = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      await authService.signInWithGoogle();
+      router.push('/paywall');
+    } catch (error: any) {
+      setError(error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <Animated.View 
@@ -132,11 +164,7 @@ export default function SignUpScreen() {
 
         <Button 
           title="Sign Up" 
-          onPress={() => {
-            if (email && password) {  // Basic validation
-              router.push('/paywall');  // Changed to go to paywall instead
-            }
-          }}
+          onPress={handleSignUp}
           style={{
             backgroundColor: '#99E86C',
             marginBottom: 24,
