@@ -5,9 +5,28 @@ import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useState } from 'react';
 
-export default function SmartwatchScreen() {
+const FREQUENCY_OPTIONS = [
+  {
+    id: '1-2',
+    title: '1-2 days',
+  },
+  {
+    id: '2-4',
+    title: '2-4 days',
+  },
+  {
+    id: '4-6',
+    title: '4-6 days',
+  },
+  {
+    id: '7+',
+    title: '7+ days',
+  },
+];
+
+export default function TrainingFrequencyScreen() {
   const router = useRouter();
-  const [hasSmartwatch, setHasSmartwatch] = useState<boolean | null>(null);
+  const [selectedFrequency, setSelectedFrequency] = useState<string | null>(null);
 
   return (
     <Animated.View 
@@ -15,16 +34,16 @@ export default function SmartwatchScreen() {
       style={{
         flex: 1,
         backgroundColor: '#ffffff',
-        padding: 24,
       }}
     >
       <OnboardingHeader 
-        currentStep={3}
-        totalSteps={5}
+        currentStep={6}
+        totalSteps={7}
       />
       
       <View style={{
         flex: 1,
+        paddingHorizontal: 24,
         justifyContent: 'center',
         alignItems: 'center',
         gap: 32,
@@ -36,38 +55,41 @@ export default function SmartwatchScreen() {
           textAlign: 'center',
           marginBottom: 20,
         }}>
-          Do you track your training with a smartwatch?
+          How many days per week do you train football currently?
         </Text>
 
         <View style={{
-          flexDirection: 'row',
-          gap: 16,
+          width: '100%',
+          gap: 12,
         }}>
-          {[
-            { value: true, label: 'Yes' },
-            { value: false, label: 'No' },
-          ].map((option) => (
+          {FREQUENCY_OPTIONS.map((option) => (
             <Pressable
-              key={option.label}
-              onPress={() => setHasSmartwatch(option.value)}
+              key={option.id}
+              onPress={() => setSelectedFrequency(option.id)}
               style={({ pressed }) => ({
-                flex: 1,
-                height: 60,
-                backgroundColor: hasSmartwatch === option.value ? '#99E86C' : '#FFFFFF',
+                width: '100%',
+                padding: 20,
+                backgroundColor: selectedFrequency === option.id ? '#99E86C' : '#FFFFFF',
                 borderRadius: 12,
                 borderWidth: 2,
-                borderColor: hasSmartwatch === option.value ? '#99E86C' : '#E5E5E5',
-                justifyContent: 'center',
-                alignItems: 'center',
+                borderColor: selectedFrequency === option.id ? '#99E86C' : '#E5E5E5',
                 opacity: pressed ? 0.9 : 1,
+                shadowColor: '#000000',
+                shadowOffset: {
+                  width: 0,
+                  height: 2,
+                },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 3,
               })}
             >
               <Text style={{
                 fontSize: 18,
                 color: '#000000',
-                fontWeight: '500',
+                fontWeight: '600',
               }}>
-                {option.label}
+                {option.title}
               </Text>
             </Pressable>
           ))}
@@ -76,10 +98,8 @@ export default function SmartwatchScreen() {
         <Button 
           title="Continue" 
           onPress={() => {
-            console.log('Smartwatch continue pressed');
-            if (hasSmartwatch !== null) {
-              console.log('Navigating to football-goal');
-              router.push('/football-goal');
+            if (selectedFrequency) {
+              router.push('/gym-access');
             }
           }}
         />

@@ -5,9 +5,9 @@ import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useState } from 'react';
 
-export default function SmartwatchScreen() {
+export default function GymAccessScreen() {
   const router = useRouter();
-  const [hasSmartwatch, setHasSmartwatch] = useState<boolean | null>(null);
+  const [hasGymAccess, setHasGymAccess] = useState<boolean | null>(null);
 
   return (
     <Animated.View 
@@ -15,16 +15,16 @@ export default function SmartwatchScreen() {
       style={{
         flex: 1,
         backgroundColor: '#ffffff',
-        padding: 24,
       }}
     >
       <OnboardingHeader 
-        currentStep={3}
-        totalSteps={5}
+        currentStep={7}
+        totalSteps={7}
       />
       
       <View style={{
         flex: 1,
+        paddingHorizontal: 24,
         justifyContent: 'center',
         alignItems: 'center',
         gap: 32,
@@ -36,7 +36,7 @@ export default function SmartwatchScreen() {
           textAlign: 'center',
           marginBottom: 20,
         }}>
-          Do you track your training with a smartwatch?
+          Do you have access to gym equipment?
         </Text>
 
         <View style={{
@@ -49,14 +49,14 @@ export default function SmartwatchScreen() {
           ].map((option) => (
             <Pressable
               key={option.label}
-              onPress={() => setHasSmartwatch(option.value)}
+              onPress={() => setHasGymAccess(option.value)}
               style={({ pressed }) => ({
                 flex: 1,
                 height: 60,
-                backgroundColor: hasSmartwatch === option.value ? '#99E86C' : '#FFFFFF',
+                backgroundColor: hasGymAccess === option.value ? '#99E86C' : '#FFFFFF',
                 borderRadius: 12,
                 borderWidth: 2,
-                borderColor: hasSmartwatch === option.value ? '#99E86C' : '#E5E5E5',
+                borderColor: hasGymAccess === option.value ? '#99E86C' : '#E5E5E5',
                 justifyContent: 'center',
                 alignItems: 'center',
                 opacity: pressed ? 0.9 : 1,
@@ -76,10 +76,8 @@ export default function SmartwatchScreen() {
         <Button 
           title="Continue" 
           onPress={() => {
-            console.log('Smartwatch continue pressed');
-            if (hasSmartwatch !== null) {
-              console.log('Navigating to football-goal');
-              router.push('/football-goal');
+            if (hasGymAccess !== null) {
+              router.push('/motivation-reason');
             }
           }}
         />

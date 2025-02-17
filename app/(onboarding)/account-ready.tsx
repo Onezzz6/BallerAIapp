@@ -1,0 +1,66 @@
+import { View, Text, Image } from 'react-native';
+import { useRouter } from 'expo-router';
+import Animated, { FadeIn } from 'react-native-reanimated';
+import Button from '../components/Button';
+import OnboardingHeader from '../components/OnboardingHeader';
+
+export default function AccountReadyScreen() {
+  const router = useRouter();
+
+  return (
+    <Animated.View 
+      entering={FadeIn.duration(500)}
+      style={{
+        flex: 1,
+        backgroundColor: '#ffffff',
+      }}
+    >
+      <OnboardingHeader 
+        currentStep={9}
+        totalSteps={9}
+      />
+      
+      <View style={{
+        flex: 1,
+        paddingHorizontal: 24,
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 32,
+      }}>
+        <Image 
+          source={require('../../assets/images/mascot.png')}
+          style={{
+            width: 200,
+            height: 200,
+          }}
+          resizeMode="contain"
+        />
+
+        <Text style={{
+          fontSize: 28,
+          color: '#000000',
+          fontWeight: '600',
+          textAlign: 'center',
+          marginBottom: 20,
+        }}>
+          Your Personalized account is ready!
+        </Text>
+
+        <Text style={{
+          fontSize: 18,
+          color: '#666666',
+          textAlign: 'center',
+        }}>
+          The more data BallerAI starts to gather from you the faster our progress of reaching your goals will be!
+        </Text>
+
+        <Button 
+          title="Take the first step to becoming a pro!" 
+          onPress={() => {
+            router.push('/analyzing');
+          }}
+        />
+      </View>
+    </Animated.View>
+  );
+} 

@@ -5,9 +5,32 @@ import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useState } from 'react';
 
-export default function SmartwatchScreen() {
+const IMPROVEMENTS = [
+  {
+    id: 'speed',
+    title: 'Speed',
+  },
+  {
+    id: 'strength',
+    title: 'Strength',
+  },
+  {
+    id: 'endurance',
+    title: 'Endurance',
+  },
+  {
+    id: 'technical',
+    title: 'Technical skills',
+  },
+  {
+    id: 'everything',
+    title: 'Everything',
+  },
+];
+
+export default function ImprovementFocusScreen() {
   const router = useRouter();
-  const [hasSmartwatch, setHasSmartwatch] = useState<boolean | null>(null);
+  const [selectedImprovement, setSelectedImprovement] = useState<string | null>(null);
 
   return (
     <Animated.View 
@@ -15,16 +38,16 @@ export default function SmartwatchScreen() {
       style={{
         flex: 1,
         backgroundColor: '#ffffff',
-        padding: 24,
       }}
     >
       <OnboardingHeader 
-        currentStep={3}
+        currentStep={5}
         totalSteps={5}
       />
       
       <View style={{
         flex: 1,
+        paddingHorizontal: 24,
         justifyContent: 'center',
         alignItems: 'center',
         gap: 32,
@@ -36,38 +59,41 @@ export default function SmartwatchScreen() {
           textAlign: 'center',
           marginBottom: 20,
         }}>
-          Do you track your training with a smartwatch?
+          What do you want to improve most?
         </Text>
 
         <View style={{
-          flexDirection: 'row',
-          gap: 16,
+          width: '100%',
+          gap: 12,
         }}>
-          {[
-            { value: true, label: 'Yes' },
-            { value: false, label: 'No' },
-          ].map((option) => (
+          {IMPROVEMENTS.map((improvement) => (
             <Pressable
-              key={option.label}
-              onPress={() => setHasSmartwatch(option.value)}
+              key={improvement.id}
+              onPress={() => setSelectedImprovement(improvement.id)}
               style={({ pressed }) => ({
-                flex: 1,
-                height: 60,
-                backgroundColor: hasSmartwatch === option.value ? '#99E86C' : '#FFFFFF',
+                width: '100%',
+                padding: 20,
+                backgroundColor: selectedImprovement === improvement.id ? '#99E86C' : '#FFFFFF',
                 borderRadius: 12,
                 borderWidth: 2,
-                borderColor: hasSmartwatch === option.value ? '#99E86C' : '#E5E5E5',
-                justifyContent: 'center',
-                alignItems: 'center',
+                borderColor: selectedImprovement === improvement.id ? '#99E86C' : '#E5E5E5',
                 opacity: pressed ? 0.9 : 1,
+                shadowColor: '#000000',
+                shadowOffset: {
+                  width: 0,
+                  height: 2,
+                },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 3,
               })}
             >
               <Text style={{
                 fontSize: 18,
                 color: '#000000',
-                fontWeight: '500',
+                fontWeight: '600',
               }}>
-                {option.label}
+                {improvement.title}
               </Text>
             </Pressable>
           ))}
@@ -76,10 +102,8 @@ export default function SmartwatchScreen() {
         <Button 
           title="Continue" 
           onPress={() => {
-            console.log('Smartwatch continue pressed');
-            if (hasSmartwatch !== null) {
-              console.log('Navigating to football-goal');
-              router.push('/football-goal');
+            if (selectedImprovement) {
+              router.push('/motivation');
             }
           }}
         />
