@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
+import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
 
 const IMPROVEMENTS = [
@@ -30,7 +31,15 @@ const IMPROVEMENTS = [
 
 export default function ImprovementFocusScreen() {
   const router = useRouter();
-  const [selectedImprovement, setSelectedImprovement] = useState<string | null>(null);
+  const { onboardingData, updateOnboardingData } = useOnboarding();
+  const [selected, setSelected] = useState<string | null>(onboardingData.improvementFocus);
+
+  const handleContinue = async () => {
+    if (selected) {
+      await updateOnboardingData({ improvementFocus: selected });
+      router.push('/training-frequency');
+    }
+  };
 
   return (
     <Animated.View 
@@ -41,8 +50,8 @@ export default function ImprovementFocusScreen() {
       }}
     >
       <OnboardingHeader 
-        currentStep={5}
-        totalSteps={5}
+        currentStep={3}
+        totalSteps={7}
       />
       
       <View style={{
@@ -66,26 +75,18 @@ export default function ImprovementFocusScreen() {
           width: '100%',
           gap: 12,
         }}>
-          {IMPROVEMENTS.map((improvement) => (
+          {IMPROVEMENTS.map((area) => (
             <Pressable
-              key={improvement.id}
-              onPress={() => setSelectedImprovement(improvement.id)}
+              key={area.id}
+              onPress={() => setSelected(area.id)}
               style={({ pressed }) => ({
                 width: '100%',
                 padding: 20,
-                backgroundColor: selectedImprovement === improvement.id ? '#99E86C' : '#FFFFFF',
+                backgroundColor: selected === area.id ? '#99E86C' : '#FFFFFF',
                 borderRadius: 12,
                 borderWidth: 2,
-                borderColor: selectedImprovement === improvement.id ? '#99E86C' : '#E5E5E5',
+                borderColor: selected === area.id ? '#99E86C' : '#E5E5E5',
                 opacity: pressed ? 0.9 : 1,
-                shadowColor: '#000000',
-                shadowOffset: {
-                  width: 0,
-                  height: 2,
-                },
-                shadowOpacity: 0.1,
-                shadowRadius: 4,
-                elevation: 3,
               })}
             >
               <Text style={{
@@ -93,7 +94,7 @@ export default function ImprovementFocusScreen() {
                 color: '#000000',
                 fontWeight: '600',
               }}>
-                {improvement.title}
+                {area.title}
               </Text>
             </Pressable>
           ))}
@@ -101,11 +102,12 @@ export default function ImprovementFocusScreen() {
 
         <Button 
           title="Continue" 
-          onPress={() => {
-            if (selectedImprovement) {
-              router.push('/motivation');
-            }
+          onPress={handleContinue}
+          buttonStyle={{
+            backgroundColor: '#007AFF',
+            opacity: !selected ? 0.5 : 1,
           }}
+          disabled={!selected}
         />
       </View>
     </Animated.View>

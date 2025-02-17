@@ -3,11 +3,25 @@ import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
-import { useState } from 'react';
+import { useOnboarding } from '../context/OnboardingContext';
+import { useState, useEffect } from 'react';
 
 export default function MotivationReasonScreen() {
   const router = useRouter();
-  const [motivation, setMotivation] = useState('');
+  const { onboardingData, updateOnboardingData } = useOnboarding();
+  const [motivation, setMotivation] = useState(onboardingData.motivation || '');
+
+  // Update local state when onboardingData changes
+  useEffect(() => {
+    setMotivation(onboardingData.motivation || '');
+  }, [onboardingData.motivation]);
+
+  const handleContinue = async () => {
+    if (motivation.trim()) {
+      await updateOnboardingData({ motivation: motivation.trim() });
+      router.push('/account-ready');
+    }
+  };
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -19,8 +33,8 @@ export default function MotivationReasonScreen() {
         }}
       >
         <OnboardingHeader 
-          currentStep={8}
-          totalSteps={9}
+          currentStep={6}
+          totalSteps={7}
         />
         
         <View style={{
@@ -70,11 +84,12 @@ export default function MotivationReasonScreen() {
 
           <Button 
             title="Continue" 
-            onPress={() => {
-              if (motivation.trim()) {
-                router.push('/account-ready');
-              }
+            onPress={handleContinue}
+            style={{
+              backgroundColor: '#99E86C',
+              opacity: !motivation.trim() ? 0.5 : 1,
             }}
+            disabled={!motivation.trim()}
           />
         </View>
       </Animated.View>

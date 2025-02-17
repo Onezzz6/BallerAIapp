@@ -1,42 +1,106 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type OnboardingData = {
+  username: string | null;
+  gender: string | null;
+  age: string | null;
+  height: string | null;
+  weight: string | null;
+  dominantFoot: string | null;
+  injuryHistory: string | null;
+  skillLevel: string | null;
+  position: string | null;
+  teamStatus: string | null;
+  trainingSurface: string | null;
   hasSmartwatch: boolean | null;
   footballGoal: string | null;
   improvementFocus: string | null;
   trainingFrequency: string | null;
   hasGymAccess: boolean | null;
   motivation: string | null;
+  fitnessLevel: string | null;
+  activityLevel: string | null;
+  sleepHours: string | null;
+  nutrition: string | null;
 };
 
 type OnboardingContextType = {
   onboardingData: OnboardingData;
-  updateOnboardingData: (data: Partial<OnboardingData>) => void;
+  updateOnboardingData: (data: Partial<OnboardingData>) => Promise<void>;
+  clearOnboardingData: () => Promise<void>;
 };
 
 const defaultOnboardingData: OnboardingData = {
+  username: null,
+  gender: null,
+  age: null,
+  height: null,
+  weight: null,
+  dominantFoot: null,
+  injuryHistory: null,
+  skillLevel: null,
+  position: null,
+  teamStatus: null,
+  trainingSurface: null,
   hasSmartwatch: null,
   footballGoal: null,
   improvementFocus: null,
   trainingFrequency: null,
   hasGymAccess: null,
   motivation: null,
+  fitnessLevel: null,
+  activityLevel: null,
+  sleepHours: null,
+  nutrition: null,
 };
 
 const OnboardingContext = createContext<OnboardingContextType>({
   onboardingData: defaultOnboardingData,
-  updateOnboardingData: () => {},
+  updateOnboardingData: async () => {},
+  clearOnboardingData: async () => {},
 });
 
 export function OnboardingProvider({ children }: { children: React.ReactNode }) {
   const [onboardingData, setOnboardingData] = useState<OnboardingData>(defaultOnboardingData);
 
-  const updateOnboardingData = (data: Partial<OnboardingData>) => {
-    setOnboardingData(prev => ({ ...prev, ...data }));
+  // Load saved data when app starts
+  useEffect(() => {
+    loadSavedData();
+  }, []);
+
+  const loadSavedData = async () => {
+    try {
+      const savedData = await AsyncStorage.getItem('onboardingData');
+      if (savedData) {
+        setOnboardingData(JSON.parse(savedData));
+      }
+    } catch (error) {
+      console.error('Error loading onboarding data:', error);
+    }
+  };
+
+  const updateOnboardingData = async (data: Partial<OnboardingData>) => {
+    try {
+      const newData = { ...onboardingData, ...data };
+      setOnboardingData(newData);
+      await AsyncStorage.setItem('onboardingData', JSON.stringify(newData));
+    } catch (error) {
+      console.error('Error saving onboarding data:', error);
+    }
+  };
+
+  const clearOnboardingData = async () => {
+    try {
+      await AsyncStorage.removeItem('onboardingData');
+      setOnboardingData(defaultOnboardingData);
+    } catch (error) {
+      console.error('Error clearing onboarding data:', error);
+    }
   };
 
   return (
-    <OnboardingContext.Provider value={{ onboardingData, updateOnboardingData }}>
+    <OnboardingContext.Provider value={{ onboardingData, updateOnboardingData, clearOnboardingData }}>
       {children}
     </OnboardingContext.Provider>
   );

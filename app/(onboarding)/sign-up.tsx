@@ -14,7 +14,7 @@ export default function SignUpScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { onboardingData } = useOnboarding();
+  const { onboardingData, clearOnboardingData } = useOnboarding();
 
   const handleSignUp = async () => {
     try {
@@ -22,6 +22,7 @@ export default function SignUpScreen() {
       setError(null);
 
       await authService.signUpWithEmail(email, password, onboardingData);
+      await clearOnboardingData();
       router.push('/paywall');
     } catch (error: any) {
       setError(error.message);

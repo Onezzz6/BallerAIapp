@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
+import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
 
 const FREQUENCY_OPTIONS = [
@@ -26,7 +27,15 @@ const FREQUENCY_OPTIONS = [
 
 export default function TrainingFrequencyScreen() {
   const router = useRouter();
-  const [selectedFrequency, setSelectedFrequency] = useState<string | null>(null);
+  const { onboardingData, updateOnboardingData } = useOnboarding();
+  const [selected, setSelected] = useState<string | null>(onboardingData.trainingFrequency);
+
+  const handleContinue = async () => {
+    if (selected) {
+      await updateOnboardingData({ trainingFrequency: selected });
+      router.push('/gym-access');
+    }
+  };
 
   return (
     <Animated.View 
@@ -37,7 +46,7 @@ export default function TrainingFrequencyScreen() {
       }}
     >
       <OnboardingHeader 
-        currentStep={6}
+        currentStep={4}
         totalSteps={7}
       />
       
@@ -65,23 +74,15 @@ export default function TrainingFrequencyScreen() {
           {FREQUENCY_OPTIONS.map((option) => (
             <Pressable
               key={option.id}
-              onPress={() => setSelectedFrequency(option.id)}
+              onPress={() => setSelected(option.id)}
               style={({ pressed }) => ({
                 width: '100%',
                 padding: 20,
-                backgroundColor: selectedFrequency === option.id ? '#99E86C' : '#FFFFFF',
+                backgroundColor: selected === option.id ? '#99E86C' : '#FFFFFF',
                 borderRadius: 12,
                 borderWidth: 2,
-                borderColor: selectedFrequency === option.id ? '#99E86C' : '#E5E5E5',
+                borderColor: selected === option.id ? '#99E86C' : '#E5E5E5',
                 opacity: pressed ? 0.9 : 1,
-                shadowColor: '#000000',
-                shadowOffset: {
-                  width: 0,
-                  height: 2,
-                },
-                shadowOpacity: 0.1,
-                shadowRadius: 4,
-                elevation: 3,
               })}
             >
               <Text style={{
@@ -97,11 +98,12 @@ export default function TrainingFrequencyScreen() {
 
         <Button 
           title="Continue" 
-          onPress={() => {
-            if (selectedFrequency) {
-              router.push('/gym-access');
-            }
+          onPress={handleContinue}
+          buttonStyle={{
+            backgroundColor: '#007AFF',
+            opacity: !selected ? 0.5 : 1,
           }}
+          disabled={!selected}
         />
       </View>
     </Animated.View>

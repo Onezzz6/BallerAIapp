@@ -13,10 +13,12 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useState } from 'react';
+import { useOnboarding } from '../context/OnboardingContext';
 
 export default function InjuryHistoryScreen() {
   const router = useRouter();
-  const [injuryHistory, setInjuryHistory] = useState('');
+  const { onboardingData, updateOnboardingData } = useOnboarding();
+  const [injuryHistory, setInjuryHistory] = useState(onboardingData.injuryHistory || '');
   const CHARACTER_LIMIT = 100;
 
   return (
@@ -95,8 +97,9 @@ export default function InjuryHistoryScreen() {
 
               <Button 
                 title="Continue" 
-                onPress={() => {
+                onPress={async () => {
                   if (injuryHistory.trim()) {
+                    await updateOnboardingData({ injuryHistory: injuryHistory.trim() });
                     router.push('/skill-level');
                   }
                 }}

@@ -3,11 +3,13 @@ import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
+import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
 
 export default function UsernameScreen() {
   const router = useRouter();
-  const [username, setUsername] = useState('');
+  const { onboardingData, updateOnboardingData } = useOnboarding();
+  const [username, setUsername] = useState(onboardingData.username || '');
 
   return (
     <Animated.View 
@@ -60,8 +62,9 @@ export default function UsernameScreen() {
 
         <Button 
           title="Continue" 
-          onPress={() => {
+          onPress={async () => {
             if (username.trim()) {
+              await updateOnboardingData({ username: username.trim() });
               router.push('/gender');
             }
           }}

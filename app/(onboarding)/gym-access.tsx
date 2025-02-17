@@ -3,11 +3,20 @@ import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
+import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
 
 export default function GymAccessScreen() {
   const router = useRouter();
-  const [hasGymAccess, setHasGymAccess] = useState<boolean | null>(null);
+  const { onboardingData, updateOnboardingData } = useOnboarding();
+  const [selected, setSelected] = useState<boolean | null>(onboardingData.hasGymAccess);
+
+  const handleContinue = async () => {
+    if (selected !== null) {
+      await updateOnboardingData({ hasGymAccess: selected });
+      router.push('/motivation-reason');
+    }
+  };
 
   return (
     <Animated.View 
@@ -18,7 +27,7 @@ export default function GymAccessScreen() {
       }}
     >
       <OnboardingHeader 
-        currentStep={7}
+        currentStep={5}
         totalSteps={7}
       />
       
@@ -49,14 +58,14 @@ export default function GymAccessScreen() {
           ].map((option) => (
             <Pressable
               key={option.label}
-              onPress={() => setHasGymAccess(option.value)}
+              onPress={() => setSelected(option.value)}
               style={({ pressed }) => ({
                 flex: 1,
                 height: 60,
-                backgroundColor: hasGymAccess === option.value ? '#99E86C' : '#FFFFFF',
+                backgroundColor: selected === option.value ? '#99E86C' : '#FFFFFF',
                 borderRadius: 12,
                 borderWidth: 2,
-                borderColor: hasGymAccess === option.value ? '#99E86C' : '#E5E5E5',
+                borderColor: selected === option.value ? '#99E86C' : '#E5E5E5',
                 justifyContent: 'center',
                 alignItems: 'center',
                 opacity: pressed ? 0.9 : 1,
@@ -75,11 +84,12 @@ export default function GymAccessScreen() {
 
         <Button 
           title="Continue" 
-          onPress={() => {
-            if (hasGymAccess !== null) {
-              router.push('/motivation-reason');
-            }
+          onPress={handleContinue}
+          buttonStyle={{
+            backgroundColor: '#007AFF',
+            opacity: selected === null ? 0.5 : 1,
           }}
+          disabled={selected === null}
         />
       </View>
     </Animated.View>

@@ -3,11 +3,13 @@ import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
+import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
 
 export default function TeamStatusScreen() {
   const router = useRouter();
-  const [trainsWithTeam, setTrainsWithTeam] = useState<boolean | null>(null);
+  const { onboardingData, updateOnboardingData } = useOnboarding();
+  const [selected, setSelected] = useState<boolean | null>(onboardingData.teamStatus || null);
 
   return (
     <Animated.View 
@@ -19,8 +21,8 @@ export default function TeamStatusScreen() {
       }}
     >
       <OnboardingHeader 
-        currentStep={3}
-        totalSteps={5}
+        currentStep={9}
+        totalSteps={12}
       />
       
       <View style={{
@@ -49,14 +51,14 @@ export default function TeamStatusScreen() {
           ].map((option) => (
             <Pressable
               key={option.label}
-              onPress={() => setTrainsWithTeam(option.value)}
+              onPress={() => setSelected(option.value)}
               style={({ pressed }) => ({
                 flex: 1,
                 height: 60,
-                backgroundColor: trainsWithTeam === option.value ? '#E8F0FE' : '#F8F8F8',
+                backgroundColor: selected === option.value ? '#99E86C' : '#FFFFFF',
                 borderRadius: 12,
                 borderWidth: 2,
-                borderColor: trainsWithTeam === option.value ? '#007AFF' : '#E5E5E5',
+                borderColor: selected === option.value ? '#99E86C' : '#E5E5E5',
                 justifyContent: 'center',
                 alignItems: 'center',
                 opacity: pressed ? 0.9 : 1,
@@ -64,7 +66,7 @@ export default function TeamStatusScreen() {
             >
               <Text style={{
                 fontSize: 18,
-                color: trainsWithTeam === option.value ? '#007AFF' : '#000000',
+                color: '#000000',
                 fontWeight: '500',
               }}>
                 {option.label}
@@ -75,11 +77,17 @@ export default function TeamStatusScreen() {
 
         <Button 
           title="Continue" 
-          onPress={() => {
-            if (trainsWithTeam !== null) {
+          onPress={async () => {
+            if (selected !== null) {
+              await updateOnboardingData({ teamStatus: selected });
               router.push('/training-surface');
             }
           }}
+          buttonStyle={{
+            backgroundColor: '#007AFF',
+            opacity: selected === null ? 0.5 : 1,
+          }}
+          disabled={selected === null}
         />
       </View>
     </Animated.View>

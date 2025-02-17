@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
+import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
 
 const FITNESS_LEVELS = [
@@ -26,7 +27,8 @@ const FITNESS_LEVELS = [
 
 export default function FitnessLevelScreen() {
   const router = useRouter();
-  const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
+  const { onboardingData, updateOnboardingData } = useOnboarding();
+  const [selected, setSelected] = useState(onboardingData.fitnessLevel || '');
 
   return (
     <Animated.View 
@@ -38,8 +40,8 @@ export default function FitnessLevelScreen() {
       }}
     >
       <OnboardingHeader 
-        currentStep={3}
-        totalSteps={5}
+        currentStep={11}
+        totalSteps={12}
       />
       
       <View style={{
@@ -65,14 +67,14 @@ export default function FitnessLevelScreen() {
           {FITNESS_LEVELS.map((level) => (
             <Pressable
               key={level.id}
-              onPress={() => setSelectedLevel(level.id)}
+              onPress={() => setSelected(level.id)}
               style={({ pressed }) => ({
                 width: '100%',
                 height: 60,
-                backgroundColor: selectedLevel === level.id ? '#99E86C' : '#FFFFFF',
+                backgroundColor: selected === level.id ? '#99E86C' : '#FFFFFF',
                 borderRadius: 12,
                 borderWidth: 2,
-                borderColor: selectedLevel === level.id ? '#99E86C' : '#E5E5E5',
+                borderColor: selected === level.id ? '#99E86C' : '#E5E5E5',
                 justifyContent: 'center',
                 alignItems: 'center',
                 opacity: pressed ? 0.9 : 1,
@@ -91,11 +93,17 @@ export default function FitnessLevelScreen() {
 
         <Button 
           title="Continue" 
-          onPress={() => {
-            if (selectedLevel) {
+          onPress={async () => {
+            if (selected) {
+              await updateOnboardingData({ fitnessLevel: selected });
               router.push('/activity-level');
             }
           }}
+          buttonStyle={{
+            backgroundColor: '#007AFF',
+            opacity: !selected ? 0.5 : 1,
+          }}
+          disabled={!selected}
         />
       </View>
     </Animated.View>

@@ -1,30 +1,42 @@
-import { Text, Pressable } from 'react-native';
+import { Text, Pressable, View, ViewStyle } from 'react-native';
 
-interface ButtonProps {
-  onPress: () => void;
+type ButtonProps = {
   title: string;
-}
+  onPress: () => void;
+  containerStyle?: ViewStyle;
+  buttonStyle?: ViewStyle;
+  disabled?: boolean;
+};
 
-export default function Button({ onPress, title }: ButtonProps) {
+export default function Button({ 
+  title, 
+  onPress, 
+  containerStyle,
+  buttonStyle,
+  disabled = false 
+}: ButtonProps) {
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => ({
-        backgroundColor: pressed ? '#0056b3' : '#007AFF',
-        paddingHorizontal: 32,
-        paddingVertical: 16,
-        borderRadius: 30,
-        opacity: pressed ? 0.9 : 1,
-      })}
-    >
-      <Text style={{
-        color: '#ffffff',
-        fontSize: 18,
-        fontWeight: '600',
-        textAlign: 'center',
-      }}>
-        {title}
-      </Text>
-    </Pressable>
+    <View style={containerStyle}>
+      <Pressable
+        onPress={onPress}
+        disabled={disabled}
+        style={({ pressed }) => ({
+          backgroundColor: '#007AFF',
+          padding: 16,
+          borderRadius: 100,
+          opacity: disabled ? 0.5 : pressed ? 0.8 : 1,
+          ...buttonStyle,
+        })}
+      >
+        <Text style={{
+          color: '#FFFFFF',
+          fontSize: 18,
+          fontWeight: '600',
+          textAlign: 'center',
+        }}>
+          {title}
+        </Text>
+      </Pressable>
+    </View>
   );
 } 

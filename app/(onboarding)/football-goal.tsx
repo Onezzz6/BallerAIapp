@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
+import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
 
 const GOALS = [
@@ -26,7 +27,15 @@ const GOALS = [
 
 export default function FootballGoalScreen() {
   const router = useRouter();
-  const [selectedGoal, setSelectedGoal] = useState<string | null>(null);
+  const { onboardingData, updateOnboardingData } = useOnboarding();
+  const [selected, setSelected] = useState<string | null>(onboardingData.footballGoal);
+
+  const handleContinue = async () => {
+    if (selected) {
+      await updateOnboardingData({ footballGoal: selected });
+      router.push('/improvement-focus');
+    }
+  };
 
   return (
     <Animated.View 
@@ -37,8 +46,8 @@ export default function FootballGoalScreen() {
       }}
     >
       <OnboardingHeader 
-        currentStep={4}
-        totalSteps={5}
+        currentStep={2}
+        totalSteps={7}
       />
       
       <View style={{
@@ -65,23 +74,15 @@ export default function FootballGoalScreen() {
           {GOALS.map((goal) => (
             <Pressable
               key={goal.id}
-              onPress={() => setSelectedGoal(goal.id)}
+              onPress={() => setSelected(goal.id)}
               style={({ pressed }) => ({
                 width: '100%',
                 padding: 20,
-                backgroundColor: selectedGoal === goal.id ? '#99E86C' : '#FFFFFF',
+                backgroundColor: selected === goal.id ? '#99E86C' : '#FFFFFF',
                 borderRadius: 12,
                 borderWidth: 2,
-                borderColor: selectedGoal === goal.id ? '#99E86C' : '#E5E5E5',
+                borderColor: selected === goal.id ? '#99E86C' : '#E5E5E5',
                 opacity: pressed ? 0.9 : 1,
-                shadowColor: '#000000',
-                shadowOffset: {
-                  width: 0,
-                  height: 2,
-                },
-                shadowOpacity: 0.1,
-                shadowRadius: 4,
-                elevation: 3,
               })}
             >
               <Text style={{
@@ -97,11 +98,12 @@ export default function FootballGoalScreen() {
 
         <Button 
           title="Continue" 
-          onPress={() => {
-            if (selectedGoal) {
-              router.push('/improvement-focus');
-            }
+          onPress={handleContinue}
+          buttonStyle={{
+            backgroundColor: '#007AFF',
+            opacity: !selected ? 0.5 : 1,
           }}
+          disabled={!selected}
         />
       </View>
     </Animated.View>

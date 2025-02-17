@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
+import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
 
 const SKILL_LEVELS = [
@@ -25,14 +26,8 @@ const SKILL_LEVELS = [
 
 export default function SkillLevelScreen() {
   const router = useRouter();
-  const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
-
-  const handleContinue = () => {
-    if (selectedLevel) {
-      console.log('Navigating to position screen...');
-      router.push('./position');
-    }
-  };
+  const { onboardingData, updateOnboardingData } = useOnboarding();
+  const [selected, setSelected] = useState(onboardingData.skillLevel || '');
 
   return (
     <Animated.View 
@@ -40,16 +35,16 @@ export default function SkillLevelScreen() {
       style={{
         flex: 1,
         backgroundColor: '#ffffff',
+        padding: 24,
       }}
     >
       <OnboardingHeader 
-        currentStep={3}
-        totalSteps={5}
+        currentStep={7}
+        totalSteps={12}
       />
       
       <View style={{
         flex: 1,
-        paddingHorizontal: 24,
         justifyContent: 'center',
         alignItems: 'center',
         gap: 32,
@@ -71,28 +66,20 @@ export default function SkillLevelScreen() {
           {SKILL_LEVELS.map((level) => (
             <Pressable
               key={level.id}
-              onPress={() => setSelectedLevel(level.id)}
+              onPress={() => setSelected(level.id)}
               style={({ pressed }) => ({
                 width: '100%',
                 padding: 20,
-                backgroundColor: selectedLevel === level.id ? '#E8F0FE' : '#FFFFFF',
+                backgroundColor: selected === level.id ? '#99E86C' : '#FFFFFF',
                 borderRadius: 12,
                 borderWidth: 2,
-                borderColor: selectedLevel === level.id ? '#007AFF' : '#E5E5E5',
+                borderColor: selected === level.id ? '#99E86C' : '#E5E5E5',
                 opacity: pressed ? 0.9 : 1,
-                shadowColor: '#000000',
-                shadowOffset: {
-                  width: 0,
-                  height: 2,
-                },
-                shadowOpacity: 0.1,
-                shadowRadius: 4,
-                elevation: 3,
               })}
             >
               <Text style={{
                 fontSize: 18,
-                color: selectedLevel === level.id ? '#007AFF' : '#000000',
+                color: '#000000',
                 fontWeight: '600',
                 marginBottom: 4,
               }}>
@@ -110,7 +97,17 @@ export default function SkillLevelScreen() {
 
         <Button 
           title="Continue" 
-          onPress={handleContinue}
+          onPress={async () => {
+            if (selected) {
+              await updateOnboardingData({ skillLevel: selected });
+              router.push('/position');
+            }
+          }}
+          buttonStyle={{
+            backgroundColor: '#007AFF',
+            opacity: !selected ? 0.5 : 1,
+          }}
+          disabled={!selected}
         />
       </View>
     </Animated.View>

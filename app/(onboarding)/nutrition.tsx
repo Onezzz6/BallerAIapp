@@ -3,11 +3,13 @@ import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
+import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
 
 export default function NutritionScreen() {
   const router = useRouter();
-  const [focusedOnNutrition, setFocusedOnNutrition] = useState<boolean | null>(null);
+  const { onboardingData, updateOnboardingData } = useOnboarding();
+  const [focusedOnNutrition, setFocusedOnNutrition] = useState<boolean | null>(onboardingData.nutrition === 'true' ? true : onboardingData.nutrition === 'false' ? false : null);
 
   return (
     <Animated.View 
@@ -19,8 +21,8 @@ export default function NutritionScreen() {
       }}
     >
       <OnboardingHeader 
-        currentStep={3}
-        totalSteps={5}
+        currentStep={14}
+        totalSteps={14}
       />
       
       <View style={{
@@ -75,11 +77,17 @@ export default function NutritionScreen() {
 
         <Button 
           title="Continue" 
-          onPress={() => {
+          onPress={async () => {
             if (focusedOnNutrition !== null) {
+              await updateOnboardingData({ nutrition: focusedOnNutrition.toString() });
               router.push('/smartwatch');
             }
           }}
+          buttonStyle={{
+            backgroundColor: '#007AFF',
+            opacity: focusedOnNutrition === null ? 0.5 : 1,
+          }}
+          disabled={focusedOnNutrition === null}
         />
       </View>
     </Animated.View>

@@ -3,12 +3,14 @@ import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
+import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
 
 export default function MeasurementsScreen() {
   const router = useRouter();
-  const [height, setHeight] = useState('');
-  const [weight, setWeight] = useState('');
+  const { onboardingData, updateOnboardingData } = useOnboarding();
+  const [height, setHeight] = useState(onboardingData.height || '');
+  const [weight, setWeight] = useState(onboardingData.weight || '');
 
   return (
     <KeyboardAvoidingView 
@@ -31,7 +33,7 @@ export default function MeasurementsScreen() {
             keyboardShouldPersistTaps="handled"
           >
             <OnboardingHeader 
-              currentStep={3}
+              currentStep={4}
               totalSteps={5}
             />
             
@@ -48,7 +50,7 @@ export default function MeasurementsScreen() {
                 textAlign: 'center',
                 marginBottom: 20,
               }}>
-                What's your height and weight?
+                What are your measurements?
               </Text>
 
               <View style={{
@@ -66,7 +68,7 @@ export default function MeasurementsScreen() {
                   <TextInput
                     value={height}
                     onChangeText={setHeight}
-                    placeholder="Enter your height"
+                    placeholder="Height (cm)"
                     keyboardType="numeric"
                     style={{
                       width: '100%',
@@ -78,6 +80,7 @@ export default function MeasurementsScreen() {
                       fontSize: 16,
                       backgroundColor: '#F8F8F8',
                     }}
+                    maxLength={3}
                   />
                 </View>
 
@@ -92,7 +95,7 @@ export default function MeasurementsScreen() {
                   <TextInput
                     value={weight}
                     onChangeText={setWeight}
-                    placeholder="Enter your weight"
+                    placeholder="Weight (kg)"
                     keyboardType="numeric"
                     style={{
                       width: '100%',
@@ -104,15 +107,17 @@ export default function MeasurementsScreen() {
                       fontSize: 16,
                       backgroundColor: '#F8F8F8',
                     }}
+                    maxLength={3}
                   />
                 </View>
               </View>
 
               <Button 
                 title="Continue" 
-                onPress={() => {
+                onPress={async () => {
                   if (height && weight) {
-                    router.push('/dominant-foot'); // Changed from '/next-screen' to '/dominant-foot'
+                    await updateOnboardingData({ height, weight });
+                    router.push('/dominant-foot');
                   }
                 }}
               />

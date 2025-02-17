@@ -3,12 +3,14 @@ import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
+import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
 import { Picker } from '@react-native-picker/picker';
 
 export default function SleepHoursScreen() {
   const router = useRouter();
-  const [sleepHours, setSleepHours] = useState('8');
+  const { onboardingData, updateOnboardingData } = useOnboarding();
+  const [sleepHours, setSleepHours] = useState(onboardingData.sleepHours || '8');
 
   return (
     <Animated.View 
@@ -20,8 +22,8 @@ export default function SleepHoursScreen() {
       }}
     >
       <OnboardingHeader 
-        currentStep={3}
-        totalSteps={5}
+        currentStep={13}
+        totalSteps={14}
       />
       
       <View style={{
@@ -67,11 +69,17 @@ export default function SleepHoursScreen() {
 
         <Button 
           title="Continue" 
-          onPress={() => {
+          onPress={async () => {
             if (sleepHours) {
+              await updateOnboardingData({ sleepHours });
               router.push('/nutrition');
             }
           }}
+          buttonStyle={{
+            backgroundColor: '#007AFF',
+            opacity: !sleepHours ? 0.5 : 1,
+          }}
+          disabled={!sleepHours}
         />
       </View>
     </Animated.View>

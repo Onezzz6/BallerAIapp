@@ -3,31 +3,32 @@ import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
+import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
 
 const SURFACES = [
-  'Grass',
-  'Artificial',
-  'Indoor',
-  'Sand',
+  {
+    id: 'grass',
+    title: 'Natural grass',
+  },
+  {
+    id: 'artificial',
+    title: 'Artificial grass',
+  },
+  {
+    id: 'indoor',
+    title: 'Indoor',
+  },
+  {
+    id: 'mixed',
+    title: 'Mixed surfaces',
+  },
 ];
 
 export default function TrainingSurfaceScreen() {
   const router = useRouter();
-  const [selectedSurface, setSelectedSurface] = useState<string | null>(null);
-
-  const handleContinue = () => {
-    console.log('Selected surface:', selectedSurface);
-    if (selectedSurface) {
-      console.log('Attempting navigation to analyzing screen...');
-      try {
-        router.push('../analyzing');
-        console.log('Navigation called');
-      } catch (error) {
-        console.error('Navigation error:', error);
-      }
-    }
-  };
+  const { onboardingData, updateOnboardingData } = useOnboarding();
+  const [selected, setSelected] = useState(onboardingData.trainingSurface || '');
 
   return (
     <Animated.View 
@@ -39,8 +40,8 @@ export default function TrainingSurfaceScreen() {
       }}
     >
       <OnboardingHeader 
-        currentStep={3}
-        totalSteps={5}
+        currentStep={10}
+        totalSteps={12}
       />
       
       <View style={{
@@ -56,7 +57,7 @@ export default function TrainingSurfaceScreen() {
           textAlign: 'center',
           marginBottom: 20,
         }}>
-          What kind of surface do you train on most?
+          What surface do you usually train on?
         </Text>
 
         <View style={{
@@ -65,26 +66,24 @@ export default function TrainingSurfaceScreen() {
         }}>
           {SURFACES.map((surface) => (
             <Pressable
-              key={surface}
-              onPress={() => setSelectedSurface(surface)}
+              key={surface.id}
+              onPress={() => setSelected(surface.id)}
               style={({ pressed }) => ({
                 width: '100%',
-                height: 60,
-                backgroundColor: selectedSurface === surface ? '#E8F0FE' : '#F8F8F8',
+                padding: 20,
+                backgroundColor: selected === surface.id ? '#99E86C' : '#FFFFFF',
                 borderRadius: 12,
                 borderWidth: 2,
-                borderColor: selectedSurface === surface ? '#007AFF' : '#E5E5E5',
-                justifyContent: 'center',
-                alignItems: 'center',
+                borderColor: selected === surface.id ? '#99E86C' : '#E5E5E5',
                 opacity: pressed ? 0.9 : 1,
               })}
             >
               <Text style={{
                 fontSize: 18,
-                color: selectedSurface === surface ? '#007AFF' : '#000000',
-                fontWeight: '500',
+                color: '#000000',
+                fontWeight: '600',
               }}>
-                {surface}
+                {surface.title}
               </Text>
             </Pressable>
           ))}
@@ -92,7 +91,17 @@ export default function TrainingSurfaceScreen() {
 
         <Button 
           title="Continue" 
-          onPress={handleContinue}
+          onPress={async () => {
+            if (selected) {
+              await updateOnboardingData({ trainingSurface: selected });
+              router.push('/analyzing');
+            }
+          }}
+          buttonStyle={{
+            backgroundColor: '#007AFF',
+            opacity: !selected ? 0.5 : 1,
+          }}
+          disabled={!selected}
         />
       </View>
     </Animated.View>
