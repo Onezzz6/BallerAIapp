@@ -52,8 +52,11 @@ export default function IntroScreen() {
         </Text>
 
         <Button 
-          title="Let's Go!" 
-          onPress={() => router.push('/username')} 
+          title="Continue" 
+          onPress={() => router.push('/(onboarding)/username')}
+          buttonStyle={{
+            backgroundColor: '#007AFF',
+          }}
         />
       </View>
     </Animated.View>

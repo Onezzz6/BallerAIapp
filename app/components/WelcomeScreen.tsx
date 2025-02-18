@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Button from './Button';
 import { useState } from 'react';
+import React from 'react';
 
 export default function WelcomeScreen() {
   const router = useRouter();
@@ -66,7 +67,7 @@ export default function WelcomeScreen() {
           <>
             <Button 
               title="Get Started" 
-              onPress={() => router.push('/age')}
+              onPress={() => router.push('/intro')}
               buttonStyle={{
                 backgroundColor: '#007AFF',
                 marginBottom: 32,
