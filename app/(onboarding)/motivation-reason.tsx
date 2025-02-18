@@ -85,7 +85,7 @@ export default function MotivationReasonScreen() {
           <Button 
             title="Continue" 
             onPress={handleContinue}
-            style={{
+            buttonStyle={{
               backgroundColor: '#99E86C',
               opacity: !motivation.trim() ? 0.5 : 1,
             }}
