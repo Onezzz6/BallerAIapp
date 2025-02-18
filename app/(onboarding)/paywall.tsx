@@ -262,12 +262,11 @@ export default function PaywallScreen() {
 
         <Button 
           title="Continue" 
-          style={{
-            backgroundColor: '#99E86C',
-            marginTop: 16,
-          }}
           onPress={() => {
-            router.push('/analyzing');
+            router.replace('/(tabs)/home');
+          }}
+          buttonStyle={{
+            backgroundColor: '#007AFF',
           }}
         />
       </Animated.View>
