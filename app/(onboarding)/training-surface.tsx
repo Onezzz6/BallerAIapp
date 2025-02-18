@@ -28,7 +28,7 @@ const SURFACES = [
 export default function TrainingSurfaceScreen() {
   const router = useRouter();
   const { onboardingData, updateOnboardingData } = useOnboarding();
-  const [selected, setSelected] = useState(onboardingData.trainingSurface || '');
+  const [selected, setSelected] = useState<string | null>(onboardingData.trainingSurface);
 
   return (
     <Animated.View 
@@ -36,16 +36,16 @@ export default function TrainingSurfaceScreen() {
       style={{
         flex: 1,
         backgroundColor: '#ffffff',
-        padding: 24,
       }}
     >
       <OnboardingHeader 
         currentStep={10}
-        totalSteps={12}
+        totalSteps={20}
       />
       
       <View style={{
         flex: 1,
+        paddingHorizontal: 24,
         justifyContent: 'center',
         alignItems: 'center',
         gap: 32,

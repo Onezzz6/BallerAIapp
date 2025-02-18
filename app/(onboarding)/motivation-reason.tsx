@@ -33,8 +33,8 @@ export default function MotivationReasonScreen() {
         }}
       >
         <OnboardingHeader 
-          currentStep={6}
-          totalSteps={7}
+          currentStep={20}
+          totalSteps={20}
         />
         
         <View style={{

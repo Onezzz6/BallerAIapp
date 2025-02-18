@@ -18,16 +18,16 @@ export default function AgeScreen() {
       style={{
         flex: 1,
         backgroundColor: '#ffffff',
-        padding: 24,
       }}
     >
       <OnboardingHeader 
         currentStep={3}
-        totalSteps={5}
+        totalSteps={20}
       />
       
       <View style={{
         flex: 1,
+        paddingHorizontal: 24,
         justifyContent: 'center',
         alignItems: 'center',
         gap: 32,

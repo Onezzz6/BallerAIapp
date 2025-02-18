@@ -46,8 +46,8 @@ export default function FootballGoalScreen() {
       }}
     >
       <OnboardingHeader 
-        currentStep={2}
-        totalSteps={7}
+        currentStep={16}
+        totalSteps={20}
       />
       
       <View style={{

@@ -2,8 +2,7 @@ import { View, Text, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Button from '../components/Button';
-import OnboardingHeader from '../components/OnboardingHeader';
-
+                
 export default function AccountReadyScreen() {
   const router = useRouter();
 
@@ -15,11 +14,6 @@ export default function AccountReadyScreen() {
         backgroundColor: '#ffffff',
       }}
     >
-      <OnboardingHeader 
-        currentStep={9}
-        totalSteps={9}
-      />
-      
       <View style={{
         flex: 1,
         paddingHorizontal: 24,

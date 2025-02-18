@@ -27,8 +27,8 @@ export default function GymAccessScreen() {
       }}
     >
       <OnboardingHeader 
-        currentStep={5}
-        totalSteps={7}
+        currentStep={19}
+        totalSteps={20}
       />
       
       <View style={{

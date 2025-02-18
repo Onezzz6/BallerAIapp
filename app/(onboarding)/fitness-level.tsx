@@ -28,7 +28,7 @@ const FITNESS_LEVELS = [
 export default function FitnessLevelScreen() {
   const router = useRouter();
   const { onboardingData, updateOnboardingData } = useOnboarding();
-  const [selected, setSelected] = useState(onboardingData.fitnessLevel || '');
+  const [selected, setSelected] = useState<string | null>(onboardingData.fitnessLevel);
 
   return (
     <Animated.View 
@@ -36,16 +36,16 @@ export default function FitnessLevelScreen() {
       style={{
         flex: 1,
         backgroundColor: '#ffffff',
-        padding: 24,
       }}
     >
       <OnboardingHeader 
         currentStep={11}
-        totalSteps={12}
+        totalSteps={20}
       />
       
       <View style={{
         flex: 1,
+        paddingHorizontal: 24,
         justifyContent: 'center',
         alignItems: 'center',
         gap: 32,

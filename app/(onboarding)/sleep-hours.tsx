@@ -1,4 +1,4 @@
-import { View, Text } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Button from '../components/Button';
@@ -10,7 +10,7 @@ import { Picker } from '@react-native-picker/picker';
 export default function SleepHoursScreen() {
   const router = useRouter();
   const { onboardingData, updateOnboardingData } = useOnboarding();
-  const [sleepHours, setSleepHours] = useState(onboardingData.sleepHours || '8');
+  const [selected, setSelected] = useState<string | null>(onboardingData.sleepHours);
 
   return (
     <Animated.View 
@@ -18,16 +18,16 @@ export default function SleepHoursScreen() {
       style={{
         flex: 1,
         backgroundColor: '#ffffff',
-        padding: 24,
       }}
     >
       <OnboardingHeader 
         currentStep={13}
-        totalSteps={14}
+        totalSteps={20}
       />
       
       <View style={{
         flex: 1,
+        paddingHorizontal: 24,
         justifyContent: 'center',
         alignItems: 'center',
         gap: 32,
@@ -50,8 +50,8 @@ export default function SleepHoursScreen() {
           overflow: 'hidden',
         }}>
           <Picker
-            selectedValue={sleepHours}
-            onValueChange={(itemValue) => setSleepHours(itemValue)}
+            selectedValue={selected}
+            onValueChange={(itemValue) => setSelected(itemValue)}
             style={{
               width: '100%',
               height: '100%',
@@ -70,16 +70,16 @@ export default function SleepHoursScreen() {
         <Button 
           title="Continue" 
           onPress={async () => {
-            if (sleepHours) {
-              await updateOnboardingData({ sleepHours });
+            if (selected) {
+              await updateOnboardingData({ sleepHours: selected });
               router.push('/nutrition');
             }
           }}
           buttonStyle={{
             backgroundColor: '#007AFF',
-            opacity: !sleepHours ? 0.5 : 1,
+            opacity: !selected ? 0.5 : 1,
           }}
-          disabled={!sleepHours}
+          disabled={!selected}
         />
       </View>
     </Animated.View>

@@ -37,7 +37,7 @@ const ACTIVITY_LEVELS = [
 export default function ActivityLevelScreen() {
   const router = useRouter();
   const { onboardingData, updateOnboardingData } = useOnboarding();
-  const [selected, setSelected] = useState(onboardingData.activityLevel || '');
+  const [selected, setSelected] = useState<string | null>(onboardingData.activityLevel);
 
   return (
     <Animated.View 
@@ -45,16 +45,16 @@ export default function ActivityLevelScreen() {
       style={{
         flex: 1,
         backgroundColor: '#ffffff',
-        padding: 24,
       }}
     >
       <OnboardingHeader 
         currentStep={12}
-        totalSteps={12}
+        totalSteps={20}
       />
       
       <View style={{
         flex: 1,
+        paddingHorizontal: 24,
         justifyContent: 'center',
         alignItems: 'center',
         gap: 32,

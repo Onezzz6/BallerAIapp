@@ -28,7 +28,7 @@ const POSITIONS = [
 export default function PositionScreen() {
   const router = useRouter();
   const { onboardingData, updateOnboardingData } = useOnboarding();
-  const [selected, setSelected] = useState(onboardingData.position || '');
+  const [selected, setSelected] = useState<string | null>(onboardingData.position);
 
   return (
     <Animated.View 
@@ -36,16 +36,16 @@ export default function PositionScreen() {
       style={{
         flex: 1,
         backgroundColor: '#ffffff',
-        padding: 24,
       }}
     >
       <OnboardingHeader 
         currentStep={8}
-        totalSteps={12}
+        totalSteps={20}
       />
       
       <View style={{
         flex: 1,
+        paddingHorizontal: 24,
         justifyContent: 'center',
         alignItems: 'center',
         gap: 32,

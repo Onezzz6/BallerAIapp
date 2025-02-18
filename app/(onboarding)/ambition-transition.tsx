@@ -1,8 +1,8 @@
-import { View, Text } from 'react-native';
+import { View, Text, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Button from '../components/Button';
-import OnboardingHeader from '../components/OnboardingHeader';
+import BackButton from '../components/BackButton';
 
 export default function AmbitionTransitionScreen() {
   const router = useRouter();
@@ -13,16 +13,59 @@ export default function AmbitionTransitionScreen() {
       style={{
         flex: 1,
         backgroundColor: '#ffffff',
-        padding: 24,
       }}
     >
-      <OnboardingHeader 
-        currentStep={4}
-        totalSteps={7}
-      />
-      
+      {/* Header with Back Button and Logo */}
+      <View style={{
+        paddingTop: 48,
+        paddingHorizontal: 24,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+      }}>
+        <BackButton />
+        
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+        }}>
+          <Image 
+            source={require('../../assets/images/BallerAILogo.png')}
+            style={{
+              width: 24,
+              height: 24,
+            }}
+            resizeMode="contain"
+          />
+          <Text style={{
+            fontSize: 20,
+            fontWeight: '600',
+            color: '#000000',
+          }}>
+            BallerAI
+          </Text>
+        </View>
+      </View>
+
+      {/* Mascot */}
+      <View style={{
+        alignItems: 'center',
+        marginTop: 20,
+      }}>
+        <Image 
+          source={require('../../assets/images/mascot.png')}
+          style={{
+            width: 120,
+            height: 120,
+          }}
+          resizeMode="contain"
+        />
+      </View>
+
       <View style={{
         flex: 1,
+        paddingHorizontal: 24,
         justifyContent: 'center',
         alignItems: 'center',
         gap: 32,

@@ -9,7 +9,7 @@ import { useState } from 'react';
 export default function DominantFootScreen() {
   const router = useRouter();
   const { onboardingData, updateOnboardingData } = useOnboarding();
-  const [selectedFoot, setSelectedFoot] = useState(onboardingData.dominantFoot || '');
+  const [selected, setSelected] = useState<string | null>(onboardingData.dominantFoot);
 
   return (
     <Animated.View 
@@ -17,16 +17,16 @@ export default function DominantFootScreen() {
       style={{
         flex: 1,
         backgroundColor: '#ffffff',
-        padding: 24,
       }}
     >
       <OnboardingHeader 
         currentStep={5}
-        totalSteps={5}
+        totalSteps={20}
       />
       
       <View style={{
         flex: 1,
+        paddingHorizontal: 24,
         justifyContent: 'center',
         alignItems: 'center',
         gap: 32,
@@ -51,14 +51,14 @@ export default function DominantFootScreen() {
           ].map((option) => (
             <Pressable
               key={option.value}
-              onPress={() => setSelectedFoot(option.value)}
+              onPress={() => setSelected(option.value)}
               style={({ pressed }) => ({
                 flex: 1,
                 height: 60,
-                backgroundColor: selectedFoot === option.value ? '#99E86C' : '#FFFFFF',
+                backgroundColor: selected === option.value ? '#99E86C' : '#FFFFFF',
                 borderRadius: 12,
                 borderWidth: 2,
-                borderColor: selectedFoot === option.value ? '#99E86C' : '#E5E5E5',
+                borderColor: selected === option.value ? '#99E86C' : '#E5E5E5',
                 justifyContent: 'center',
                 alignItems: 'center',
                 opacity: pressed ? 0.9 : 1,
@@ -78,8 +78,8 @@ export default function DominantFootScreen() {
         <Button 
           title="Continue" 
           onPress={async () => {
-            if (selectedFoot) {
-              await updateOnboardingData({ dominantFoot: selectedFoot });
+            if (selected) {
+              await updateOnboardingData({ dominantFoot: selected });
               router.push('/injury-history');
             }
           }}

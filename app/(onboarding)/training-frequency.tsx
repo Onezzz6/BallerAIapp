@@ -46,8 +46,8 @@ export default function TrainingFrequencyScreen() {
       }}
     >
       <OnboardingHeader 
-        currentStep={4}
-        totalSteps={7}
+        currentStep={18}
+        totalSteps={20}
       />
       
       <View style={{

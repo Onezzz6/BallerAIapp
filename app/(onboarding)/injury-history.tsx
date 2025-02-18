@@ -12,8 +12,8 @@ import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
-import { useState } from 'react';
 import { useOnboarding } from '../context/OnboardingContext';
+import { useState } from 'react';
 
 export default function InjuryHistoryScreen() {
   const router = useRouter();
@@ -34,18 +34,18 @@ export default function InjuryHistoryScreen() {
             backgroundColor: '#ffffff',
           }}
         >
+          <OnboardingHeader 
+            currentStep={6}
+            totalSteps={20}
+          />
+
           <ScrollView 
             contentContainerStyle={{
               flexGrow: 1,
-              padding: 24,
+              paddingHorizontal: 24,
             }}
             keyboardShouldPersistTaps="handled"
           >
-            <OnboardingHeader 
-              currentStep={3}
-              totalSteps={5}
-            />
-            
             <View style={{
               flex: 1,
               justifyContent: 'center',
@@ -103,6 +103,11 @@ export default function InjuryHistoryScreen() {
                     router.push('/skill-level');
                   }
                 }}
+                buttonStyle={{
+                  backgroundColor: '#007AFF',
+                  opacity: !injuryHistory.trim() ? 0.5 : 1,
+                }}
+                disabled={!injuryHistory.trim()}
               />
             </View>
           </ScrollView>

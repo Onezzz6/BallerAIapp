@@ -43,8 +43,8 @@ export default function ImprovementFocusScreen() {
       }}
     >
       <OnboardingHeader 
-        currentStep={3}
-        totalSteps={7}
+        currentStep={17}
+        totalSteps={20}
       />
       
       <View style={{

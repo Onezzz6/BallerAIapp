@@ -27,8 +27,8 @@ export default function SmartwatchScreen() {
       }}
     >
       <OnboardingHeader 
-        currentStep={1}
-        totalSteps={7}
+        currentStep={15}
+        totalSteps={20}
       />
       
       <View style={{

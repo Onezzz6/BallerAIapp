@@ -25,18 +25,18 @@ export default function MeasurementsScreen() {
             backgroundColor: '#ffffff',
           }}
         >
+          <OnboardingHeader 
+            currentStep={4}
+            totalSteps={20}
+          />
+
           <ScrollView 
             contentContainerStyle={{
               flexGrow: 1,
-              padding: 24,
+              paddingHorizontal: 24,
             }}
             keyboardShouldPersistTaps="handled"
           >
-            <OnboardingHeader 
-              currentStep={4}
-              totalSteps={5}
-            />
-            
             <View style={{
               flex: 1,
               justifyContent: 'center',

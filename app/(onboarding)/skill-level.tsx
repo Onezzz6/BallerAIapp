@@ -27,7 +27,7 @@ const SKILL_LEVELS = [
 export default function SkillLevelScreen() {
   const router = useRouter();
   const { onboardingData, updateOnboardingData } = useOnboarding();
-  const [selected, setSelected] = useState(onboardingData.skillLevel || '');
+  const [selected, setSelected] = useState<string | null>(onboardingData.skillLevel);
 
   return (
     <Animated.View 
@@ -35,16 +35,16 @@ export default function SkillLevelScreen() {
       style={{
         flex: 1,
         backgroundColor: '#ffffff',
-        padding: 24,
       }}
     >
       <OnboardingHeader 
         currentStep={7}
-        totalSteps={12}
+        totalSteps={20}
       />
       
       <View style={{
         flex: 1,
+        paddingHorizontal: 24,
         justifyContent: 'center',
         alignItems: 'center',
         gap: 32,
@@ -56,7 +56,7 @@ export default function SkillLevelScreen() {
           textAlign: 'center',
           marginBottom: 20,
         }}>
-          What's your current level in football?
+          What's your current level?
         </Text>
 
         <View style={{
