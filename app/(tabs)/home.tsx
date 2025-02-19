@@ -2,18 +2,41 @@ import { View, Text, Image, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { TextInput } from 'react-native';
 import { format, startOfWeek, addDays } from 'date-fns';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../config/firebase';
+import { useAuth } from '../context/AuthContext';
 
 export default function HomeScreen() {
+  const { user } = useAuth();
   const calorieGoal = 1600;
   const currentCalories = 800;
   const progressPercentage = (currentCalories / calorieGoal) * 100;
   const [showQuestion, setShowQuestion] = useState(false);
   const [question, setQuestion] = useState('');
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
   
+  // Fetch user's profile picture
+  useEffect(() => {
+    const fetchProfilePicture = async () => {
+      if (user) {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists() && userDoc.data().profilePicture) {
+            setProfilePicture(userDoc.data().profilePicture);
+          }
+        } catch (error) {
+          console.error('Error fetching profile picture:', error);
+        }
+      }
+    };
+
+    fetchProfilePicture();
+  }, [user]);
+
   // Generate week days
   const today = new Date();
   const startOfTheWeek = startOfWeek(today);
@@ -50,12 +73,12 @@ export default function HomeScreen() {
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
           <Image 
-            source={require('../../assets/images/profile.png')}
+            source={profilePicture ? { uri: profilePicture } : require('../../assets/images/profile.png')}
             style={{ 
               width: 40, 
               height: 40, 
               borderRadius: 20,
-              backgroundColor: '#E5E5E5',
+              backgroundColor: '#F5F5F5',
             }}
           />
           <Ionicons name="notifications-outline" size={24} color="#000000" />
@@ -64,20 +87,19 @@ export default function HomeScreen() {
 
       <ScrollView style={{ flex: 1 }}>
         <View style={{ padding: 24, gap: 24 }}>
-          {/* Welcome Section */}
-          <View style={{ gap: 8 }}>
+          {/* Overview Section */}
+          <View style={{ 
+            alignItems: 'center',
+            paddingVertical: 16,
+            borderBottomWidth: 1,
+            borderBottomColor: '#E5E5E5',
+          }}>
             <Text style={{ 
               fontSize: 32, 
               fontWeight: '600',
               color: '#000000',
             }}>
-              Welcome back,
-            </Text>
-            <Text style={{ 
-              fontSize: 16, 
-              color: '#666666',
-            }}>
-              Let's get started—your journey to greatness begins now!
+              Overview
             </Text>
           </View>
 
