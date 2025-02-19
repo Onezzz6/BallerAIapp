@@ -23,7 +23,7 @@ export default function SignUpScreen() {
 
       await authService.signUpWithEmail(email, password, onboardingData);
       await clearOnboardingData();
-      router.push('/paywall');
+      router.replace('/(tabs)/home');
     } catch (error: any) {
       setError(error.message);
     } finally {
@@ -36,7 +36,7 @@ export default function SignUpScreen() {
       setIsLoading(true);
       setError(null);
       await authService.signInWithGoogle();
-      router.push('/paywall');
+      router.replace('/(tabs)/home');
     } catch (error: any) {
       setError(error.message);
     } finally {

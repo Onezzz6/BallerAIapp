@@ -15,7 +15,7 @@ export default function WelcomeScreen() {
     // For now, we'll just simulate checking if it's a valid email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (emailRegex.test(email)) {
-      router.replace('/(tabs)');
+      router.replace('/(tabs)/home');
     }
   };
 
