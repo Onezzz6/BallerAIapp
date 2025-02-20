@@ -57,34 +57,60 @@ export default function HomeScreen() {
       {/* Header */}
       <View style={{
         paddingHorizontal: 24,
-        paddingVertical: 16,
+        paddingTop: 24,
+        paddingBottom: 16,
+        backgroundColor: '#FFFFFF',
         flexDirection: 'row',
-        alignItems: 'center',
         justifyContent: 'space-between',
+        alignItems: 'flex-start',
       }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <View style={{ 
+          flexDirection: 'row', 
+          alignItems: 'center', 
+          gap: 8 
+        }}>
           <Image 
             source={require('../../assets/images/BallerAILogo.png')}
             style={{ width: 32, height: 32 }}
             resizeMode="contain"
           />
-          <Text style={{ fontSize: 24, fontWeight: '600', color: '#000000' }}>
+          <Text style={{ 
+            fontSize: 24, 
+            fontWeight: '600', 
+            color: '#000000' 
+          }}>
             BallerAI
           </Text>
         </View>
 
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-          <Image 
-            source={profilePicture ? { uri: profilePicture } : require('../../assets/images/profile.png')}
-            style={{ 
-              width: 40, 
-              height: 40, 
-              borderRadius: 20,
-              backgroundColor: '#F5F5F5',
-            }}
-          />
-          <Ionicons name="notifications-outline" size={24} color="#000000" />
-        </View>
+        <Pressable onPress={() => {}} style={{
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          marginTop: 4,
+          backgroundColor: '#F5F5F5',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderWidth: 1,
+          borderColor: '#E5E5E5',
+        }}>
+          {profilePicture ? (
+            <Image
+              source={{ uri: profilePicture }}
+              style={{
+                width: '100%',
+                height: '100%',
+                borderRadius: 20,
+              }}
+            />
+          ) : (
+            <Text style={{
+              fontSize: 12,
+              color: '#666666',
+              textAlign: 'center',
+            }}>Add{'\n'}photo</Text>
+          )}
+        </Pressable>
       </View>
 
       <ScrollView style={{ flex: 1 }}>
@@ -104,90 +130,133 @@ export default function HomeScreen() {
               Overview
             </Text>
           </View>
-
+                      
           {/* First Row of Cards */}
           <View style={{ 
             flexDirection: 'row', 
             gap: 16,
           }}>
-            {/* Calorie Goal Card */}
+            {/* Calorie Progress Card */}
             <View style={{
               flex: 1,
-              padding: 24,
+              backgroundColor: '#EDF1F9',
               borderRadius: 24,
-              backgroundColor: '#FFF5EB',
-              alignItems: 'center',
-              gap: 12,
+              padding: 24,
+              gap: 24,
+              shadowColor: '#000000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 4,
+              elevation: 4,
             }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Ionicons name="flame-outline" size={20} color="#FF9500" />
-                <Text style={{ fontSize: 16, fontWeight: '600', color: '#000000' }}>
-                  Calorie Goal
-                </Text>
-              </View>
-
-              <View style={{ 
-                width: '100%', 
-                aspectRatio: 1,
-                justifyContent: 'center',
+              <View style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
                 alignItems: 'center',
               }}>
-                {/* Progress Circle */}
+                <Text style={{
+                  fontSize: 20,
+                  fontWeight: '600',
+                  color: '#000000',
+                }}>Daily Calories</Text>
+              </View>     
+
+              <View style={{
+                alignItems: 'center',
+                gap: 24,
+              }}>
                 <View style={{
-                  width: '100%',
-                  height: '100%',
-                  position: 'absolute',
-                  transform: [{ rotate: '-90deg' }],
+                  width: 200,
+                  height: 200,
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}>
-                  <Svg width="100%" height="100%" viewBox="0 0 100 100">
-                    {/* Background Circle */}
-                    <Circle
-                      cx="50"
-                      cy="50"
-                      r="45"
-                      stroke="#FFE5CC"
-                      strokeWidth="10"
-                      fill="none"
-                    />
-                    {/* Progress Circle */}
-                    <Circle
-                      cx="50"
-                      cy="50"
-                      r="45"
-                      stroke="#FF9500"
-                      strokeWidth="10"
-                      fill="none"
-                      strokeDasharray={`${2 * Math.PI * 45}`}
-                      strokeDashoffset={2 * Math.PI * 45 * (1 - progressPercentage / 100)}
-                    />
-                  </Svg>
+                  <View style={{
+                    width: '100%',
+                    height: '100%',
+                  }}>
+                    <View style={{
+                      position: 'absolute',
+                      left: 0,
+                      right: 0,
+                      top: 0,
+                      bottom: 0,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                      <View style={{ alignItems: 'center' }}>
+                        <Text style={{
+                          fontSize: 32,
+                          fontWeight: '600',
+                          color: '#000000',
+                        }}>{macros.calories.current}</Text>
+                        <Text style={{
+                          fontSize: 14,
+                          color: '#666666',
+                        }}>consumed</Text>
+                      </View>
+                    </View>
+                    <Svg width={200} height={200} style={{ position: 'absolute' }}>
+                      <Circle
+                        cx={100}
+                        cy={100}
+                        r={80}
+                        stroke="#E5E5E5"
+                        strokeWidth={12}
+                        fill="transparent"
+                      />
+                      <Circle
+                        cx={100}
+                        cy={100}
+                        r={80}
+                        stroke="#4A72B2"
+                        strokeWidth={12}
+                        fill="transparent"
+                        strokeLinecap="round"
+                        strokeDasharray={`${2 * Math.PI * 80}`}
+                        strokeDashoffset={2 * Math.PI * 80 * (1 - Math.min(Math.max(macros.calories.current / macros.calories.goal, 0), 1))}
+                        transform={`rotate(-90 100 100)`}
+                      />
+                    </Svg>
+                  </View>
                 </View>
 
-                {/* Center Text */}
-                <View style={{ alignItems: 'center' }}>
-                  <Text style={{ 
-                    fontSize: 32, 
-                    fontWeight: '700', 
-                    color: '#000000',
-                  }}>
-                    {currentCalories}
-                  </Text>
-                  <Text style={{ 
-                    fontSize: 14, 
-                    color: '#666666',
-                  }}>
-                    /{calorieGoal}
-                  </Text>
+                <View style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 24,
+                }}>
+                  <View style={{ alignItems: 'center' }}>
+                    <Text style={{
+                      fontSize: 20,
+                      fontWeight: '600',
+                      color: '#000000',
+                    }}>{macros.calories.goal - macros.calories.current}</Text>
+                    <Text style={{
+                      fontSize: 14,
+                      color: '#666666',
+                    }}>Remaining</Text>
+                  </View>
+
+                  <View style={{
+                    width: 1,
+                    height: 40,
+                    backgroundColor: '#E5E5E5',
+                  }} />
+
+                  <View style={{ alignItems: 'center' }}>
+                    <Text style={{
+                      fontSize: 20,
+                      fontWeight: '600',
+                      color: '#000000',
+                    }}>{macros.calories.goal}</Text>
+                    <Text style={{
+                      fontSize: 14,
+                      color: '#666666',
+                    }}>Goal</Text>
+                  </View>
                 </View>
               </View>
-
-              <Text style={{ 
-                fontSize: 14, 
-                color: '#666666',
-                textAlign: 'center',
-              }}>
-                {progressPercentage}% of the daily{'\n'}calorie goal reached.
-              </Text>
             </View>
 
             {/* Recovery Score Card */}

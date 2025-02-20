@@ -370,11 +370,46 @@ export default function NutritionScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView>
-        <View style={styles.header}>
-          <Text style={styles.title}>Nutrition</Text>
+      <View style={{
+        paddingHorizontal: 24,
+        paddingTop: 24,
+        paddingBottom: 16,
+        backgroundColor: '#FFFFFF',
+      }}>
+        {/* BallerAI Logo and Text */}
+        <View style={{ 
+          flexDirection: 'row', 
+          alignItems: 'center', 
+          gap: 8,
+          marginBottom: 16, // Add space between logo and title
+        }}>
+          <Image 
+            source={require('../../assets/images/BallerAILogo.png')}
+            style={{ width: 32, height: 32 }}
+            resizeMode="contain"
+          />
+          <Text style={{ 
+            fontSize: 24, 
+            fontWeight: '600', 
+            color: '#000000' 
+          }}>
+            BallerAI
+          </Text>
         </View>
 
+        {/* Centered Nutrition Title */}
+        <Text style={{
+          fontSize: 32,
+          fontWeight: '700',
+          color: '#000000',
+          textAlign: 'center',
+          marginBottom: 8,
+        }}>
+          Nutrition
+        </Text>
+      </View>
+
+      <ScrollView>
         <View style={styles.calorieCard}>
           <CalorieProgress 
             eaten={macros.calories.current}
