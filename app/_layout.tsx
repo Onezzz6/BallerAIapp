@@ -10,6 +10,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { AuthProvider } from './context/AuthContext';
 import { OnboardingProvider } from './context/OnboardingContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { NutritionProvider } from './context/NutritionContext';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -46,12 +47,14 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AuthProvider>
-        <OnboardingProvider>
-          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-            <Slot />
-            <StatusBar style="auto" />
-          </ThemeProvider>
-        </OnboardingProvider>
+        <NutritionProvider>
+          <OnboardingProvider>
+            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+              <Slot />
+              <StatusBar style="auto" />
+            </ThemeProvider>
+          </OnboardingProvider>
+        </NutritionProvider>
       </AuthProvider>
     </GestureHandlerRootView>
   );

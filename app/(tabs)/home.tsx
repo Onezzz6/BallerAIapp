@@ -8,9 +8,11 @@ import { format, startOfWeek, addDays } from 'date-fns';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
+import { useNutrition } from '../context/NutritionContext';
 
 export default function HomeScreen() {
   const { user } = useAuth();
+  const { macros } = useNutrition();
   const calorieGoal = 1600;
   const currentCalories = 800;
   const progressPercentage = (currentCalories / calorieGoal) * 100;

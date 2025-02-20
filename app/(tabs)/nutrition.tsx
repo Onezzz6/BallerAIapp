@@ -9,6 +9,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../context/AuthContext';
 import { doc, setDoc, getDoc, collection, addDoc, deleteDoc, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { useNutrition } from '../context/NutritionContext';
 
 type MacroGoals = {
   calories: { current: number; goal: number };
@@ -16,6 +17,65 @@ type MacroGoals = {
   carbs: { current: number; goal: number };
   fats: { current: number; goal: number };
 };
+
+type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'very' | 'extra';
+
+function calculateDailyCalories(
+  weight: number,  // in kg
+  height: number,  // in cm
+  age: number,
+  gender: string,
+  activityLevel: ActivityLevel
+): number {
+  // Harris-Benedict BMR Formula
+  let bmr;
+  if (gender === 'male') {
+    bmr = 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age);
+  } else {
+    bmr = 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age);
+  }
+
+  // Activity Multipliers
+  const activityMultipliers = {
+    sedentary: 1.2,    // Little or no exercise
+    light: 1.375,      // Light exercise/sports 1-3 days/week
+    moderate: 1.55,    // Moderate exercise/sports 3-5 days/week
+    very: 1.725,       // Hard exercise/sports 6-7 days/week
+    extra: 1.9         // Very hard exercise/sports & physical job or training
+  };
+
+  return Math.round(bmr * activityMultipliers[activityLevel]);
+}
+
+function calculateMacroGoals(dailyCalories: number, goal: string) {
+  // Different macro ratios based on goals
+  const macroRatios = {
+    'maintain': {
+      protein: 0.25, // 25% of calories from protein
+      fats: 0.25,    // 25% of calories from fat
+      carbs: 0.50    // 50% of calories from carbs
+    },
+    'lose': {
+      protein: 0.30, // Higher protein for muscle preservation
+      fats: 0.25,
+      carbs: 0.45
+    },
+    'gain': {
+      protein: 0.25,
+      fats: 0.20,
+      carbs: 0.55    // Higher carbs for muscle gain
+    }
+  };
+
+  const ratios = macroRatios[goal as keyof typeof macroRatios] || macroRatios.maintain;
+
+  return {
+    calories: dailyCalories,
+    protein: Math.round((dailyCalories * ratios.protein) / 4), // 4 calories per gram of protein
+    fats: Math.round((dailyCalories * ratios.fats) / 9),      // 9 calories per gram of fat
+    carbs: Math.round((dailyCalories * ratios.carbs) / 4)     // 4 calories per gram of carbs
+  };
+}
 
 function CircularProgress({ progress }: { progress: number }) {
   const size = 140;
@@ -165,19 +225,29 @@ function MacroProgress({ type, current, goal, color }: {
   goal: number;
   color: string;
 }) {
-  const progress = (current / goal) * 100;
-  
+  // Add debug log
+  useEffect(() => {
+    console.log(`${type} - Current: ${current}, Goal: ${goal}`);
+  }, [type, current, goal]);
+
+  const progress = goal > 0 ? Math.min(current / goal, 1) : 0;
+
   return (
-    <View style={styles.macroContainer}>
+    <View style={styles.macroItem}>
       <View style={styles.macroHeader}>
-        <Text style={styles.macroType}>{type}</Text>
-        <Text style={styles.macroValues}>{current} / {goal}g</Text>
+        <Text style={styles.macroTitle}>{type}</Text>
+        <Text style={styles.macroValue}>
+          {current}g / {goal || 0}g
+        </Text>
       </View>
       <View style={styles.progressBar}>
         <View 
           style={[
             styles.progressFill,
-            { width: `${Math.min(progress, 100)}%`, backgroundColor: color }
+            { 
+              backgroundColor: color,
+              width: `${progress * 100}%`
+            }
           ]} 
         />
       </View>
@@ -207,45 +277,57 @@ function WeeklyAdherence({ percentage }: { percentage: number }) {
 
 export default function NutritionScreen() {
   const { user } = useAuth();
-  const [macros, setMacros] = useState<MacroGoals>({
-    calories: { current: 381, goal: 2000 },
-    protein: { current: 89, goal: 200 },
-    carbs: { current: 87, goal: 224 },
-    fats: { current: 30, goal: 60 },
-  });
-
+  const { macros, updateMacros, todaysMeals } = useNutrition();
   const [isLogMealModalVisible, setIsLogMealModalVisible] = useState(false);
   const [selectedLoggingMethod, setSelectedLoggingMethod] = useState<'manual' | 'photo' | null>(null);
-  const [meals, setMeals] = useState<Array<{
-    id: string;
-    name: string;
-    calories: number;
-    protein: number;
-    carbs: number;
-    fats: number;
-    timestamp: Date;
-  }>>([]);
-  const [isLoading, setIsLoading] = useState(true);
+
+  // Debug logs
+  useEffect(() => {
+    console.log('NutritionScreen mounted');
+    console.log('Current macros:', macros);
+    console.log('Current user:', user);
+  }, []);
 
   useEffect(() => {
-    if (!user) return;
+    if (user) {
+      // Load user profile and calculate initial goals
+      const loadUserProfile = async () => {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            console.log('User data loaded:', userData);
+            
+            const weight = parseFloat(userData.weight);
+            const height = parseFloat(userData.height);
+            const age = parseInt(userData.age);
+            
+            const dailyCalories = calculateDailyCalories(
+              weight,
+              height,
+              age,
+              userData.gender.toLowerCase(),
+              userData.activityLevel as ActivityLevel
+            );
 
-    const q = query(
-      collection(db, 'users', user.uid, 'meals'),
-      orderBy('timestamp', 'desc')
-    );
+            const goals = calculateMacroGoals(dailyCalories, userData.footballGoal);
+            console.log('Calculated goals:', goals);
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const fetchedMeals = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        timestamp: doc.data().timestamp.toDate(),
-      }));
-      setMeals(fetchedMeals);
-      setIsLoading(false);
-    });
+            // Update the goals in context
+            updateMacros({
+              calories: { current: macros.calories.current, goal: goals.calories },
+              protein: { current: macros.protein.current, goal: goals.protein },
+              carbs: { current: macros.carbs.current, goal: goals.carbs },
+              fats: { current: macros.fats.current, goal: goals.fats }
+            });
+          }
+        } catch (error) {
+          console.error('Error loading user profile:', error);
+        }
+      };
 
-    return () => unsubscribe();
+      loadUserProfile();
+    }
   }, [user]);
 
   const handleAddMeal = async (newMeal: {
@@ -261,112 +343,82 @@ export default function NutritionScreen() {
       const mealData = {
         ...newMeal,
         timestamp: new Date(),
+        userId: user.uid,
       };
       
-      // Add to Firebase
-      const mealsRef = collection(db, 'users', user.uid, 'meals');
-      await addDoc(mealsRef, mealData);
-
-      // Update daily macros in Firebase
-      const today = format(new Date(), 'yyyy-MM-dd');
-      const macrosRef = doc(db, 'users', user.uid, 'dailyMacros', today);
-      
-      const currentMacros = await getDoc(macrosRef);
-      const updatedMacros = {
-        calories: (currentMacros.data()?.calories || 0) + newMeal.calories,
-        protein: (currentMacros.data()?.protein || 0) + newMeal.protein,
-        carbs: (currentMacros.data()?.carbs || 0) + newMeal.carbs,
-        fats: (currentMacros.data()?.fats || 0) + newMeal.fats,
-        lastUpdated: new Date(),
-      };
-
-      await setDoc(macrosRef, updatedMacros, { merge: true });
+      await addDoc(collection(db, 'users', user.uid, 'meals'), mealData);
+      setIsLogMealModalVisible(false);
     } catch (error) {
       console.error('Error adding meal:', error);
     }
   };
 
-  const handleDeleteMeal = async (mealId: string, mealData: {
-    calories: number;
-    protein: number;
-    carbs: number;
-    fats: number;
-  }) => {
+  const handleDeleteMeal = async (mealId: string) => {
     if (!user) return;
 
     try {
-      // Delete from Firebase
       await deleteDoc(doc(db, 'users', user.uid, 'meals', mealId));
-
-      // Update daily macros in Firebase
-      const today = format(new Date(), 'yyyy-MM-dd');
-      const macrosRef = doc(db, 'users', user.uid, 'dailyMacros', today);
-      
-      const currentMacros = await getDoc(macrosRef);
-      const updatedMacros = {
-        calories: (currentMacros.data()?.calories || 0) - mealData.calories,
-        protein: (currentMacros.data()?.protein || 0) - mealData.protein,
-        carbs: (currentMacros.data()?.carbs || 0) - mealData.carbs,
-        fats: (currentMacros.data()?.fats || 0) - mealData.fats,
-        lastUpdated: new Date(),
-      };
-
-      await setDoc(macrosRef, updatedMacros, { merge: true });
     } catch (error) {
       console.error('Error deleting meal:', error);
     }
   };
 
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-      <ScrollView>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.screenTitle}>Nutrition Tracker</Text>
-          <Text style={styles.subtitle}>Monitor your macros</Text>
+  // Debug log
+  useEffect(() => {
+    console.log('NutritionScreen macros:', macros);
+  }, [macros]);
 
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView>
+        <View style={styles.header}>
+          <Text style={styles.title}>Nutrition</Text>
+        </View>
+
+        <View style={styles.calorieCard}>
           <CalorieProgress 
             eaten={macros.calories.current}
             burned={0}
             goal={macros.calories.goal}
           />
-
-          <View style={styles.macrosCard}>
-            <MacroProgress 
-              type="Fats"
-              current={macros.fats.current}
-              goal={macros.fats.goal}
-              color="#4A72B2"
-            />
-            <MacroProgress 
-              type="Protein"
-              current={macros.protein.current}
-              goal={macros.protein.goal}
-              color="#FF9500"
-            />
-            <MacroProgress 
-              type="Carbs"
-              current={macros.carbs.current}
-              goal={macros.carbs.goal}
-              color="#00BFB3"
-            />
-            
-            <WeeklyAdherence percentage={60} />
-          </View>
-
-          <View style={styles.mealsSection}>
-            <Pressable 
-              style={styles.logMealButton}
-              onPress={() => setIsLogMealModalVisible(true)}
-            >
-              <Text style={styles.logMealText}>Log Meal</Text>
-              <View style={styles.logMealIcon}>
-                <Ionicons name="add" size={24} color="#FFFFFF" />
-              </View>
-            </Pressable>
-          </View>
-
-          <LoggedMeals meals={meals} onDelete={handleDeleteMeal} />
         </View>
+
+        <View style={styles.macrosCard}>
+          <MacroProgress
+            type="Protein"
+            current={macros.protein.current}
+            goal={macros.protein.goal}
+            color="#FF6B6B"
+          />
+          <MacroProgress
+            type="Carbs"
+            current={macros.carbs.current}
+            goal={macros.carbs.goal}
+            color="#4ECDC4"
+          />
+          <MacroProgress
+            type="Fats"
+            current={macros.fats.current}
+            goal={macros.fats.goal}
+            color="#FFD93D"
+          />
+          
+          <WeeklyAdherence percentage={60} />
+        </View>
+
+        <View style={styles.mealsSection}>
+          <Pressable 
+            style={styles.logMealButton}
+            onPress={() => setIsLogMealModalVisible(true)}
+          >
+            <Text style={styles.logMealText}>Log Meal</Text>
+            <View style={styles.logMealIcon}>
+              <Ionicons name="add" size={24} color="#FFFFFF" />
+            </View>
+          </Pressable>
+        </View>
+
+        <LoggedMeals meals={todaysMeals} onDelete={handleDeleteMeal} />
       </ScrollView>
 
       <LogMealModal
@@ -419,22 +471,11 @@ function LogMealModal({
       });
 
       if (!result.canceled) {
-        // Here you would typically send the image to your AI service
-        // For now, we'll simulate a response
-        const analyzedMeal = {
-          name: "Analyzed Meal",
-          calories: 350,
-          protein: 20,
-          carbs: 40,
-          fats: 15,
-        };
-        
-        onAddMeal(analyzedMeal);
-        onClose();
-        setMethod(null);
+        // Handle photo analysis here
+        console.log('Photo selected:', result.assets[0].uri);
       }
     } catch (error) {
-      console.error("Error picking image:", error);
+      console.error('Error picking image:', error);
     }
   };
 
@@ -523,11 +564,9 @@ function LogMealModal({
                       placeholder="Fats (g)"
                       keyboardType="numeric"
                       value={manualEntry.fats}
-                      onChangeText={text => {
-                        setManualEntry(prev => ({ ...prev, fats: text }));
-                        Keyboard.dismiss();
-                      }}
+                      onChangeText={text => setManualEntry(prev => ({ ...prev, fats: text }))}
                       returnKeyType="done"
+                      blurOnSubmit={false}
                     />
                     <Button 
                       title="Log Meal"
@@ -563,7 +602,7 @@ function LoggedMeals({ meals, onDelete }: {
     fats: number;
     timestamp: Date;
   }>;
-  onDelete: (id: string, mealData: any) => void;
+  onDelete: (id: string) => void;
 }) {
   return (
     <View style={styles.loggedMealsContainer}>
@@ -587,7 +626,7 @@ function LoggedMeals({ meals, onDelete }: {
           </View>
 
           <Pressable 
-            onPress={() => onDelete(meal.id, meal)}
+            onPress={() => onDelete(meal.id)}
             style={({ pressed }) => ({
               opacity: pressed ? 0.7 : 1,
               padding: 8,
@@ -763,7 +802,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
-  macroContainer: {
+  macroItem: {
     gap: 8,
   },
   macroHeader: {
@@ -771,12 +810,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  macroType: {
+  macroTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#000000',
   },
-  macroValues: {
+  macroValue: {
     fontSize: 14,
     color: '#666666',
   },
