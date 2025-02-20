@@ -1,4 +1,4 @@
-import { View, Text, Image, ScrollView, Pressable } from 'react-native';
+import { View, Text, Image, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
@@ -139,7 +139,7 @@ export default function HomeScreen() {
             {/* Calorie Progress Card */}
             <View style={{
               flex: 1,
-              backgroundColor: '#EDF1F9',
+              backgroundColor: '#99E86C',
               borderRadius: 24,
               padding: 24,
               gap: 24,
@@ -159,7 +159,12 @@ export default function HomeScreen() {
                   fontWeight: '600',
                   color: '#000000',
                 }}>Daily Calories</Text>
-              </View>     
+                <Ionicons 
+                  name="nutrition-outline" 
+                  size={24} 
+                  color="#000000"
+                />
+              </View>
 
               <View style={{
                 alignItems: 'center',
@@ -196,7 +201,8 @@ export default function HomeScreen() {
                         }}>consumed</Text>
                       </View>
                     </View>
-                    <Svg width={200} height={200} style={{ position: 'absolute' }}>
+                    <Svg width={200} height={200} style={StyleSheet.absoluteFill}>
+                      {/* Background Circle */}
                       <Circle
                         cx={100}
                         cy={100}
@@ -205,11 +211,12 @@ export default function HomeScreen() {
                         strokeWidth={12}
                         fill="transparent"
                       />
+                      {/* Progress Circle */}
                       <Circle
                         cx={100}
                         cy={100}
                         r={80}
-                        stroke="#4A72B2"
+                        stroke="#4064F6"
                         strokeWidth={12}
                         fill="transparent"
                         strokeLinecap="round"
@@ -264,7 +271,7 @@ export default function HomeScreen() {
               flex: 1,
               padding: 24,
               borderRadius: 24,
-              backgroundColor: '#E8F8F5',
+              backgroundColor: '#99E86C',
               alignItems: 'center',
               gap: 12,
             }}>
@@ -275,48 +282,41 @@ export default function HomeScreen() {
                 </Text>
               </View>
               
+              {/* Progress Circle Container */}
               <View style={{ 
-                width: '100%', 
-                aspectRatio: 1,
-                justifyContent: 'center',
+                width: 200,
+                height: 200,
                 alignItems: 'center',
+                justifyContent: 'center',
               }}>
-                {/* Progress Circle */}
-                <View style={{
-                  width: '100%',
-                  height: '100%',
-                  position: 'absolute',
-                  transform: [{ rotate: '-90deg' }],
-                }}>
-                  <Svg width="100%" height="100%" viewBox="0 0 100 100">
-                    {/* Background Circle */}
-                    <Circle
-                      cx="50"
-                      cy="50"
-                      r="45"
-                      stroke="#B2EBE5"
-                      strokeWidth="10"
-                      fill="none"
-                    />
-                    {/* Progress Circle */}
-                    <Circle
-                      cx="50"
-                      cy="50"
-                      r="45"
-                      stroke="#00BFA5"
-                      strokeWidth="10"
-                      fill="none"
-                      strokeDasharray={`${2 * Math.PI * 45}`}
-                      strokeDashoffset={2 * Math.PI * 45 * (1 - 90 / 100)}
-                    />
-                  </Svg>
-                </View>
+                <Svg width="200" height="200">
+                  <Circle
+                    cx="100"
+                    cy="100"
+                    r="80"
+                    stroke="#B2EBE5"
+                    strokeWidth="12"
+                    fill="none"
+                  />
+                  <Circle
+                    cx="100"
+                    cy="100"
+                    r="80"
+                    stroke="#4064F6"
+                    strokeWidth="12"
+                    fill="none"
+                    strokeDasharray={`${2 * Math.PI * 80}`}
+                    strokeDashoffset={2 * Math.PI * 80 * (1 - 90 / 100)}
+                    transform="rotate(-90 100 100)"
+                  />
+                </Svg>
 
                 {/* Center Text */}
                 <Text style={{ 
+                  position: 'absolute',
                   fontSize: 40, 
                   fontWeight: '700', 
-                  color: '#00BFA5',
+                  color: '#4064F6',
                 }}>
                   90%
                 </Text>
@@ -342,7 +342,7 @@ export default function HomeScreen() {
               flex: 1,
               padding: 24,
               borderRadius: 24,
-              backgroundColor: '#F5F5FF', // Light blue background
+              backgroundColor: '#99E86C',
               alignItems: 'center',
               gap: 12,
             }}>
@@ -422,7 +422,7 @@ export default function HomeScreen() {
               flex: 1,
               padding: 24,
               borderRadius: 24,
-              backgroundColor: '#F0F0FF',
+              backgroundColor: '#99E86C',
               alignItems: 'center',
               gap: 12,
             }}>
@@ -715,33 +715,33 @@ export default function HomeScreen() {
                   <View style={{
                     flex: 1,
                     minWidth: '45%',
-                    backgroundColor: '#E8F8F5',
+                    backgroundColor: '#99E86C',
                     padding: 16,
                     borderRadius: 16,
                     gap: 8,
                   }}>
                     <Text style={{ fontSize: 14, color: '#666666' }}>Recovery Score</Text>
-                    <Text style={{ fontSize: 24, fontWeight: '600', color: '#00BFA5' }}>90%</Text>
+                    <Text style={{ fontSize: 24, fontWeight: '600', color: '#4064F6' }}>90%</Text>
                   </View>
 
                   {/* Readiness Score */}
                   <View style={{
                     flex: 1,
                     minWidth: '45%',
-                    backgroundColor: '#F0F0FF',
+                    backgroundColor: '#99E86C',
                     padding: 16,
                     borderRadius: 16,
                     gap: 8,
                   }}>
                     <Text style={{ fontSize: 14, color: '#666666' }}>Readiness Score</Text>
-                    <Text style={{ fontSize: 24, fontWeight: '600', color: '#4B45FF' }}>40</Text>
+                    <Text style={{ fontSize: 24, fontWeight: '600', color: '#4A72B2' }}>40</Text>
                   </View>
 
                   {/* Training Status */}
                   <View style={{
                     flex: 1,
                     minWidth: '45%',
-                    backgroundColor: '#F5F5F5',
+                    backgroundColor: '#99E86C',
                     padding: 16,
                     borderRadius: 16,
                     gap: 8,
