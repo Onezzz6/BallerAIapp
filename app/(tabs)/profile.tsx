@@ -1,14 +1,16 @@
-import { View, Text, Image, Pressable, StyleSheet, ScrollView, TextInput, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, Image, Pressable, StyleSheet, ScrollView, TextInput, Modal, ActivityIndicator, Alert, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { useOnboarding } from '../context/OnboardingContext';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, deleteDoc, collection, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getStorage, ref, uploadBytes, getDownloadURL, listAll, deleteObject } from 'firebase/storage';
+import { useRouter } from 'expo-router';
+import authService from '../services/auth';
 
 type UserData = {
   username?: string;
@@ -27,6 +29,7 @@ type UserData = {
 
 export default function ProfileScreen() {
   const { user } = useAuth();
+  const router = useRouter();
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -34,6 +37,9 @@ export default function ProfileScreen() {
   const [editValue, setEditValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isPrivacyExpanded, setIsPrivacyExpanded] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteReason, setDeleteReason] = useState('');
+  const [otherReason, setOtherReason] = useState('');
 
   const uploadImageToFirebase = async (uri: string) => {
     if (!user?.uid) {
@@ -167,6 +173,210 @@ export default function ProfileScreen() {
     { label: 'Fitness Level', field: 'fitnessLevel', value: userData?.fitnessLevel, icon: 'fitness-outline' as const },
     { label: 'Activity Level', field: 'activityLevel', value: userData?.activityLevel, icon: 'walk-outline' as const },
   ];
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Log Out',
+      'Are you sure you want to log out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Log Out', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await authService.signOut();
+              router.replace('/');
+            } catch (error) {
+              console.error('Error signing out:', error);
+              Alert.alert('Error', 'Failed to sign out. Please try again.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleDeleteAccount = () => {
+    setShowDeleteModal(true);
+  };
+
+  const sendFeedbackEmail = async () => {
+    const reason = deleteReason === 'Other' ? otherReason : deleteReason;
+    const emailBody = `User Feedback for Account Deletion:\n\nReason: ${reason}`;
+    const emailUrl = `mailto:ballerai.official@gmail.com?subject=Account Deletion Feedback&body=${encodeURIComponent(emailBody)}`;
+    
+    try {
+      const canOpen = await Linking.canOpenURL(emailUrl);
+      if (canOpen) {
+        await Linking.openURL(emailUrl);
+      }
+    } catch (error) {
+      console.error('Error opening email:', error);
+    }
+  };
+
+  const deleteUserData = async (uid: string) => {
+    try {
+      // Create a batch
+      const batch = writeBatch(db);
+
+      // Delete main user document
+      const userRef = doc(db, 'users', uid);
+      batch.delete(userRef);
+
+      // Delete all subcollections
+      const collections = [
+        'meals',
+        'trainings',
+        'nutrition',
+        'recovery',
+        'progress',
+        'workouts',
+        'dailyMacros'
+      ];
+
+      for (const collectionName of collections) {
+        const collectionRef = collection(db, 'users', uid, collectionName);
+        const snapshot = await getDocs(collectionRef);
+        snapshot.docs.forEach((doc) => {
+          batch.delete(doc.ref);
+        });
+      }
+
+      // Commit the batch
+      await batch.commit();
+
+      // Delete profile pictures from storage
+      const storage = getStorage();
+      const profilePicRef = ref(storage, `profile_pictures/${uid}`);
+      try {
+        const picsList = await listAll(profilePicRef);
+        await Promise.all(picsList.items.map(item => deleteObject(item)));
+      } catch (storageError) {
+        // Ignore if no pictures exist
+        console.log('No profile pictures to delete');
+      }
+
+    } catch (error) {
+      console.error('Error deleting user data:', error);
+      throw new Error('Failed to delete user data');
+    }
+  };
+
+  const confirmDeleteAccount = async () => {
+    if (!user?.uid) {
+      Alert.alert('Error', 'No user found');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // First delete user data
+      await deleteUserData(user.uid);
+      
+      // Then delete the authentication account
+      await authService.deleteAccount();
+      
+      // If successful, navigate back
+      router.replace('/');
+    } catch (error: any) {
+      console.error('Error during account deletion:', error);
+      
+      // If it's a re-authentication required error, handle it
+      if (error.message?.includes('sign in again')) {
+        Alert.alert(
+          'Authentication Required',
+          'Please sign out and sign in again before deleting your account.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Sign Out',
+              onPress: async () => {
+                await authService.signOut();
+                router.replace('/');
+              }
+            }
+          ]
+        );
+        return;
+      }
+
+      Alert.alert(
+        'Error',
+        error.message || 'Failed to delete account. Please try again later.'
+      );
+    } finally {
+      setIsLoading(false);
+      setShowDeleteModal(false);
+    }
+  };
+
+  if (showDeleteModal) {
+    return (
+      <View style={styles.modalContainer}>
+        <View style={styles.modalContent}>
+          <Text style={styles.modalTitle}>Before you go...</Text>
+          <Text style={styles.modalSubtitle}>Please tell us why you're leaving:</Text>
+
+          {[
+            'Not finding value in the app',
+            'Technical issues',
+            'Privacy concerns',
+            'Found a better alternative',
+            'Taking a break',
+            'Other'
+          ].map((reason) => (
+            <Pressable
+              key={reason}
+              style={[
+                styles.reasonButton,
+                deleteReason === reason && styles.selectedReason
+              ]}
+              onPress={() => setDeleteReason(reason)}
+            >
+              <Text style={[
+                styles.reasonText,
+                deleteReason === reason && styles.selectedReasonText
+              ]}>
+                {reason}
+              </Text>
+            </Pressable>
+          ))}
+
+          {deleteReason === 'Other' && (
+            <TextInput
+              style={styles.otherInput}
+              placeholder="Please specify..."
+              value={otherReason}
+              onChangeText={setOtherReason}
+              multiline
+            />
+          )}
+
+          <View style={styles.modalFooter}>
+            <Button
+              title="Send Feedback"
+              onPress={sendFeedbackEmail}
+              buttonStyle={styles.feedbackButton}
+            />
+            <View style={styles.actionButtons}>
+              <Button
+                title="Cancel"
+                onPress={() => setShowDeleteModal(false)}
+                buttonStyle={styles.cancelButton}
+              />
+              <Button
+                title="Delete Account"
+                onPress={confirmDeleteAccount}
+                buttonStyle={styles.deleteButton}
+              />
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -395,6 +605,19 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
+
+      <View style={styles.buttonContainer}>
+        <Button
+          title="Log Out"
+          onPress={handleLogout}
+          buttonStyle={styles.logoutButton}
+        />
+        <Button
+          title="Delete Account"
+          onPress={handleDeleteAccount}
+          buttonStyle={styles.deleteButton}
+        />
+      </View>
     </SafeAreaView>
   );
 }
@@ -561,5 +784,86 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: '#666666',
+  },
+  buttonContainer: {
+    padding: 24,
+    gap: 16,
+  },
+  logoutButton: {
+    backgroundColor: '#007AFF',
+  },
+  deleteButton: {
+    backgroundColor: '#FF3B30',
+  },
+  cancelButton: {
+    backgroundColor: '#8E8E93',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    padding: 24,
+    borderRadius: 16,
+    width: '90%',
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: '600',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modalSubtitle: {
+    fontSize: 16,
+    color: '#666666',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  reasonButton: {
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    marginBottom: 8,
+  },
+  selectedReason: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  reasonText: {
+    fontSize: 16,
+    color: '#000000',
+  },
+  selectedReasonText: {
+    color: '#FFFFFF',
+  },
+  otherInput: {
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+    marginBottom: 24,
+    height: 100,
+    textAlignVertical: 'top',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalFooter: {
+    gap: 16,
+  },
+  feedbackButton: {
+    backgroundColor: '#34C759',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 16,
   },
 }); 

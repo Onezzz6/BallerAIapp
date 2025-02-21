@@ -1,0 +1,105 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // User profiles and personal data
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write, delete: if isOwner(userId);
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      
+      // Allow batch operations for all subcollections
+      match /{collection}/{doc} {
+        allow read, write, delete: if isOwner(userId);
+      }
+
+      // Allow recursive delete for all nested documents
+      match /{document=**} {
+        allow read, write, delete: if isOwner(userId);
+      }
+      
+      // User's training data
+      match /trainings/{trainingId} {
+        allow read, write, delete: if isOwner(userId);
+      }
+      
+      // User's nutrition data
+      match /nutrition/{nutritionId} {
+        allow read, write, delete: if isOwner(userId);
+      }
+      
+      // User's recovery data
+      match /recovery/{recoveryId} {
+        allow read, write, delete: if isOwner(userId);
+      }
+      
+      // User's progress tracking
+      match /progress/{progressId} {
+        allow read, write, delete: if isOwner(userId);
+      }
+      
+      // User's workout history
+      match /workouts/{workoutId} {
+        allow read, write, delete: if isOwner(userId);
+      }
+
+      // Meals and dailyMacros
+      match /meals/{mealId} {
+        allow read, write, delete: if isOwner(userId);
+      }
+      
+      match /dailyMacros/{date} {
+        allow read, write, delete: if isOwner(userId);
+      }
+    }
+    
+    // Public exercise database
+    match /exercises/{exerciseId} {
+      allow read: if isSignedIn();
+      allow write: if false; // Admin only via backend
+    }
+    
+    // Public nutrition database
+    match /nutritionDb/{itemId} {
+      allow read: if isSignedIn();
+      allow write: if false; // Admin only via backend
+    }
+    
+    // Teams functionality
+    match /teams/{teamId} {
+      function isTeamMember() {
+        return isSignedIn() && (
+          exists(/databases/$(database)/documents/teams/$(teamId)/members/$(request.auth.uid))
+        );
+      }
+      
+      function isTeamCoach() {
+        return isSignedIn() && resource.data.coachId == request.auth.uid;
+      }
+      
+      allow read: if isSignedIn() && (isTeamMember() || isTeamCoach());
+      allow create: if isSignedIn();
+      allow update, delete: if isTeamCoach();
+      
+      // Team members subcollection
+      match /members/{memberId} {
+        allow read: if isSignedIn() && (isTeamMember() || isTeamCoach());
+        allow write: if isTeamCoach();
+      }
+      
+      // Team workouts
+      match /workouts/{workoutId} {
+        allow read: if isSignedIn() && (isTeamMember() || isTeamCoach());
+        allow write: if isTeamCoach();
+      }
+    }
+  }
+} 

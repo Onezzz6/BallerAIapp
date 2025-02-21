@@ -1,21 +1,72 @@
-import { View, Text, Image, Pressable, TextInput } from 'react-native';
+import { View, Text, Image, Pressable, TextInput, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Button from './Button';
 import { useState } from 'react';
 import React from 'react';
+import authService from '../services/auth';
 
 export default function WelcomeScreen() {
   const router = useRouter();
   const [showSignIn, setShowSignIn] = useState(false);
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSignIn = () => {
-    // Here you would typically verify the email with your backend
-    // For now, we'll just simulate checking if it's a valid email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (emailRegex.test(email)) {
-      router.replace('/(tabs)/home');
+  const handleGetStarted = () => {
+    router.push('/onboarding');
+  };
+
+  const handleSignIn = async () => {
+    if (!email) {
+      Alert.alert('Error', 'Please enter your email');
+      return;
+    }
+
+    if (!password) {
+      Alert.alert('Error', 'Please enter your password');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const emailExists = await authService.checkEmailExists(email);
+      
+      if (!emailExists) {
+        Alert.alert(
+          'Account Not Found',
+          'No account found with this email. Would you like to create one?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Get Started', 
+              onPress: () => {
+                setEmail('');
+                setPassword('');
+                setShowSignIn(false);
+              }
+            }
+          ]
+        );
+        return;
+      }
+
+      // Email exists - try to sign in
+      const user = await authService.signInWithEmail(email, password);
+      if (user) {
+        router.replace('/(tabs)/home');
+      }
+    } catch (error: any) {
+      if (error.code === 'auth/wrong-password') {
+        Alert.alert('Error', 'Invalid password. Please try again.');
+      } else {
+        Alert.alert(
+          'Error',
+          error.message || 'Failed to sign in. Please try again.'
+        );
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -67,7 +118,7 @@ export default function WelcomeScreen() {
           <>
             <Button 
               title="Get Started" 
-              onPress={() => router.push('/intro')}
+              onPress={handleGetStarted}
               buttonStyle={{
                 backgroundColor: '#007AFF',
                 marginBottom: 32,
@@ -116,12 +167,30 @@ export default function WelcomeScreen() {
               }}
             />
 
+            <TextInput
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Enter your password"
+              secureTextEntry
+              style={{
+                width: '100%',
+                height: 50,
+                borderWidth: 1,
+                borderColor: '#E5E5E5',
+                borderRadius: 12,
+                paddingHorizontal: 16,
+                fontSize: 16,
+              }}
+            />
+
             <Button 
-              title="Sign In" 
+              title={isLoading ? "Signing In..." : "Sign In"}
               onPress={handleSignIn}
+              disabled={isLoading}
               buttonStyle={{
                 backgroundColor: '#007AFF',
                 marginBottom: 16,
+                opacity: isLoading ? 0.5 : 1,
               }}
             />
 

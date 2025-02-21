@@ -4,15 +4,13 @@ import Button from '../components/Button';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import authService from '../services/auth';
-import { useOnboarding } from '../context/OnboardingContext';
 
-export default function SignUpScreen() {
+export default function SignInScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { onboardingData } = useOnboarding();
 
   const handleSubmit = async () => {
     if (!email || !password) {
@@ -27,38 +25,39 @@ export default function SignUpScreen() {
 
     setIsLoading(true);
     try {
-      // First try to create new account
-      const user = await authService.signUpWithEmail(email, password, onboardingData);
-      if (user) {
-        router.replace('/(tabs)/home');
-      }
-    } catch (error: any) {
-      // If email exists, prompt for sign in
-      if (error.code === 'auth/email-already-in-use') {
+      // First check if the email exists
+      const emailExists = await authService.checkEmailExists(email);
+      
+      if (!emailExists) {
+        // Email doesn't exist - redirect to onboarding
         Alert.alert(
-          'Existing Account',
-          'Looks like you already have an account. Would you like to sign in?',
+          'Account Not Found',
+          'No account found with this email. Would you like to create one?',
           [
             { text: 'Cancel', style: 'cancel' },
             { 
-              text: 'Sign In', 
-              onPress: async () => {
-                try {
-                  const user = await authService.signInWithEmail(email, password);
-                  if (user) {
-                    router.replace('/(tabs)/home');
-                  }
-                } catch (signInError: any) {
-                  Alert.alert('Error', 'Invalid password. Please try again.');
-                }
+              text: 'Get Started', 
+              onPress: () => {
+                router.replace('/onboarding');
               }
             }
           ]
         );
+        return;
+      }
+
+      // Email exists - try to sign in
+      const user = await authService.signInWithEmail(email, password);
+      if (user) {
+        router.replace('/(tabs)/home');
+      }
+    } catch (error: any) {
+      if (error.code === 'auth/wrong-password') {
+        Alert.alert('Error', 'Invalid password. Please try again.');
       } else {
         Alert.alert(
           'Error',
-          error.message || 'Failed to create account. Please try again.'
+          error.message || 'Failed to sign in. Please try again.'
         );
       }
     } finally {
@@ -68,7 +67,7 @@ export default function SignUpScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Create Your Account</Text>
+      <Text style={styles.title}>Welcome Back</Text>
       
       <View style={styles.inputContainer}>
         <TextInput
@@ -105,7 +104,7 @@ export default function SignUpScreen() {
       </View>
 
       <Button
-        title={isLoading ? "Creating Account..." : "Continue"}
+        title={isLoading ? "Signing In..." : "Sign In"}
         onPress={handleSubmit}
         disabled={isLoading}
         buttonStyle={{
