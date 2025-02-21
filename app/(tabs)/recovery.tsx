@@ -119,26 +119,50 @@ export default function RecoveryScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Pressable onPress={() => {}} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={24} color="#000000" />
-        </Pressable>
-        <View style={styles.logoContainer}>
+      {/* Header */}
+      <View style={{
+        paddingHorizontal: 24,
+        paddingTop: 24,
+        paddingBottom: 16,
+        backgroundColor: '#FFFFFF',
+      }}>
+        {/* BallerAI Logo and Text */}
+        <View style={{ 
+          flexDirection: 'row', 
+          alignItems: 'center', 
+          gap: 8,
+          marginBottom: 16, // Add space between logo and title
+        }}>
           <Image 
             source={require('../../assets/images/BallerAILogo.png')}
-            style={styles.logo}
+            style={{ width: 32, height: 32 }}
             resizeMode="contain"
           />
-          <Text style={styles.title}>BallerAI</Text>
+          <Text style={{ 
+            fontSize: 24, 
+            fontWeight: '600', 
+            color: '#000000' 
+          }}>
+            BallerAI
+          </Text>
         </View>
+
+        {/* Title */}
+        <Text style={{
+          fontSize: 32,
+          fontWeight: '700',
+          color: '#000000',
+          textAlign: 'center',
+          marginBottom: 8,
+        }}>
+          Recovery
+        </Text>
       </View>
 
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollViewContent}
       >
-        <Text style={styles.screenTitle}>Recovery Plan</Text>
-        
         <Text style={styles.dateText}>
           {format(selectedDate, 'MMMM do, yyyy')}
         </Text>
@@ -391,15 +415,18 @@ function RecoverySlider({
       <View style={styles.sliderWrapper}>
         <SliderTrack type={type} />
         <Slider
-          style={[styles.slider, { position: 'absolute', width: '100%' }]}
+          style={[
+            { height: 40 },
+            { position: 'absolute', width: '100%' }
+          ]}
           minimumValue={min}
           maximumValue={max}
           value={value}
-          onValueChange={disabled ? undefined : onValueChange}
-          minimumTrackTintColor="transparent"
+          onValueChange={onValueChange}
+          minimumTrackTintColor="#99E86C"
           maximumTrackTintColor="transparent"
           thumbTintColor={disabled ? "#CCCCCC" : "#FFFFFF"}
-          enabled={!disabled}
+          disabled={disabled}
           step={1}
         />
       </View>

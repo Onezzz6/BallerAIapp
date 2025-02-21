@@ -166,7 +166,7 @@ export default function SignUpScreen() {
         <Button 
           title="Sign Up" 
           onPress={handleSignUp}
-          style={{
+          buttonStyle={{
             backgroundColor: '#99E86C',
             marginBottom: 24,
           }}

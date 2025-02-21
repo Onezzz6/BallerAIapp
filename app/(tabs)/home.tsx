@@ -53,21 +53,23 @@ export default function HomeScreen() {
   });
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#ffffff' }}>
+    <SafeAreaView style={{ 
+      flex: 1, 
+      backgroundColor: '#FFFFFF',  // Keep white background
+    }}>
       {/* Header */}
       <View style={{
         paddingHorizontal: 24,
         paddingTop: 24,
         paddingBottom: 16,
         backgroundColor: '#FFFFFF',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
       }}>
+        {/* BallerAI Logo and Text */}
         <View style={{ 
           flexDirection: 'row', 
           alignItems: 'center', 
-          gap: 8 
+          gap: 8,
+          marginBottom: 16, // Add space between logo and title
         }}>
           <Image 
             source={require('../../assets/images/BallerAILogo.png')}
@@ -83,38 +85,29 @@ export default function HomeScreen() {
           </Text>
         </View>
 
-        <Pressable onPress={() => {}} style={{
-          width: 40,
-          height: 40,
-          borderRadius: 20,
-          marginTop: 4,
-          backgroundColor: '#F5F5F5',
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderWidth: 1,
-          borderColor: '#E5E5E5',
+        {/* Title */}
+        <Text style={{
+          fontSize: 32,
+          fontWeight: '700',
+          color: '#000000',
+          textAlign: 'center',
+          marginBottom: 8,
         }}>
-          {profilePicture ? (
-            <Image
-              source={{ uri: profilePicture }}
-              style={{
-                width: '100%',
-                height: '100%',
-                borderRadius: 20,
-              }}
-            />
-          ) : (
-            <Text style={{
-              fontSize: 12,
-              color: '#666666',
-              textAlign: 'center',
-            }}>Add{'\n'}photo</Text>
-          )}
-        </Pressable>
+          Home
+        </Text>
       </View>
 
-      <ScrollView style={{ flex: 1 }}>
-        <View style={{ padding: 24, gap: 24 }}>
+      <ScrollView 
+        style={{ 
+          flex: 1,
+          backgroundColor: '#FFFFFF',
+        }}
+        contentContainerStyle={{
+          padding: 8,
+          gap: 16,
+        }}
+      >
+        <View style={{ padding: 16, gap: 24 }}>
           {/* Overview Section */}
           <View style={{ 
             alignItems: 'center',
@@ -127,43 +120,49 @@ export default function HomeScreen() {
               fontWeight: '600',
               color: '#000000',
             }}>
-              Overview
+              Todays Progress
             </Text>
           </View>
                       
           {/* First Row of Cards */}
           <View style={{ 
             flexDirection: 'row', 
-            gap: 16,
+            gap: 8,
           }}>
-            {/* Calorie Progress Card */}
+            {/* Daily Calories Card */}
             <View style={{
               flex: 1,
               backgroundColor: '#99E86C',
               borderRadius: 24,
-              padding: 24,
+              padding: 16,
               gap: 24,
               shadowColor: '#000000',
               shadowOffset: { width: 0, height: 2 },
               shadowOpacity: 0.1,
               shadowRadius: 4,
               elevation: 4,
+              borderWidth: 1,
+              borderColor: '#E5E5E5',
+              minHeight: 280,
             }}>
               <View style={{
                 flexDirection: 'row',
-                justifyContent: 'space-between',
                 alignItems: 'center',
+                justifyContent: 'center',
+                width: '100%',
               }}>
-                <Text style={{
-                  fontSize: 20,
-                  fontWeight: '600',
-                  color: '#000000',
-                }}>Daily Calories</Text>
-                <Ionicons 
-                  name="nutrition-outline" 
-                  size={24} 
-                  color="#000000"
-                />
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons 
+                    name="nutrition-outline" 
+                    size={24} 
+                    color="#000000"
+                  />
+                  <Text style={{
+                    fontSize: 20,
+                    fontWeight: '600',
+                    color: '#000000',
+                  }}>calories</Text>
+                </View>
               </View>
 
               <View style={{
@@ -207,7 +206,7 @@ export default function HomeScreen() {
                         cx={100}
                         cy={100}
                         r={80}
-                        stroke="#E5E5E5"
+                        stroke="#ffffff"
                         strokeWidth={12}
                         fill="transparent"
                       />
@@ -266,20 +265,229 @@ export default function HomeScreen() {
               </View>
             </View>
 
-            {/* Recovery Score Card */}
+            {/* Readiness Card */}
             <View style={{
               flex: 1,
-              padding: 24,
+              padding: 16,
+              gap: 24,
               borderRadius: 24,
               backgroundColor: '#99E86C',
               alignItems: 'center',
-              gap: 12,
+              shadowColor: '#000000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 4,
+              elevation: 4,
+              borderWidth: 1,
+              borderColor: '#E5E5E5',
+              minHeight: 280,
             }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Ionicons name="pulse-outline" size={20} color="#00BFA5" />
-                <Text style={{ fontSize: 16, fontWeight: '600', color: '#000000' }}>
-                  Recovery Score
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '100%',
+              }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="trending-up" size={24} color="#000000" />
+                  <Text style={{
+                    fontSize: 20,
+                    fontWeight: '600',
+                    color: '#000000',
+                  }}>
+                    Readiness 
+                  </Text>
+                </View>
+              </View>
+
+              {/* Progress Circle Container */}
+              <View style={{ 
+                width: 200,
+                height: 200,
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}>
+                <Svg width="200" height="200" style={{
+                  position: 'absolute',
+                  transform: [{ rotate: '-90deg' }],
+                }}>
+                  <Circle
+                    cx="100"
+                    cy="100"
+                    r="80"
+                    stroke="#ffffff"
+                    strokeWidth="12"
+                    fill="none"
+                  />
+                  <Circle
+                    cx="100"
+                    cy="100"
+                    r="80"
+                    stroke="#4064F6"
+                    strokeWidth="12"
+                    fill="none"
+                    strokeDasharray={`${2 * Math.PI * 80}`}
+                    strokeDashoffset={2 * Math.PI * 80 * (1 - 40 / 100)}
+                  />
+                </Svg>
+
+                <Text style={{ 
+                  fontSize: 40, 
+                  fontWeight: '700', 
+                  color: '#000000',
+                }}>
+                  40%
                 </Text>
+              </View>
+
+              <Text style={{ 
+                fontSize: 14, 
+                color: '#666666',
+                textAlign: 'center',
+              }}>
+                Reaching moderate{'\n'}level of readiness.
+              </Text>
+            </View>
+          </View>
+
+          {/* Weekly Progress Section Header */}
+          <View style={{ 
+            alignItems: 'center',
+            paddingVertical: 16,
+            borderBottomWidth: 1,
+            borderBottomColor: '#E5E5E5',
+          }}>
+            <Text style={{ 
+              fontSize: 32, 
+              fontWeight: '600',
+              color: '#000000',
+            }}>
+              Weekly Progress
+            </Text>
+          </View>
+
+          {/* Second Row of Cards */}
+          <View style={{ 
+            flexDirection: 'row', 
+            gap: 8,
+          }}>
+            {/* Training Progress Card */}
+            <View style={{
+              flex: 1,
+              padding: 16,
+              gap: 24,
+              borderRadius: 24,
+              backgroundColor: '#99E86C',
+              alignItems: 'center',
+              shadowColor: '#000000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 4,
+              elevation: 4,
+              borderWidth: 1,
+              borderColor: '#E5E5E5',
+              minHeight: 280,
+            }}>
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '100%',
+              }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="barbell-outline" size={24} color="#000000" />
+                  <Text style={{
+                    fontSize: 20,
+                    fontWeight: '600',
+                    color: '#000000',
+                  }}>
+                    Training
+                  </Text>
+                </View>
+              </View>
+
+              {/* Progress Circle Container */}
+              <View style={{ 
+                width: 200,
+                height: 200,
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}>
+                <Svg width="200" height="200" style={{
+                  position: 'absolute',
+                  transform: [{ rotate: '-90deg' }],
+                }}>
+                  <Circle
+                    cx="100"
+                    cy="100"
+                    r="80"
+                    stroke="#ffffff"
+                    strokeWidth="12"
+                    fill="none"
+                  />
+                  <Circle
+                    cx="100"
+                    cy="100"
+                    r="80"
+                    stroke="#4064F6"
+                    strokeWidth="12"
+                    fill="none"
+                    strokeDasharray={`${2 * Math.PI * 80}`}
+                    strokeDashoffset={2 * Math.PI * 80 * (1 - 80 / 100)}
+                  />
+                </Svg>
+
+                <Text style={{ 
+                  fontSize: 40, 
+                  fontWeight: '700', 
+                  color: '#000000',
+                }}>
+                  80%
+                </Text>
+              </View>
+
+              <Text style={{ 
+                fontSize: 14, 
+                color: '#666666',
+                textAlign: 'center',
+              }}>
+                Completed this week!
+              </Text>
+            </View>
+
+            {/* Recovery Card */}
+            <View style={{
+              flex: 1,
+              padding: 16,
+              gap: 24,
+              borderRadius: 24,
+              backgroundColor: '#99E86C',
+              alignItems: 'center',
+              shadowColor: '#000000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 4,
+              elevation: 4,
+              borderWidth: 1,
+              borderColor: '#E5E5E5',
+              minHeight: 280,
+            }}>
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '100%',
+              }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="pulse-outline" size={24} color="#000000" />
+                  <Text style={{
+                    fontSize: 20,
+                    fontWeight: '600',
+                    color: '#000000',
+                  }}>
+                    Recovery
+                  </Text>
+                </View>
               </View>
               
               {/* Progress Circle Container */}
@@ -294,7 +502,7 @@ export default function HomeScreen() {
                     cx="100"
                     cy="100"
                     r="80"
-                    stroke="#B2EBE5"
+                    stroke="#ffffff"
                     strokeWidth="12"
                     fill="none"
                   />
@@ -316,7 +524,7 @@ export default function HomeScreen() {
                   position: 'absolute',
                   fontSize: 40, 
                   fontWeight: '700', 
-                  color: '#4064F6',
+                  color: '#000000',
                 }}>
                   90%
                 </Text>
@@ -328,164 +536,6 @@ export default function HomeScreen() {
                 textAlign: 'center',
               }}>
                 Awesome! You did{'\n'}excellent recovery level.
-              </Text>
-            </View>
-          </View>
-
-          {/* Second Row of Cards */}
-          <View style={{ 
-            flexDirection: 'row', 
-            gap: 16,
-          }}>
-            {/* Training Progress Card */}
-            <View style={{
-              flex: 1,
-              padding: 24,
-              borderRadius: 24,
-              backgroundColor: '#99E86C',
-              alignItems: 'center',
-              gap: 12,
-            }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Ionicons name="barbell-outline" size={20} color="#4A3AFF" />
-                <Text style={{ fontSize: 16, fontWeight: '600', color: '#000000' }}>
-                  Training Progress
-                </Text>
-              </View>
-
-              <View style={{ 
-                width: '100%', 
-                aspectRatio: 1,
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}>
-                {/* Progress Circle */}
-                <View style={{
-                  width: '100%',
-                  height: '100%',
-                  position: 'absolute',
-                  transform: [{ rotate: '-90deg' }],
-                }}>
-                  <Svg width="100%" height="100%" viewBox="0 0 100 100">
-                    {/* Background Circle */}
-                    <Circle
-                      cx="50"
-                      cy="50"
-                      r="45"
-                      stroke="#E8E8FF"
-                      strokeWidth="10"
-                      fill="none"
-                    />
-                    {/* Progress Circle */}
-                    <Circle
-                      cx="50"
-                      cy="50"
-                      r="45"
-                      stroke="#4A3AFF"
-                      strokeWidth="10"
-                      fill="none"
-                      strokeDasharray={`${2 * Math.PI * 45}`}
-                      strokeDashoffset={2 * Math.PI * 45 * (1 - 80 / 100)} // 80% progress
-                    />
-                  </Svg>
-                </View>
-
-                {/* Center Text */}
-                <View style={{ alignItems: 'center' }}>
-                  <Text style={{ 
-                    fontSize: 40, 
-                    fontWeight: '700', 
-                    color: '#4A3AFF',
-                  }}>
-                    80
-                  </Text>
-                  <Text style={{ 
-                    fontSize: 14, 
-                    color: '#666666',
-                  }}>
-                    /100
-                  </Text>
-                </View>
-              </View>
-
-              <Text style={{ 
-                fontSize: 14, 
-                color: '#666666',
-                textAlign: 'center',
-              }}>
-                Completed this week!
-              </Text>
-            </View>
-
-            {/* Readiness Score Card */}
-            <View style={{
-              flex: 1,
-              padding: 24,
-              borderRadius: 24,
-              backgroundColor: '#99E86C',
-              alignItems: 'center',
-              gap: 12,
-            }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Ionicons name="trending-up" size={20} color="#4B45FF" />
-                <Text style={{ fontSize: 16, fontWeight: '600', color: '#000000' }}>
-                  Readiness Score
-                </Text>
-              </View>
-
-              <View style={{ 
-                width: '100%', 
-                aspectRatio: 1,
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}>
-                {/* Progress Circle */}
-                <View style={{
-                  width: '100%',
-                  height: '100%',
-                  position: 'absolute',
-                  transform: [{ rotate: '-90deg' }],
-                }}>
-                  <Svg width="100%" height="100%" viewBox="0 0 100 100">
-                    {/* Background Circle */}
-                    <Circle
-                      cx="50"
-                      cy="50"
-                      r="45"
-                      stroke="#E8E8FF"
-                      strokeWidth="10"
-                      fill="none"
-                    />
-                    {/* Progress Circle */}
-                    <Circle
-                      cx="50"
-                      cy="50"
-                      r="45"
-                      stroke="#4B45FF"
-                      strokeWidth="10"
-                      fill="none"
-                      strokeDasharray={`${2 * Math.PI * 45}`}
-                      strokeDashoffset={2 * Math.PI * 45 * (1 - 40 / 100)} // 40% progress
-                    />
-                  </Svg>
-                </View>
-
-                {/* Center Text */}
-                <Text style={{ 
-                  fontSize: 40, 
-                  fontWeight: '700', 
-                  color: '#4B45FF',
-                }}>
-                  40
-                </Text>
-              </View>
-
-              <Text style={{ 
-                fontSize: 14, 
-                color: '#666666',
-                textAlign: 'center',
-              }}>
-                Reaching moderate{'\n'}level of readiness.
               </Text>
             </View>
           </View>
@@ -629,9 +679,9 @@ export default function HomeScreen() {
                     width: 40,
                     height: 56,
                     borderRadius: 12,
-                    backgroundColor: day.isToday ? '#99E86C' 
-                      : selectedDay?.toISOString() === day.date.toISOString() ? '#F5F5FF'
-                      : '#F5F5F5',
+                    backgroundColor: day.isToday ? '#99e86c' 
+                      : selectedDay?.toISOString() === day.date.toISOString() ? '#f5f5ff'
+                      : '#f5f5ff',
                     justifyContent: 'center',
                     alignItems: 'center',
                     opacity: pressed ? 0.7 : 1,
@@ -639,7 +689,7 @@ export default function HomeScreen() {
                 >
                   <Text style={{
                     fontSize: 12,
-                    color: '#666666',
+                    color: '#000000',
                     marginBottom: 4,
                   }}>
                     {day.dayLetter}
@@ -663,7 +713,7 @@ export default function HomeScreen() {
                 padding: 24,
                 gap: 16,
                 borderWidth: 1,
-                borderColor: '#E5E5E5',
+                borderColor: '#000000',
               }}>
                 <View style={{
                   flexDirection: 'row',
@@ -685,7 +735,7 @@ export default function HomeScreen() {
                   >
                     <Text style={{
                       fontSize: 16,
-                      color: '#666666',
+                      color: '#000000',
                     }}>
                       Close
                     </Text>
@@ -715,7 +765,7 @@ export default function HomeScreen() {
                   <View style={{
                     flex: 1,
                     minWidth: '45%',
-                    backgroundColor: '#99E86C',
+                    backgroundColor: '#F5F5FF',
                     padding: 16,
                     borderRadius: 16,
                     gap: 8,
@@ -728,7 +778,7 @@ export default function HomeScreen() {
                   <View style={{
                     flex: 1,
                     minWidth: '45%',
-                    backgroundColor: '#99E86C',
+                    backgroundColor: '#F5F5FF',
                     padding: 16,
                     borderRadius: 16,
                     gap: 8,
@@ -741,7 +791,7 @@ export default function HomeScreen() {
                   <View style={{
                     flex: 1,
                     minWidth: '45%',
-                    backgroundColor: '#99E86C',
+                    backgroundColor: '#F5F5FF',
                     padding: 16,
                     borderRadius: 16,
                     gap: 8,
