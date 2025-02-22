@@ -380,16 +380,31 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <View style={styles.headerContainer}>
+        {/* BallerAI Logo and Text */}
+        <View style={styles.logoContainer}>
+          <Image 
+            source={require('../../assets/images/BallerAILogo.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
+          <Text style={styles.logoText}>
+            BallerAI
+          </Text>
+        </View>
+
+        {/* Title */}
+        <Text style={styles.headerTitle}>
+          Profile
+        </Text>
+      </View>
+
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
         <ScrollView>
-          {/* Profile Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>Profile</Text>
-          </View>
-
           {/* Profile Picture Section */}
           <View style={styles.profileSection}>
             <Pressable
@@ -671,6 +686,34 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  headerContainer: {
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 16,
+    backgroundColor: '#FFFFFF',
+  },
+  logoContainer: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 8,
+    marginBottom: 16,
+  },
+  logoImage: {
+    width: 32,
+    height: 32,
+  },
+  logoText: { 
+    fontSize: 24, 
+    fontWeight: '600', 
+    color: '#000000' 
+  },
+  headerTitle: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#000000',
+    textAlign: 'center',
+    marginBottom: 8,
   },
   header: {
     flexDirection: 'row',
