@@ -14,17 +14,12 @@ export default function WelcomeScreen() {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleGetStarted = () => {
-    router.push('/onboarding');
+    router.push('/intro');
   };
 
   const handleSignIn = async () => {
-    if (!email) {
-      Alert.alert('Error', 'Please enter your email');
-      return;
-    }
-
-    if (!password) {
-      Alert.alert('Error', 'Please enter your password');
+    if (!email || !password) {
+      Alert.alert('Error', 'Please enter your email and password');
       return;
     }
 
