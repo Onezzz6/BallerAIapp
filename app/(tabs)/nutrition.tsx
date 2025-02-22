@@ -1,4 +1,4 @@
-import { View, Text, Pressable, StyleSheet, Image, ScrollView, Modal, TextInput, Button, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Image, ScrollView, Modal, TextInput, Button, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
@@ -7,9 +7,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path, Circle, G } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../context/AuthContext';
-import { doc, setDoc, getDoc, collection, addDoc, deleteDoc, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, addDoc, deleteDoc, query, orderBy, onSnapshot, where, limit } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useNutrition } from '../context/NutritionContext';
+import imageAnalysis from '../services/imageAnalysis';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 type MacroGoals = {
   calories: { current: number; goal: number };
@@ -275,11 +277,247 @@ function WeeklyAdherence({ percentage }: { percentage: number }) {
   );
 }
 
+// Define the FoodItem type
+type FoodItem = {
+  name: string;
+  quantity: string;
+  unit: string;
+};
+
+type MacroData = {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+};
+
+type FoodItemWithMacros = FoodItem & MacroData;
+
+type LogMealModalProps = {
+  visible: boolean;
+  onClose: () => void;
+  onPhotoAnalysis: (imageUri: string) => Promise<void>;
+  onAddMeal: (meal: any) => void;
+};
+
+function LogMealModal({ visible, onClose, onPhotoAnalysis }: LogMealModalProps) {
+  const [method, setMethod] = useState<'manual' | 'gallery' | 'camera' | null>(null);
+  const [manualEntry, setManualEntry] = useState({
+    name: '',
+    portion: '',
+    calories: '',
+    protein: '',
+    carbs: '',
+    fats: ''
+  });
+
+  const handleGallerySelect = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 1,
+      });
+      if (!result.canceled) {
+        onPhotoAnalysis(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to select image');
+    }
+  };
+
+  const handleCameraCapture = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please grant camera permissions to take photos');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 1,
+      });
+      if (!result.canceled) {
+        onPhotoAnalysis(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to take photo');
+    }
+  };
+
+  const handleMethodSelect = (selectedMethod: 'manual' | 'gallery' | 'camera') => {
+    setMethod(selectedMethod);
+    if (selectedMethod === 'gallery') {
+      handleGallerySelect();
+    } else if (selectedMethod === 'camera') {
+      handleCameraCapture();
+    }
+  };
+
+  const handleManualSubmit = async () => {
+    try {
+      const mealItem = {
+        name: manualEntry.name,
+        portion: manualEntry.portion || '1 serving',
+        macros: {
+          calories: parseInt(manualEntry.calories) || 0,
+          protein: parseInt(manualEntry.protein) || 0,
+          carbs: parseInt(manualEntry.carbs) || 0,
+          fats: parseInt(manualEntry.fats) || 0
+        }
+      };
+
+      await logMealToFirestore([mealItem]);
+      setManualEntry({ name: '', portion: '', calories: '', protein: '', carbs: '', fats: '' });
+      setMethod(null);
+      onClose();
+      Alert.alert('Success', 'Meal logged successfully!');
+    } catch (error) {
+      console.error('Error logging manual meal:', error);
+      Alert.alert('Error', 'Failed to log meal. Please try again.');
+    }
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent>
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Log Meal</Text>
+            <Pressable onPress={onClose}>
+              <Ionicons name="close" size={24} color="#000000" />
+            </Pressable>
+          </View>
+
+          {method === 'manual' ? (
+            <ScrollView style={styles.manualForm}>
+              <TextInput
+                style={styles.input}
+                placeholder="Food name"
+                value={manualEntry.name}
+                onChangeText={(text) => setManualEntry(prev => ({ ...prev, name: text }))}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Portion (e.g., 1 cup)"
+                value={manualEntry.portion}
+                onChangeText={(text) => setManualEntry(prev => ({ ...prev, portion: text }))}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Calories"
+                keyboardType="numeric"
+                value={manualEntry.calories}
+                onChangeText={(text) => setManualEntry(prev => ({ ...prev, calories: text }))}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Protein (g)"
+                keyboardType="numeric"
+                value={manualEntry.protein}
+                onChangeText={(text) => setManualEntry(prev => ({ ...prev, protein: text }))}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Carbs (g)"
+                keyboardType="numeric"
+                value={manualEntry.carbs}
+                onChangeText={(text) => setManualEntry(prev => ({ ...prev, carbs: text }))}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Fats (g)"
+                keyboardType="numeric"
+                value={manualEntry.fats}
+                onChangeText={(text) => setManualEntry(prev => ({ ...prev, fats: text }))}
+              />
+              <Button
+                title="Log Meal"
+                onPress={handleManualSubmit}
+                containerStyle={{ marginTop: 16 }}
+              />
+            </ScrollView>
+          ) : (
+            <View style={styles.methodSelection}>
+              <Pressable
+                style={styles.methodButton}
+                onPress={() => handleMethodSelect('manual')}
+              >
+                <Ionicons name="create-outline" size={32} color="#000000" />
+                <Text style={styles.methodButtonText}>Log{'\n'}Manually</Text>
+              </Pressable>
+
+              <Pressable
+                style={styles.methodButton}
+                onPress={() => handleMethodSelect('gallery')}
+              >
+                <Ionicons name="images-outline" size={32} color="#000000" />
+                <Text style={styles.methodButtonText}>Pick from{'\n'}Gallery</Text>
+              </Pressable>
+
+              <Pressable
+                style={styles.methodButton}
+                onPress={() => handleMethodSelect('camera')}
+              >
+                <Ionicons name="camera-outline" size={32} color="#000000" />
+                <Text style={styles.methodButtonText}>Take{'\n'}Photo</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function LoggedMeals({ meals }: { meals: any[] }) {
+  return (
+    <View style={styles.loggedMealsContainer}>
+      <Text style={styles.loggedMealsTitle}>Recent Meals</Text>
+      {meals.map((meal) => (
+        <View key={meal.id} style={styles.mealItem}>
+          <View style={styles.mealInfo}>
+            <Text style={styles.mealName}>{meal.items[0].name}</Text>
+            <Text style={styles.mealTime}>
+              {format(new Date(meal.timestamp), 'h:mm a')}
+            </Text>
+          </View>
+          <View style={styles.mealMacros}>
+            <Text style={styles.mealCalories}>{meal.totalMacros.calories} kcal</Text>
+            <View style={styles.macroDetails}>
+              <Text style={styles.macroDetail}>P: {meal.totalMacros.protein}g</Text>
+              <Text style={styles.macroDetail}>C: {meal.totalMacros.carbs}g</Text>
+              <Text style={styles.macroDetail}>F: {meal.totalMacros.fats}g</Text>
+            </View>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+type LabelAnnotation = {
+  description: string;
+  mid: string;
+  score: number;
+  topicality: number;
+};
+
 export default function NutritionScreen() {
   const { user } = useAuth();
   const { macros, updateMacros, todaysMeals } = useNutrition();
   const [isLogMealModalVisible, setIsLogMealModalVisible] = useState(false);
   const [selectedLoggingMethod, setSelectedLoggingMethod] = useState<'manual' | 'photo' | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [foodItems, setFoodItems] = useState<FoodItem[]>([]);
+  const [showManualEntry, setShowManualEntry] = useState(false);
+  const [loggedMeals, setLoggedMeals] = useState<any[]>([]);
 
   // Debug logs
   useEffect(() => {
@@ -330,6 +568,27 @@ export default function NutritionScreen() {
     }
   }, [user]);
 
+  useEffect(() => {
+    if (!user) return;
+
+    const q = query(
+      collection(db, 'meals'),
+      where('userId', '==', user.uid),
+      orderBy('timestamp', 'desc'),
+      limit(10)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const meals = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setLoggedMeals(meals);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
   const handleAddMeal = async (newMeal: {
     name: string;
     calories: number;
@@ -367,6 +626,115 @@ export default function NutritionScreen() {
   useEffect(() => {
     console.log('NutritionScreen macros:', macros);
   }, [macros]);
+
+  const handlePhotoAnalysis = async (imageUri: string) => {
+    try {
+      setIsLoading(true);
+      
+      // Upload to Firebase Storage
+      const { downloadURL } = await uploadImageToStorage(imageUri);
+      
+      // Analyze the image
+      const analysisResult = await imageAnalysis.analyzeImage(downloadURL);
+      console.log('Analysis Result:', analysisResult);
+
+      if (analysisResult.items && analysisResult.items.length > 0) {
+        // Log the meal to Firestore
+        await logMealToFirestore(analysisResult.items);
+        
+        Alert.alert('Success', 'Meal logged successfully!');
+        setIsLogMealModalVisible(false);
+      } else {
+        Alert.alert('No food detected', 'Please try another photo or log manually');
+      }
+    } catch (error: any) {
+      console.error('Error analyzing image:', error);
+      Alert.alert('Error', error.message || 'Failed to analyze image');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const uploadImageToStorage = async (uri: string): Promise<{ downloadURL: string }> => {
+    if (!user) throw new Error('Must be logged in to upload images');
+
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    
+    const storage = getStorage();
+    const filename = `food_images/${user.uid}/${Date.now()}.jpg`;
+    const storageRef = ref(storage, filename);
+    
+    await uploadBytes(storageRef, blob);
+    const downloadURL = await getDownloadURL(storageRef);
+    
+    return { downloadURL };
+  };
+
+  const fetchNutritionData = async (foodName: string): Promise<MacroData> => {
+    try {
+      const response = await fetch('https://trackapi.nutritionix.com/v2/natural/nutrients', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-app-id': process.env.NUTRITIONIX_APP_ID!,
+          'x-app-key': process.env.NUTRITIONIX_API_KEY!,
+        },
+        body: JSON.stringify({
+          query: foodName,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.foods && data.foods.length > 0) {
+        const food = data.foods[0];
+        return {
+          calories: Math.round(food.nf_calories),
+          protein: Math.round(food.nf_protein),
+          carbs: Math.round(food.nf_total_carbohydrate),
+          fats: Math.round(food.nf_total_fat)
+        };
+      }
+      
+      throw new Error('No nutrition data found');
+    } catch (error) {
+      console.error('Error fetching nutrition data:', error);
+      // Return default values if API fails
+      return {
+        calories: 100,
+        protein: 5,
+        carbs: 20,
+        fats: 2
+      };
+    }
+  };
+
+  const logMealToFirestore = async (items: any[]) => {
+    if (!user) {
+      throw new Error('Must be logged in to log meals');
+    }
+
+    try {
+      const mealData = {
+        userId: user.uid,
+        timestamp: new Date().toISOString(),
+        items: items,
+        totalMacros: items.reduce((acc: any, item: any) => ({
+          calories: acc.calories + item.macros.calories,
+          protein: acc.protein + item.macros.protein,
+          carbs: acc.carbs + item.macros.carbs,
+          fats: acc.fats + item.macros.fats
+        }), { calories: 0, protein: 0, carbs: 0, fats: 0 })
+      };
+
+      await addDoc(collection(db, 'meals'), mealData);
+      console.log('Meal logged successfully:', mealData);
+    } catch (error) {
+      console.error('Error logging meal:', error);
+      throw error;
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -453,226 +821,24 @@ export default function NutritionScreen() {
           </Pressable>
         </View>
 
-        <LoggedMeals meals={todaysMeals} onDelete={handleDeleteMeal} />
+        <LoggedMeals meals={loggedMeals} />
       </ScrollView>
 
       <LogMealModal
         visible={isLogMealModalVisible}
         onClose={() => setIsLogMealModalVisible(false)}
+        onPhotoAnalysis={handlePhotoAnalysis}
         onAddMeal={handleAddMeal}
       />
+
+      {isLoading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#4A72B2" />
+          <Text style={styles.loadingText}>Analyzing image...</Text>
+        </View>
+      )}
     </SafeAreaView>
   );    
-}
-
-function LogMealModal({ 
-  visible, 
-  onClose,
-  onAddMeal,
-}: { 
-  visible: boolean; 
-  onClose: () => void;
-  onAddMeal: (meal: any) => void;
-}) {
-  const [method, setMethod] = useState<'manual' | 'photo' | null>(null);
-  const [manualEntry, setManualEntry] = useState({
-    name: '',
-    calories: '',
-    protein: '',
-    carbs: '',
-    fats: '',
-  });
-
-  const handleSubmitManual = () => {
-    onAddMeal({
-      name: manualEntry.name,
-      calories: Number(manualEntry.calories),
-      protein: Number(manualEntry.protein),
-      carbs: Number(manualEntry.carbs),
-      fats: Number(manualEntry.fats),
-    });
-    onClose();
-    setMethod(null);
-    setManualEntry({ name: '', calories: '', protein: '', carbs: '', fats: '' });
-  };
-
-  const handlePhotoAnalysis = async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 1,
-      });
-
-      if (!result.canceled) {
-        // Handle photo analysis here
-        console.log('Photo selected:', result.assets[0].uri);
-      }
-    } catch (error) {
-      console.error('Error picking image:', error);
-    }
-  };
-
-  return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={onClose}
-    >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={styles.modalOverlay}>
-          <KeyboardAvoidingView 
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={{ width: '100%' }}
-          >
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Log Meal</Text>
-                <Pressable onPress={onClose}>
-                  <Ionicons name="close" size={24} color="#000000" />
-                </Pressable>
-              </View>
-
-              <ScrollView 
-                style={styles.modalScroll}
-                keyboardShouldPersistTaps="handled"
-              >
-                {!method ? (
-                  <View style={styles.methodSelection}>
-                    <Pressable 
-                      style={styles.methodButton}
-                      onPress={() => setMethod('photo')}
-                    >
-                      <Ionicons name="camera" size={32} color="#4A72B2" />
-                      <Text style={styles.methodButtonText}>Analyze Photo</Text>
-                    </Pressable>
-
-                    <Pressable 
-                      style={styles.methodButton}
-                      onPress={() => setMethod('manual')}
-                    >
-                      <Ionicons name="create" size={32} color="#4A72B2" />
-                      <Text style={styles.methodButtonText}>Manual Entry</Text>
-                    </Pressable>
-                  </View>
-                ) : method === 'manual' ? (
-                  <View style={styles.manualForm}>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Meal Name"
-                      value={manualEntry.name}
-                      onChangeText={text => setManualEntry(prev => ({ ...prev, name: text }))}
-                      returnKeyType="next"
-                      blurOnSubmit={false}
-                    />
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Calories"
-                      keyboardType="numeric"
-                      value={manualEntry.calories}
-                      onChangeText={text => setManualEntry(prev => ({ ...prev, calories: text }))}
-                      returnKeyType="next"
-                      blurOnSubmit={false}
-                    />
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Protein (g)"
-                      keyboardType="numeric"
-                      value={manualEntry.protein}
-                      onChangeText={text => setManualEntry(prev => ({ ...prev, protein: text }))}
-                      returnKeyType="next"
-                      blurOnSubmit={false}
-                    />
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Carbs (g)"
-                      keyboardType="numeric"
-                      value={manualEntry.carbs}
-                      onChangeText={text => setManualEntry(prev => ({ ...prev, carbs: text }))}
-                      returnKeyType="next"
-                      blurOnSubmit={false}
-                    />
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Fats (g)"
-                      keyboardType="numeric"
-                      value={manualEntry.fats}
-                      onChangeText={text => setManualEntry(prev => ({ ...prev, fats: text }))}
-                      returnKeyType="done"
-                      blurOnSubmit={false}
-                    />
-                    <Button 
-                      title="Log Meal"
-                      onPress={handleSubmitManual}
-                      buttonStyle={styles.submitButton}
-                    />
-                  </View>
-                ) : (
-                  <View style={styles.photoAnalysis}>
-                    <Button 
-                      title="Select Photo"
-                      onPress={handlePhotoAnalysis}
-                      buttonStyle={styles.submitButton}
-                    />
-                  </View>
-                )}
-              </ScrollView>
-            </View>
-          </KeyboardAvoidingView>
-        </View>
-      </TouchableWithoutFeedback>
-    </Modal>
-  );
-}
-
-function LoggedMeals({ meals, onDelete }: { 
-  meals: Array<{
-    id: string;
-    name: string;
-    calories: number;
-    protein: number;
-    carbs: number;
-    fats: number;
-    timestamp: Date;
-  }>;
-  onDelete: (id: string) => void;
-}) {
-  return (
-    <View style={styles.loggedMealsContainer}>
-      <Text style={styles.loggedMealsTitle}>Logged Meals</Text>
-      {meals.map((meal) => (
-        <View key={meal.id} style={styles.mealItem}>
-          <View style={styles.mealInfo}>
-            <Text style={styles.mealName}>{meal.name}</Text>
-            <Text style={styles.mealTime}>
-              {format(meal.timestamp, 'h:mm a')}
-            </Text>
-          </View>
-          
-          <View style={styles.mealMacros}>
-            <Text style={styles.mealCalories}>{meal.calories} kcal</Text>
-            <View style={styles.macroDetails}>
-              <Text style={styles.macroDetail}>P: {meal.protein}g</Text>
-              <Text style={styles.macroDetail}>C: {meal.carbs}g</Text>
-              <Text style={styles.macroDetail}>F: {meal.fats}g</Text>
-            </View>
-          </View>
-
-          <Pressable 
-            onPress={() => onDelete(meal.id)}
-            style={({ pressed }) => ({
-              opacity: pressed ? 0.7 : 1,
-              padding: 8,
-            })}
-          >
-            <Ionicons name="trash-outline" size={20} color="#FF3B30" />
-          </Pressable>
-        </View>
-      ))}
-    </View>
-  );
 }
 
 const styles = StyleSheet.create({
@@ -976,21 +1142,21 @@ const styles = StyleSheet.create({
   },
   methodSelection: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    gap: 16,
-    padding: 24,
+    justifyContent: 'space-between',
+    padding: 16,
+    gap: 12,
   },
   methodButton: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 24,
-    borderRadius: 16,
+    padding: 16,
+    borderRadius: 12,
     backgroundColor: '#F5F5F5',
-    gap: 12,
+    gap: 8,
   },
   methodButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '500',
     color: '#000000',
     textAlign: 'center',
@@ -1017,23 +1183,23 @@ const styles = StyleSheet.create({
     maxHeight: '80%',
   },
   loggedMealsContainer: {
-    marginTop: 24,
+    marginTop: 16,
     paddingHorizontal: 24,
   },
   loggedMealsTitle: {
     fontSize: 20,
     fontWeight: '600',
     color: '#000000',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   mealItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
     backgroundColor: '#FFFFFF',
+    padding: 16,
     borderRadius: 12,
-    marginBottom: 12,
+    marginBottom: 8,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -1055,7 +1221,6 @@ const styles = StyleSheet.create({
   },
   mealMacros: {
     alignItems: 'flex-end',
-    marginRight: 16,
   },
   mealCalories: {
     fontSize: 16,
@@ -1070,5 +1235,34 @@ const styles = StyleSheet.create({
   macroDetail: {
     fontSize: 14,
     color: '#666666',
+  },
+  loggingOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: '#F5F5F5',
+  },
+  loggingOptionText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#000000',
+    marginLeft: 8,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#FFFFFF',
+    marginTop: 12,
+    fontSize: 16,
   },
 }); 

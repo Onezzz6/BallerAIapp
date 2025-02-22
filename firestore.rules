@@ -10,6 +10,13 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    // Root-level collections
+    match /meals/{mealId} {
+      allow read: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isSignedIn() && request.auth.uid == resource.data.userId;
+    }
+
     // User profiles and personal data
     match /users/{userId} {
       allow read: if isSignedIn();
@@ -51,11 +58,6 @@ service cloud.firestore {
         allow read, write, delete: if isOwner(userId);
       }
 
-      // Meals and dailyMacros
-      match /meals/{mealId} {
-        allow read, write, delete: if isOwner(userId);
-      }
-      
       match /dailyMacros/{date} {
         allow read, write, delete: if isOwner(userId);
       }

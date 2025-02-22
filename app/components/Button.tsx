@@ -25,7 +25,7 @@ export default function Button({
           padding: 16,
           borderRadius: 100,
           opacity: disabled ? 0.5 : pressed ? 0.8 : 1,
-          ...buttonStyle,
+          ...(buttonStyle as object),
         })}
       >
         <Text style={{

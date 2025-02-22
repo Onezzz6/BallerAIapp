@@ -29,6 +29,14 @@ type UserData = {
   injuryHistory?: string;
 };
 
+type ProfileDetail = {
+  field: string;
+  label: string;
+  value?: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  unit?: string;
+};
+
 export default function ProfileScreen() {
   const { user } = useAuth();
   const router = useRouter();
@@ -163,7 +171,7 @@ export default function ProfileScreen() {
     }
   };
 
-  const profileDetails = [
+  const profileDetails: ProfileDetail[] = [
     { field: 'age', label: 'Age', value: userData?.age, icon: 'calendar-outline', unit: 'years' },
     { field: 'gender', label: 'Gender', value: userData?.gender, icon: 'person-outline' },
     { field: 'height', label: 'Height', value: userData?.height, icon: 'resize-outline', unit: 'cm' },
@@ -1416,5 +1424,30 @@ const styles = StyleSheet.create({
     color: '#666666',
     textAlign: 'right',
     marginTop: 8,
+  },
+  modalSubtitle: {
+    fontSize: 16,
+    color: '#666666',
+    marginBottom: 16,
+  },
+  reasonButton: {
+    width: '100%',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#E5E5E5',
+    backgroundColor: '#FFFFFF',
+    marginBottom: 8,
+  },
+  selectedReason: {
+    borderColor: '#99E86C',
+    backgroundColor: '#99E86C',
+  },
+  reasonText: {
+    fontSize: 16,
+    color: '#000000',
+  },
+  selectedReasonText: {
+    color: '#FFFFFF',
   },
 }); 

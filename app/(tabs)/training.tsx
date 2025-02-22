@@ -1,7 +1,8 @@
-import { View, Text, Pressable, StyleSheet, Image, ScrollView } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Image, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
+import imageAnalysis from '../services/imageAnalysis';
 
 type FocusArea = 'technique' | 'strength' | 'endurance' | 'speed' | 'overall';
 type GymAccess = 'yes' | 'no';
@@ -23,6 +24,20 @@ export default function TrainingScreen() {
     { value: 'overall', emoji: '💪' },
   ];
     
+  const testEnvVariables = async () => {
+    try {
+      console.log('Testing environment variables...');
+      // Use a real image URL for testing
+      const testImageUrl = 'https://storage.googleapis.com/cloud-vision-codelab/bonito.jpg';
+      const result = await imageAnalysis.analyzeImage(testImageUrl);
+      console.log('API Response:', result);
+      Alert.alert('Success', 'Environment variables are working!');
+    } catch (error: any) {
+      console.error('Test failed:', error);
+      Alert.alert('Error', error.message);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -63,6 +78,19 @@ export default function TrainingScreen() {
         }}>
           Training
         </Text>
+
+        <Pressable
+          onPress={testEnvVariables}
+          style={({ pressed }) => ({
+            opacity: pressed ? 0.7 : 1,
+            padding: 10,
+            backgroundColor: '#007AFF',
+            borderRadius: 8,
+            marginBottom: 16,
+          })}
+        >
+          <Text style={{ color: '#FFFFFF' }}>Test Env Variables</Text>
+        </Pressable>
       </View>
 
       <ScrollView style={styles.content}>
