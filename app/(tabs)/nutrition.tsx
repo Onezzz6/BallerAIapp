@@ -1,13 +1,13 @@
 import { View, Text, Pressable, StyleSheet, Image, ScrollView, Modal, TextInput, Button, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { format, addDays } from 'date-fns';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path, Circle, G } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../context/AuthContext';
-import { doc, setDoc, getDoc, collection, addDoc, deleteDoc, query, orderBy, onSnapshot, where, limit } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, addDoc, deleteDoc, query, orderBy, onSnapshot, where, limit, getDocs } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useNutrition } from '../context/NutritionContext';
 import imageAnalysis from '../services/imageAnalysis';
@@ -297,10 +297,10 @@ type LogMealModalProps = {
   visible: boolean;
   onClose: () => void;
   onPhotoAnalysis: (imageUri: string) => Promise<void>;
-  onAddMeal: (meal: any) => void;
+  onLogMeal: (items: any[]) => Promise<void>;
 };
 
-function LogMealModal({ visible, onClose, onPhotoAnalysis }: LogMealModalProps) {
+function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal }: LogMealModalProps) {
   const [method, setMethod] = useState<'manual' | 'gallery' | 'camera' | null>(null);
   const [manualEntry, setManualEntry] = useState({
     name: '',
@@ -373,7 +373,7 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis }: LogMealModalProps) 
         }
       };
 
-      await logMealToFirestore([mealItem]);
+      await onLogMeal([mealItem]);
       setManualEntry({ name: '', portion: '', calories: '', protein: '', carbs: '', fats: '' });
       setMethod(null);
       onClose();
@@ -440,7 +440,7 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis }: LogMealModalProps) 
               <Button
                 title="Log Meal"
                 onPress={handleManualSubmit}
-                containerStyle={{ marginTop: 16 }}
+                style={{ marginTop: 16 }}
               />
             </ScrollView>
           ) : (
@@ -476,7 +476,7 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis }: LogMealModalProps) 
   );
 }
 
-function LoggedMeals({ meals }: { meals: any[] }) {
+function LoggedMeals({ meals, onDelete }: { meals: any[]; onDelete: (mealId: string, mealMacros: any) => Promise<void> }) {
   return (
     <View style={styles.loggedMealsContainer}>
       <Text style={styles.loggedMealsTitle}>Recent Meals</Text>
@@ -496,6 +496,12 @@ function LoggedMeals({ meals }: { meals: any[] }) {
               <Text style={styles.macroDetail}>F: {meal.totalMacros.fats}g</Text>
             </View>
           </View>
+          <Pressable
+            style={styles.deleteButton}
+            onPress={() => onDelete(meal.id, meal.totalMacros)}
+          >
+            <Ionicons name="trash-outline" size={24} color="#FF6B6B" />
+          </Pressable>
         </View>
       ))}
     </View>
@@ -509,338 +515,128 @@ type LabelAnnotation = {
   topicality: number;
 };
 
-export default function NutritionScreen() {
-  const { user } = useAuth();
-  const { macros, updateMacros, todaysMeals } = useNutrition();
-  const [isLogMealModalVisible, setIsLogMealModalVisible] = useState(false);
-  const [selectedLoggingMethod, setSelectedLoggingMethod] = useState<'manual' | 'photo' | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [foodItems, setFoodItems] = useState<FoodItem[]>([]);
-  const [showManualEntry, setShowManualEntry] = useState(false);
-  const [loggedMeals, setLoggedMeals] = useState<any[]>([]);
-
-  // Debug logs
-  useEffect(() => {
-    console.log('NutritionScreen mounted');
-    console.log('Current macros:', macros);
-    console.log('Current user:', user);
-  }, []);
-
-  useEffect(() => {
-    if (user) {
-      // Load user profile and calculate initial goals
-      const loadUserProfile = async () => {
-        try {
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            console.log('User data loaded:', userData);
-            
-            const weight = parseFloat(userData.weight);
-            const height = parseFloat(userData.height);
-            const age = parseInt(userData.age);
-            
-            const dailyCalories = calculateDailyCalories(
-              weight,
-              height,
-              age,
-              userData.gender.toLowerCase(),
-              userData.activityLevel as ActivityLevel
-            );
-
-            const goals = calculateMacroGoals(dailyCalories, userData.footballGoal);
-            console.log('Calculated goals:', goals);
-
-            // Update the goals in context
-            updateMacros({
-              calories: { current: macros.calories.current, goal: goals.calories },
-              protein: { current: macros.protein.current, goal: goals.protein },
-              carbs: { current: macros.carbs.current, goal: goals.carbs },
-              fats: { current: macros.fats.current, goal: goals.fats }
-            });
-          }
-        } catch (error) {
-          console.error('Error loading user profile:', error);
-        }
-      };
-
-      loadUserProfile();
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (!user) return;
-
-    const q = query(
-      collection(db, 'meals'),
-      where('userId', '==', user.uid),
-      orderBy('timestamp', 'desc'),
-      limit(10)
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const meals = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setLoggedMeals(meals);
-    });
-
-    return () => unsubscribe();
-  }, [user]);
-
-  const handleAddMeal = async (newMeal: {
-    name: string;
-    calories: number;
-    protein: number;
-    carbs: number;
-    fats: number;
-  }) => {
-    if (!user) return;
-
-    try {
-      const mealData = {
-        ...newMeal,
-        timestamp: new Date(),
-        userId: user.uid,
-      };
-      
-      await addDoc(collection(db, 'users', user.uid, 'meals'), mealData);
-      setIsLogMealModalVisible(false);
-    } catch (error) {
-      console.error('Error adding meal:', error);
-    }
-  };
-
-  const handleDeleteMeal = async (mealId: string) => {
-    if (!user) return;
-
-    try {
-      await deleteDoc(doc(db, 'users', user.uid, 'meals', mealId));
-    } catch (error) {
-      console.error('Error deleting meal:', error);
-    }
-  };
-
-  // Debug log
-  useEffect(() => {
-    console.log('NutritionScreen macros:', macros);
-  }, [macros]);
-
-  const handlePhotoAnalysis = async (imageUri: string) => {
-    try {
-      setIsLoading(true);
-      
-      // Upload to Firebase Storage
-      const { downloadURL } = await uploadImageToStorage(imageUri);
-      
-      // Analyze the image
-      const analysisResult = await imageAnalysis.analyzeImage(downloadURL);
-      console.log('Analysis Result:', analysisResult);
-
-      if (analysisResult.items && analysisResult.items.length > 0) {
-        // Log the meal to Firestore
-        await logMealToFirestore(analysisResult.items);
-        
-        Alert.alert('Success', 'Meal logged successfully!');
-        setIsLogMealModalVisible(false);
-      } else {
-        Alert.alert('No food detected', 'Please try another photo or log manually');
-      }
-    } catch (error: any) {
-      console.error('Error analyzing image:', error);
-      Alert.alert('Error', error.message || 'Failed to analyze image');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const uploadImageToStorage = async (uri: string): Promise<{ downloadURL: string }> => {
-    if (!user) throw new Error('Must be logged in to upload images');
-
-    const response = await fetch(uri);
-    const blob = await response.blob();
-    
-    const storage = getStorage();
-    const filename = `food_images/${user.uid}/${Date.now()}.jpg`;
-    const storageRef = ref(storage, filename);
-    
-    await uploadBytes(storageRef, blob);
-    const downloadURL = await getDownloadURL(storageRef);
-    
-    return { downloadURL };
-  };
-
-  const fetchNutritionData = async (foodName: string): Promise<MacroData> => {
-    try {
-      const response = await fetch('https://trackapi.nutritionix.com/v2/natural/nutrients', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-app-id': process.env.NUTRITIONIX_APP_ID!,
-          'x-app-key': process.env.NUTRITIONIX_API_KEY!,
-        },
-        body: JSON.stringify({
-          query: foodName,
-        }),
-      });
-
-      const data = await response.json();
-      
-      if (data.foods && data.foods.length > 0) {
-        const food = data.foods[0];
-        return {
-          calories: Math.round(food.nf_calories),
-          protein: Math.round(food.nf_protein),
-          carbs: Math.round(food.nf_total_carbohydrate),
-          fats: Math.round(food.nf_total_fat)
-        };
-      }
-      
-      throw new Error('No nutrition data found');
-    } catch (error) {
-      console.error('Error fetching nutrition data:', error);
-      // Return default values if API fails
-      return {
-        calories: 100,
-        protein: 5,
-        carbs: 20,
-        fats: 2
-      };
-    }
-  };
-
-  const logMealToFirestore = async (items: any[]) => {
-    if (!user) {
-      throw new Error('Must be logged in to log meals');
-    }
-
-    try {
-      const mealData = {
-        userId: user.uid,
-        timestamp: new Date().toISOString(),
-        items: items,
-        totalMacros: items.reduce((acc: any, item: any) => ({
-          calories: acc.calories + item.macros.calories,
-          protein: acc.protein + item.macros.protein,
-          carbs: acc.carbs + item.macros.carbs,
-          fats: acc.fats + item.macros.fats
-        }), { calories: 0, protein: 0, carbs: 0, fats: 0 })
-      };
-
-      await addDoc(collection(db, 'meals'), mealData);
-      console.log('Meal logged successfully:', mealData);
-    } catch (error) {
-      console.error('Error logging meal:', error);
-      throw error;
-    }
-  };
-
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={{
-        paddingHorizontal: 24,
-        paddingTop: 24,
-        paddingBottom: 16,
-        backgroundColor: '#FFFFFF',
-      }}>
-        {/* BallerAI Logo and Text */}
-        <View style={{ 
-          flexDirection: 'row', 
-          alignItems: 'center', 
-          gap: 8,
-          marginBottom: 16, // Add space between logo and title
-        }}>
-          <Image 
-            source={require('../../assets/images/BallerAILogo.png')}
-            style={{ width: 32, height: 32 }}
-            resizeMode="contain"
-          />
-          <Text style={{ 
-            fontSize: 24, 
-            fontWeight: '600', 
-            color: '#000000' 
-          }}>
-            BallerAI
-          </Text>
-        </View>
-
-        {/* Centered Nutrition Title */}
-        <Text style={{
-          fontSize: 32,
-          fontWeight: '700',
-          color: '#000000',
-          textAlign: 'center',
-          marginBottom: 8,
-        }}>
-          Nutrition
-        </Text>
-      </View>
-
-      <ScrollView>
-        <View style={styles.calorieCard}>
-          <CalorieProgress 
-            eaten={macros.calories.current}
-            burned={0}
-            goal={macros.calories.goal}
-          />
-        </View>
-
-        <View style={styles.macrosCard}>
-          <MacroProgress
-            type="Protein"
-            current={macros.protein.current}
-            goal={macros.protein.goal}
-            color="#FF6B6B"
-          />
-          <MacroProgress
-            type="Carbs"
-            current={macros.carbs.current}
-            goal={macros.carbs.goal}
-            color="#4ECDC4"
-          />
-          <MacroProgress
-            type="Fats"
-            current={macros.fats.current}
-            goal={macros.fats.goal}
-            color="#FFD93D"
-          />
-          
-          <WeeklyAdherence percentage={60} />
-        </View>
-
-        <View style={styles.mealsSection}>
-          <Pressable 
-            style={styles.logMealButton}
-            onPress={() => setIsLogMealModalVisible(true)}
-          >
-            <Text style={styles.logMealText}>Log Meal</Text>
-            <View style={styles.logMealIcon}>
-              <Ionicons name="add" size={24} color="#FFFFFF" />
-            </View>
-          </Pressable>
-        </View>
-
-        <LoggedMeals meals={loggedMeals} />
-      </ScrollView>
-
-      <LogMealModal
-        visible={isLogMealModalVisible}
-        onClose={() => setIsLogMealModalVisible(false)}
-        onPhotoAnalysis={handlePhotoAnalysis}
-        onAddMeal={handleAddMeal}
-      />
-
-      {isLoading && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#4A72B2" />
-          <Text style={styles.loadingText}>Analyzing image...</Text>
-        </View>
-      )}
-    </SafeAreaView>
-  );    
+function getLocalStartOfDay(date: Date = new Date()) {
+  const local = new Date(date);
+  local.setHours(0, 0, 0, 0);
+  return local;
 }
 
+function getLocalEndOfDay(date: Date = new Date()) {
+  const local = new Date(date);
+  local.setHours(23, 59, 59, 999);
+  return local;
+}
+
+function formatDateId(date: Date) {
+  return date.toISOString().split('T')[0];
+}
+
+type DailyMacros = {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+  date: string;
+  dayOfWeek: number;
+};
+
+const SELECTED_GREEN = '#99E86C';  // New green color
+
+function WeekOverview({ 
+  selectedDate, 
+  onSelectDate, 
+  weeklyData 
+}: { 
+  selectedDate: Date; 
+  onSelectDate: (date: Date) => void;
+  weeklyData: DailyMacros[];
+}) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Sort the weeklyData to ensure Sunday-Saturday order
+  const sortedWeekData = [...weeklyData].sort((a, b) => {
+    const dateA = new Date(a.date);
+    const dateB = new Date(b.date);
+    return dateA.getDay() - dateB.getDay();  // Sunday (0) to Saturday (6)
+  });
+
+  const days = sortedWeekData.map((day, index) => {
+    const date = new Date(day.date);
+    const isSelected = formatDateId(date) === formatDateId(selectedDate);
+    const isToday = formatDateId(date) === formatDateId(today);
+    const isFuture = date > today;
+
+    return (
+      <Pressable
+        key={day.date}
+        style={[
+          styles.dayButton,
+          isSelected && styles.selectedDay,
+          isToday && styles.todayDay,
+          isFuture && styles.futureDay
+        ]}
+        onPress={() => !isFuture && onSelectDate(date)}
+        disabled={isFuture}
+      >
+        {isToday && <View style={styles.todayIndicator} />}
+        <Text style={[
+          styles.dayName,
+          isSelected && styles.selectedText,
+          isToday && styles.todayText,
+          isFuture && styles.futureText
+        ]}>
+          {format(date, 'EEE')}
+        </Text>
+        <Text style={[
+          styles.dayDate,
+          isSelected && styles.selectedText,
+          isToday && styles.todayText,
+          isFuture && styles.futureText
+        ]}>
+          {format(date, 'd')}
+        </Text>
+        <View style={styles.macroSummary}>
+          <Text style={[
+            styles.macroValue,
+            isSelected && styles.selectedText,
+            isToday && styles.todayText,
+            isFuture && styles.futureText
+          ]}>
+            {Math.round(day.calories)}
+          </Text>
+          <Text style={[
+            styles.macroLabel,
+            isSelected && styles.selectedText,
+            isToday && styles.todayText,
+            isFuture && styles.futureText
+          ]}>
+            kcal
+          </Text>
+        </View>
+      </Pressable>
+    );
+  });
+
+  return (
+    <View style={styles.weekContainer}>
+      <Text style={styles.weekTitle}>
+        Week of {format(new Date(weeklyData[0].date), 'MMM d')}
+      </Text>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        style={styles.daysScroll}
+      >
+        <View style={styles.daysContainer}>
+          {days}
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+// Move styles outside the component
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -1097,25 +893,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#F5F5F5',
-    padding: 16,
-    borderRadius: 16,
-    borderStyle: 'dashed',
-    borderWidth: 1,
-    borderColor: '#CCCCCC',
-  },
-  logMealText: {
-    fontSize: 16,
-    color: '#4A72B2',
-  },
-  logMealIcon: {
     backgroundColor: '#4A72B2',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  logMealButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
   modalOverlay: {
     flex: 1,
@@ -1265,4 +1054,481 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 16,
   },
-}); 
+  weekContainer: {
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+  },
+  weekTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 12,
+  },
+  daysScroll: {
+    marginHorizontal: -16,
+  },
+  daysContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+  },
+  dayButton: {
+    alignItems: 'center',
+    padding: 12,
+    marginRight: 8,
+    borderRadius: 12,
+    backgroundColor: '#F5F5F5',
+    minWidth: 80,
+    position: 'relative',
+  },
+  selectedDay: {
+    backgroundColor: SELECTED_GREEN,
+  },
+  todayDay: {
+    borderWidth: 2,
+    borderColor: '#4A72B2',
+  },
+  todayIndicator: {
+    position: 'absolute',
+    top: -4,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#4A72B2',
+    alignSelf: 'center',
+  },
+  selectedText: {
+    color: '#FFFFFF',
+  },
+  todayText: {
+    color: '#4A72B2',
+    fontWeight: '700',
+  },
+  futureDay: {
+    opacity: 0.5,
+  },
+  dayName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#000000',
+    marginBottom: 4,
+  },
+  dayDate: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 8,
+  },
+  macroSummary: {
+    alignItems: 'center',
+  },
+  futureWarning: {
+    color: '#FF6B6B',
+    textAlign: 'center',
+    padding: 8,
+    backgroundColor: '#FFE5E5',
+    marginHorizontal: 16,
+    borderRadius: 8,
+  },
+  topStats: {
+    backgroundColor: '#FFFFFF',
+    paddingTop: 16,
+    paddingHorizontal: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
+  },
+  dateHeader: {
+    marginBottom: 16,
+  },
+  currentDate: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666666',
+  },
+  macroCircles: {
+    // Placeholder for macro circles
+  },
+  dayContent: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+  },
+  dailySummary: {
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    marginTop: 8,
+    borderRadius: 12,
+    marginHorizontal: 16,
+  },
+  selectedDayTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 16,
+  },
+  noMealsText: {
+    textAlign: 'center',
+    color: '#666666',
+    fontSize: 16,
+    paddingVertical: 24,
+  },
+  logMealButtonContainer: {
+    position: 'absolute',
+    bottom: 24,
+    left: 24,
+    right: 24,
+  },
+});
+
+export default function NutritionScreen() {
+  const { macros, updateMacros } = useNutrition();
+  const [loggedMeals, setLoggedMeals] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
+  const [isLogMealModalVisible, setIsLogMealModalVisible] = useState(false);
+  const [selectedLoggingMethod, setSelectedLoggingMethod] = useState<'manual' | 'photo' | null>(null);
+  const [foodItems, setFoodItems] = useState<FoodItem[]>([]);
+  const [showManualEntry, setShowManualEntry] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [weeklyData, setWeeklyData] = useState<DailyMacros[]>([]);
+  const [isLoadingWeek, setIsLoadingWeek] = useState(true);
+
+  // Move canLogMeal to component scope
+  const canLogMeal = useCallback(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selected = new Date(selectedDate);
+    selected.setHours(0, 0, 0, 0);
+    return selected <= today;
+  }, [selectedDate]);
+
+  // Load selected day's macros and meals
+  useEffect(() => {
+    if (!user) return;
+
+    const loadSelectedDayData = async () => {
+      try {
+        setIsLoading(true);
+        const dateString = formatDateId(selectedDate);
+        
+        // Load macros for selected date
+        const dailyMacrosRef = doc(db, `users/${user.uid}/dailyMacros/${dateString}`);
+        const dailyMacrosDoc = await getDoc(dailyMacrosRef);
+        
+        // Get the goals (these stay constant)
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        const userData = userDoc.data();
+        const dailyCalories = calculateDailyCalories(
+          parseFloat(userData.weight),
+          parseFloat(userData.height),
+          parseInt(userData.age),
+          userData.gender.toLowerCase(),
+          userData.activityLevel as ActivityLevel
+        );
+        const goals = calculateMacroGoals(dailyCalories, userData.footballGoal);
+
+        // Update macros with selected day's progress
+        updateMacros({
+          calories: { 
+            current: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().calories : 0, 
+            goal: goals.calories 
+          },
+          protein: { 
+            current: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().protein : 0, 
+            goal: goals.protein 
+          },
+          carbs: { 
+            current: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().carbs : 0, 
+            goal: goals.carbs 
+          },
+          fats: { 
+            current: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().fats : 0, 
+            goal: goals.fats 
+          }
+        });
+
+        // Load meals for selected date
+        const startOfDay = getLocalStartOfDay(selectedDate);
+        const endOfDay = getLocalEndOfDay(selectedDate);
+
+        const q = query(
+          collection(db, 'meals'),
+          where('userId', '==', user.uid),
+          where('timestamp', '>=', startOfDay.toISOString()),
+          where('timestamp', '<=', endOfDay.toISOString()),
+          orderBy('timestamp', 'desc')
+        );
+
+        const mealsSnapshot = await getDocs(q);
+        const meals = mealsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        setLoggedMeals(meals);
+      } catch (error) {
+        console.error('Error loading selected day data:', error);
+        setLoggedMeals([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadSelectedDayData();
+  }, [user, selectedDate]); // Reload when selected date changes
+
+  // Update the logMealToFirestore function to use selectedDate
+  const logMealToFirestore = async (items: any[]) => {
+    if (!user) {
+      throw new Error('Must be logged in to log meals');
+    }
+
+    if (!canLogMeal()) {
+      throw new Error('Cannot log meals for future dates');
+    }
+
+    try {
+      const totalMacros = items.reduce((acc: any, item: any) => ({
+        calories: acc.calories + item.macros.calories,
+        protein: acc.protein + item.macros.protein,
+        carbs: acc.carbs + item.macros.carbs,
+        fats: acc.fats + item.macros.fats
+      }), { calories: 0, protein: 0, carbs: 0, fats: 0 });
+
+      // Use selected date for the meal timestamp
+      const mealDate = new Date(selectedDate);
+      mealDate.setHours(new Date().getHours());
+      mealDate.setMinutes(new Date().getMinutes());
+
+      const mealData = {
+        userId: user.uid,
+        timestamp: mealDate.toISOString(),
+        items,
+        totalMacros
+      };
+
+      await addDoc(collection(db, 'meals'), mealData);
+
+      // Update daily macros for selected date
+      const dateString = formatDateId(selectedDate);
+      const dailyMacrosRef = doc(db, `users/${user.uid}/dailyMacros/${dateString}`);
+      const dailyMacrosDoc = await getDoc(dailyMacrosRef);
+
+      if (dailyMacrosDoc.exists()) {
+        const currentMacros = dailyMacrosDoc.data();
+        await setDoc(dailyMacrosRef, {
+          calories: currentMacros.calories + totalMacros.calories,
+          protein: currentMacros.protein + totalMacros.protein,
+          carbs: currentMacros.carbs + totalMacros.carbs,
+          fats: currentMacros.fats + totalMacros.fats,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } else {
+        await setDoc(dailyMacrosRef, {
+          calories: totalMacros.calories,
+          protein: totalMacros.protein,
+          carbs: totalMacros.carbs,
+          fats: totalMacros.fats,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+      }
+
+      // Update local state
+      updateMacros({
+        calories: { current: macros.calories.current + totalMacros.calories, goal: macros.calories.goal },
+        protein: { current: macros.protein.current + totalMacros.protein, goal: macros.protein.goal },
+        carbs: { current: macros.carbs.current + totalMacros.carbs, goal: macros.carbs.goal },
+        fats: { current: macros.fats.current + totalMacros.fats, goal: macros.fats.goal }
+      });
+
+      console.log('Meal logged successfully:', mealData);
+    } catch (error) {
+      console.error('Error logging meal:', error);
+      throw error;
+    }
+  };
+
+  // Update weekly data fetching
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchWeeklyData = async () => {
+      try {
+        setIsLoadingWeek(true);
+        const today = new Date();
+        
+        // Get the start of the week (Sunday)
+        const startOfWeek = new Date(today);
+        if (today.getDay() !== 0) { // 0 is Sunday
+          startOfWeek.setDate(today.getDate() - today.getDay());
+        }
+        startOfWeek.setHours(0, 0, 0, 0);
+
+        const weekData: DailyMacros[] = [];
+        
+        // Get 7 days starting from Sunday
+        for (let i = 0; i < 7; i++) {
+          const currentDate = new Date(startOfWeek);
+          currentDate.setDate(startOfWeek.getDate() + i);
+          const dateId = formatDateId(currentDate);
+          
+          const dailyMacrosRef = doc(db, `users/${user.uid}/dailyMacros/${dateId}`);
+          const dailyMacrosDoc = await getDoc(dailyMacrosRef);
+          
+          weekData.push({
+            calories: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().calories : 0,
+            protein: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().protein : 0,
+            carbs: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().carbs : 0,
+            fats: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().fats : 0,
+            date: dateId,
+            dayOfWeek: i  // Add this to ensure correct sorting
+          });
+        }
+        
+        setWeeklyData(weekData);
+      } catch (error) {
+        console.error('Error fetching weekly data:', error);
+        // Initialize with empty data on error
+        const today = new Date();
+        const startOfWeek = new Date(today);
+        if (today.getDay() !== 0) {
+          startOfWeek.setDate(today.getDate() - today.getDay());
+        }
+        startOfWeek.setHours(0, 0, 0, 0);
+        
+        setWeeklyData(Array(7).fill(null).map((_, i) => {
+          const date = new Date(startOfWeek);
+          date.setDate(startOfWeek.getDate() + i);
+          return {
+            calories: 0,
+            protein: 0,
+            carbs: 0,
+            fats: 0,
+            date: formatDateId(date),
+            dayOfWeek: i
+          };
+        }));
+      } finally {
+        setIsLoadingWeek(false);
+      }
+    };
+
+    fetchWeeklyData();
+  }, [user, selectedDate]);
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={{
+        paddingHorizontal: 24,
+        paddingTop: 24,
+        paddingBottom: 16,
+        backgroundColor: '#FFFFFF',
+      }}>
+        {/* BallerAI Logo and Text */}
+        <View style={{ 
+          flexDirection: 'row', 
+          alignItems: 'center', 
+          gap: 8,
+          marginBottom: 16,
+        }}>
+          <Image 
+            source={require('../../assets/images/BallerAILogo.png')}
+            style={{ width: 32, height: 32 }}
+            resizeMode="contain"
+          />
+          <Text style={{ 
+            fontSize: 24, 
+            fontWeight: '600', 
+            color: '#000000' 
+          }}>
+            BallerAI
+          </Text>
+        </View>
+
+        {/* Centered Nutrition Title */}
+        <Text style={{
+          fontSize: 32,
+          fontWeight: '700',
+          color: '#000000',
+          textAlign: 'center',
+          marginBottom: 8,
+        }}>
+          Nutrition
+        </Text>
+      </View>
+
+      {/* Add Week Overview here */}
+      {isLoadingWeek ? (
+        <View style={styles.weekContainer}>
+          <ActivityIndicator size="large" color="#4A72B2" />
+        </View>
+      ) : (
+        <WeekOverview
+          selectedDate={selectedDate}
+          onSelectDate={setSelectedDate}
+          weeklyData={weeklyData}
+        />
+      )}
+
+      <ScrollView>
+        <View style={styles.calorieCard}>
+          <CalorieProgress 
+            eaten={macros.calories.current}
+            burned={0}
+            goal={macros.calories.goal}
+          />
+        </View>
+
+        <View style={styles.macrosCard}>
+          <MacroProgress
+            type="Protein"
+            current={macros.protein.current}
+            goal={macros.protein.goal}
+            color="#FF6B6B"
+          />
+          <MacroProgress
+            type="Carbs"
+            current={macros.carbs.current}
+            goal={macros.carbs.goal}
+            color="#4ECDC4"
+          />
+          <MacroProgress
+            type="Fats"
+            current={macros.fats.current}
+            goal={macros.fats.goal}
+            color="#FFD93D"
+          />
+          
+          <WeeklyAdherence percentage={60} />
+        </View>
+
+        <View style={styles.mealsSection}>
+          <Pressable
+            style={styles.logMealButton}
+            onPress={() => setIsLogMealModalVisible(true)}
+          >
+            <Text style={styles.logMealText}>Log Meal</Text>
+            <View style={styles.logMealIcon}>
+              <Ionicons name="add" size={24} color="#FFFFFF" />
+            </View>
+          </Pressable>
+        </View>
+
+        <LoggedMeals meals={loggedMeals} onDelete={logMealToFirestore} />
+      </ScrollView>
+
+      <LogMealModal
+        visible={isLogMealModalVisible}
+        onClose={() => setIsLogMealModalVisible(false)}
+        onPhotoAnalysis={logMealToFirestore}
+        onLogMeal={logMealToFirestore}
+      />
+
+      {isLoading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#4A72B2" />
+          <Text style={styles.loadingText}>Analyzing image...</Text>
+        </View>
+      )}
+    </SafeAreaView>
+  );
+} 

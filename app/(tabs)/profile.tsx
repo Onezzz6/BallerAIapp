@@ -4,8 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { useOnboarding } from '../context/OnboardingContext';
-import { doc, getDoc, updateDoc, deleteDoc, collection, getDocs, writeBatch } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { doc, getDoc, updateDoc, deleteDoc, collection, getDocs, writeBatch, query, where } from 'firebase/firestore';
+import { deleteUser, signOut, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
+import { db, auth } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
 import { getStorage, ref, uploadBytes, getDownloadURL, listAll, deleteObject } from 'firebase/storage';
@@ -50,6 +51,9 @@ export default function ProfileScreen() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteReason, setDeleteReason] = useState('');
   const [otherReason, setOtherReason] = useState('');
+  const [showReauthModal, setShowReauthModal] = useState(false);
+  const [password, setPassword] = useState('');
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
 
   const uploadImageToFirebase = async (uri: string) => {
     if (!user?.uid) {
@@ -205,8 +209,78 @@ export default function ProfileScreen() {
     );
   };
 
+  const reauthenticateUser = async (password: string) => {
+    if (!user?.email) return;
+    
+    try {
+      const credential = EmailAuthProvider.credential(user.email, password);
+      await reauthenticateWithCredential(user, credential);
+      return true;
+    } catch (error) {
+      console.error('Reauthentication error:', error);
+      Alert.alert(
+        'Error',
+        'Invalid password. Please try again.'
+      );
+      return false;
+    }
+  };
+
   const handleDeleteAccount = () => {
     setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirmation = async () => {
+    if (!user) return;
+    
+    try {
+      setIsLoading(true);
+      // Try to delete account first
+      try {
+        // 1. Delete all user's meals
+        const mealsQuery = query(
+          collection(db, 'meals'),
+          where('userId', '==', user.uid)
+        );
+        const mealsSnapshot = await getDocs(mealsQuery);
+        const mealDeletions = mealsSnapshot.docs.map(doc => 
+          deleteDoc(doc.ref)
+        );
+        await Promise.all(mealDeletions);
+
+        // 2. Delete all user's dailyMacros
+        const dailyMacrosRef = collection(db, `users/${user.uid}/dailyMacros`);
+        const dailyMacrosSnapshot = await getDocs(dailyMacrosRef);
+        const macroDeletions = dailyMacrosSnapshot.docs.map(doc => 
+          deleteDoc(doc.ref)
+        );
+        await Promise.all(macroDeletions);
+
+        // 3. Delete user document and all its subcollections
+        await deleteDoc(doc(db, 'users', user.uid));
+
+        // 4. Delete Firebase Auth user and sign out
+        await deleteUser(user);
+        await signOut(auth);
+
+        // 5. Navigate to welcome screen
+        router.replace('/');
+      } catch (error: any) {
+        if (error.code === 'auth/requires-recent-login') {
+          setShowReauthModal(true);
+          return;
+        }
+        throw error;
+      }
+    } catch (error) {
+      console.error('Error during account deletion:', error);
+      Alert.alert(
+        'Error',
+        'Failed to delete account. Please try again or contact support.'
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const sendFeedbackEmail = async () => {
@@ -221,102 +295,6 @@ export default function ProfileScreen() {
       }
     } catch (error) {
       console.error('Error opening email:', error);
-    }
-  };
-
-  const deleteUserData = async (uid: string) => {
-    try {
-      // Create a batch
-      const batch = writeBatch(db);
-
-      // Delete main user document
-      const userRef = doc(db, 'users', uid);
-      batch.delete(userRef);
-
-      // Delete all subcollections
-      const collections = [
-        'meals',
-        'trainings',
-        'nutrition',
-        'recovery',
-        'progress',
-        'workouts',
-        'dailyMacros'
-      ];
-
-      for (const collectionName of collections) {
-        const collectionRef = collection(db, 'users', uid, collectionName);
-        const snapshot = await getDocs(collectionRef);
-        snapshot.docs.forEach((doc) => {
-          batch.delete(doc.ref);
-        });
-      }
-
-      // Commit the batch
-      await batch.commit();
-
-      // Delete profile pictures from storage
-      const storage = getStorage();
-      const profilePicRef = ref(storage, `profile_pictures/${uid}`);
-      try {
-        const picsList = await listAll(profilePicRef);
-        await Promise.all(picsList.items.map(item => deleteObject(item)));
-      } catch (storageError) {
-        // Ignore if no pictures exist
-        console.log('No profile pictures to delete');
-      }
-
-    } catch (error) {
-      console.error('Error deleting user data:', error);
-      throw new Error('Failed to delete user data');
-    }
-  };
-
-  const confirmDeleteAccount = async () => {
-    if (!user?.uid) {
-      Alert.alert('Error', 'No user found');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      // First delete user data
-      await deleteUserData(user.uid);
-      
-      // Then delete the authentication account
-      await authService.deleteAccount();
-      
-      // If successful, navigate back
-      router.replace('/');
-    } catch (error: any) {
-      console.error('Error during account deletion:', error);
-      
-      // If it's a re-authentication required error, handle it
-      if (error.message?.includes('sign in again')) {
-        Alert.alert(
-          'Authentication Required',
-          'Please sign out and sign in again before deleting your account.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { 
-              text: 'Sign Out',
-              onPress: async () => {
-                await authService.signOut();
-                router.replace('/');
-              }
-            }
-          ]
-        );
-        return;
-      }
-
-      Alert.alert(
-        'Error',
-        error.message || 'Failed to delete account. Please try again later.'
-      );
-    } finally {
-      setIsLoading(false);
-      setShowDeleteModal(false);
     }
   };
 
@@ -799,69 +777,175 @@ export default function ProfileScreen() {
     );
   };
 
-  if (showDeleteModal) {
-    return (
+  const renderReauthModal = () => (
+    <Modal
+      visible={showReauthModal}
+      transparent
+      animationType="slide"
+    >
       <View style={styles.modalContainer}>
         <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Before you go...</Text>
-          <Text style={styles.modalSubtitle}>Please tell us why you're leaving:</Text>
+          <Text style={styles.modalTitle}>Confirm Your Password</Text>
+          <Text style={styles.modalSubtitle}>
+            For security reasons, please enter your password to continue.
+          </Text>
+          
+          <TextInput
+            style={styles.modalInput}
+            placeholder="Enter your password"
+            secureTextEntry
+            value={password}
+            onChangeText={setPassword}
+          />
 
-          {[
-            'Not finding value in the app',
-            'Technical issues',
-            'Privacy concerns',
-            'Found a better alternative',
-            'Taking a break',
-            'Other'
-          ].map((reason) => (
-            <Pressable
-              key={reason}
-              style={[
-                styles.reasonButton,
-                deleteReason === reason && styles.selectedReason
-              ]}
-              onPress={() => setDeleteReason(reason)}
-            >
-              <Text style={[
-                styles.reasonText,
-                deleteReason === reason && styles.selectedReasonText
-              ]}>
-                {reason}
-              </Text>
-            </Pressable>
-          ))}
+          <View style={styles.modalButtons}>
+            <Button
+              title="Cancel"
+              onPress={() => {
+                setShowReauthModal(false);
+                setPassword('');
+              }}
+              buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
+            />
+            <Button
+              title="Confirm"
+              onPress={async () => {
+                const success = await reauthenticateUser(password);
+                if (success) {
+                  setShowReauthModal(false);
+                  setPassword('');
+                  handleDeleteAccount();
+                }
+              }}
+              buttonStyle={{ backgroundColor: '#FF3B30', flex: 1 }}
+              disabled={!password.trim()}
+            />
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  const renderDeleteModal = () => (
+    <Modal
+      visible={showDeleteModal}
+      transparent
+      animationType="slide"
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.modalContent}>
+          <Text style={styles.modalTitle}>We're sorry to see you go</Text>
+          <Text style={styles.modalSubtitle}>
+            Please let us know why you're leaving so we can improve our service
+          </Text>
+
+          <ScrollView style={styles.reasonsContainer}>
+            {[
+              'Not finding it useful',
+              'Technical issues',
+              'Found a better alternative',
+              'Privacy concerns',
+              'Too expensive',
+              'Other'
+            ].map((reason) => (
+              <Pressable
+                key={reason}
+                style={[
+                  styles.reasonButton,
+                  deleteReason === reason && styles.selectedReason
+                ]}
+                onPress={() => setDeleteReason(reason)}
+              >
+                <Text style={[
+                  styles.reasonText,
+                  deleteReason === reason && styles.selectedReasonText
+                ]}>
+                  {reason}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
 
           {deleteReason === 'Other' && (
             <TextInput
               style={styles.otherInput}
-              placeholder="Please specify..."
+              placeholder="Please tell us more..."
+              multiline
               value={otherReason}
               onChangeText={setOtherReason}
-              multiline
             />
           )}
 
           <View style={styles.modalFooter}>
             <Button
-              title="Send Feedback"
+              title="Send Feedback via Email"
               onPress={sendFeedbackEmail}
               buttonStyle={styles.feedbackButton}
+              icon={<Ionicons name="mail-outline" size={24} color="#FFFFFF" />}
             />
+            
             <View style={styles.actionButtons}>
               <Button
-                title="Cancel"
-                onPress={() => setShowDeleteModal(false)}
-                buttonStyle={styles.cancelButton}
+                title="Go Back"
+                onPress={() => {
+                  setShowDeleteModal(false);
+                  setDeleteReason('');
+                  setOtherReason('');
+                }}
+                buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
               />
               <Button
-                title="Delete Account"
-                onPress={confirmDeleteAccount}
-                buttonStyle={styles.deleteButton}
+                title="Continue to Delete"
+                onPress={() => {
+                  setShowDeleteModal(false);
+                  setShowDeleteConfirmModal(true);
+                }}
+                buttonStyle={{ backgroundColor: '#FF3B30', flex: 1 }}
               />
             </View>
           </View>
         </View>
       </View>
+    </Modal>
+  );
+
+  const renderDeleteConfirmModal = () => (
+    <Modal
+      visible={showDeleteConfirmModal}
+      transparent
+      animationType="slide"
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.modalContent}>
+          <Text style={styles.modalTitle}>Final Confirmation</Text>
+          <Text style={styles.modalSubtitle}>
+            Are you sure you want to delete your account? This action cannot be undone.
+          </Text>
+
+          <View style={styles.modalButtons}>
+            <Button
+              title="Cancel"
+              onPress={() => setShowDeleteConfirmModal(false)}
+              buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
+            />
+            <Button
+              title="Delete Account"
+              onPress={handleDeleteConfirmation}
+              buttonStyle={{ backgroundColor: '#FF3B30', flex: 1 }}
+            />
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  if (showDeleteModal) {
+    return (
+      <SafeAreaView style={styles.container}>
+        {renderDeleteModal()}
+        {renderDeleteConfirmModal()}
+        {renderReauthModal()}
+      </SafeAreaView>
     );
   }
 
@@ -1103,6 +1187,7 @@ export default function ProfileScreen() {
       </KeyboardAvoidingView>
 
       {renderEditModal()}
+      {renderReauthModal()}
 
       <View style={styles.buttonContainer}>
         <Button
@@ -1266,9 +1351,8 @@ const styles = StyleSheet.create({
     borderColor: '#E5E5E5',
     borderRadius: 12,
     padding: 16,
-    fontSize: 18,
-    textAlign: 'center',
-    backgroundColor: '#F8F8F8',
+    marginVertical: 16,
+    fontSize: 16,
   },
   modalButtons: {
     flexDirection: 'row',
@@ -1279,11 +1363,14 @@ const styles = StyleSheet.create({
   },
   feedbackButton: {
     backgroundColor: '#34C759',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
   actionButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 16,
+    gap: 12,
   },
   otherInput: {
     borderWidth: 1,
@@ -1426,9 +1513,10 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   modalSubtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#666666',
     marginBottom: 16,
+    textAlign: 'center',
   },
   reasonButton: {
     width: '100%',
@@ -1449,5 +1537,42 @@ const styles = StyleSheet.create({
   },
   selectedReasonText: {
     color: '#FFFFFF',
+  },
+  reasonsContainer: {
+    maxHeight: 300,
+    marginVertical: 16,
+  },
+  reasons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  reasonsTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 16,
+  },
+  reasonsSubtitle: {
+    fontSize: 14,
+    color: '#666666',
+    marginBottom: 16,
+  },
+  reasonsInput: {
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 24,
+  },
+  reasonsFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  reasonsButton: {
+    backgroundColor: '#007AFF',
+  },
+  reasonsCancelButton: {
+    backgroundColor: '#8E8E93',
   },
 }); 
