@@ -25,9 +25,13 @@ export default function WelcomeScreen() {
 
     setIsLoading(true);
     try {
-      const emailExists = await authService.checkEmailExists(email);
-      
-      if (!emailExists) {
+      // Try to sign in directly instead of checking email first
+      const user = await authService.signInWithEmail(email, password);
+      if (user) {
+        router.replace('/(tabs)/home');
+      }
+    } catch (error: any) {
+      if (error.code === 'auth/user-not-found') {
         Alert.alert(
           'Account Not Found',
           'No account found with this email. Would you like to create one?',
@@ -43,16 +47,7 @@ export default function WelcomeScreen() {
             }
           ]
         );
-        return;
-      }
-
-      // Email exists - try to sign in
-      const user = await authService.signInWithEmail(email, password);
-      if (user) {
-        router.replace('/(tabs)/home');
-      }
-    } catch (error: any) {
-      if (error.code === 'auth/wrong-password') {
+      } else if (error.code === 'auth/wrong-password') {
         Alert.alert('Error', 'Invalid password. Please try again.');
       } else {
         Alert.alert(

@@ -11,6 +11,7 @@ import Button from '../components/Button';
 import { getStorage, ref, uploadBytes, getDownloadURL, listAll, deleteObject } from 'firebase/storage';
 import { useRouter } from 'expo-router';
 import authService from '../services/auth';
+import { Picker } from '@react-native-picker/picker';
 
 type UserData = {
   username?: string;
@@ -25,6 +26,7 @@ type UserData = {
   fitnessLevel?: string;
   activityLevel?: string;
   profilePicture?: string;
+  injuryHistory?: string;
 };
 
 export default function ProfileScreen() {
@@ -162,16 +164,14 @@ export default function ProfileScreen() {
   };
 
   const profileDetails = [
-    { label: 'Age', field: 'age', value: userData?.age, icon: 'calendar-outline' as const },
-    { label: 'Gender', field: 'gender', value: userData?.gender, icon: 'person-outline' as const },
-    { label: 'Height', field: 'height', value: userData?.height, icon: 'resize-outline' as const, unit: 'cm' },
-    { label: 'Weight', field: 'weight', value: userData?.weight, icon: 'scale-outline' as const, unit: 'kg' },
-    { label: 'Dominant Foot', field: 'dominantFoot', value: userData?.dominantFoot, icon: 'football-outline' as const },
-    { label: 'Position', field: 'position', value: userData?.position, icon: 'location-outline' as const },
-    { label: 'Skill Level', field: 'skillLevel', value: userData?.skillLevel, icon: 'star-outline' as const },
-    { label: 'Training Frequency', field: 'trainingFrequency', value: userData?.trainingFrequency, icon: 'time-outline' as const },
-    { label: 'Fitness Level', field: 'fitnessLevel', value: userData?.fitnessLevel, icon: 'fitness-outline' as const },
-    { label: 'Activity Level', field: 'activityLevel', value: userData?.activityLevel, icon: 'walk-outline' as const },
+    { field: 'age', label: 'Age', value: userData?.age, icon: 'calendar-outline', unit: 'years' },
+    { field: 'gender', label: 'Gender', value: userData?.gender, icon: 'person-outline' },
+    { field: 'height', label: 'Height', value: userData?.height, icon: 'resize-outline', unit: 'cm' },
+    { field: 'weight', label: 'Weight', value: userData?.weight, icon: 'barbell-outline', unit: 'kg' },
+    { field: 'dominantFoot', label: 'Dominant Foot', value: userData?.dominantFoot, icon: 'football-outline' },
+    { field: 'position', label: 'Position', value: userData?.position, icon: 'people-outline' },
+    { field: 'injuryHistory', label: 'Injury History', value: userData?.injuryHistory, icon: 'medical-outline' },
+    { field: 'activityLevel', label: 'Activity Level', value: userData?.activityLevel, icon: 'fitness-outline' },
   ];
 
   const handleLogout = () => {
@@ -310,6 +310,485 @@ export default function ProfileScreen() {
       setIsLoading(false);
       setShowDeleteModal(false);
     }
+  };
+
+  const renderEditModal = () => {
+    if (editingField === 'gender') {
+      const genderOptions = [
+        { value: 'male', label: 'Male' },
+        { value: 'female', label: 'Female' },
+        { value: 'other', label: 'Other' }
+      ];
+
+      return (
+        <Modal
+          visible={editingField === 'gender'}
+          transparent
+          animationType="slide"
+        >
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{ flex: 1 }}
+          >
+            <View style={styles.modalContainer}>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>
+                  What is your gender?
+                </Text>
+
+                <View style={styles.optionsContainer}>
+                  {genderOptions.map((option) => (
+                    <Pressable
+                      key={option.value}
+                      onPress={() => setEditValue(option.value)}
+                      style={({ pressed }) => [
+                        styles.optionButton,
+                        editValue === option.value && styles.selectedOption,
+                        { opacity: pressed ? 0.9 : 1 }
+                      ]}
+                    >
+                      <Text style={[
+                        styles.optionText,
+                        editValue === option.value && styles.selectedOptionText
+                      ]}>
+                        {option.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+
+                <View style={styles.modalButtons}>
+                  <Button
+                    title="Cancel"
+                    onPress={() => setEditingField(null)}
+                    buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
+                  />
+                  <Button
+                    title="Save"
+                    onPress={() => {
+                      if (editValue) {
+                        updateUserField('gender', editValue);
+                      }
+                    }}
+                    buttonStyle={{ backgroundColor: '#99E86C', flex: 1 }}
+                    disabled={!editValue}
+                  />
+                </View>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
+      );
+    }
+
+    if (editingField === 'age') {
+      return (
+        <Modal
+          visible={editingField === 'age'}
+          transparent
+          animationType="slide"
+        >
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{ flex: 1 }}
+          >
+            <View style={styles.modalContainer}>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>
+                  How old are you?
+                </Text>
+
+                <View style={styles.pickerContainer}>
+                  <Picker
+                    selectedValue={editValue}
+                    onValueChange={(itemValue) => setEditValue(itemValue)}
+                    style={styles.picker}
+                  >
+                    {Array.from({ length: 83 }, (_, i) => i + 8).map((num) => (
+                      <Picker.Item
+                        key={num}
+                        label={num.toString()}
+                        value={num.toString()}
+                      />
+                    ))}
+                  </Picker>
+                </View>
+
+                <View style={styles.modalButtons}>
+                  <Button
+                    title="Cancel"
+                    onPress={() => setEditingField(null)}
+                    buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
+                  />
+                  <Button
+                    title="Save"
+                    onPress={() => {
+                      if (editValue) {
+                        updateUserField('age', editValue);
+                      }
+                    }}
+                    buttonStyle={{ backgroundColor: '#99E86C', flex: 1 }}
+                    disabled={isLoading}
+                  />
+                </View>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
+      );
+    }
+
+    if (editingField === 'dominantFoot') {
+      const footOptions = [
+        { value: 'left', label: 'Left' },
+        { value: 'right', label: 'Right' },
+        { value: 'both', label: 'Both' }
+      ];
+
+      return (
+        <Modal
+          visible={editingField === 'dominantFoot'}
+          transparent
+          animationType="slide"
+        >
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{ flex: 1 }}
+          >
+            <View style={styles.modalContainer}>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>
+                  Which is your dominant foot?
+                </Text>
+
+                <View style={styles.optionsContainer}>
+                  {footOptions.map((option) => (
+                    <Pressable
+                      key={option.value}
+                      onPress={() => setEditValue(option.value)}
+                      style={({ pressed }) => [
+                        styles.optionButton,
+                        editValue === option.value && styles.selectedOption,
+                        { opacity: pressed ? 0.9 : 1 }
+                      ]}
+                    >
+                      <Text style={[
+                        styles.optionText,
+                        editValue === option.value && styles.selectedOptionText
+                      ]}>
+                        {option.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+
+                <View style={styles.modalButtons}>
+                  <Button
+                    title="Cancel"
+                    onPress={() => setEditingField(null)}
+                    buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
+                  />
+                  <Button
+                    title="Save"
+                    onPress={() => {
+                      if (editValue) {
+                        updateUserField('dominantFoot', editValue);
+                      }
+                    }}
+                    buttonStyle={{ backgroundColor: '#99E86C', flex: 1 }}
+                    disabled={!editValue}
+                  />
+                </View>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
+      );
+    }
+
+    if (editingField === 'position') {
+      const POSITIONS = [
+        { id: 'goalkeeper', title: 'Goalkeeper' },
+        { id: 'defender', title: 'Defender' },
+        { id: 'midfielder', title: 'Midfielder' },
+        { id: 'forward', title: 'Forward' },
+      ];
+
+      return (
+        <Modal
+          visible={editingField === 'position'}
+          transparent
+          animationType="slide"
+        >
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{ flex: 1 }}
+          >
+            <View style={styles.modalContainer}>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>
+                  What's your position?
+                </Text>
+
+                <View style={styles.optionsContainer}>
+                  {POSITIONS.map((position) => (
+                    <Pressable
+                      key={position.id}
+                      onPress={() => setEditValue(position.id)}
+                      style={({ pressed }) => [
+                        styles.optionButton,
+                        editValue === position.id && styles.selectedOption,
+                        { opacity: pressed ? 0.9 : 1 }
+                      ]}
+                    >
+                      <Text style={[
+                        styles.optionText,
+                        editValue === position.id && styles.selectedOptionText
+                      ]}>
+                        {position.title}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+
+                <View style={styles.modalButtons}>
+                  <Button
+                    title="Cancel"
+                    onPress={() => setEditingField(null)}
+                    buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
+                  />
+                  <Button
+                    title="Save"
+                    onPress={() => {
+                      if (editValue) {
+                        updateUserField('position', editValue);
+                      }
+                    }}
+                    buttonStyle={{ backgroundColor: '#99E86C', flex: 1 }}
+                    disabled={!editValue}
+                  />
+                </View>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
+      );
+    }
+
+    if (editingField === 'activityLevel') {
+      const ACTIVITY_LEVELS = [
+        {
+          id: 'sedentary',
+          title: 'Sedentary',
+          description: 'No exercise, desk job',
+        },
+        {
+          id: 'light',
+          title: 'Lightly Active',
+          description: '1-3 days/week',
+        },
+        {
+          id: 'moderate',
+          title: 'Moderately Active',
+          description: '3-5 days/week',
+        },
+        {
+          id: 'very',
+          title: 'Very Active',
+          description: '6-7 days/week',
+        },
+        {
+          id: 'extra',
+          title: 'Extra Active',
+          description: 'Very active & physical job',
+        },
+      ];
+
+      return (
+        <Modal
+          visible={editingField === 'activityLevel'}
+          transparent
+          animationType="slide"
+        >
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{ flex: 1 }}
+          >
+            <View style={styles.modalContainer}>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>
+                  What's your activity level?
+                </Text>
+
+                <View style={styles.optionsContainer}>
+                  {ACTIVITY_LEVELS.map((level) => (
+                    <Pressable
+                      key={level.id}
+                      onPress={() => setEditValue(level.id)}
+                      style={({ pressed }) => [
+                        styles.optionButtonWithDescription,
+                        editValue === level.id && styles.selectedOption,
+                        { opacity: pressed ? 0.9 : 1 }
+                      ]}
+                    >
+                      <Text style={[
+                        styles.optionText,
+                        editValue === level.id && styles.selectedOptionText
+                      ]}>
+                        {level.title}
+                      </Text>
+                      <Text style={[
+                        styles.optionDescription,
+                        editValue === level.id && styles.selectedOptionText
+                      ]}>
+                        {level.description}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+
+                <View style={styles.modalButtons}>
+                  <Button
+                    title="Cancel"
+                    onPress={() => setEditingField(null)}
+                    buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
+                  />
+                  <Button
+                    title="Save"
+                    onPress={() => {
+                      if (editValue) {
+                        updateUserField('activityLevel', editValue);
+                      }
+                    }}
+                    buttonStyle={{ backgroundColor: '#99E86C', flex: 1 }}
+                    disabled={!editValue}
+                  />
+                </View>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
+      );
+    }
+
+    if (editingField === 'injuryHistory') {
+      const CHARACTER_LIMIT = 100;
+
+      return (
+        <Modal
+          visible={editingField === 'injuryHistory'}
+          transparent
+          animationType="slide"
+        >
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{ flex: 1 }}
+          >
+            <View style={styles.modalContainer}>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>
+                  Do you have any injury history?
+                </Text>
+
+                <TextInput
+                  value={editValue}
+                  onChangeText={(text) => {
+                    if (text.length <= CHARACTER_LIMIT) {
+                      setEditValue(text);
+                    }
+                  }}
+                  style={[styles.modalInput, styles.textArea]}
+                  multiline
+                  placeholder="Describe any past injuries..."
+                  maxLength={CHARACTER_LIMIT}
+                />
+
+                <Text style={styles.characterCount}>
+                  {editValue.length}/{CHARACTER_LIMIT}
+                </Text>
+
+                <View style={styles.modalButtons}>
+                  <Button
+                    title="Cancel"
+                    onPress={() => setEditingField(null)}
+                    buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
+                  />
+                  <Button
+                    title="Save"
+                    onPress={() => {
+                      if (editValue.trim()) {
+                        updateUserField('injuryHistory', editValue.trim());
+                      }
+                    }}
+                    buttonStyle={{ backgroundColor: '#99E86C', flex: 1 }}
+                    disabled={!editValue.trim()}
+                  />
+                </View>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
+      );
+    }
+
+    // Return the default text input modal for other fields
+    return (
+      <Modal
+        visible={editingField !== null && 
+          editingField !== 'age' && 
+          editingField !== 'gender' && 
+          editingField !== 'dominantFoot' &&
+          editingField !== 'position' &&
+          editingField !== 'activityLevel' &&
+          editingField !== 'injuryHistory'}
+        transparent
+        animationType="slide"
+      >
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
+        >
+          <ScrollView 
+            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.modalContainer}>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>
+                  Edit {profileDetails.find(d => d.field === editingField)?.label}
+                </Text>
+                
+                <TextInput
+                  value={editValue}
+                  onChangeText={setEditValue}
+                  style={styles.modalInput}
+                  autoFocus
+                  keyboardType={editingField === 'age' || editingField === 'height' || editingField === 'weight' ? 'numeric' : 'default'}
+                />
+
+                <View style={styles.modalButtons}>
+                  <Button
+                    title="Cancel"
+                    onPress={() => setEditingField(null)}
+                    buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
+                  />
+                  <Button
+                    title="Save"
+                    onPress={() => {
+                      if (editingField) {
+                        updateUserField(editingField, editValue);
+                      }
+                    }}
+                    buttonStyle={{ backgroundColor: '#99E86C', flex: 1 }}
+                    disabled={isLoading}
+                  />
+                </View>
+              </View>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </Modal>
+    );
   };
 
   if (showDeleteModal) {
@@ -615,56 +1094,7 @@ export default function ProfileScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Edit Modal */}
-      <Modal
-        visible={editingField !== null}
-        transparent
-        animationType="slide"
-      >
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={{ flex: 1 }}
-        >
-          <ScrollView 
-            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
-            keyboardShouldPersistTaps="handled"
-          >
-            <View style={styles.modalContainer}>
-              <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>
-                  Edit {profileDetails.find(d => d.field === editingField)?.label}
-                </Text>
-                
-                <TextInput
-                  value={editValue}
-                  onChangeText={setEditValue}
-                  style={styles.modalInput}
-                  autoFocus
-                  keyboardType={editingField === 'age' || editingField === 'height' || editingField === 'weight' ? 'numeric' : 'default'}
-                />
-
-                <View style={styles.modalButtons}>
-                  <Button
-                    title="Cancel"
-                    onPress={() => setEditingField(null)}
-                    buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
-                  />
-                  <Button
-                    title="Save"
-                    onPress={() => {
-                      if (editingField) {
-                        updateUserField(editingField, editValue);
-                      }
-                    }}
-                    buttonStyle={{ backgroundColor: '#99E86C', flex: 1 }}
-                    disabled={isLoading}
-                  />
-                </View>
-              </View>
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </Modal>
+      {renderEditModal()}
 
       <View style={styles.buttonContainer}>
         <Button
@@ -924,5 +1354,67 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+  },
+  pickerContainer: {
+    width: '100%',
+    height: 200,
+    backgroundColor: '#F8F8F8',
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginVertical: 16,
+  },
+  picker: {
+    width: '100%',
+    height: '100%',
+  },
+  optionsContainer: {
+    width: '100%',
+    gap: 12,
+    marginVertical: 16,
+  },
+  optionButton: {
+    width: '100%',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#E5E5E5',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+  },
+  selectedOption: {
+    borderColor: '#99E86C',
+    backgroundColor: '#99E86C',
+  },
+  optionText: {
+    fontSize: 18,
+    color: '#000000',
+    fontWeight: '500',
+  },
+  selectedOptionText: {
+    color: '#FFFFFF',
+  },
+  optionButtonWithDescription: {
+    width: '100%',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#E5E5E5',
+    backgroundColor: '#FFFFFF',
+  },
+  optionDescription: {
+    fontSize: 14,
+    color: '#666666',
+  },
+  textArea: {
+    height: 120,
+    textAlignVertical: 'top',
+    textAlign: 'left',
+    paddingTop: 12,
+  },
+  characterCount: {
+    fontSize: 14,
+    color: '#666666',
+    textAlign: 'right',
+    marginTop: 8,
   },
 }); 
