@@ -2,7 +2,7 @@ import { View, Text, Pressable, StyleSheet, Image, ScrollView, Modal, TextInput,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect, useCallback } from 'react';
-import { format, addDays } from 'date-fns';
+import { format, addDays, startOfWeek } from 'date-fns';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path, Circle, G } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
@@ -11,7 +11,7 @@ import { doc, setDoc, getDoc, collection, addDoc, deleteDoc, query, orderBy, onS
 import { db } from '../config/firebase';
 import { useNutrition } from '../context/NutritionContext';
 import imageAnalysis from '../services/imageAnalysis';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 
 type MacroGoals = {
   calories: { current: number; goal: number };
@@ -304,12 +304,31 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal }: LogMealM
   const [method, setMethod] = useState<'manual' | 'gallery' | 'camera' | null>(null);
   const [manualEntry, setManualEntry] = useState({
     name: '',
-    portion: '',
     calories: '',
     protein: '',
     carbs: '',
     fats: ''
   });
+
+  const handleManualSubmit = async () => {
+    try {
+      const meal = {
+        name: manualEntry.name,
+        macros: {
+          calories: parseInt(manualEntry.calories) || 0,
+          protein: parseInt(manualEntry.protein) || 0,
+          carbs: parseInt(manualEntry.carbs) || 0,
+          fats: parseInt(manualEntry.fats) || 0
+        }
+      };
+      await onLogMeal({ items: [meal] });
+      setManualEntry({ name: '', calories: '', protein: '', carbs: '', fats: '' });
+      onClose();
+    } catch (error) {
+      console.error('Error logging meal:', error);
+      Alert.alert('Error', 'Failed to log meal');
+    }
+  };
 
   const handleGallerySelect = async () => {
     try {
@@ -360,123 +379,109 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal }: LogMealM
     }
   };
 
-  const handleManualSubmit = async () => {
-    try {
-      const mealItem = {
-        name: manualEntry.name,
-        portion: manualEntry.portion || '1 serving',
-        macros: {
-          calories: parseInt(manualEntry.calories) || 0,
-          protein: parseInt(manualEntry.protein) || 0,
-          carbs: parseInt(manualEntry.carbs) || 0,
-          fats: parseInt(manualEntry.fats) || 0
-        }
-      };
-
-      await onLogMeal([mealItem]);
-      setManualEntry({ name: '', portion: '', calories: '', protein: '', carbs: '', fats: '' });
-      setMethod(null);
-      onClose();
-      Alert.alert('Success', 'Meal logged successfully!');
-    } catch (error) {
-      console.error('Error logging manual meal:', error);
-      Alert.alert('Error', 'Failed to log meal. Please try again.');
-    }
-  };
-
   return (
-    <Modal visible={visible} animationType="slide" transparent>
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Log Meal</Text>
-            <Pressable onPress={onClose}>
-              <Ionicons name="close" size={24} color="#000000" />
-            </Pressable>
-          </View>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={onClose}
+    >
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Log Meal</Text>
+                <Pressable onPress={onClose}>
+                  <Ionicons name="close" size={24} color="#000000" />
+                </Pressable>
+              </View>
 
-          {method === 'manual' ? (
-            <ScrollView style={styles.manualForm}>
-              <TextInput
-                style={styles.input}
-                placeholder="Food name"
-                value={manualEntry.name}
-                onChangeText={(text) => setManualEntry(prev => ({ ...prev, name: text }))}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Portion (e.g., 1 cup)"
-                value={manualEntry.portion}
-                onChangeText={(text) => setManualEntry(prev => ({ ...prev, portion: text }))}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Calories"
-                keyboardType="numeric"
-                value={manualEntry.calories}
-                onChangeText={(text) => setManualEntry(prev => ({ ...prev, calories: text }))}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Protein (g)"
-                keyboardType="numeric"
-                value={manualEntry.protein}
-                onChangeText={(text) => setManualEntry(prev => ({ ...prev, protein: text }))}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Carbs (g)"
-                keyboardType="numeric"
-                value={manualEntry.carbs}
-                onChangeText={(text) => setManualEntry(prev => ({ ...prev, carbs: text }))}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Fats (g)"
-                keyboardType="numeric"
-                value={manualEntry.fats}
-                onChangeText={(text) => setManualEntry(prev => ({ ...prev, fats: text }))}
-              />
-              <Button
-                title="Log Meal"
-                onPress={handleManualSubmit}
-                style={{ marginTop: 16 }}
-              />
-            </ScrollView>
-          ) : (
-            <View style={styles.methodSelection}>
-              <Pressable
-                style={styles.methodButton}
-                onPress={() => handleMethodSelect('manual')}
-              >
-                <Ionicons name="create-outline" size={32} color="#000000" />
-                <Text style={styles.methodButtonText}>Log{'\n'}Manually</Text>
-              </Pressable>
+              {method === 'manual' ? (
+                <ScrollView 
+                  style={{ flex: 1 }}
+                  contentContainerStyle={{ padding: 16 }}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Meal Name"
+                    value={manualEntry.name}
+                    onChangeText={(text) => setManualEntry(prev => ({ ...prev, name: text }))}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Calories"
+                    keyboardType="numeric"
+                    value={manualEntry.calories}
+                    onChangeText={(text) => setManualEntry(prev => ({ ...prev, calories: text }))}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Protein (g)"
+                    keyboardType="numeric"
+                    value={manualEntry.protein}
+                    onChangeText={(text) => setManualEntry(prev => ({ ...prev, protein: text }))}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Carbs (g)"
+                    keyboardType="numeric"
+                    value={manualEntry.carbs}
+                    onChangeText={(text) => setManualEntry(prev => ({ ...prev, carbs: text }))}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Fats (g)"
+                    keyboardType="numeric"
+                    value={manualEntry.fats}
+                    onChangeText={(text) => setManualEntry(prev => ({ ...prev, fats: text }))}
+                  />
+                  <Button
+                    title="Log Meal"
+                    onPress={handleManualSubmit}
+                    containerStyle={{ marginTop: 16 }}
+                  />
+                </ScrollView>
+              ) : (
+                <View style={styles.methodSelection}>
+                  <Pressable
+                    style={styles.methodButton}
+                    onPress={() => handleMethodSelect('manual')}
+                  >
+                    <Ionicons name="create-outline" size={32} color="#000000" />
+                    <Text style={styles.methodButtonText}>Log{'\n'}Manually</Text>
+                  </Pressable>
 
-              <Pressable
-                style={styles.methodButton}
-                onPress={() => handleMethodSelect('gallery')}
-              >
-                <Ionicons name="images-outline" size={32} color="#000000" />
-                <Text style={styles.methodButtonText}>Pick from{'\n'}Gallery</Text>
-              </Pressable>
+                  <Pressable
+                    style={styles.methodButton}
+                    onPress={() => handleMethodSelect('gallery')}
+                  >
+                    <Ionicons name="images-outline" size={32} color="#000000" />
+                    <Text style={styles.methodButtonText}>Pick from{'\n'}Gallery</Text>
+                  </Pressable>
 
-              <Pressable
-                style={styles.methodButton}
-                onPress={() => handleMethodSelect('camera')}
-              >
-                <Ionicons name="camera-outline" size={32} color="#000000" />
-                <Text style={styles.methodButtonText}>Take{'\n'}Photo</Text>
-              </Pressable>
+                  <Pressable
+                    style={styles.methodButton}
+                    onPress={() => handleMethodSelect('camera')}
+                  >
+                    <Ionicons name="camera-outline" size={32} color="#000000" />
+                    <Text style={styles.methodButtonText}>Take{'\n'}Photo</Text>
+                  </Pressable>
+                </View>
+              )}
             </View>
-          )}
-        </View>
-      </View>
+          </View>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
-function LoggedMeals({ meals, onDelete }: { meals: any[]; onDelete: (mealId: string, mealMacros: any) => Promise<void> }) {
+function LoggedMeals({ meals, onDelete }: { meals: any[]; onDelete: (mealId: string) => Promise<void> }) {
   return (
     <View style={styles.loggedMealsContainer}>
       <Text style={styles.loggedMealsTitle}>Recent Meals</Text>
@@ -498,7 +503,7 @@ function LoggedMeals({ meals, onDelete }: { meals: any[]; onDelete: (mealId: str
           </View>
           <Pressable
             style={styles.deleteButton}
-            onPress={() => onDelete(meal.id, meal.totalMacros)}
+            onPress={() => onDelete(meal.id)}
           >
             <Ionicons name="trash-outline" size={24} color="#FF6B6B" />
           </Pressable>
@@ -554,22 +559,44 @@ function WeekOverview({
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Sort the weeklyData to ensure Sunday-Saturday order
-  const sortedWeekData = [...weeklyData].sort((a, b) => {
-    const dateA = new Date(a.date);
-    const dateB = new Date(b.date);
-    return dateA.getDay() - dateB.getDay();  // Sunday (0) to Saturday (6)
+  // Helper function to get Monday of the week
+  const getMondayOfWeek = (date: Date) => {
+    const day = date.getDay();
+    const diff = day === 0 ? -6 : 1 - day; // If Sunday (0), go back 6 days, else adjust to previous Monday
+    const monday = new Date(date);
+    monday.setDate(date.getDate() + diff);
+    return monday;
+  };
+
+  // Generate week dates starting from Monday
+  const weekDates = [...Array(7)].map((_, index) => {
+    const monday = getMondayOfWeek(selectedDate);
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + index);
+    
+    const isToday = format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+    const isFuture = date > new Date();
+    
+    return {
+      date,
+      isSelected: format(date, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd'),
+      isToday,
+      isFuture,
+      macros: weeklyData.find(d => format(new Date(d.date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')) || {
+        calories: 0,
+        protein: 0,
+        carbs: 0,
+        fats: 0
+      }
+    };
   });
 
-  const days = sortedWeekData.map((day, index) => {
-    const date = new Date(day.date);
-    const isSelected = formatDateId(date) === formatDateId(selectedDate);
-    const isToday = formatDateId(date) === formatDateId(today);
-    const isFuture = date > today;
+  const days = weekDates.map((day) => {
+    const { date, isSelected, isToday, isFuture, macros } = day;
 
     return (
       <Pressable
-        key={day.date}
+        key={format(date, 'yyyy-MM-dd')}
         style={[
           styles.dayButton,
           isSelected && styles.selectedDay,
@@ -603,7 +630,7 @@ function WeekOverview({
             isToday && styles.todayText,
             isFuture && styles.futureText
           ]}>
-            {Math.round(day.calories)}
+            {Math.round(macros.calories)}
           </Text>
           <Text style={[
             styles.macroLabel,
@@ -620,13 +647,14 @@ function WeekOverview({
 
   return (
     <View style={styles.weekContainer}>
-      <Text style={styles.weekTitle}>
-        Week of {format(new Date(weeklyData[0].date), 'MMM d')}
+      <Text style={styles.dateHeader}>
+        {format(selectedDate, 'EEEE, MMMM d')}
       </Text>
+
       <ScrollView 
         horizontal 
         showsHorizontalScrollIndicator={false}
-        style={styles.daysScroll}
+        contentContainerStyle={styles.daysScrollContent}
       >
         <View style={styles.daysContainer}>
           {days}
@@ -906,7 +934,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 8,
   },
-  modalOverlay: {
+  modalContainer: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
@@ -915,61 +943,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    padding: 24,
-    maxHeight: '90%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#000000',
-  },
-  methodSelection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 16,
-    gap: 12,
-  },
-  methodButton: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: '#F5F5F5',
-    gap: 8,
-  },
-  methodButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#000000',
-    textAlign: 'center',
-  },
-  manualForm: {
-    gap: 16,
-    paddingBottom: 24,
+    maxHeight: '80%',
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
-    borderRadius: 12,
+    backgroundColor: '#F5F5F5',
     padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
     fontSize: 16,
-  },
-  submitButton: {
-    backgroundColor: '#4A72B2',
-  },
-  photoAnalysis: {
-    alignItems: 'center',
-    padding: 24,
-  },
-  modalScroll: {
-    maxHeight: '80%',
   },
   loggedMealsContainer: {
     marginTop: 16,
@@ -1055,8 +1036,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   weekContainer: {
-    padding: 16,
     backgroundColor: '#FFFFFF',
+    paddingVertical: 16,
   },
   weekTitle: {
     fontSize: 16,
@@ -1067,25 +1048,27 @@ const styles = StyleSheet.create({
   daysScroll: {
     marginHorizontal: -16,
   },
-  daysContainer: {
-    flexDirection: 'row',
+  daysScrollContent: {
     paddingHorizontal: 16,
   },
+  daysContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   dayButton: {
-    alignItems: 'center',
+    width: 72,
     padding: 12,
-    marginRight: 8,
     borderRadius: 12,
-    backgroundColor: '#F5F5F5',
-    minWidth: 80,
+    alignItems: 'center',
+    backgroundColor: '#F8F8F8',
     position: 'relative',
   },
   selectedDay: {
-    backgroundColor: SELECTED_GREEN,
+    backgroundColor: '#99E86C',
   },
   todayDay: {
     borderWidth: 2,
-    borderColor: '#4A72B2',
+    borderColor: '#3F63F6',
   },
   todayIndicator: {
     position: 'absolute',
@@ -1093,14 +1076,14 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#4A72B2',
+    backgroundColor: '#3F63F6',
     alignSelf: 'center',
   },
   selectedText: {
     color: '#FFFFFF',
   },
   todayText: {
-    color: '#4A72B2',
+    color: '#3F63F6',
     fontWeight: '700',
   },
   futureDay: {
@@ -1137,7 +1120,11 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E5E5E5',
   },
   dateHeader: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#000000',
     marginBottom: 16,
+    textAlign: 'center',
   },
   currentDate: {
     fontSize: 16,
@@ -1176,6 +1163,60 @@ const styles = StyleSheet.create({
     left: 24,
     right: 24,
   },
+  futureText: {
+    color: '#999999',
+  },
+  macroLabel: {
+    fontSize: 12,
+    color: '#666666',
+  },
+  logMealText: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  logMealIcon: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    padding: 8,
+    borderRadius: 8,
+  },
+  deleteButton: {
+    padding: 8,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#000000',
+  },
+  methodSelection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 16,
+    gap: 12,
+  },
+  methodButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: '#F5F5F5',
+    gap: 8,
+  },
+  methodButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#000000',
+    textAlign: 'center',
+  },
 });
 
 export default function NutritionScreen() {
@@ -1186,7 +1227,6 @@ export default function NutritionScreen() {
   const [isLogMealModalVisible, setIsLogMealModalVisible] = useState(false);
   const [selectedLoggingMethod, setSelectedLoggingMethod] = useState<'manual' | 'photo' | null>(null);
   const [foodItems, setFoodItems] = useState<FoodItem[]>([]);
-  const [showManualEntry, setShowManualEntry] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [weeklyData, setWeeklyData] = useState<DailyMacros[]>([]);
   const [isLoadingWeek, setIsLoadingWeek] = useState(true);
@@ -1201,82 +1241,98 @@ export default function NutritionScreen() {
   }, [selectedDate]);
 
   // Load selected day's macros and meals
-  useEffect(() => {
+  const loadSelectedDayData = async () => {
     if (!user) return;
-
-    const loadSelectedDayData = async () => {
-      try {
-        setIsLoading(true);
-        const dateString = formatDateId(selectedDate);
-        
-        // Load macros for selected date
-        const dailyMacrosRef = doc(db, `users/${user.uid}/dailyMacros/${dateString}`);
-        const dailyMacrosDoc = await getDoc(dailyMacrosRef);
-        
-        // Get the goals (these stay constant)
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        const userData = userDoc.data();
-        const dailyCalories = calculateDailyCalories(
-          parseFloat(userData.weight),
-          parseFloat(userData.height),
-          parseInt(userData.age),
-          userData.gender.toLowerCase(),
-          userData.activityLevel as ActivityLevel
-        );
-        const goals = calculateMacroGoals(dailyCalories, userData.footballGoal);
-
-        // Update macros with selected day's progress
-        updateMacros({
-          calories: { 
-            current: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().calories : 0, 
-            goal: goals.calories 
-          },
-          protein: { 
-            current: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().protein : 0, 
-            goal: goals.protein 
-          },
-          carbs: { 
-            current: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().carbs : 0, 
-            goal: goals.carbs 
-          },
-          fats: { 
-            current: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().fats : 0, 
-            goal: goals.fats 
-          }
-        });
-
-        // Load meals for selected date
-        const startOfDay = getLocalStartOfDay(selectedDate);
-        const endOfDay = getLocalEndOfDay(selectedDate);
-
-        const q = query(
-          collection(db, 'meals'),
-          where('userId', '==', user.uid),
-          where('timestamp', '>=', startOfDay.toISOString()),
-          where('timestamp', '<=', endOfDay.toISOString()),
-          orderBy('timestamp', 'desc')
-        );
-
-        const mealsSnapshot = await getDocs(q);
-        const meals = mealsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        
-        setLoggedMeals(meals);
-      } catch (error) {
-        console.error('Error loading selected day data:', error);
+    try {
+      setIsLoading(true);
+      const dateString = formatDateId(selectedDate);
+      
+      // Load macros for selected date
+      const dailyMacrosRef = doc(db, `users/${user.uid}/dailyMacros/${dateString}`);
+      const dailyMacrosDoc = await getDoc(dailyMacrosRef);
+      
+      // Get the goals (these stay constant)
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      if (!userDoc.exists()) {
+        console.error('User document not found');
         setLoggedMeals([]);
-      } finally {
-        setIsLoading(false);
+        return;
       }
-    };
 
-    loadSelectedDayData();
-  }, [user, selectedDate]); // Reload when selected date changes
+      const userData = userDoc.data() as {
+        weight: string;
+        height: string;
+        age: string;
+        gender: string;
+        activityLevel: ActivityLevel;
+        footballGoal: string;
+      };
+      
+      const dailyCalories = calculateDailyCalories(
+        parseFloat(userData.weight),
+        parseFloat(userData.height),
+        parseInt(userData.age),
+        userData.gender.toLowerCase(),
+        userData.activityLevel
+      );
+      const goals = calculateMacroGoals(dailyCalories, userData.footballGoal);
+
+      // Update macros with selected day's progress
+      updateMacros({
+        calories: { 
+          current: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().calories : 0, 
+          goal: goals.calories 
+        },
+        protein: { 
+          current: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().protein : 0, 
+          goal: goals.protein 
+        },
+        carbs: { 
+          current: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().carbs : 0, 
+          goal: goals.carbs 
+        },
+        fats: { 
+          current: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().fats : 0, 
+          goal: goals.fats 
+        }
+      });
+
+      // Load meals for selected date
+      const startOfDay = getLocalStartOfDay(selectedDate);
+      const endOfDay = getLocalEndOfDay(selectedDate);
+
+      const q = query(
+        collection(db, 'meals'),
+        where('userId', '==', user.uid),
+        where('timestamp', '>=', startOfDay.toISOString()),
+        where('timestamp', '<=', endOfDay.toISOString()),
+        orderBy('timestamp', 'desc')
+      );
+
+      const mealsSnapshot = await getDocs(q);
+      const meals = mealsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      setLoggedMeals(meals);
+    } catch (error) {
+      console.error('Error loading selected day data:', error);
+      setLoggedMeals([]);
+      // Set default macros on error
+      updateMacros({
+        calories: { current: 0, goal: 2000 },
+        protein: { current: 0, goal: 150 },
+        carbs: { current: 0, goal: 250 },
+        fats: { current: 0, goal: 70 }
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Update the logMealToFirestore function to use selectedDate
-  const logMealToFirestore = async (items: any[]) => {
+  const logMealToFirestore = async (items: any) => {
     if (!user) {
       throw new Error('Must be logged in to log meals');
     }
@@ -1286,11 +1342,14 @@ export default function NutritionScreen() {
     }
 
     try {
-      const totalMacros = items.reduce((acc: any, item: any) => ({
-        calories: acc.calories + item.macros.calories,
-        protein: acc.protein + item.macros.protein,
-        carbs: acc.carbs + item.macros.carbs,
-        fats: acc.fats + item.macros.fats
+      // Convert single item to array if needed
+      const itemsArray = Array.isArray(items) ? items : items.items || [items];
+      
+      const totalMacros = itemsArray.reduce((acc: any, item: any) => ({
+        calories: acc.calories + (item.macros?.calories || 0),
+        protein: acc.protein + (item.macros?.protein || 0),
+        carbs: acc.carbs + (item.macros?.carbs || 0),
+        fats: acc.fats + (item.macros?.fats || 0)
       }), { calories: 0, protein: 0, carbs: 0, fats: 0 });
 
       // Use selected date for the meal timestamp
@@ -1301,7 +1360,7 @@ export default function NutritionScreen() {
       const mealData = {
         userId: user.uid,
         timestamp: mealDate.toISOString(),
-        items,
+        items: itemsArray,
         totalMacros
       };
 
@@ -1356,16 +1415,17 @@ export default function NutritionScreen() {
         setIsLoadingWeek(true);
         const today = new Date();
         
-        // Get the start of the week (Sunday)
+        // Get the start of the week (Monday)
         const startOfWeek = new Date(today);
-        if (today.getDay() !== 0) { // 0 is Sunday
-          startOfWeek.setDate(today.getDate() - today.getDay());
-        }
+        // Adjust to get Monday (1) as first day instead of Sunday (0)
+        const day = today.getDay();
+        const diff = day === 0 ? -6 : 1 - day; // If Sunday, go back 6 days, else adjust to previous Monday
+        startOfWeek.setDate(today.getDate() + diff);
         startOfWeek.setHours(0, 0, 0, 0);
 
         const weekData: DailyMacros[] = [];
         
-        // Get 7 days starting from Sunday
+        // Get 7 days starting from Monday
         for (let i = 0; i < 7; i++) {
           const currentDate = new Date(startOfWeek);
           currentDate.setDate(startOfWeek.getDate() + i);
@@ -1380,22 +1440,21 @@ export default function NutritionScreen() {
             carbs: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().carbs : 0,
             fats: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().fats : 0,
             date: dateId,
-            dayOfWeek: i  // Add this to ensure correct sorting
+            dayOfWeek: currentDate.getDay()
           });
         }
         
         setWeeklyData(weekData);
       } catch (error) {
         console.error('Error fetching weekly data:', error);
-        // Initialize with empty data on error
         const today = new Date();
         const startOfWeek = new Date(today);
-        if (today.getDay() !== 0) {
-          startOfWeek.setDate(today.getDate() - today.getDay());
-        }
+        const day = today.getDay();
+        const diff = day === 0 ? -6 : 1 - day;
+        startOfWeek.setDate(today.getDate() + diff);
         startOfWeek.setHours(0, 0, 0, 0);
         
-        setWeeklyData(Array(7).fill(null).map((_, i) => {
+        const emptyWeekData = Array(7).fill(null).map((_, i) => {
           const date = new Date(startOfWeek);
           date.setDate(startOfWeek.getDate() + i);
           return {
@@ -1404,15 +1463,92 @@ export default function NutritionScreen() {
             carbs: 0,
             fats: 0,
             date: formatDateId(date),
-            dayOfWeek: i
+            dayOfWeek: date.getDay()
           };
-        }));
+        });
+        
+        setWeeklyData(emptyWeekData);
       } finally {
         setIsLoadingWeek(false);
       }
     };
 
     fetchWeeklyData();
+  }, [user, selectedDate]);
+
+  // Move these functions inside the component
+  const deleteMeal = async (mealId: string) => {
+    if (!user) return;
+    try {
+      await deleteDoc(doc(db, 'meals', mealId));
+    } catch (error) {
+      console.error('Error deleting meal:', error);
+      Alert.alert('Error', 'Failed to delete meal');
+    }
+  };
+
+  const analyzeImage = async (imageUri: string) => {
+    try {
+      // First check if user is authenticated
+      if (!user?.uid) {
+        throw new Error('User must be logged in');
+      }
+
+      // First upload the image to Firebase Storage
+      const storage = getStorage();
+      const filename = imageUri.substring(imageUri.lastIndexOf('/') + 1);
+      const storageRef = ref(storage, `food_images/${user.uid}/${filename}`);
+
+      // Convert image uri to blob
+      const response = await fetch(imageUri);
+      const blob = await response.blob();
+      
+      // Upload to Firebase Storage
+      await uploadBytes(storageRef, blob);
+      
+      // Get the download URL
+      const downloadURL = await getDownloadURL(storageRef);
+      
+      // Now analyze the image using the public URL
+      const result = await imageAnalysis.analyzeImage(downloadURL);
+      
+      if (!result?.items?.[0]) {
+        throw new Error('Analysis failed');
+      }
+
+      // Format the response
+      return {
+        items: [{
+          name: result.items[0].name,
+          macros: {
+            calories: result.items[0].macros.calories,
+            protein: result.items[0].macros.protein,
+            carbs: result.items[0].macros.carbs,
+            fats: result.items[0].macros.fats
+          }
+        }]
+      };
+    } catch (error: any) {
+      console.error('Error processing image:', error);
+      if (error.code === 'storage/unauthorized') {
+        Alert.alert('Error', 'Please ensure you are logged in');
+      } else if (!error.message.includes('Analysis failed')) {
+        Alert.alert(
+          'Analysis Failed',
+          'Please ensure that:\n\n' +
+          '• Photo is taken 40-50cm from the food\n' +
+          '• Background is clean and clear\n' +
+          '• Only the intended food is in the picture'
+        );
+      }
+      throw error;
+    }
+  };
+
+  // Add useEffect to call loadSelectedDayData
+  useEffect(() => {
+    if (!user) return;
+    loadSelectedDayData();
   }, [user, selectedDate]);
 
   return (
@@ -1513,13 +1649,45 @@ export default function NutritionScreen() {
           </Pressable>
         </View>
 
-        <LoggedMeals meals={loggedMeals} onDelete={logMealToFirestore} />
+        <LoggedMeals 
+          meals={loggedMeals} 
+          onDelete={async (mealId: string) => {
+            try {
+              await deleteMeal(mealId);
+              // Refresh meals list
+              loadSelectedDayData();
+            } catch (error) {
+              console.error('Error deleting meal:', error);
+              Alert.alert('Error', 'Failed to delete meal');
+            }
+          }} 
+        />
       </ScrollView>
 
       <LogMealModal
         visible={isLogMealModalVisible}
         onClose={() => setIsLogMealModalVisible(false)}
-        onPhotoAnalysis={logMealToFirestore}
+        onPhotoAnalysis={async (imageUri: string) => {
+          try {
+            setIsLoading(true);
+            const result = await analyzeImage(imageUri);
+            if (!result) {
+              return; // Exit silently if analysis failed
+            }
+            await logMealToFirestore(result);
+            setIsLogMealModalVisible(false);
+            // Refresh the data
+            loadSelectedDayData();
+          } catch (error) {
+            // Only show error if it's not an analysis failure
+            if (error instanceof Error && !error.message.includes('Analysis failed')) {
+              console.error('Error handling photo:', error);
+              Alert.alert('Error', 'Failed to process photo. Please try again.');
+            }
+          } finally {
+            setIsLoading(false);
+          }
+        }}
         onLogMeal={logMealToFirestore}
       />
 
