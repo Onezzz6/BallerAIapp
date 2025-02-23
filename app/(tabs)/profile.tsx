@@ -38,6 +38,43 @@ type ProfileDetail = {
   unit?: string;
 };
 
+interface CustomButtonProps {
+  title: string;
+  onPress: () => void;
+  buttonStyle?: any;
+  icon?: React.ReactNode;
+}
+
+const CustomButton: React.FC<CustomButtonProps> = ({ 
+  title, 
+  onPress, 
+  buttonStyle, 
+  icon 
+}) => (
+  <Pressable 
+    style={[styles.button, buttonStyle]} 
+    onPress={onPress}
+  >
+    {icon && icon}
+    <Text style={styles.buttonText}>{title}</Text>
+  </Pressable>
+);
+
+const buttonStyles = StyleSheet.create({
+  button: {
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});
+
 export default function ProfileScreen() {
   const { user } = useAuth();
   const router = useRouter();
@@ -799,25 +836,25 @@ export default function ProfileScreen() {
           />
 
           <View style={styles.modalButtons}>
-            <Button
+            <CustomButton
               title="Cancel"
               onPress={() => {
                 setShowReauthModal(false);
                 setPassword('');
               }}
-              buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
+              buttonStyle={styles.cancelButton}
             />
-            <Button
+            <CustomButton
               title="Confirm"
               onPress={async () => {
                 const success = await reauthenticateUser(password);
                 if (success) {
                   setShowReauthModal(false);
                   setPassword('');
-                  handleDeleteAccount();
+                  handleDeleteConfirmation();
                 }
               }}
-              buttonStyle={{ backgroundColor: '#FF3B30', flex: 1 }}
+              buttonStyle={styles.deleteButton}
               disabled={!password.trim()}
             />
           </View>
@@ -836,7 +873,7 @@ export default function ProfileScreen() {
         <View style={styles.modalContent}>
           <Text style={styles.modalTitle}>We're sorry to see you go</Text>
           <Text style={styles.modalSubtitle}>
-            Please let us know why you're leaving so we can improve our service
+            Please let us know why you're leaeving so we can improve our service
           </Text>
 
           <ScrollView style={styles.reasonsContainer}>
@@ -877,62 +914,32 @@ export default function ProfileScreen() {
           )}
 
           <View style={styles.modalFooter}>
-            <Button
+            <CustomButton
               title="Send Feedback via Email"
               onPress={sendFeedbackEmail}
               buttonStyle={styles.feedbackButton}
-              icon={<Ionicons name="mail-outline" size={24} color="#FFFFFF" />}
+              icon={<Ionicons name="mail-outline" size={24} color="#FFFFFF" style={{ marginRight: 8 }} />}
             />
             
             <View style={styles.actionButtons}>
-              <Button
+              <CustomButton
                 title="Go Back"
                 onPress={() => {
                   setShowDeleteModal(false);
                   setDeleteReason('');
                   setOtherReason('');
                 }}
-                buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
+                buttonStyle={styles.cancelButton}
               />
-              <Button
+              <CustomButton
                 title="Continue to Delete"
                 onPress={() => {
                   setShowDeleteModal(false);
-                  setShowDeleteConfirmModal(true);
+                  setShowReauthModal(true);
                 }}
-                buttonStyle={{ backgroundColor: '#FF3B30', flex: 1 }}
+                buttonStyle={styles.deleteButton}
               />
             </View>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
-
-  const renderDeleteConfirmModal = () => (
-    <Modal
-      visible={showDeleteConfirmModal}
-      transparent
-      animationType="slide"
-    >
-      <View style={styles.modalContainer}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Final Confirmation</Text>
-          <Text style={styles.modalSubtitle}>
-            Are you sure you want to delete your account? This action cannot be undone.
-          </Text>
-
-          <View style={styles.modalButtons}>
-            <Button
-              title="Cancel"
-              onPress={() => setShowDeleteConfirmModal(false)}
-              buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
-            />
-            <Button
-              title="Delete Account"
-              onPress={handleDeleteConfirmation}
-              buttonStyle={{ backgroundColor: '#FF3B30', flex: 1 }}
-            />
           </View>
         </View>
       </View>
@@ -943,8 +950,6 @@ export default function ProfileScreen() {
     return (
       <SafeAreaView style={styles.container}>
         {renderDeleteModal()}
-        {renderDeleteConfirmModal()}
-        {renderReauthModal()}
       </SafeAreaView>
     );
   }
@@ -1190,12 +1195,12 @@ export default function ProfileScreen() {
       {renderReauthModal()}
 
       <View style={styles.buttonContainer}>
-        <Button
+        <CustomButton
           title="Log Out"
           onPress={handleLogout}
           buttonStyle={styles.logoutButton}
         />
-        <Button
+        <CustomButton
           title="Delete Account"
           onPress={handleDeleteAccount}
           buttonStyle={styles.deleteButton}
@@ -1574,5 +1579,17 @@ const styles = StyleSheet.create({
   },
   reasonsCancelButton: {
     backgroundColor: '#8E8E93',
+  },
+  button: {
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 }); 

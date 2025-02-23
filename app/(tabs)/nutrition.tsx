@@ -7,11 +7,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path, Circle, G } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../context/AuthContext';
-import { doc, setDoc, getDoc, collection, addDoc, deleteDoc, query, orderBy, onSnapshot, where, limit, getDocs } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, addDoc, deleteDoc, query, orderBy, onSnapshot, where, limit, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useNutrition } from '../context/NutritionContext';
 import imageAnalysis from '../services/imageAnalysis';
-import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject, listAll } from 'firebase/storage';
+import { deleteUser } from 'firebase/auth';
+import { useRouter } from 'expo-router';
 
 type MacroGoals = {
   calories: { current: number; goal: number };
@@ -1476,17 +1478,67 @@ export default function NutritionScreen() {
     fetchWeeklyData();
   }, [user, selectedDate]);
 
-  // Move these functions inside the component
+  // Update the deleteMeal function to recalculate daily totals
   const deleteMeal = async (mealId: string) => {
     if (!user) return;
     try {
+      // First delete the meal
       await deleteDoc(doc(db, 'meals', mealId));
+
+      // Then recalculate daily totals from remaining meals
+      const startOfDay = getLocalStartOfDay(selectedDate);
+      const endOfDay = getLocalEndOfDay(selectedDate);
+      const dateString = formatDateId(selectedDate);
+
+      // Query all meals for the day
+      const mealsQuery = query(
+        collection(db, 'meals'),
+        where('userId', '==', user.uid),
+        where('timestamp', '>=', startOfDay.toISOString()),
+        where('timestamp', '<=', endOfDay.toISOString())
+      );
+
+      const mealsSnapshot = await getDocs(mealsQuery);
+      
+      // Calculate new totals from remaining meals
+      const newTotals = mealsSnapshot.docs.reduce((acc, mealDoc) => {
+        const meal = mealDoc.data();
+        return {
+          calories: acc.calories + (meal.totalMacros?.calories || 0),
+          protein: acc.protein + (meal.totalMacros?.protein || 0),
+          carbs: acc.carbs + (meal.totalMacros?.carbs || 0),
+          fats: acc.fats + (meal.totalMacros?.fats || 0)
+        };
+      }, { calories: 0, protein: 0, carbs: 0, fats: 0 });
+
+      // Update daily macros document with new totals
+      const dailyMacrosRef = doc(db, `users/${user.uid}/dailyMacros/${dateString}`);
+      await setDoc(dailyMacrosRef, {
+        ...newTotals,
+        updatedAt: new Date().toISOString()
+      });
+
+      // Update local state
+      updateMacros({
+        calories: { current: newTotals.calories, goal: macros.calories.goal },
+        protein: { current: newTotals.protein, goal: macros.protein.goal },
+        carbs: { current: newTotals.carbs, goal: macros.carbs.goal },
+        fats: { current: newTotals.fats, goal: macros.fats.goal }
+      });
+
+      // Update meals list
+      setLoggedMeals(mealsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })));
+
     } catch (error) {
       console.error('Error deleting meal:', error);
-      Alert.alert('Error', 'Failed to delete meal');
+      throw error;
     }
   };
 
+  // Move these functions inside the component
   const analyzeImage = async (imageUri: string) => {
     try {
       // First check if user is authenticated
@@ -1653,12 +1705,15 @@ export default function NutritionScreen() {
           meals={loggedMeals} 
           onDelete={async (mealId: string) => {
             try {
+              setIsLoading(true);
               await deleteMeal(mealId);
-              // Refresh meals list
-              loadSelectedDayData();
+              // Refresh weekly data to update the overview
+              await fetchWeeklyData();
             } catch (error) {
               console.error('Error deleting meal:', error);
               Alert.alert('Error', 'Failed to delete meal');
+            } finally {
+              setIsLoading(false);
             }
           }} 
         />
