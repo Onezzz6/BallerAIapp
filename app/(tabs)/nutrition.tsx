@@ -397,18 +397,22 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal }: LogMealM
           <View style={styles.modalContainer}>
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Log Meal</Text>
-                <Pressable onPress={onClose}>
-                  <Ionicons name="close" size={24} color="#000000" />
+                <Text style={styles.modalTitle}>
+                  {method === 'manual' ? 'Manual Entry' : 'Log Meal'}
+                </Text>
+                <Pressable onPress={() => {
+                  if (method === 'manual') {
+                    setMethod(null);
+                  } else {
+                    onClose();
+                  }
+                }}>
+                  <Ionicons name={method === 'manual' ? "arrow-back" : "close"} size={24} color="#000000" />
                 </Pressable>
               </View>
 
               {method === 'manual' ? (
-                <ScrollView 
-                  style={{ flex: 1 }}
-                  contentContainerStyle={{ padding: 16 }}
-                  keyboardShouldPersistTaps="handled"
-                >
+                <ScrollView style={{ padding: 16 }}>
                   <TextInput
                     style={styles.input}
                     placeholder="Meal Name"
@@ -443,17 +447,18 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal }: LogMealM
                     value={manualEntry.fats}
                     onChangeText={(text) => setManualEntry(prev => ({ ...prev, fats: text }))}
                   />
-                  <Button
-                    title="Log Meal"
+                  <Pressable
+                    style={[styles.logMealButton, { marginTop: 16 }]}
                     onPress={handleManualSubmit}
-                    containerStyle={{ marginTop: 16 }}
-                  />
+                  >
+                    <Text style={styles.logMealText}>Log Meal</Text>
+                  </Pressable>
                 </ScrollView>
               ) : (
                 <View style={styles.methodSelection}>
                   <Pressable
                     style={styles.methodButton}
-                    onPress={() => handleMethodSelect('manual')}
+                    onPress={() => setMethod('manual')}
                   >
                     <Ionicons name="create-outline" size={32} color="#000000" />
                     <Text style={styles.methodButtonText}>Log{'\n'}Manually</Text>
@@ -461,7 +466,7 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal }: LogMealM
 
                   <Pressable
                     style={styles.methodButton}
-                    onPress={() => handleMethodSelect('gallery')}
+                    onPress={() => handleGallerySelect()}
                   >
                     <Ionicons name="images-outline" size={32} color="#000000" />
                     <Text style={styles.methodButtonText}>Pick from{'\n'}Gallery</Text>
@@ -469,7 +474,7 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal }: LogMealM
 
                   <Pressable
                     style={styles.methodButton}
-                    onPress={() => handleMethodSelect('camera')}
+                    onPress={() => handleCameraCapture()}
                   >
                     <Ionicons name="camera-outline" size={32} color="#000000" />
                     <Text style={styles.methodButtonText}>Take{'\n'}Photo</Text>
@@ -858,7 +863,11 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   adherenceContainer: {
-    gap: 8,
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    marginTop: 16,
   },
   adherenceHeader: {
     flexDirection: 'row',
@@ -866,13 +875,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   adherenceTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: '#000000',
+    marginBottom: 4,
   },
-  adherencePercentage: {
+  adherenceSubtitle: {
     fontSize: 14,
     color: '#666666',
+    marginBottom: 8,
+  },
+  adherencePercentage: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#4A72B2',
   },
   adherenceBar: {
     height: 8,
@@ -1604,6 +1620,25 @@ export default function NutritionScreen() {
     loadSelectedDayData();
   }, [user, selectedDate]);
 
+  // Add this function to calculate today's adherence
+  const calculateTodayAdherence = () => {
+    // Calculate percentage for each macro
+    const caloriesScore = Math.min(macros.calories.current / macros.calories.goal * 100, 100);
+    const proteinScore = Math.min(macros.protein.current / macros.protein.goal * 100, 100);
+    const carbsScore = Math.min(macros.carbs.current / macros.carbs.goal * 100, 100);
+    const fatsScore = Math.min(macros.fats.current / macros.fats.goal * 100, 100);
+
+    // Weighted average (same weights as weekly score)
+    const todayScore = Math.round(
+      caloriesScore * 0.4 + // 40% weight on calories
+      proteinScore * 0.3 + // 30% weight on protein
+      carbsScore * 0.15 + // 15% weight on carbs
+      fatsScore * 0.15    // 15% weight on fats
+    );
+
+    return todayScore;
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={{
@@ -1648,10 +1683,7 @@ export default function NutritionScreen() {
       {/* Weekly Overview */}
       <WeeklyOverview 
         selectedDate={selectedDate}
-        onDateSelect={(date) => {
-          setSelectedDate(date);
-          loadSelectedDayData();
-        }}
+        onDateSelect={setSelectedDate}
       />
 
       <ScrollView>
@@ -1683,7 +1715,11 @@ export default function NutritionScreen() {
             color="#FFD93D"
           />
           
-          <WeeklyAdherence percentage={60} />
+          <View style={styles.adherenceContainer}>
+            <Text style={styles.adherenceTitle}>Nutrition Adherence</Text>
+            <Text style={styles.adherenceSubtitle}>Today's Progress</Text>
+            <Text style={styles.adherencePercentage}>{calculateTodayAdherence()}%</Text>
+          </View>
         </View>
 
         <View style={styles.mealsSection}>

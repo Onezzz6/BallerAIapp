@@ -1,25 +1,29 @@
-import { View, Text, Image, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Image, ScrollView, Pressable, StyleSheet, Modal, TouchableWithoutFeedback } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { TextInput } from 'react-native';
-import { format, startOfWeek, addDays } from 'date-fns';
+import { format, startOfWeek, addDays, subDays } from 'date-fns';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
 import { useNutrition } from '../context/NutritionContext';
+import WeeklyOverview from '../components/WeeklyOverview';
+import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 
 export default function HomeScreen() {
   const { user } = useAuth();
-  const { macros } = useNutrition();
+  const { macros, macroGoals } = useNutrition();
   const calorieGoal = 1600;
   const currentCalories = 800;
   const progressPercentage = (currentCalories / calorieGoal) * 100;
   const [showQuestion, setShowQuestion] = useState(false);
   const [question, setQuestion] = useState('');
-  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
+  const [nutritionScore, setNutritionScore] = useState(0);
+  const [showNutritionInfo, setShowNutritionInfo] = useState(false);
   
   // Fetch user's profile picture
   useEffect(() => {
@@ -51,6 +55,69 @@ export default function HomeScreen() {
       isToday: format(date, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd'),
     };
   });
+
+  // Modify the calculation function
+  const calculateNutritionScore = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      const endDate = new Date();
+      const startDate = subDays(endDate, 10);
+      
+      const nutritionRef = collection(db, 'users', user.uid, 'nutrition');
+      const q = query(
+        nutritionRef,
+        where('date', '>=', format(startDate, 'yyyy-MM-dd')),
+        where('date', '<=', format(endDate, 'yyyy-MM-dd')),
+        orderBy('date', 'desc')
+      );
+
+      const querySnapshot = await getDocs(q);
+      const dailyScores: number[] = [];
+
+      querySnapshot.forEach(doc => {
+        const data = doc.data();
+        // Only calculate score if user has logged any macros for the day
+        if (data.calories || data.protein || data.carbs || data.fats) {
+          const dayMacros = {
+            calories: data.calories || 0,
+            protein: data.protein || 0,
+            carbs: data.carbs || 0,
+            fats: data.fats || 0,
+          };
+
+          const caloriesScore = Math.min(dayMacros.calories / macroGoals.calories.goal * 100, 100);
+          const proteinScore = Math.min(dayMacros.protein / macroGoals.protein.goal * 100, 100);
+          const carbsScore = Math.min(dayMacros.carbs / macroGoals.carbs.goal * 100, 100);
+          const fatsScore = Math.min(dayMacros.fats / macroGoals.fats.goal * 100, 100);
+
+          const dailyScore = (
+            caloriesScore * 0.4 +
+            proteinScore * 0.3 +
+            carbsScore * 0.15 +
+            fatsScore * 0.15
+          );
+
+          dailyScores.push(dailyScore);
+        }
+      });
+
+      // Calculate average score only from days with data
+      const averageScore = dailyScores.length > 0
+        ? Math.round(dailyScores.reduce((a, b) => a + b, 0) / dailyScores.length)
+        : 0;
+
+      setNutritionScore(averageScore);
+    } catch (error) {
+      console.error('Error calculating nutrition score:', error);
+      setNutritionScore(0);
+    }
+  }, [user, macroGoals]);
+
+  // Add this useEffect to calculate score when component mounts
+  useEffect(() => {
+    calculateNutritionScore();
+  }, [calculateNutritionScore]);
 
   return (
     <SafeAreaView style={{ 
@@ -371,7 +438,7 @@ export default function HomeScreen() {
             flexDirection: 'row', 
             gap: 8,
           }}>
-            {/* Training Progress Card */}
+            {/* Nutrition Adherence Card */}
             <View style={{
               flex: 1,
               padding: 16,
@@ -391,22 +458,31 @@ export default function HomeScreen() {
               <View style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                justifyContent: 'center',
+                justifyContent: 'space-between',
                 width: '100%',
               }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Ionicons name="barbell-outline" size={24} color="#000000" />
+                  <Ionicons name="nutrition-outline" size={24} color="#000000" />
                   <Text style={{
                     fontSize: 20,
                     fontWeight: '600',
                     color: '#000000',
                   }}>
-                    Training
+                    Nutrition
                   </Text>
                 </View>
+                {nutritionScore === 0 && (
+                  <Pressable
+                    onPress={() => setShowNutritionInfo(true)}
+                    style={({ pressed }) => ({
+                      opacity: pressed ? 0.7 : 1,
+                    })}
+                  >
+                    <Ionicons name="information-circle-outline" size={24} color="#000000" />
+                  </Pressable>
+                )}
               </View>
 
-              {/* Progress Circle Container */}
               <View style={{ 
                 width: 200,
                 height: 200,
@@ -433,17 +509,28 @@ export default function HomeScreen() {
                     strokeWidth="12"
                     fill="none"
                     strokeDasharray={`${2 * Math.PI * 80}`}
-                    strokeDashoffset={2 * Math.PI * 80 * (1 - 80 / 100)}
+                    strokeDashoffset={2 * Math.PI * 80 * (1 - nutritionScore / 100)}
                   />
                 </Svg>
 
-                <Text style={{ 
-                  fontSize: 40, 
-                  fontWeight: '700', 
-                  color: '#000000',
-                }}>
-                  80%
-                </Text>
+                {nutritionScore > 0 ? (
+                  <Text style={{ 
+                    fontSize: 40, 
+                    fontWeight: '700', 
+                    color: '#000000',
+                  }}>
+                    {nutritionScore}%
+                  </Text>
+                ) : (
+                  <Text style={{ 
+                    fontSize: 16, 
+                    fontWeight: '600', 
+                    color: '#666666',
+                    textAlign: 'center',
+                  }}>
+                    No data{'\n'}yet
+                  </Text>
+                )}
               </View>
 
               <Text style={{ 
@@ -451,7 +538,10 @@ export default function HomeScreen() {
                 color: '#666666',
                 textAlign: 'center',
               }}>
-                Completed this week!
+                {nutritionScore > 0 
+                  ? 'Great nutrition habits\nthis week!'
+                  : 'Start logging meals\nto see your score'
+                }
               </Text>
             </View>
 
@@ -663,50 +753,18 @@ export default function HomeScreen() {
               Weekly Overview
             </Text>
 
-            {/* Calendar Days */}
-            <View style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              gap: 8,
-            }}>
-              {weekDays.map((day) => (
-                <Pressable
-                  key={day.date.toISOString()}
-                  onPress={() => setSelectedDay(
-                    selectedDay?.toISOString() === day.date.toISOString() ? null : day.date
-                  )}
-                  style={({ pressed }) => ({
-                    width: 40,
-                    height: 56,
-                    borderRadius: 12,
-                    backgroundColor: day.isToday ? '#99e86c' 
-                      : selectedDay?.toISOString() === day.date.toISOString() ? '#f5f5ff'
-                      : '#f5f5ff',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    opacity: pressed ? 0.7 : 1,
-                  })}
-                >
-                  <Text style={{
-                    fontSize: 12,
-                    color: '#000000',
-                    marginBottom: 4,
-                  }}>
-                    {day.dayLetter}
-                  </Text>
-                  <Text style={{
-                    fontSize: 16,
-                    fontWeight: '600',
-                    color: '#000000',
-                  }}>
-                    {day.dayNumber}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
+            {/* Replace Calendar Days with WeeklyOverview */}
+            <WeeklyOverview 
+              selectedDate={selectedDate || new Date()}
+              onDateSelect={(date) => {
+                setSelectedDate(
+                  selectedDate?.toISOString() === date.toISOString() ? null : date
+                );
+              }}
+            />
 
-            {/* Day Details */}
-            {selectedDay && (
+            {/* Day Details - update to use selectedDate instead of selectedDay */}
+            {selectedDate && (
               <View style={{
                 backgroundColor: '#FFFFFF',
                 borderRadius: 24,
@@ -725,10 +783,10 @@ export default function HomeScreen() {
                     fontWeight: '600',
                     color: '#000000',
                   }}>
-                    {format(selectedDay, 'EEEE, MMMM d')}
+                    {format(selectedDate, 'EEEE, MMMM d')}
                   </Text>
                   <Pressable
-                    onPress={() => setSelectedDay(null)}
+                    onPress={() => setSelectedDate(null)}
                     style={({ pressed }) => ({
                       opacity: pressed ? 0.7 : 1,
                     })}
@@ -758,7 +816,7 @@ export default function HomeScreen() {
                     gap: 8,
                   }}>
                     <Text style={{ fontSize: 14, color: '#666666' }}>Nutrition Adherence</Text>
-                    <Text style={{ fontSize: 24, fontWeight: '600', color: '#FF9500' }}>85%</Text>
+                    <Text style={{ fontSize: 24, fontWeight: '600', color: '#FF9500' }}>{nutritionScore}%</Text>
                   </View>
 
                   {/* Recovery Score */}
@@ -799,15 +857,15 @@ export default function HomeScreen() {
                     <Text style={{ fontSize: 14, color: '#666666' }}>Training Status</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                       <Ionicons 
-                        name={selectedDay > new Date() ? 'time-outline' : 'checkmark-circle'} 
+                        name={selectedDate > new Date() ? 'time-outline' : 'checkmark-circle'} 
                         size={24} 
-                        color={selectedDay > new Date() ? '#666666' : '#99E86C'} 
+                        color={selectedDate > new Date() ? '#666666' : '#99E86C'} 
                       />
                       <Text style={{ 
                         fontSize: 16, 
-                        color: selectedDay > new Date() ? '#666666' : '#000000',
+                        color: selectedDate > new Date() ? '#666666' : '#000000',
                       }}>
-                        {selectedDay > new Date() ? 'Upcoming' : 'Completed'}
+                        {selectedDate > new Date() ? 'Upcoming' : 'Completed'}
                       </Text>
                     </View>
                   </View>
@@ -817,6 +875,73 @@ export default function HomeScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Info Modal */}
+      <Modal
+        visible={showNutritionInfo}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowNutritionInfo(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setShowNutritionInfo(false)}>
+          <View style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 24,
+          }}>
+            <TouchableWithoutFeedback>
+              <View style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: 24,
+                padding: 24,
+                width: '100%',
+                maxWidth: 400,
+                gap: 16,
+              }}>
+                <Text style={{
+                  fontSize: 20,
+                  fontWeight: '600',
+                  color: '#000000',
+                }}>
+                  How to Get Your Nutrition Score
+                </Text>
+                <Text style={{
+                  fontSize: 16,
+                  color: '#666666',
+                  lineHeight: 24,
+                }}>
+                  Your nutrition score shows how well you're meeting your daily macro goals.{'\n\n'}
+                  To start seeing your score:{'\n'}
+                  1. Go to the Nutrition tab{'\n'}
+                  2. Log your meals daily{'\n'}
+                  3. Track your progress over time{'\n\n'}
+                  The score is calculated from your logged meals in the past 10 days.
+                </Text>
+                <Pressable
+                  onPress={() => setShowNutritionInfo(false)}
+                  style={({ pressed }) => ({
+                    backgroundColor: '#007AFF',
+                    padding: 16,
+                    borderRadius: 12,
+                    opacity: pressed ? 0.7 : 1,
+                  })}
+                >
+                  <Text style={{
+                    color: '#FFFFFF',
+                    fontSize: 16,
+                    fontWeight: '600',
+                    textAlign: 'center',
+                  }}>
+                    Got it
+                  </Text>
+                </Pressable>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </SafeAreaView>
   );
 } 
