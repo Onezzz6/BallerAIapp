@@ -1,23 +1,24 @@
-import { View, Text, Pressable, StyleSheet, Image, ScrollView } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Image, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
 import Slider from '@react-native-community/slider';
 import { format, addDays, startOfWeek } from 'date-fns';
-import { doc, getDoc, setDoc, collection } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, Timestamp } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import WeeklyOverview from '../components/WeeklyOverview';
+import { OPENAI_API_KEY } from '@env';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
 type RecoveryData = {
-  trainingIntensity: number;
   soreness: number;
   fatigue: number;
-  sleepDuration: number;
-  submitted: boolean;
-  lastUpdated: string;
+  sleep: number;
+  mood: number;
+  submitted?: boolean;
 };
 
 export default function RecoveryScreen() {
@@ -25,13 +26,20 @@ export default function RecoveryScreen() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isEditing, setIsEditing] = useState(false);
   const [recoveryData, setRecoveryData] = useState<RecoveryData>({
-    trainingIntensity: 6,
-    soreness: 4,
-    fatigue: 8,
-    sleepDuration: 12,
-    submitted: false,
-    lastUpdated: '',
+    soreness: 5,
+    fatigue: 5,
+    sleep: 5,
+    mood: 5,
+    submitted: false
   });
+  const [loading, setLoading] = useState(false);
+  const [todaysPlan, setTodaysPlan] = useState<string | null>(null);
+  const [todaysData, setTodaysData] = useState<{
+    soreness: number;
+    fatigue: number;
+    sleep: number;
+    mood: number;
+  } | null>(null);
 
   // Fetch recovery data for selected date
   useEffect(() => {
@@ -49,12 +57,11 @@ export default function RecoveryScreen() {
         } else {
           // Reset form for new date with even numbers
           setRecoveryData({
-            trainingIntensity: 6,
-            soreness: 4,
-            fatigue: 8,
-            sleepDuration: 12,
-            submitted: false,
-            lastUpdated: '',
+            soreness: 5,
+            fatigue: 5,
+            sleep: 5,
+            mood: 5,
+            submitted: false
           });
           setIsEditing(true);
         }
@@ -65,6 +72,38 @@ export default function RecoveryScreen() {
 
     fetchRecoveryData();
   }, [selectedDate, user]);
+
+  // Check if today's data exists when component mounts
+  useEffect(() => {
+    if (user) {
+      checkTodaysData();
+    }
+  }, [user]);
+
+  const checkTodaysData = async () => {
+    if (!user) return;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    try {
+      const dataRef = doc(db, 'users', user.uid, 'recoveryData', today.toISOString().split('T')[0]);
+      const dataSnap = await getDoc(dataRef);
+
+      if (dataSnap.exists()) {
+        const data = dataSnap.data();
+        setRecoveryData({
+          soreness: data.soreness || 5,
+          fatigue: data.fatigue || 5,
+          sleep: data.sleep || 5,
+          mood: data.mood || 5,
+          submitted: true
+        });
+      }
+    } catch (error) {
+      console.error('Error checking today\'s data:', error);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!user) return;
@@ -88,205 +127,309 @@ export default function RecoveryScreen() {
     }
   };
 
+  const handleGeneratePlan = async () => {
+    if (!user || !recoveryData.submitted) {
+      Alert.alert('Error', 'Please submit today\'s recovery data first');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const prompt = `Create a personalized recovery plan for today based on the following metrics:
+
+Muscle Soreness Level: ${recoveryData.soreness}/10
+Overall Fatigue: ${recoveryData.fatigue}/10
+Sleep Quality: ${recoveryData.sleep}/10
+Mood: ${recoveryData.mood}/10
+
+The plan should:
+1. Be specific and actionable
+2. Include appropriate recovery techniques based on the metrics
+3. Consider both active and passive recovery methods
+4. Include approximate durations for each activity
+5. Focus on the areas that need the most attention based on the soreness level
+6. Adjust intensity based on overall fatigue and sleep quality
+7. Include nutrition and hydration recommendations
+8. Suggest optimal timing for each recovery activity
+
+Format the response in clear, easy-to-read sections.`;
+
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a professional sports recovery specialist.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 1000
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('API Response:', data);
+
+      // Properly access the message content
+      const planText = data.choices?.[0]?.message?.content;
+      if (!planText) {
+        throw new Error('No plan content in API response');
+      }
+
+      setTodaysPlan(planText);
+
+      // Ensure all recovery data fields are present before saving
+      const metricsToSave = {
+        soreness: recoveryData.soreness || 5,
+        fatigue: recoveryData.fatigue || 5,
+        sleep: recoveryData.sleep || 5,
+        mood: recoveryData.mood || 5
+      };
+
+      // Save the plan to Firebase
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      await setDoc(doc(db, 'users', user.uid, 'recoveryPlans', today.toISOString().split('T')[0]), {
+        plan: planText,
+        createdAt: Timestamp.now(),
+        metrics: metricsToSave
+      });
+
+    } catch (error) {
+      console.error('Error generating recovery plan:', error);
+      Alert.alert('Error', 'Failed to generate recovery plan. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={{
-        paddingHorizontal: 24,
-        paddingTop: 24,
-        paddingBottom: 16,
-        backgroundColor: '#FFFFFF',
-      }}>
-        {/* BallerAI Logo and Text */}
-        <View style={{ 
-          flexDirection: 'row', 
-          alignItems: 'center', 
-          gap: 8,
-          marginBottom: 16,
-        }}>
-          <Image 
-            source={require('../../assets/images/BallerAILogo.png')}
-            style={{ width: 32, height: 32 }}
-            resizeMode="contain"
-          />
-          <Text style={{ 
-            fontSize: 24, 
-            fontWeight: '600', 
-            color: '#000000' 
-          }}>
-            BallerAI
-          </Text>
-        </View>
-
-        {/* Centered Recovery Title */}
-        <Text style={{
-          fontSize: 32,
-          fontWeight: '700',
-          color: '#000000',
-          textAlign: 'center',
-          marginBottom: 8,
-        }}>
-          Recovery
-        </Text>
-      </View>
-
-      {/* Weekly Overview */}
-      <WeeklyOverview 
-        selectedDate={selectedDate}
-        onDateSelect={setSelectedDate}
-      />
-
-      <ScrollView 
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollViewContent}
+      <Animated.View 
+        entering={FadeIn.duration(1000)}
+        style={styles.container}
       >
-        <Text style={styles.dateText}>
-          {format(selectedDate, 'MMMM do, yyyy')}
-        </Text>
-
-        {/* Recovery Inputs */}
-        <View style={styles.inputsContainer}>
-          {recoveryData.submitted && !isEditing ? (
-            // Show submitted data with edit button
-            <>
-              <View style={styles.submittedHeader}>
-                <Text style={styles.submittedText}>Submitted</Text>
-                <Pressable
-                  style={styles.editButton}
-                  onPress={() => setIsEditing(true)}
-                >
-                  <Ionicons name="create-outline" size={24} color="#FFFFFF" />
-                  <Text style={styles.editButtonText}>Edit</Text>
-                </Pressable>
+        <ScrollView style={styles.scrollView}>
+          <View style={styles.contentContainer}>
+            {/* Header */}
+            <View style={{
+              paddingHorizontal: 24,
+              paddingTop: 24,
+              paddingBottom: 16,
+              backgroundColor: '#FFFFFF',
+            }}>
+              {/* BallerAI Logo and Text */}
+              <View style={{ 
+                flexDirection: 'row', 
+                alignItems: 'center', 
+                gap: 8,
+                marginBottom: 16,
+              }}>
+                <Image 
+                  source={require('../../assets/images/BallerAILogo.png')}
+                  style={{ width: 32, height: 32 }}
+                  resizeMode="contain"
+                />
+                <Text style={{ 
+                  fontSize: 24, 
+                  fontWeight: '600', 
+                  color: '#000000' 
+                }}>
+                  BallerAI
+                </Text>
               </View>
-              
-              <RecoverySlider
-                icon="fitness"
-                question="How intensive was the training?"
-                value={recoveryData.trainingIntensity}
-                onValueChange={() => {}}
-                min={1}
-                max={10}
-                disabled={true}
-                type="intensity"
-              />
-              <RecoverySlider
-                icon="medical"
-                question="How sore are you?"
-                value={recoveryData.soreness}
-                onValueChange={() => {}}
-                min={1}
-                max={10}
-                disabled={true}
-                type="soreness"
-              />
-              <RecoverySlider
-                icon="flash"
-                question="How tired do you feel overall?"
-                value={recoveryData.fatigue}
-                onValueChange={() => {}}
-                min={1}
-                max={10}
-                disabled={true}
-                type="fatigue"
-              />
-              <RecoverySlider
-                icon="moon"
-                question="Sleep duration"
-                value={recoveryData.sleepDuration}
-                onValueChange={() => {}}
-                min={4}
-                max={12}
-                disabled={true}
-                type="sleep"
-              />
-            </>
-          ) : (
-            // Show editable sliders
-            <>
-              <RecoverySlider
-                icon="fitness"
-                question="How intensive was the training?"
-                value={recoveryData.trainingIntensity}
-                onValueChange={(value) => setRecoveryData(prev => ({
-                  ...prev,
-                  trainingIntensity: value
-                }))}
-                min={1}
-                max={10}
-                disabled={false}
-                type="intensity"
-              />
-              <RecoverySlider
-                icon="medical"
-                question="How sore are you?"
-                value={recoveryData.soreness}
-                onValueChange={(value) => setRecoveryData(prev => ({
-                  ...prev,
-                  soreness: value
-                }))}
-                min={1}
-                max={10}
-                disabled={false}
-                type="soreness"
-              />
-              <RecoverySlider
-                icon="flash"
-                question="How tired do you feel overall?"
-                value={recoveryData.fatigue}
-                onValueChange={(value) => setRecoveryData(prev => ({
-                  ...prev,
-                  fatigue: value
-                }))}
-                min={1}
-                max={10}
-                disabled={false}
-                type="fatigue"
-              />
-              <RecoverySlider
-                icon="moon"
-                question="Sleep duration"
-                value={recoveryData.sleepDuration}
-                onValueChange={(value) => setRecoveryData(prev => ({
-                  ...prev,
-                  sleepDuration: value
-                }))}
-                min={4}
-                max={12}
-                disabled={false}
-                type="sleep"
-              />
-            </>
-          )}
-        </View>
 
-        {(!recoveryData.submitted || isEditing) && (
-          <Pressable 
-            style={styles.submitButton}
-            onPress={handleSubmit}
-          >
-            <Text style={styles.submitButtonText}>
-              {isEditing ? 'Update Recovery Data' : 'Submit Recovery Data'}
+              {/* Centered Recovery Title */}
+              <Text style={{
+                fontSize: 32,
+                fontWeight: '700',
+                color: '#000000',
+                textAlign: 'center',
+                marginBottom: 8,
+              }}>
+                Recovery
+              </Text>
+            </View>
+
+            {/* Weekly Overview */}
+            <WeeklyOverview 
+              selectedDate={selectedDate}
+              onDateSelect={setSelectedDate}
+            />
+
+            <Text style={styles.dateText}>
+              {format(selectedDate, 'MMMM do, yyyy')}
             </Text>
-            <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-          </Pressable>
-        )}
 
-        <Pressable 
-          style={[
-            styles.generateButton,
-            !recoveryData.submitted && { opacity: 0.5 }
-          ]}
-          onPress={handleSubmit}
-          disabled={!recoveryData.submitted}
-        >
-          <Text style={styles.generateButtonText}>Generate Today's Recovery Plan</Text>
-          <Ionicons name="fitness" size={20} color="#FFFFFF" />
-        </Pressable>
+            {/* Recovery Inputs */}
+            <View style={styles.inputsContainer}>
+              {recoveryData.submitted && !isEditing ? (
+                // Show submitted data with edit button
+                <>
+                  <View style={styles.submittedHeader}>
+                    <Text style={styles.submittedText}>Submitted</Text>
+                    <Pressable
+                      style={styles.editButton}
+                      onPress={() => setIsEditing(true)}
+                    >
+                      <Ionicons name="create-outline" size={24} color="#FFFFFF" />
+                      <Text style={styles.editButtonText}>Edit</Text>
+                    </Pressable>
+                  </View>
+                  
+                  <RecoverySlider
+                    icon="fitness"
+                    question="How intensive was the training?"
+                    value={recoveryData.soreness}
+                    onValueChange={() => {}}
+                    min={1}
+                    max={10}
+                    disabled={true}
+                    type="intensity"
+                  />
+                  <RecoverySlider
+                    icon="medical"
+                    question="How sore are you?"
+                    value={recoveryData.fatigue}
+                    onValueChange={() => {}}
+                    min={1}
+                    max={10}
+                    disabled={true}
+                    type="soreness"
+                  />
+                  <RecoverySlider
+                    icon="flash"
+                    question="How tired do you feel overall?"
+                    value={recoveryData.sleep}
+                    onValueChange={() => {}}
+                    min={1}
+                    max={10}
+                    disabled={true}
+                    type="fatigue"
+                  />
+                  <RecoverySlider
+                    icon="moon"
+                    question="Sleep duration"
+                    value={recoveryData.mood}
+                    onValueChange={() => {}}
+                    min={1}
+                    max={10}
+                    disabled={true}
+                    type="sleep"
+                  />
+                </>
+              ) : (
+                // Show editable sliders
+                <>
+                  <RecoverySlider
+                    icon="fitness"
+                    question="How intensive was the training?"
+                    value={recoveryData.soreness}
+                    onValueChange={(value) => setRecoveryData(prev => ({
+                      ...prev,
+                      soreness: value
+                    }))}
+                    min={1}
+                    max={10}
+                    disabled={false}
+                    type="intensity"
+                  />
+                  <RecoverySlider
+                    icon="medical"
+                    question="How sore are you?"
+                    value={recoveryData.fatigue}
+                    onValueChange={(value) => setRecoveryData(prev => ({
+                      ...prev,
+                      fatigue: value
+                    }))}
+                    min={1}
+                    max={10}
+                    disabled={false}
+                    type="soreness"
+                  />
+                  <RecoverySlider
+                    icon="flash"
+                    question="How tired do you feel overall?"
+                    value={recoveryData.sleep}
+                    onValueChange={(value) => setRecoveryData(prev => ({
+                      ...prev,
+                      sleep: value
+                    }))}
+                    min={1}
+                    max={10}
+                    disabled={false}
+                    type="fatigue"
+                  />
+                  <RecoverySlider
+                    icon="moon"
+                    question="Sleep duration"
+                    value={recoveryData.mood}
+                    onValueChange={(value) => setRecoveryData(prev => ({
+                      ...prev,
+                      mood: value
+                    }))}
+                    min={1}
+                    max={10}
+                    disabled={false}
+                    type="sleep"
+                  />
+                </>
+              )}
+            </View>
 
-        {/* Add bottom padding to ensure content is above tab bar */}
-        <View style={styles.bottomPadding} />
-      </ScrollView>
+            {(!recoveryData.submitted || isEditing) && (
+              <Pressable 
+                style={styles.submitButton}
+                onPress={handleSubmit}
+              >
+                <Text style={styles.submitButtonText}>
+                  {isEditing ? 'Update Recovery Data' : 'Submit Recovery Data'}
+                </Text>
+                <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+              </Pressable>
+            )}
+
+            <Pressable
+              style={[
+                styles.generateButton, 
+                (!recoveryData.submitted || loading) && styles.generateButtonDisabled
+              ]}
+              onPress={handleGeneratePlan}
+              disabled={!recoveryData.submitted || loading}
+            >
+              <Text style={styles.generateButtonText}>
+                {loading ? 'Generating Plan...' : 
+                 !recoveryData.submitted ? 'Submit Today\'s Data First' : 
+                 'Generate Today\'s Recovery Plan'}
+              </Text>
+              <Ionicons name="fitness" size={20} color="#FFFFFF" />
+            </Pressable>
+
+            {todaysPlan && (
+              <View style={styles.planContainer}>
+                <Text style={styles.planTitle}>Your Recovery Plan</Text>
+                <Text style={styles.planText}>{todaysPlan}</Text>
+              </View>
+            )}
+          </View>
+        </ScrollView>
+      </Animated.View>
     </SafeAreaView>
   );
 }
@@ -590,5 +733,28 @@ const styles = StyleSheet.create({
   },
   disabledDayText: {
     color: '#999999', // Grey text for disabled days
+  },
+  generateButtonDisabled: {
+    opacity: 0.5,
+  },
+  planContainer: {
+    marginTop: 24,
+    padding: 16,
+    backgroundColor: '#F8F8F8',
+    borderRadius: 12,
+  },
+  planTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 16,
+  },
+  planText: {
+    fontSize: 16,
+    color: '#000000',
+    lineHeight: 24,
+  },
+  contentContainer: {
+    padding: 24,
   },
 }); 
