@@ -11,19 +11,22 @@ import { AuthProvider } from './context/AuthContext';
 import { OnboardingProvider } from './context/OnboardingContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NutritionProvider } from './context/NutritionContext';
+import { TrainingProvider } from './context/TrainingContext';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
+  const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
 
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (error) throw error;
+
     if (loaded) {
       SplashScreen.hideAsync();
     }
@@ -34,7 +37,7 @@ export default function RootLayout() {
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [loaded]);
+  }, [loaded, error]);
 
   if (!loaded) {
     return null;
@@ -49,10 +52,12 @@ export default function RootLayout() {
       <AuthProvider>
         <NutritionProvider>
           <OnboardingProvider>
-            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-              <Slot />
-              <StatusBar style="auto" />
-            </ThemeProvider>
+            <TrainingProvider>
+              <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+                <Slot />
+                <StatusBar style="auto" />
+              </ThemeProvider>
+            </TrainingProvider>
           </OnboardingProvider>
         </NutritionProvider>
       </AuthProvider>

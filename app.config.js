@@ -26,6 +26,9 @@ export default {
       bundleIdentifier: "com.ballerai.app"
     },
     jsEngine: "hermes",
-    newArchEnabled: true
+    newArchEnabled: true,
+    plugins: [
+      'expo-font',
+    ],
   },
 }; 

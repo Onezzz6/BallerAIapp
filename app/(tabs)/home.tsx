@@ -24,6 +24,7 @@ export default function HomeScreen() {
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [nutritionScore, setNutritionScore] = useState(0);
   const [showNutritionInfo, setShowNutritionInfo] = useState(false);
+  const [nutritionAdherence, setNutritionAdherence] = useState(0);
   
   // Fetch user's profile picture
   useEffect(() => {
@@ -118,6 +119,71 @@ export default function HomeScreen() {
   useEffect(() => {
     calculateNutritionScore();
   }, [calculateNutritionScore]);
+
+  // Calculate nutrition adherence
+  const calculateNutritionAdherence = useCallback(async () => {
+    if (!user) return 0;
+
+    try {
+      const today = new Date();
+      const tenDaysAgo = new Date(today);
+      tenDaysAgo.setDate(today.getDate() - 10);
+
+      const nutritionRef = collection(db, 'users', user.uid, 'nutrition');
+      const q = query(
+        nutritionRef,
+        where('date', '>=', format(tenDaysAgo, 'yyyy-MM-dd')),
+        where('date', '<=', format(today, 'yyyy-MM-dd')),
+        orderBy('date', 'desc')
+      );
+
+      const querySnapshot = await getDocs(q);
+      if (querySnapshot.empty) return 0;
+
+      let totalAdherence = 0;
+      let daysWithData = 0;
+
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        const dayScore = calculateDayScore(data);
+        totalAdherence += dayScore;
+        daysWithData++;
+      });
+
+      return Math.round(totalAdherence / daysWithData);
+    } catch (error) {
+      console.error('Error calculating nutrition adherence:', error);
+      return 0;
+    }
+  }, [user]);
+
+  // Helper function to calculate daily score
+  const calculateDayScore = (data: any) => {
+    const { calories = 0, protein = 0, carbs = 0, fats = 0 } = data;
+    const { macros } = useNutrition();
+    
+    const caloriesScore = Math.min((calories / (macros.calories.goal || 1)) * 100, 100);
+    const proteinScore = Math.min((protein / (macros.protein.goal || 1)) * 100, 100);
+    const carbsScore = Math.min((carbs / (macros.carbs.goal || 1)) * 100, 100);
+    const fatsScore = Math.min((fats / (macros.fats.goal || 1)) * 100, 100);
+
+    return (
+      caloriesScore * 0.4 +
+      proteinScore * 0.3 +
+      carbsScore * 0.15 +
+      fatsScore * 0.15
+    );
+  };
+
+  // Load adherence data
+  useEffect(() => {
+    const loadAdherence = async () => {
+      const adherence = await calculateNutritionAdherence();
+      setNutritionAdherence(adherence);
+    };
+
+    loadAdherence();
+  }, [calculateNutritionAdherence]);
 
   return (
     <SafeAreaView style={{ 
@@ -816,7 +882,13 @@ export default function HomeScreen() {
                     gap: 8,
                   }}>
                     <Text style={{ fontSize: 14, color: '#666666' }}>Nutrition Adherence</Text>
-                    <Text style={{ fontSize: 24, fontWeight: '600', color: '#FF9500' }}>{nutritionScore}%</Text>
+                    <Text style={{ 
+                      fontSize: 24, 
+                      fontWeight: '600', 
+                      color: '#FF9500' 
+                    }}>
+                      {nutritionAdherence}%
+                    </Text>
                   </View>
 
                   {/* Recovery Score */}

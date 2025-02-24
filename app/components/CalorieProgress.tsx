@@ -1,10 +1,37 @@
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
 
 export default function CalorieProgress({ eaten, burned, goal }: { eaten: number; burned: number; goal: number }) {
   const remaining = goal - eaten;
   const progress = Math.min(Math.max(eaten / goal, 0), 1);
+
+  const showInfoAlert = () => {
+    Alert.alert(
+      "No Data Yet",
+      "Start logging your meals to see your daily calorie progress. You can log meals from the nutrition tab.",
+      [{ text: "OK" }]
+    );
+  };
+
+  if (goal === 0) {
+    return (
+      <View style={styles.calorieCard}>
+        <View style={styles.emptyStateContainer}>
+          <Pressable
+            onPress={showInfoAlert}
+            style={({ pressed }) => [
+              styles.infoButton,
+              { opacity: pressed ? 0.7 : 1 }
+            ]}
+          >
+            <Ionicons name="information-circle-outline" size={32} color="#666666" />
+            <Text style={styles.infoText}>Tap to learn how to start tracking</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.calorieCard}>
@@ -175,4 +202,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666666',
   },
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: 200, // Ensure minimum height for empty state
+  },
+  infoButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  infoText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#666666',
+    textAlign: 'center',
+  }
 }); 
