@@ -9,6 +9,7 @@ import { db } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
+import WeeklyOverview from '../components/WeeklyOverview';
 
 type RecoveryData = {
   trainingIntensity: number;
@@ -65,36 +66,6 @@ export default function RecoveryScreen() {
     fetchRecoveryData();
   }, [selectedDate, user]);
 
-  // Generate week dates centered on selected date
-  const weekDates = [...Array(7)].map((_, index) => {
-    const date = addDays(startOfWeek(selectedDate), index);
-    const isToday = format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
-    const isFuture = date > new Date();
-    
-    return {
-      date,
-      day: format(date, 'E')[0],
-      dayNum: format(date, 'd'),
-      isSelected: format(date, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd'),
-      isDisabled: isToday || isFuture,
-    };
-  });
-
-  const handleDaySelect = (date: Date) => {
-    // Prevent selection of current or future dates
-    if (date >= new Date()) return;
-    
-    setSelectedDate(date);
-    setRecoveryData({
-      trainingIntensity: 6,
-      soreness: 4,
-      fatigue: 8,
-      sleepDuration: 12,
-      submitted: false,
-      lastUpdated: '',
-    });
-  };
-
   const handleSubmit = async () => {
     if (!user) return;
     
@@ -131,7 +102,7 @@ export default function RecoveryScreen() {
           flexDirection: 'row', 
           alignItems: 'center', 
           gap: 8,
-          marginBottom: 16, // Add space between logo and title
+          marginBottom: 16,
         }}>
           <Image 
             source={require('../../assets/images/BallerAILogo.png')}
@@ -147,7 +118,7 @@ export default function RecoveryScreen() {
           </Text>
         </View>
 
-        {/* Title */}
+        {/* Centered Recovery Title */}
         <Text style={{
           fontSize: 32,
           fontWeight: '700',
@@ -159,6 +130,12 @@ export default function RecoveryScreen() {
         </Text>
       </View>
 
+      {/* Weekly Overview */}
+      <WeeklyOverview 
+        selectedDate={selectedDate}
+        onDateSelect={setSelectedDate}
+      />
+
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollViewContent}
@@ -166,37 +143,6 @@ export default function RecoveryScreen() {
         <Text style={styles.dateText}>
           {format(selectedDate, 'MMMM do, yyyy')}
         </Text>
-
-        {/* Week Calendar */}
-        <View style={styles.calendar}>
-          {weekDates.map((item, index) => (
-            <Pressable
-              key={index}
-              style={[
-                styles.dayButton,
-                item.isSelected && styles.selectedDay,
-                item.isDisabled && styles.disabledDay
-              ]}
-              onPress={() => handleDaySelect(item.date)}
-              disabled={item.isDisabled}
-            >
-              <Text style={[
-                styles.dayLetter,
-                item.isSelected && styles.selectedDayText,
-                item.isDisabled && styles.disabledDayText
-              ]}>
-                {item.day}
-              </Text>
-              <Text style={[
-                styles.dayNumber,
-                item.isSelected && styles.selectedDayText,
-                item.isDisabled && styles.disabledDayText
-              ]}>
-                {item.dayNum}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
 
         {/* Recovery Inputs */}
         <View style={styles.inputsContainer}>

@@ -14,6 +14,7 @@ import imageAnalysis from '../services/imageAnalysis';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject, listAll } from 'firebase/storage';
 import { deleteUser } from 'firebase/auth';
 import { useRouter } from 'expo-router';
+import WeeklyOverview from '../components/WeeklyOverview';
 
 type MacroGoals = {
   calories: { current: number; goal: number };
@@ -1644,18 +1645,14 @@ export default function NutritionScreen() {
         </Text>
       </View>
 
-      {/* Add Week Overview here */}
-      {isLoadingWeek ? (
-        <View style={styles.weekContainer}>
-          <ActivityIndicator size="large" color="#4A72B2" />
-        </View>
-      ) : (
-        <WeekOverview
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-          weeklyData={weeklyData}
-        />
-      )}
+      {/* Weekly Overview */}
+      <WeeklyOverview 
+        selectedDate={selectedDate}
+        onDateSelect={(date) => {
+          setSelectedDate(date);
+          loadSelectedDayData();
+        }}
+      />
 
       <ScrollView>
         <View style={styles.calorieCard}>
