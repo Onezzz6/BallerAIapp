@@ -3,6 +3,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useTraining } from './context/TrainingContext';
+import Accordion from './components/Accordion';
 
 const DAYS_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
@@ -15,7 +16,19 @@ export default function PlanDetailsScreen() {
   const plan = plans.find(p => p.id === id);
 
   if (!plan) {
-    return null;
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Pressable onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#000000" />
+          </Pressable>
+          <Text style={styles.title}>Plan Details</Text>
+        </View>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Plan not found</Text>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   const formatScheduleText = (text: string) => {
@@ -28,6 +41,20 @@ export default function PlanDetailsScreen() {
       .join('\n');
   };
 
+  // Helper function to safely format day headers
+  const formatDayHeader = (day) => {
+    if (!day) return '';
+    return day.charAt(0).toUpperCase() + day.slice(1);
+  };
+  
+  // Helper function to safely get plan content
+  const getDayContent = (day) => {
+    if (!plan.schedule || !plan.schedule[day]) {
+      return "No content available for this day.";
+    }
+    return plan.schedule[day];
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -36,33 +63,27 @@ export default function PlanDetailsScreen() {
         </Pressable>
         <Text style={styles.title}>{plan.name}</Text>
       </View>
-
+      
       <ScrollView style={styles.content}>
+        <View style={styles.planMeta}>
+          <Text style={styles.planDate}>
+            Created on {plan.createdAt.toLocaleDateString()}
+          </Text>
+        </View>
+        
+        {/* Days of the week */}
         {DAYS_ORDER.map((day) => (
-          <Pressable
+          <Accordion 
             key={day}
-            style={styles.dayCard}
-            onPress={() => setExpandedDay(expandedDay === day ? null : day)}
+            title={formatDayHeader(day)}
+            expanded={false}
           >
-            <View style={styles.dayHeader}>
-              <Text style={styles.dayTitle}>
-                {day.charAt(0).toUpperCase() + day.slice(1)}
-              </Text>
-              <Ionicons 
-                name={expandedDay === day ? "chevron-up" : "chevron-down"} 
-                size={24} 
-                color="#000000" 
-              />
+            <View style={styles.planContent}>
+              <ScrollView style={{ maxHeight: 400 }}>
+                <Text style={styles.planText}>{getDayContent(day)}</Text>
+              </ScrollView>
             </View>
-            
-            {expandedDay === day && (
-              <View style={styles.dayContent}>
-                <Text style={styles.scheduleText}>
-                  {formatScheduleText(plan.schedule[day])}
-                </Text>
-              </View>
-            )}
-          </Pressable>
+          </Accordion>
         ))}
       </ScrollView>
     </SafeAreaView>
@@ -93,34 +114,31 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: 16,
+    padding: 24,
   },
-  dayCard: {
-    backgroundColor: '#F8F8F8',
-    borderRadius: 12,
-    marginBottom: 12,
-    overflow: 'hidden',
+  planMeta: {
+    marginBottom: 24,
   },
-  dayHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-  },
-  dayTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000000',
-  },
-  dayContent: {
-    padding: 16,
-    paddingTop: 0,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E5E5',
-  },
-  scheduleText: {
+  planDate: {
     fontSize: 16,
-    color: '#000000',
-    lineHeight: 24,
+    color: '#666666',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666666',
+  },
+  planContent: {
+    padding: 16,
+    backgroundColor: '#F8F8F8',
+  },
+  planText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#333333',
   },
 }); 

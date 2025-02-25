@@ -39,7 +39,7 @@ export default function TrainingPlansScreen() {
           <Pressable onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#000000" />
           </Pressable>
-          <Text style={styles.title}>Your Training Plans</Text>
+          <Text style={styles.title}>This weeks training plan.</Text>
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#000022" />
@@ -55,7 +55,7 @@ export default function TrainingPlansScreen() {
           <Pressable onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#000000" />
           </Pressable>
-          <Text style={styles.title}>Your Training Plans</Text>
+          <Text style={styles.title}>This weeks training plan</Text>
         </View>
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No training plans generated yet</Text>
@@ -172,5 +172,14 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     padding: 4,
+  },
+  planContent: {
+    padding: 16,
+    backgroundColor: '#F8F8F8',
+  },
+  planText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#333333',
   },
 }); 

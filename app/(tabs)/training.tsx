@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTraining } from '../context/TrainingContext';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { OPENAI_API_KEY } from '@env';
+import { OPENAI_API_KEY, DEEPSEEK_API_KEY } from '@env';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 type FocusArea = 'technique' | 'strength' | 'endurance' | 'speed' | 'overall';
@@ -244,7 +244,7 @@ export default function TrainingScreen() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer sk-6fbabfd516ff465fb0accf35b63eb00c`,
+          'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
         },
         body: JSON.stringify({
           model: "deepseek-chat",
@@ -268,10 +268,37 @@ export default function TrainingScreen() {
       
       const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
       days.forEach(day => {
-        const dayRegex = new RegExp(`${day}:.*?(?=(?:tuesday|wednesday|thursday|friday|saturday|sunday):|$)`, 'is');
+        const dayRegex = new RegExp(
+          `(?:####\\s*\\*\\*${day}(?:\\s*\\([^)]*\\))?\\*\\*|` +
+          `###\\s*\\*\\*${day}(?:\\s*\\([^)]*\\))?\\*\\*|` +
+          `\\*\\*${day}(?:\\s*\\([^)]*\\))?\\*\\*|` +
+          `${day}:)` +
+          `[\\s\\S]*?` +
+          `(?=(?:` +
+            `####\\s*\\*\\*(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)(?:\\s*\\([^)]*\\))?\\*\\*|` +
+            `###\\s*\\*\\*(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)(?:\\s*\\([^)]*\\))?\\*\\*|` +
+            `\\*\\*(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)(?:\\s*\\([^)]*\\))?\\*\\*|` +
+            `---\\s*\\n|` +
+            `$` +
+          `))`,
+          'i'
+        );
+        
         const match = planText.match(dayRegex);
         if (match) {
           dailyPlans[day] = match[0].trim();
+        } else {
+          const sections = planText.split(/(?:###|####)/);
+          for (const section of sections) {
+            if (section.toLowerCase().includes(day.toLowerCase())) {
+              dailyPlans[day] = section.trim();
+              break;
+            }
+          }
+          
+          if (!dailyPlans[day]) {
+            dailyPlans[day] = `No specific training for ${day}.`;
+          }
         }
       });
 
@@ -368,8 +395,8 @@ export default function TrainingScreen() {
               ))}
             </View>
 
-            <Text style={styles.sectionTitle}>Available Training Time <Text style={styles.subtitleInline}>(minutes/day)</Text></Text>
-            <Text style={styles.subtitle}>Fill in your team training amounts so BallerAI can take this into consideration when making ur personalized training plan.</Text>
+            <Text style={styles.sectionTitle}>Team Training schedule <Text style={styles.subtitleInline}>(minutes/day)</Text></Text>
+            <Text style={styles.subtitle}>Fill in your team training schedule so BallerAI can take this into consideration when making ur personalized training plan.</Text>
 
             {Object.entries(schedule).map(([day, daySchedule]) => (
               <View key={day} style={styles.dayContainer}>
