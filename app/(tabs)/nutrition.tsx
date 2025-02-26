@@ -324,7 +324,7 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal }: LogMealM
           fats: parseInt(manualEntry.fats) || 0
         }
       };
-      await onLogMeal({ items: [meal] });
+      await onLogMeal([meal]);
       setManualEntry({ name: '', calories: '', protein: '', carbs: '', fats: '' });
       onClose();
     } catch (error) {
@@ -940,18 +940,35 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4A72B2',
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: '#4CAF50',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 25,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    marginVertical: 10,
   },
   disabledButton: {
     opacity: 0.5,
   },
-  logMealButtonText: {
+  logMealText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
-    marginLeft: 8,
+    marginRight: 8,
+  },
+  logMealIcon: {
+    marginLeft: 4,
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   modalContainer: {
     flex: 1,
@@ -1189,16 +1206,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666666',
   },
-  logMealText: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  logMealIcon: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    padding: 8,
-    borderRadius: 8,
-  },
   deleteButton: {
     padding: 8,
   },
@@ -1266,15 +1273,17 @@ export default function NutritionScreen() {
       setIsLoading(true);
       const dateString = formatDateId(selectedDate);
       
-      // Load macros for selected date
-      const dailyMacrosRef = doc(db, `users/${user.uid}/dailyMacros/${dateString}`);
-      const dailyMacrosDoc = await getDoc(dailyMacrosRef);
-      
       // Get the goals (these stay constant)
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       if (!userDoc.exists()) {
         console.error('User document not found');
         setLoggedMeals([]);
+        updateMacros({
+          calories: { current: 0, goal: 2000 },
+          protein: { current: 0, goal: 150 },
+          carbs: { current: 0, goal: 250 },
+          fats: { current: 0, goal: 70 }
+        });
         return;
       }
 
@@ -1296,26 +1305,6 @@ export default function NutritionScreen() {
       );
       const goals = calculateMacroGoals(dailyCalories, userData.footballGoal);
 
-      // Update macros with selected day's progress
-      updateMacros({
-        calories: { 
-          current: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().calories : 0, 
-          goal: goals.calories 
-        },
-        protein: { 
-          current: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().protein : 0, 
-          goal: goals.protein 
-        },
-        carbs: { 
-          current: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().carbs : 0, 
-          goal: goals.carbs 
-        },
-        fats: { 
-          current: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().fats : 0, 
-          goal: goals.fats 
-        }
-      });
-
       // Load meals for selected date
       const startOfDay = getLocalStartOfDay(selectedDate);
       const endOfDay = getLocalEndOfDay(selectedDate);
@@ -1335,6 +1324,40 @@ export default function NutritionScreen() {
       }));
       
       setLoggedMeals(meals);
+      
+      // Load macros for selected date - only if there are meals
+      if (meals.length > 0) {
+        const dailyMacrosRef = doc(db, `users/${user.uid}/dailyMacros/${dateString}`);
+        const dailyMacrosDoc = await getDoc(dailyMacrosRef);
+        
+        // Update macros with selected day's progress
+        updateMacros({
+          calories: { 
+            current: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().calories : 0, 
+            goal: goals.calories 
+          },
+          protein: { 
+            current: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().protein : 0, 
+            goal: goals.protein 
+          },
+          carbs: { 
+            current: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().carbs : 0, 
+            goal: goals.carbs 
+          },
+          fats: { 
+            current: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().fats : 0, 
+            goal: goals.fats 
+          }
+        });
+      } else {
+        // If no meals, set all current values to 0
+        updateMacros({
+          calories: { current: 0, goal: goals.calories },
+          protein: { current: 0, goal: goals.protein },
+          carbs: { current: 0, goal: goals.carbs },
+          fats: { current: 0, goal: goals.fats }
+        });
+      }
     } catch (error) {
       console.error('Error loading selected day data:', error);
       setLoggedMeals([]);
@@ -1499,8 +1522,17 @@ export default function NutritionScreen() {
   const deleteMeal = async (mealId: string) => {
     if (!user) return;
     try {
+      // Get the meal data before deleting it
+      const mealRef = doc(db, 'meals', mealId);
+      const mealDoc = await getDoc(mealRef);
+      
+      if (!mealDoc.exists()) {
+        console.error('Meal not found');
+        return;
+      }
+      
       // First delete the meal
-      await deleteDoc(doc(db, 'meals', mealId));
+      await deleteDoc(mealRef);
 
       // Then recalculate daily totals from remaining meals
       const startOfDay = getLocalStartOfDay(selectedDate);
@@ -1530,10 +1562,17 @@ export default function NutritionScreen() {
 
       // Update daily macros document with new totals
       const dailyMacrosRef = doc(db, `users/${user.uid}/dailyMacros/${dateString}`);
-      await setDoc(dailyMacrosRef, {
-        ...newTotals,
-        updatedAt: new Date().toISOString()
-      });
+      
+      if (mealsSnapshot.docs.length > 0) {
+        // If there are still meals, update with new totals
+        await setDoc(dailyMacrosRef, {
+          ...newTotals,
+          updatedAt: new Date().toISOString()
+        });
+      } else {
+        // If no meals left, delete the daily macros document to avoid showing zeros
+        await deleteDoc(dailyMacrosRef);
+      }
 
       // Update local state
       updateMacros({
@@ -1727,7 +1766,7 @@ export default function NutritionScreen() {
             style={styles.logMealButton}
             onPress={() => setIsLogMealModalVisible(true)}
           >
-            <Text style={styles.logMealText}>Log Meal</Text>
+            <Text style={styles.logMealText}>Log meal</Text>
             <View style={styles.logMealIcon}>
               <Ionicons name="add" size={24} color="#FFFFFF" />
             </View>
@@ -1741,7 +1780,7 @@ export default function NutritionScreen() {
               setIsLoading(true);
               await deleteMeal(mealId);
               // Refresh weekly data to update the overview
-              await fetchWeeklyData();
+              await loadSelectedDayData();
             } catch (error) {
               console.error('Error deleting meal:', error);
               Alert.alert('Error', 'Failed to delete meal');

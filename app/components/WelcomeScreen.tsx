@@ -92,7 +92,7 @@ export default function WelcomeScreen() {
           textAlign: 'center',
           marginBottom: 12,
         }}>
-          Ready to start your journey to becoming professional?
+          Ready to become professional?
         </Text>
 
         <Text style={{

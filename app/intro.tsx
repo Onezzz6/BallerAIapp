@@ -38,7 +38,7 @@ export default function IntroScreen() {
           textAlign: 'center',
           marginBottom: 12,
         }}>
-          Hi, I'm BallerAI, your AI football partner!
+          Hi, I'm Ballzy!
         </Text>
 
         <Text style={{
@@ -48,7 +48,7 @@ export default function IntroScreen() {
           textAlign: 'center',
           marginBottom: 32,
         }}>
-          I will guide you to your goals. Before we start, answer a few quick questions to make sure I can customize everything just for you!
+          I will help you reach your goals. Before we start, answer a few quick questions so i can customize everything just for you!
         </Text>
 
         <Button 

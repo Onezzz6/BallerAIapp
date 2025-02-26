@@ -77,7 +77,7 @@ export default function AmbitionTransitionScreen() {
           textAlign: 'center',
           marginBottom: 20,
         }}>
-          Great! You clearly show great ambition - this is very important in achieving your goals!
+          Great you clearly show ambition!
         </Text>
 
         <Text style={{

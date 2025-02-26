@@ -51,7 +51,7 @@ export default function MotivationReasonScreen() {
             textAlign: 'center',
             marginBottom: 20,
           }}>
-            Lastly, the most important part of becoming a professional football player!
+            Lastly, the most important part of becoming a pro!
           </Text>
 
           <Text style={{

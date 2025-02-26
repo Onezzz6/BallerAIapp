@@ -136,24 +136,19 @@ export default function RecoveryScreen() {
     setLoading(true);
 
     try {
-      const prompt = `Create a personalized recovery plan for today based on the following metrics:
+      const prompt = `Create a short, focused recovery plan with ONLY recovery exercises based on these metrics:
 
 Muscle Soreness Level: ${recoveryData.soreness}/10
 Overall Fatigue: ${recoveryData.fatigue}/10
 Sleep Quality: ${recoveryData.sleep}/10
 Mood: ${recoveryData.mood}/10
 
-The plan should:
-1. Be specific and actionable
-2. Include appropriate recovery techniques based on the metrics
-3. Consider both active and passive recovery methods
-4. Include approximate durations for each activity
-5. Focus on the areas that need the most attention based on the soreness level
-6. Adjust intensity based on overall fatigue and sleep quality
-7. Include nutrition and hydration recommendations
-8. Suggest optimal timing for each recovery activity
-
-Format the response in clear, easy-to-read sections.`;
+The plan MUST:
+1. Be no longer than 5 lines total
+2. Include ONLY specific recovery exercises to perform today
+3. Do NOT include any nutrition, hydration, or sleep advice
+4. Focus only on physical recovery activities/exercises
+5. Be direct and easy to follow`;
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -166,7 +161,7 @@ Format the response in clear, easy-to-read sections.`;
           messages: [
             {
               role: 'system',
-              content: 'You are a professional sports recovery specialist.'
+              content: 'You are a professional sports recovery specialist focused on providing concise, exercise-only recovery plans. Keep your response under 5 lines and focus only on recovery exercises.'
             },
             {
               role: 'user',
@@ -174,7 +169,7 @@ Format the response in clear, easy-to-read sections.`;
             }
           ],
           temperature: 0.7,
-          max_tokens: 1000
+          max_tokens: 300
         }),
       });
 
@@ -423,7 +418,7 @@ Format the response in clear, easy-to-read sections.`;
 
             {todaysPlan && (
               <View style={styles.planContainer}>
-                <Text style={styles.planTitle}>Your Recovery Plan</Text>
+                <Text style={styles.planTitle}>Today's Recovery Exercises</Text>
                 <Text style={styles.planText}>{todaysPlan}</Text>
               </View>
             )}
@@ -739,20 +734,29 @@ const styles = StyleSheet.create({
   },
   planContainer: {
     marginTop: 24,
-    padding: 16,
-    backgroundColor: '#F8F8F8',
-    borderRadius: 12,
+    marginHorizontal: 8,
+    padding: 20,
+    backgroundColor: '#F0F9FF',
+    borderRadius: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#3F63F6',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   planTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#000000',
-    marginBottom: 16,
+    fontWeight: '700',
+    color: '#3F63F6',
+    marginBottom: 12,
   },
   planText: {
     fontSize: 16,
     color: '#000000',
     lineHeight: 24,
+    fontWeight: '500',
   },
   contentContainer: {
     padding: 24,

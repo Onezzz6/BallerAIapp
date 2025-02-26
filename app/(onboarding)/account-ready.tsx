@@ -45,7 +45,7 @@ export default function AccountReadyScreen() {
           color: '#666666',
           textAlign: 'center',
         }}>
-          The more data BallerAI starts to gather from you the faster our progress of reaching your goals will be!
+          Remember the more you use the app, the better it will get!
         </Text>
 
         <Button 

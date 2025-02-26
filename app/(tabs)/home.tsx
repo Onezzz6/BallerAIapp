@@ -14,7 +14,7 @@ import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 
 export default function HomeScreen() {
   const { user } = useAuth();
-  const { macros, macroGoals } = useNutrition();
+  const { macros } = useNutrition();
   const calorieGoal = 1600;
   const currentCalories = 800;
   const progressPercentage = (currentCalories / calorieGoal) * 100;
@@ -25,6 +25,8 @@ export default function HomeScreen() {
   const [nutritionScore, setNutritionScore] = useState(0);
   const [showNutritionInfo, setShowNutritionInfo] = useState(false);
   const [nutritionAdherence, setNutritionAdherence] = useState(0);
+  const [readinessScore, setReadinessScore] = useState(0);
+  const [showReadinessInfo, setShowReadinessInfo] = useState(false);
   
   // Fetch user's profile picture
   useEffect(() => {
@@ -87,10 +89,10 @@ export default function HomeScreen() {
             fats: data.fats || 0,
           };
 
-          const caloriesScore = Math.min(dayMacros.calories / macroGoals.calories.goal * 100, 100);
-          const proteinScore = Math.min(dayMacros.protein / macroGoals.protein.goal * 100, 100);
-          const carbsScore = Math.min(dayMacros.carbs / macroGoals.carbs.goal * 100, 100);
-          const fatsScore = Math.min(dayMacros.fats / macroGoals.fats.goal * 100, 100);
+          const caloriesScore = Math.min(dayMacros.calories / macros.calories.goal * 100, 100);
+          const proteinScore = Math.min(dayMacros.protein / macros.protein.goal * 100, 100);
+          const carbsScore = Math.min(dayMacros.carbs / macros.carbs.goal * 100, 100);
+          const fatsScore = Math.min(dayMacros.fats / macros.fats.goal * 100, 100);
 
           const dailyScore = (
             caloriesScore * 0.4 +
@@ -113,7 +115,7 @@ export default function HomeScreen() {
       console.error('Error calculating nutrition score:', error);
       setNutritionScore(0);
     }
-  }, [user, macroGoals]);
+  }, [user, macros]);
 
   // Add this useEffect to calculate score when component mounts
   useEffect(() => {
@@ -184,6 +186,65 @@ export default function HomeScreen() {
 
     loadAdherence();
   }, [calculateNutritionAdherence]);
+
+  // Calculate readiness score based on recovery data
+  const calculateReadinessScore = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      // Get today's recovery data
+      const today = new Date();
+      const todayStr = format(today, 'yyyy-MM-dd');
+      const recoveryRef = doc(db, 'users', user.uid, 'recovery', todayStr);
+      const recoveryDoc = await getDoc(recoveryRef);
+
+      if (recoveryDoc.exists()) {
+        const data = recoveryDoc.data();
+        
+        // Extract recovery metrics
+        const trainingIntensity = data.soreness || 5; // Default to middle value if not set
+        const soreness = data.fatigue || 5; // Note: In the UI, this is mapped to "How sore are you?"
+        const fatigue = data.sleep || 5; // Note: In the UI, this is mapped to "How tired do you feel overall?"
+        const sleepAmount = data.mood || 5; // Note: In the UI, this is mapped to "Sleep duration"
+        
+        // Calculate score components
+        // 1. For training intensity, soreness, and fatigue: Higher values mean lower score (inverse relationship)
+        // Scale is 1-10, so 11-value gives us the inverse (e.g., 8 becomes 3)
+        const intensityComponent = ((11 - trainingIntensity) / 10) * 100;
+        const sorenessComponent = ((11 - soreness) / 10) * 100;
+        const fatigueComponent = ((11 - fatigue) / 10) * 100;
+        
+        // 2. For sleep: Higher values mean higher score (direct relationship)
+        // Bonus for sleep 9 or above
+        let sleepComponent = (sleepAmount / 10) * 100;
+        if (sleepAmount >= 9) {
+          sleepComponent *= 1.2; // 20% bonus for excellent sleep
+        }
+        
+        // Calculate final score with equal weighting (can be adjusted)
+        const finalScore = Math.round(
+          (intensityComponent * 0.25) +
+          (sorenessComponent * 0.25) +
+          (fatigueComponent * 0.25) +
+          (sleepComponent * 0.25)
+        );
+        
+        // Ensure score is within 0-100 range
+        setReadinessScore(Math.min(Math.max(finalScore, 0), 100));
+      } else {
+        // No recovery data for today
+        setReadinessScore(0);
+      }
+    } catch (error) {
+      console.error('Error calculating readiness score:', error);
+      setReadinessScore(0);
+    }
+  }, [user]);
+
+  // Add this useEffect to calculate readiness score when component mounts
+  useEffect(() => {
+    calculateReadinessScore();
+  }, [calculateReadinessScore]);
 
   return (
     <SafeAreaView style={{ 
@@ -418,7 +479,7 @@ export default function HomeScreen() {
               <View style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                justifyContent: 'center',
+                justifyContent: 'space-between',
                 width: '100%',
               }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -431,6 +492,16 @@ export default function HomeScreen() {
                     Readiness 
                   </Text>
                 </View>
+                {readinessScore === 0 && (
+                  <Pressable
+                    onPress={() => setShowReadinessInfo(true)}
+                    style={({ pressed }) => ({
+                      opacity: pressed ? 0.7 : 1,
+                    })}
+                  >
+                    <Ionicons name="information-circle-outline" size={24} color="#000000" />
+                  </Pressable>
+                )}
               </View>
 
               {/* Progress Circle Container */}
@@ -460,7 +531,7 @@ export default function HomeScreen() {
                     strokeWidth="12"
                     fill="none"
                     strokeDasharray={`${2 * Math.PI * 80}`}
-                    strokeDashoffset={2 * Math.PI * 80 * (1 - 40 / 100)}
+                    strokeDashoffset={2 * Math.PI * 80 * (1 - readinessScore / 100)}
                   />
                 </Svg>
 
@@ -469,7 +540,7 @@ export default function HomeScreen() {
                   fontWeight: '700', 
                   color: '#000000',
                 }}>
-                  40%
+                  {readinessScore}%
                 </Text>
               </View>
 
@@ -478,8 +549,35 @@ export default function HomeScreen() {
                 color: '#666666',
                 textAlign: 'center',
               }}>
-                Reaching moderate{'\n'}level of readiness.
+                {readinessScore > 0 
+                  ? readinessScore >= 70 
+                    ? 'Your body is ready\nfor high intensity training!'
+                    : readinessScore >= 40
+                    ? 'Your body needs\nmoderate intensity today.'
+                    : 'Focus on recovery\ntoday, take it easy.'
+                  : 'Submit recovery data\nto see your score'
+                }
               </Text>
+              {readinessScore > 0 && (
+                <Pressable
+                  onPress={() => setShowReadinessInfo(true)}
+                  style={({ pressed }) => ({
+                    backgroundColor: '#FFFFFF',
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 12,
+                    opacity: pressed ? 0.7 : 1,
+                  })}
+                >
+                  <Text style={{ 
+                    fontSize: 14, 
+                    color: '#4064F6',
+                    fontWeight: '600',
+                  }}>
+                    How is this calculated?
+                  </Text>
+                </Pressable>
+              )}
             </View>
           </View>
 
@@ -914,7 +1012,7 @@ export default function HomeScreen() {
                     gap: 8,
                   }}>
                     <Text style={{ fontSize: 14, color: '#666666' }}>Readiness Score</Text>
-                    <Text style={{ fontSize: 24, fontWeight: '600', color: '#4A72B2' }}>40</Text>
+                    <Text style={{ fontSize: 24, fontWeight: '600', color: '#4A72B2' }}>{readinessScore}%</Text>
                   </View>
 
                   {/* Training Status */}
@@ -1008,6 +1106,72 @@ export default function HomeScreen() {
                   }}>
                     Got it
                   </Text>
+                </Pressable>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* Readiness Info Modal */}
+      <Modal
+        visible={showReadinessInfo}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowReadinessInfo(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setShowReadinessInfo(false)}>
+          <View style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 24,
+          }}>
+            <TouchableWithoutFeedback>
+              <View style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: 24,
+                padding: 24,
+                width: '100%',
+                maxWidth: 400,
+                gap: 16,
+              }}>
+                <Text style={{
+                  fontSize: 20,
+                  fontWeight: '600',
+                  color: '#000000',
+                }}>
+                  How Your Readiness Score Works
+                </Text>
+                <Text style={{
+                  fontSize: 16,
+                  color: '#666666',
+                  lineHeight: 24,
+                }}>
+                  Your readiness score indicates how prepared your body is for training today.{'\n\n'}
+                  The score is calculated from:{'\n'}
+                  • Training intensity - higher intensity lowers your score{'\n'}
+                  • Muscle soreness - more soreness lowers your score{'\n'}
+                  • Overall fatigue - more fatigue lowers your score{'\n'}
+                  • Sleep duration - more sleep improves your score{'\n\n'}
+                  Getting 9+ hours of sleep gives you a significant boost to your readiness!
+                </Text>
+                <Pressable
+                  style={{
+                    backgroundColor: '#4064F6',
+                    paddingVertical: 12,
+                    paddingHorizontal: 24,
+                    borderRadius: 12,
+                    alignItems: 'center',
+                  }}
+                  onPress={() => setShowReadinessInfo(false)}
+                >
+                  <Text style={{
+                    color: '#FFFFFF',
+                    fontSize: 16,
+                    fontWeight: '600',
+                  }}>Got it</Text>
                 </Pressable>
               </View>
             </TouchableWithoutFeedback>
