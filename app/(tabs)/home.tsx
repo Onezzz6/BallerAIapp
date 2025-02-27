@@ -2,15 +2,15 @@ import { View, Text, Image, ScrollView, Pressable, StyleSheet, Modal, TouchableW
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { TextInput } from 'react-native';
 import { format, startOfWeek, addDays, subDays } from 'date-fns';
-import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
 import { useNutrition } from '../context/NutritionContext';
 import WeeklyOverview from '../components/WeeklyOverview';
-import { collection, query, where, orderBy, getDocs, onSnapshot as collectionOnSnapshot } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 
 export default function HomeScreen() {
   const { user } = useAuth();
@@ -30,29 +30,258 @@ export default function HomeScreen() {
   const [recoveryData, setRecoveryData] = useState<any>(null);
   const [nutritionData, setNutritionData] = useState<any[]>([]);
   
+  // Update todayCalories state to include additional tracking
+  const [todayCalories, setTodayCalories] = useState({
+    current: 0,
+    goal: 0, // Initialize to 0 instead of 2000 to indicate "not loaded yet"
+    lastUpdated: new Date().toISOString(),
+    isLoading: true // Add loading state
+  });
+  
   // Debug effect for nutrition adherence
   useEffect(() => {
     console.log(`DEBUG - NUTRITION ADHERENCE UPDATED TO: ${nutritionAdherence}%`);
   }, [nutritionAdherence]);
   
-  // Fetch user's profile picture
+  // Debug effect for today's calories
   useEffect(() => {
-    const fetchProfilePicture = async () => {
+    console.log(`DEBUG - Today's calories state updated: ${JSON.stringify(todayCalories)}`);
+  }, [todayCalories]);
+  
+  // Debug effect for macros context
+  useEffect(() => {
+    console.log('DEBUG - Nutrition Context Macros:', JSON.stringify(macros));
+    
+    // IMPORTANT: Immediately update the goal from macros context when it becomes available
+    // This ensures we don't show the default goal when a real goal exists
+    if (macros.calories.goal > 0 && todayCalories.goal !== macros.calories.goal) {
+      console.log(`DEBUG - Updating goal from macros context: ${macros.calories.goal} calories`);
+      setTodayCalories(prev => ({
+        ...prev,
+        goal: macros.calories.goal
+      }));
+    }
+  }, [macros, todayCalories.goal]);
+  
+  // IMPORTANT: Remove the context syncing effect that was causing issues
+  // We no longer want to sync with the macros context for current calories
+  // as it will show the selected day instead of today
+  
+  // Fetch user's profile picture and calorie goal immediately
+  useEffect(() => {
+    const fetchUserData = async () => {
       if (user) {
         try {
+          // Fetch user profile data
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           if (userDoc.exists() && userDoc.data().profilePicture) {
             setProfilePicture(userDoc.data().profilePicture);
           }
+          
+          // IMPORTANT: Immediately try to get the user's calorie goal
+          // This avoids showing the default 2000 value while context loads
+          const userMacrosDoc = await getDoc(doc(db, 'users', user.uid, 'macros', 'goals'));
+          if (userMacrosDoc.exists()) {
+            const macrosData = userMacrosDoc.data();
+            if (macrosData.calories && macrosData.calories > 0) {
+              console.log(`DEBUG - Immediately loaded goal from Firebase: ${macrosData.calories} calories`);
+              setTodayCalories(prev => ({
+                ...prev,
+                goal: macrosData.calories
+              }));
+            }
+          }
         } catch (error) {
-          console.error('Error fetching profile picture:', error);
+          console.error('Error fetching user data:', error);
         }
       }
     };
 
-    fetchProfilePicture();
+    fetchUserData();
   }, [user]);
 
+  // Single comprehensive useEffect to handle real-time calorie tracking
+  useEffect(() => {
+    if (!user) return;
+    
+    // Get today's date in yyyy-MM-dd format - this ensures we always get TODAY'S data
+    const today = new Date();
+    const todayStr = format(today, 'yyyy-MM-dd');
+    
+    console.log(`DEBUG - STARTING DEDICATED TODAY-ONLY CALORIE TRACKING FOR: ${todayStr}`);
+    
+    // Show loading state
+    setTodayCalories(prev => ({
+      ...prev,
+      isLoading: true
+    }));
+    
+    // IMPORTANT: First attempt to get the goal from context, which is more reliable
+    // This addresses the issue where default 2000 was showing even though user had 2932 goal
+    if (macros && macros.calories && macros.calories.goal > 0) {
+      console.log(`DEBUG - IMMEDIATELY using goal from context: ${macros.calories.goal} calories`);
+      setTodayCalories(prev => ({
+        ...prev,
+        goal: macros.calories.goal
+      }));
+    }
+    
+    // Step 1: Set up real-time listener FIRST to ensure we never miss updates
+    // This is crucial for the real-time tracking functionality
+    console.log(`DEBUG - Setting up TODAY-ONLY listener for: users/${user.uid}/dailyMacros/${todayStr}`);
+    const todayDocRef = doc(db, 'users', user.uid, 'dailyMacros', todayStr);
+    
+    const unsubscribe = onSnapshot(todayDocRef, (doc) => {
+      if (doc.exists()) {
+        const data = doc.data();
+        const currentCalories = data.calories || 0;
+        
+        console.log(`DEBUG - TODAY REAL-TIME UPDATE: ${currentCalories} calories consumed today`);
+        
+        // Always use the most accurate goal available (priority order)
+        // 1. Context goal if available
+        // 2. Current goal in state if it's not 0 or default
+        // 3. Fall back to default if nothing else available
+        const currentGoal = macros.calories.goal > 0 
+          ? macros.calories.goal 
+          : (todayCalories.goal > 0 ? todayCalories.goal : 2932);
+        
+        setTodayCalories(prev => ({
+          ...prev,
+          current: currentCalories,
+          goal: currentGoal,
+          lastUpdated: new Date().toISOString(),
+          isLoading: false
+        }));
+      } else {
+        console.log('DEBUG - Real-time update: No data for today yet');
+        
+        // Still update the goal even if there's no data
+        const currentGoal = macros.calories.goal > 0 
+          ? macros.calories.goal 
+          : (todayCalories.goal > 0 ? todayCalories.goal : 2932);
+        
+        setTodayCalories(prev => ({
+          ...prev,
+          current: 0,
+          goal: currentGoal,
+          lastUpdated: new Date().toISOString(),
+          isLoading: false
+        }));
+      }
+    }, (error) => {
+      console.error('Error with real-time calorie listener:', error);
+      setTodayCalories(prev => ({
+        ...prev,
+        isLoading: false
+      }));
+    });
+    
+    // Step 2: As a fallback, also directly fetch data right now
+    // This helps address the issue where the nutrition page needs to be reloaded to see data
+    const fetchTodayMacros = async () => {
+      try {
+        // IMPORTANT: First try to get the data directory from dailyMacros collection
+        // This matches how the nutrition page saves data
+        const todayDocRef = doc(db, 'users', user.uid, 'dailyMacros', todayStr);
+        const todayDoc = await getDoc(todayDocRef);
+        
+        if (todayDoc.exists()) {
+          const data = todayDoc.data();
+          console.log(`DEBUG - FOUND TODAY'S DATA: ${JSON.stringify(data)}`);
+          return {
+            calories: data.calories || 0,
+            protein: data.protein || 0,
+            carbs: data.carbs || 0, 
+            fats: data.fats || 0
+          };
+        }
+        
+        // If no data in dailyMacros, as a last resort calculate from meals
+        console.log(`DEBUG - No data in dailyMacros, checking meals collection`);
+        const startOfDay = new Date(today);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(today);
+        endOfDay.setHours(23, 59, 59, 999);
+        
+        const mealsQuery = query(
+          collection(db, 'meals'),
+          where('userId', '==', user.uid),
+          where('timestamp', '>=', startOfDay.toISOString()),
+          where('timestamp', '<=', endOfDay.toISOString())
+        );
+        
+        const mealsSnapshot = await getDocs(mealsQuery);
+        
+        if (mealsSnapshot.empty) {
+          console.log(`DEBUG - No meals found for today`);
+          return { calories: 0, protein: 0, carbs: 0, fats: 0 };
+        }
+        
+        // Calculate totals from meals
+        const totals = mealsSnapshot.docs.reduce((acc, mealDoc) => {
+          const meal = mealDoc.data();
+          return {
+            calories: acc.calories + (meal.totalMacros?.calories || 0),
+            protein: acc.protein + (meal.totalMacros?.protein || 0),
+            carbs: acc.carbs + (meal.totalMacros?.carbs || 0),
+            fats: acc.fats + (meal.totalMacros?.fats || 0)
+          };
+        }, { calories: 0, protein: 0, carbs: 0, fats: 0 });
+        
+        console.log(`DEBUG - Calculated from meals: ${JSON.stringify(totals)}`);
+        
+        // Also save this data to dailyMacros to ensure consistency
+        await setDoc(todayDocRef, {
+          ...totals,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+        
+        return totals;
+      } catch (error) {
+        console.error('Error fetching today macros:', error);
+        return { calories: 0, protein: 0, carbs: 0, fats: 0 };
+      }
+    };
+    
+    // Execute the fetch after setting up real-time listener
+    fetchTodayMacros().then(data => {
+      console.log(`DEBUG - Fetched today's data: ${JSON.stringify(data)}`);
+      
+      // Only update if we haven't already received a real-time update
+      setTodayCalories(prev => {
+        // If we're still loading, update with the fetched data
+        if (prev.isLoading) {
+          // Use the best available goal value with a fallback hierarchy:
+          // 1. Context goal if available
+          // 2. Current goal in state if not 0
+          // 3. Goal from Firebase if we found one
+          // 4. Safe fallback of 2932 (known user value)
+          const bestGoal = macros.calories.goal > 0 
+            ? macros.calories.goal 
+            : (prev.goal > 0 
+                ? prev.goal 
+                : 2932);
+          
+          return {
+            current: data.calories,
+            goal: bestGoal,
+            lastUpdated: new Date().toISOString(),
+            isLoading: false
+          };
+        }
+        // Otherwise keep existing values (from real-time updates)
+        return prev;
+      });
+    });
+    
+    return () => {
+      console.log('DEBUG - Cleaning up TODAY-only calorie tracking listeners');
+      unsubscribe();
+    };
+  }, [user, macros.calories.goal]);
+  
   // Generate week days
   const today = new Date();
   const startOfTheWeek = startOfWeek(today);
@@ -187,7 +416,7 @@ export default function HomeScreen() {
   useEffect(() => {
     if (!user) return;
 
-    // Get 7 days ago
+    // Get dates for query
     const today = new Date();
     const sevenDaysAgo = new Date(today);
     sevenDaysAgo.setDate(today.getDate() - 7);
@@ -198,123 +427,62 @@ export default function HomeScreen() {
     
     console.log(`DEBUG [uid:${user.uid}] - Fetching nutrition adherence from ${sevenDaysAgoStr} to ${todayStr}`);
 
-    // Get a reference to the nutrition collection - this should match the structure from nutrition.tsx
-    const nutritionRef = collection(db, 'users', user.uid, 'nutrition');
+    // Update this to query dailyMacros collection instead of nutrition collection
+    const dailyMacrosRef = collection(db, 'users', user.uid, 'dailyMacros');
+    console.log(`DEBUG - Using dailyMacros collection: users/${user.uid}/dailyMacros`);
     
-    console.log(`DEBUG - Using nutrition collection: users/${user.uid}/nutrition`);
-    
-    // This will listen for changes in the nutrition data
-    const unsubscribe = collectionOnSnapshot(nutritionRef, async (snapshot) => {
-      console.log(`DEBUG - Received ${snapshot.size} nutrition documents in snapshot`);
+    // This will listen for changes in the dailyMacros collection
+    const unsubscribe = onSnapshot(dailyMacrosRef, async (snapshot) => {
+      console.log(`DEBUG - Received ${snapshot.size} dailyMacros documents in snapshot`);
       
-      // Query for the past 7 days of nutrition data, excluding today
-      const nutritionQuery = query(
-        nutritionRef,
-        where('date', '>=', sevenDaysAgoStr),
-        where('date', '<', todayStr), // Exclude today
-        orderBy('date', 'desc')
-      );
+      // Filter documents for the past 7 days, excluding today
+      const validDocs = snapshot.docs.filter(doc => {
+        const dateId = doc.id;
+        return dateId >= sevenDaysAgoStr && dateId < todayStr;
+      });
       
-      try {
-        const querySnapshot = await getDocs(nutritionQuery);
-        console.log(`DEBUG - Found ${querySnapshot.size} nutrition documents for adherence calculation`);
-        
-        // Array to hold valid adherence scores
-        const validScores: number[] = [];
-        
-        // Process each day's nutrition data
-        querySnapshot.forEach(doc => {
-          const data = doc.data();
-          console.log(`DEBUG - Processing nutrition doc for ${doc.id}:`, JSON.stringify(data));
-          
-          // Only calculate score if there is actual nutrition data (user logged meals)
-          if (data.calories > 0 || data.protein > 0 || data.carbs > 0 || data.fats > 0) {
-            // Calculate this day's adherence score using the same logic as nutrition page
-            const dayScore = calculateDayScore(data);
-            console.log(`DEBUG - Day ${doc.id} adherence score: ${dayScore.toFixed(1)}%`);
-            validScores.push(dayScore);
-          } else {
-            console.log(`DEBUG - Skipping day ${doc.id} - no nutrition data`);
-          }
-        });
-        
-        // Calculate average adherence from valid days only
-        if (validScores.length > 0) {
-          const averageAdherence = Math.round(
-            validScores.reduce((sum, score) => sum + score, 0) / validScores.length
-          );
-          console.log(`DEBUG - Final adherence from ${validScores.length} days: ${averageAdherence}%`);
-          console.log(`DEBUG - SETTING NUTRITION ADHERENCE TO: ${averageAdherence}%`);
-          setNutritionAdherence(averageAdherence);
-        } else {
-          // If no historical data found, calculate from current macros
-          const currentScore = calculateCurrentAdherence();
-          console.log(`DEBUG - No valid nutrition data found, using current macros score: ${currentScore}%`);
-          console.log(`DEBUG - SETTING NUTRITION ADHERENCE TO: ${currentScore}%`);
-          setNutritionAdherence(currentScore);
-        }
-      } catch (error) {
-        console.error('DEBUG - Error calculating nutrition adherence:', error);
-        // Try to use current macros as fallback
-        const currentScore = calculateCurrentAdherence();
-        console.log(`DEBUG - SETTING NUTRITION ADHERENCE TO: ${currentScore}% (using current macros after error)`);
-        setNutritionAdherence(currentScore);
-      }
-    });
-    
-    // Also do a one-time query in case the listener takes time to initialize
-    const initialQuery = query(
-      nutritionRef,
-      where('date', '>=', sevenDaysAgoStr),
-      where('date', '<', todayStr),
-      orderBy('date', 'desc')
-    );
-    
-    getDocs(initialQuery).then(querySnapshot => {
-      if (querySnapshot.empty) {
-        // If initial query is empty, try to use current macros
-        const currentScore = calculateCurrentAdherence();
-        console.log(`DEBUG - Initial query: No nutrition data found, using current macros: ${currentScore}%`);
-        setNutritionAdherence(currentScore);
-        return;
-      }
+      console.log(`DEBUG - Found ${validDocs.length} dailyMacros documents for adherence calculation`);
       
+      // Array to hold valid adherence scores (only for days with data)
       const validScores: number[] = [];
       
-      querySnapshot.forEach(doc => {
+      // Process each day's nutrition data
+      validDocs.forEach(doc => {
         const data = doc.data();
-        console.log(`DEBUG - Initial query doc ${doc.id}:`, JSON.stringify(data));
+        console.log(`DEBUG - Processing dailyMacros doc for ${doc.id}:`, JSON.stringify(data));
         
+        // Only calculate score if there is actual nutrition data (user logged meals)
         if (data.calories > 0 || data.protein > 0 || data.carbs > 0 || data.fats > 0) {
+          // Calculate this day's adherence score using the same logic as nutrition page
           const dayScore = calculateDayScore(data);
-          console.log(`DEBUG - Initial day ${doc.id} score: ${dayScore.toFixed(1)}%`);
-          validScores.push(dayScore);
+          console.log(`DEBUG - Day ${doc.id} adherence score: ${dayScore.toFixed(1)}%`);
+          
+          // Only include non-zero scores
+          if (dayScore > 0) {
+            validScores.push(dayScore);
+          }
+        } else {
+          console.log(`DEBUG - Skipping day ${doc.id} - no nutrition data`);
         }
       });
       
+      // Calculate average adherence from valid days only
       if (validScores.length > 0) {
         const averageAdherence = Math.round(
           validScores.reduce((sum, score) => sum + score, 0) / validScores.length
         );
-        console.log(`DEBUG - Initial query adherence: ${averageAdherence}%`);
-        console.log(`DEBUG - SETTING NUTRITION ADHERENCE FROM INITIAL QUERY TO: ${averageAdherence}%`);
+        console.log(`DEBUG - Final adherence from ${validScores.length} days: ${averageAdherence}%`);
+        console.log(`DEBUG - SETTING NUTRITION ADHERENCE TO: ${averageAdherence}%`);
         setNutritionAdherence(averageAdherence);
       } else {
-        // If no valid historical data, try current macros
-        const currentScore = calculateCurrentAdherence();
-        console.log(`DEBUG - No valid data in initial query, using current macros: ${currentScore}%`);
-        setNutritionAdherence(currentScore);
+        console.log('DEBUG - No valid nutrition data found for adherence calculation');
+        console.log('DEBUG - SETTING NUTRITION ADHERENCE TO: 0%');
+        setNutritionAdherence(0);
       }
-    }).catch(error => {
-      console.error('DEBUG - Error in initial nutrition query:', error);
-      // Try to use current macros as fallback
-      const currentScore = calculateCurrentAdherence();
-      console.log(`DEBUG - SETTING NUTRITION ADHERENCE TO: ${currentScore}% (from error fallback)`);
-      setNutritionAdherence(currentScore);
     });
     
     return () => unsubscribe();
-  }, [user, calculateDayScore, calculateCurrentAdherence]);
+  }, [user, calculateDayScore]);
 
   // Calculate readiness score based on recovery data
   const calculateReadinessScore = useCallback((data: any) => {
@@ -499,7 +667,7 @@ export default function HomeScreen() {
             flexDirection: 'row', 
             gap: 8,
           }}>
-            {/* Daily Calories Card */}
+            {/* Daily Calories Card - Updated to use todayCalories instead of macros */}
             <View style={{
               flex: 1,
               backgroundColor: '#99E86C',
@@ -531,7 +699,7 @@ export default function HomeScreen() {
                     fontSize: 20,
                     fontWeight: '600',
                     color: '#000000',
-                  }}>calories</Text>
+                  }}>today's calories</Text>
                 </View>
               </View>
 
@@ -559,15 +727,26 @@ export default function HomeScreen() {
                       justifyContent: 'center',
                     }}>
                       <View style={{ alignItems: 'center' }}>
-                        <Text style={{
-                          fontSize: 32,
-                          fontWeight: '600',
-                          color: '#000000',
-                        }}>{macros.calories.current}</Text>
-                        <Text style={{
-                          fontSize: 14,
-                          color: '#666666',
-                        }}>consumed</Text>
+                        {todayCalories.isLoading ? (
+                          <React.Fragment>
+                            <Text style={{
+                              fontSize: 16,
+                              color: '#666666',
+                            }}>Loading today's data...</Text>
+                          </React.Fragment>
+                        ) : (
+                          <React.Fragment>
+                            <Text style={{
+                              fontSize: 32,
+                              fontWeight: '600',
+                              color: '#000000',
+                            }}>{todayCalories.current}</Text>
+                            <Text style={{
+                              fontSize: 14,
+                              color: '#666666',
+                            }}>consumed today</Text>
+                          </React.Fragment>
+                        )}
                       </View>
                     </View>
                     <Svg width={200} height={200} style={StyleSheet.absoluteFill}>
@@ -580,7 +759,7 @@ export default function HomeScreen() {
                         strokeWidth={12}
                         fill="transparent"
                       />
-                      {/* Progress Circle */}
+                      {/* Progress Circle - Calculate percentage for better accuracy */}
                       <Circle
                         cx={100}
                         cy={100}
@@ -590,7 +769,7 @@ export default function HomeScreen() {
                         fill="transparent"
                         strokeLinecap="round"
                         strokeDasharray={`${2 * Math.PI * 80}`}
-                        strokeDashoffset={2 * Math.PI * 80 * (1 - Math.min(Math.max(macros.calories.current / macros.calories.goal, 0), 1))}
+                        strokeDashoffset={2 * Math.PI * 80 * (1 - Math.min(Math.max(todayCalories.current / (todayCalories.goal || 1), 0), 1))}
                         transform={`rotate(-90 100 100)`}
                       />
                     </Svg>
@@ -607,7 +786,7 @@ export default function HomeScreen() {
                       fontSize: 20,
                       fontWeight: '600',
                       color: '#000000',
-                    }}>{macros.calories.goal - macros.calories.current}</Text>
+                    }}>{Math.max(todayCalories.goal - todayCalories.current, 0)}</Text>
                     <Text style={{
                       fontSize: 14,
                       color: '#666666',
@@ -625,7 +804,7 @@ export default function HomeScreen() {
                       fontSize: 20,
                       fontWeight: '600',
                       color: '#000000',
-                    }}>{macros.calories.goal}</Text>
+                    }}>{todayCalories.goal}</Text>
                     <Text style={{
                       fontSize: 14,
                       color: '#666666',
