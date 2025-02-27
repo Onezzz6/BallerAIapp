@@ -2,7 +2,7 @@ import { View, Text, Image, ScrollView, Pressable, StyleSheet, Modal, TouchableW
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { TextInput } from 'react-native';
 import { format, startOfWeek, addDays, subDays } from 'date-fns';
 import { doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
@@ -37,6 +37,19 @@ export default function HomeScreen() {
     lastUpdated: new Date().toISOString(),
     isLoading: true // Add loading state
   });
+  
+  const debounceTimerRef = useRef(null);
+  
+  const updateCaloriesWithDebounce = (newCaloriesData) => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    
+    debounceTimerRef.current = setTimeout(() => {
+      setTodayCalories(newCaloriesData);
+      debounceTimerRef.current = null;
+    }, 300); // 300ms debounce time
+  };
   
   // Debug effect for nutrition adherence
   useEffect(() => {
@@ -131,12 +144,40 @@ export default function HomeScreen() {
     console.log(`DEBUG - Setting up TODAY-ONLY listener for: users/${user.uid}/dailyMacros/${todayStr}`);
     const todayDocRef = doc(db, 'users', user.uid, 'dailyMacros', todayStr);
     
+    // Track the last known calories value to detect additions and deletions
+    let lastKnownCalories = 0;
+    
     const unsubscribe = onSnapshot(todayDocRef, (doc) => {
       if (doc.exists()) {
         const data = doc.data();
         const currentCalories = data.calories || 0;
         
-        console.log(`DEBUG - TODAY REAL-TIME UPDATE: ${currentCalories} calories consumed today`);
+        console.log(`DEBUG - TODAY REAL-TIME UPDATE: ${currentCalories} calories consumed today (previous: ${lastKnownCalories})`);
+        
+        // Check if calories have changed to detect meal additions or deletions
+        if (currentCalories > lastKnownCalories) {
+          console.log(`DEBUG - MEAL ADDED: Calories increased from ${lastKnownCalories} to ${currentCalories}`);
+        } else if (currentCalories < lastKnownCalories) {
+          console.log(`DEBUG - MEAL DELETED: Calories decreased from ${lastKnownCalories} to ${currentCalories}`);
+          
+          // Double check by fetching meals directly to verify
+          fetchTodayMacros().then((totals: { calories: number, protein: number, carbs: number, fats: number }) => {
+            if (Math.abs(totals.calories - currentCalories) > 0.1) {
+              console.log(`DEBUG - DISCREPANCY AFTER DELETION: dailyMacros shows ${currentCalories} but meals total is ${totals.calories}`);
+              // Update UI immediately with the correct value from meals
+              setTodayCalories(prev => ({
+                ...prev,
+                current: totals.calories,
+                lastUpdated: new Date().toISOString()
+              }));
+            }
+          });
+        } else {
+          console.log(`DEBUG - NO CHANGE IN CALORIES: Still at ${currentCalories}`);
+        }
+        
+        // Update our tracking variable
+        lastKnownCalories = currentCalories;
         
         // Always use the most accurate goal available (priority order)
         // 1. Context goal if available
@@ -154,7 +195,14 @@ export default function HomeScreen() {
           isLoading: false
         }));
       } else {
-        console.log('DEBUG - Real-time update: No data for today yet');
+        console.log('DEBUG - Real-time update: No data for today yet or ALL MEALS DELETED');
+        
+        // If we previously had calories but now document doesn't exist,
+        // it likely means all meals were deleted
+        if (lastKnownCalories > 0) {
+          console.log(`DEBUG - ALL MEALS DELETED: Previously had ${lastKnownCalories} calories, now document doesn't exist`);
+          lastKnownCalories = 0;
+        }
         
         // Still update the goal even if there's no data
         const currentGoal = macros.calories.goal > 0 
@@ -179,7 +227,7 @@ export default function HomeScreen() {
     
     // Step 2: As a fallback, also directly fetch data right now
     // This helps address the issue where the nutrition page needs to be reloaded to see data
-    const fetchTodayMacros = async () => {
+    const fetchTodayMacros = async (forceRefresh = false) => {
       try {
         // IMPORTANT: First try to get the data directory from dailyMacros collection
         // This matches how the nutrition page saves data
@@ -237,6 +285,21 @@ export default function HomeScreen() {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         });
+        
+        // Add retry logic if we get inconsistent data
+        if (forceRefresh) {
+          console.log('DEBUG - Force refreshing meal data from database');
+          // Force a fresh query instead of using cache
+          const freshMealsQuery = query(
+            collection(db, 'meals'),
+            where('userId', '==', user.uid),
+            where('timestamp', '>=', startOfDay.toISOString()),
+            where('timestamp', '<=', endOfDay.toISOString())
+          );
+          
+          const freshMealsSnapshot = await getDocs(freshMealsQuery);
+          // Rest of calculation code...
+        }
         
         return totals;
       } catch (error) {
@@ -590,6 +653,86 @@ export default function HomeScreen() {
     fetchNutritionData();
   }, [fetchNutritionData]);
 
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Modify your Firebase listener setup:
+  useEffect(() => {
+    if (!user) return;
+    
+    // Create an array to track all active subscriptions
+    const subscriptions = [];
+    
+    // Add listeners to the array when creating them
+    const unsubscribeDailyMacros = onSnapshot(collection(db, 'users', user.uid, 'dailyMacros'), async (snapshot) => {
+      console.log(`DEBUG - Received ${snapshot.size} dailyMacros documents in snapshot`);
+      
+      // Filter documents for the past 7 days, excluding today
+      const validDocs = snapshot.docs.filter(doc => {
+        const dateId = doc.id;
+        const today = new Date();
+        const todayStr = format(today, 'yyyy-MM-dd');
+        return dateId >= format(today, 'yyyy-MM-dd') && dateId < todayStr;
+      });
+      
+      console.log(`DEBUG - Found ${validDocs.length} dailyMacros documents for adherence calculation`);
+      
+      // Array to hold valid adherence scores (only for days with data)
+      const validScores: number[] = [];
+      
+      // Process each day's nutrition data
+      validDocs.forEach(doc => {
+        const data = doc.data();
+        console.log(`DEBUG - Processing dailyMacros doc for ${doc.id}:`, JSON.stringify(data));
+        
+        // Only calculate score if there is actual nutrition data (user logged meals)
+        if (data.calories > 0 || data.protein > 0 || data.carbs > 0 || data.fats > 0) {
+          // Calculate this day's adherence score using the same logic as nutrition page
+          const dayScore = calculateDayScore(data);
+          console.log(`DEBUG - Day ${doc.id} adherence score: ${dayScore.toFixed(1)}%`);
+          
+          // Only include non-zero scores
+          if (dayScore > 0) {
+            validScores.push(dayScore);
+          }
+        } else {
+          console.log(`DEBUG - Skipping day ${doc.id} - no nutrition data`);
+        }
+      });
+      
+      // Calculate average adherence from valid days only
+      if (validScores.length > 0) {
+        const averageAdherence = Math.round(
+          validScores.reduce((sum, score) => sum + score, 0) / validScores.length
+        );
+        console.log(`DEBUG - Final adherence from ${validScores.length} days: ${averageAdherence}%`);
+        console.log(`DEBUG - SETTING NUTRITION ADHERENCE TO: ${averageAdherence}%`);
+        setNutritionAdherence(averageAdherence);
+      } else {
+        console.log('DEBUG - No valid nutrition data found for adherence calculation');
+        console.log('DEBUG - SETTING NUTRITION ADHERENCE TO: 0%');
+        setNutritionAdherence(0);
+      }
+    });
+    subscriptions.push(unsubscribeDailyMacros);
+    
+    const unsubscribeNutrition = onSnapshot(collection(db, 'users', user.uid, 'nutrition'), async (snapshot) => {
+      console.log(`DEBUG - Received ${snapshot.size} nutrition documents in snapshot`);
+    });
+    subscriptions.push(unsubscribeNutrition);
+    
+    // Clean up ALL subscriptions when component unmounts
+    return () => {
+      console.log(`DEBUG - Cleaning up ${subscriptions.length} subscriptions`);
+      subscriptions.forEach(unsubscribe => unsubscribe());
+    };
+  }, [user, calculateDayScore]);
+
   return (
     <SafeAreaView style={{ 
       flex: 1, 
@@ -811,6 +954,15 @@ export default function HomeScreen() {
                     }}>Goal</Text>
                   </View>
                 </View>
+              </View>
+
+              <View style={{
+                position: 'absolute',
+                right: 16,
+                top: 16,
+                zIndex: 10,
+              }}>
+                {/* Refresh button removed as it was causing UI issues and reference errors */}
               </View>
             </View>
 

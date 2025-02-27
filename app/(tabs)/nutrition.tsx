@@ -2,7 +2,7 @@ import { View, Text, Pressable, StyleSheet, Image, ScrollView, Modal, TextInput,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect, useCallback } from 'react';
-import { format, addDays, startOfWeek } from 'date-fns';
+import { format, addDays, startOfWeek, isSameDay } from 'date-fns';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path, Circle, G } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
@@ -1309,6 +1309,8 @@ export default function NutritionScreen() {
       const startOfDay = getLocalStartOfDay(selectedDate);
       const endOfDay = getLocalEndOfDay(selectedDate);
 
+      console.log(`Loading meals for ${dateString} from ${startOfDay.toISOString()} to ${endOfDay.toISOString()}`);
+      
       const q = query(
         collection(db, 'meals'),
         where('userId', '==', user.uid),
@@ -1323,32 +1325,50 @@ export default function NutritionScreen() {
         ...doc.data()
       }));
       
+      console.log(`Found ${meals.length} meals for ${dateString}`);
       setLoggedMeals(meals);
+      
+      // Check if today's date is selected - we should always recompute the daily macros
+      // This ensures accuracy across the app after deleting meals
+      const isToday = isSameDay(selectedDate, new Date());
+      
+      // Always recompute the totals from meals to ensure accuracy
+      const computedTotals = meals.reduce((acc, meal: any) => ({
+        calories: acc.calories + (meal.totalMacros?.calories || 0),
+        protein: acc.protein + (meal.totalMacros?.protein || 0),
+        carbs: acc.carbs + (meal.totalMacros?.carbs || 0),
+        fats: acc.fats + (meal.totalMacros?.fats || 0)
+      }), { calories: 0, protein: 0, carbs: 0, fats: 0 });
       
       // Load macros for selected date - only if there are meals
       if (meals.length > 0) {
         const dailyMacrosRef = doc(db, `users/${user.uid}/dailyMacros/${dateString}`);
         const dailyMacrosDoc = await getDoc(dailyMacrosRef);
         
-        // Update macros with selected day's progress
-        updateMacros({
-          calories: { 
-            current: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().calories : 0, 
-            goal: goals.calories 
-          },
-          protein: { 
-            current: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().protein : 0, 
-            goal: goals.protein 
-          },
-          carbs: { 
-            current: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().carbs : 0, 
-            goal: goals.carbs 
-          },
-          fats: { 
-            current: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().fats : 0, 
-            goal: goals.fats 
-          }
-        });
+        // If this is today's date or the dailyMacros document doesn't exist, update it to match our computed totals
+        if (isToday || !dailyMacrosDoc.exists()) {
+          await setDoc(dailyMacrosRef, {
+            ...computedTotals,
+            updatedAt: new Date().toISOString(),
+            createdAt: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().createdAt : new Date().toISOString()
+          });
+          
+          // Update macros with computed totals
+          updateMacros({
+            calories: { current: computedTotals.calories, goal: goals.calories },
+            protein: { current: computedTotals.protein, goal: goals.protein },
+            carbs: { current: computedTotals.carbs, goal: goals.carbs },
+            fats: { current: computedTotals.fats, goal: goals.fats }
+          });
+        } else {
+          // For past dates, use the stored values
+          updateMacros({
+            calories: { current: dailyMacrosDoc.data().calories, goal: goals.calories },
+            protein: { current: dailyMacrosDoc.data().protein, goal: goals.protein },
+            carbs: { current: dailyMacrosDoc.data().carbs, goal: goals.carbs },
+            fats: { current: dailyMacrosDoc.data().fats, goal: goals.fats }
+          });
+        }
       } else {
         // If no meals, set all current values to 0
         updateMacros({
@@ -1442,6 +1462,9 @@ export default function NutritionScreen() {
       });
 
       console.log('Meal logged successfully:', mealData);
+      
+      // Refresh data to ensure UI is up-to-date
+      await loadSelectedDayData();
     } catch (error) {
       console.error('Error logging meal:', error);
       throw error;
@@ -1528,11 +1551,12 @@ export default function NutritionScreen() {
       
       if (!mealDoc.exists()) {
         console.error('Meal not found');
-        return;
+        throw new Error('Meal not found');
       }
       
       // First delete the meal
       await deleteDoc(mealRef);
+      console.log('MEAL DELETED: Document removed from meals collection');
 
       // Then recalculate daily totals from remaining meals
       const startOfDay = getLocalStartOfDay(selectedDate);
@@ -1548,6 +1572,7 @@ export default function NutritionScreen() {
       );
 
       const mealsSnapshot = await getDocs(mealsQuery);
+      console.log(`Recalculating from ${mealsSnapshot.docs.length} remaining meals`);
       
       // Calculate new totals from remaining meals
       const newTotals = mealsSnapshot.docs.reduce((acc, mealDoc) => {
@@ -1568,10 +1593,12 @@ export default function NutritionScreen() {
         await setDoc(dailyMacrosRef, {
           ...newTotals,
           updatedAt: new Date().toISOString()
-        });
+        }, { merge: true });
+        console.log('MEAL DELETED: Updated daily macros with new totals', newTotals);
       } else {
         // If no meals left, delete the daily macros document to avoid showing zeros
         await deleteDoc(dailyMacrosRef);
+        console.log('MEAL DELETED: No meals left, removed daily macros document');
       }
 
       // Update local state
@@ -1804,7 +1831,7 @@ export default function NutritionScreen() {
             await logMealToFirestore(result);
             setIsLogMealModalVisible(false);
             // Refresh the data
-            loadSelectedDayData();
+            await loadSelectedDayData();
           } catch (error) {
             // Only show error if it's not an analysis failure
             if (error instanceof Error && !error.message.includes('Analysis failed')) {
@@ -1815,7 +1842,20 @@ export default function NutritionScreen() {
             setIsLoading(false);
           }
         }}
-        onLogMeal={logMealToFirestore}
+        onLogMeal={async (items) => {
+          try {
+            setIsLoading(true);
+            await logMealToFirestore(items);
+            setIsLogMealModalVisible(false);
+            // Refresh the data
+            await loadSelectedDayData();
+          } catch (error) {
+            console.error('Error logging meal:', error);
+            Alert.alert('Error', 'Failed to log meal. Please try again.');
+          } finally {
+            setIsLoading(false);
+          }
+        }}
       />
 
       {isLoading && (
