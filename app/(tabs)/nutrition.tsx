@@ -15,6 +15,7 @@ import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject, listAll } f
 import { deleteUser } from 'firebase/auth';
 import { useRouter } from 'expo-router';
 import WeeklyOverview from '../components/WeeklyOverview';
+import { useNutritionDate } from './_layout';
 
 type MacroGoals = {
   calories: { current: number; goal: number };
@@ -1253,9 +1254,37 @@ export default function NutritionScreen() {
   const [isLogMealModalVisible, setIsLogMealModalVisible] = useState(false);
   const [selectedLoggingMethod, setSelectedLoggingMethod] = useState<'manual' | 'photo' | null>(null);
   const [foodItems, setFoodItems] = useState<FoodItem[]>([]);
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const { 
+    selectedDate,
+    setSelectedDate,
+    isLeavingNutrition,
+    setIsLeavingNutrition 
+  } = useNutritionDate();
   const [weeklyData, setWeeklyData] = useState<DailyMacros[]>([]);
   const [isLoadingWeek, setIsLoadingWeek] = useState(true);
+
+  // Listen for tab navigation attempting to leave nutrition tab
+  // If isLeavingNutrition is true, reset to today's date
+  useEffect(() => {
+    if (isLeavingNutrition) {
+      console.log('DEBUG - Resetting nutrition tab date to today before navigating away');
+      
+      // This will reset the selected date to today
+      const today = new Date();
+      setSelectedDate(today);
+      
+      // Load today's data to ensure we're showing today's values
+      loadSelectedDayData();
+    }
+  }, [isLeavingNutrition, setSelectedDate]);
+
+  // When this component unmounts, make sure it resets the date
+  useEffect(() => {
+    return () => {
+      // Set date to today when leaving the nutrition tab
+      setSelectedDate(new Date());
+    };
+  }, [setSelectedDate]);
 
   // Move canLogMeal to component scope
   const canLogMeal = useCallback(() => {

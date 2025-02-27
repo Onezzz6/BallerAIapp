@@ -30,13 +30,11 @@ export default function HomeScreen() {
   const [recoveryData, setRecoveryData] = useState<any>(null);
   const [nutritionData, setNutritionData] = useState<any[]>([]);
   
-  const [todayOnlyCalories, setTodayOnlyCalories] = useState({
+  const [todayCalories, setTodayCalories] = useState({
     current: 0,
     goal: 0,
     lastUpdated: new Date().toISOString(),
-    isLoading: true,
-    date: format(new Date(), 'yyyy-MM-dd'),
-    isToday: true
+    isLoading: true
   });
   
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -47,7 +45,7 @@ export default function HomeScreen() {
     }
     
     debounceTimerRef.current = setTimeout(() => {
-      setTodayOnlyCalories(newCaloriesData);
+      setTodayCalories(newCaloriesData);
       debounceTimerRef.current = null;
     }, 300); // 300ms debounce time
   };
@@ -59,8 +57,8 @@ export default function HomeScreen() {
   
   // Debug effect for today's calories
   useEffect(() => {
-    console.log(`DEBUG - Today's calories state updated: ${JSON.stringify(todayOnlyCalories)}`);
-  }, [todayOnlyCalories]);
+    console.log(`DEBUG - Today's calories state updated: ${JSON.stringify(todayCalories)}`);
+  }, [todayCalories]);
   
   // Debug effect for macros context
   useEffect(() => {
@@ -68,14 +66,14 @@ export default function HomeScreen() {
     
     // IMPORTANT: Immediately update the goal from macros context when it becomes available
     // This ensures we don't show the default goal when a real goal exists
-    if (macros.calories.goal > 0 && todayOnlyCalories.goal !== macros.calories.goal) {
+    if (macros.calories.goal > 0 && todayCalories.goal !== macros.calories.goal) {
       console.log(`DEBUG - Updating goal from macros context: ${macros.calories.goal} calories`);
-      setTodayOnlyCalories(prev => ({
+      setTodayCalories(prev => ({
         ...prev,
         goal: macros.calories.goal
       }));
     }
-  }, [macros, todayOnlyCalories.goal]);
+  }, [macros, todayCalories.goal]);
   
   // IMPORTANT: Remove the context syncing effect that was causing issues
   // We no longer want to sync with the macros context for current calories
@@ -99,7 +97,7 @@ export default function HomeScreen() {
             const macrosData = userMacrosDoc.data();
             if (macrosData.calories && macrosData.calories > 0) {
               console.log(`DEBUG - Immediately loaded goal from Firebase: ${macrosData.calories} calories`);
-              setTodayOnlyCalories(prev => ({
+              setTodayCalories(prev => ({
                 ...prev,
                 goal: macrosData.calories
               }));
@@ -122,7 +120,7 @@ export default function HomeScreen() {
       console.log(`DEBUG - Loading calories for date: ${format(date, 'yyyy-MM-dd')}`);
       
       // Set loading state
-      setTodayOnlyCalories(prev => ({
+      setTodayCalories(prev => ({
         ...prev,
         isLoading: true
       }));
@@ -167,30 +165,26 @@ export default function HomeScreen() {
         const data = docSnap.data();
         console.log(`DEBUG - Found data for ${dateStr}:`, JSON.stringify(data));
         
-        setTodayOnlyCalories({
+        setTodayCalories({
           current: data.calories || 0,
           goal: calorieGoal,
           lastUpdated: new Date().toISOString(),
-          isLoading: false,
-          date: dateStr,
-          isToday: isToday
+          isLoading: false
         });
       } else {
         // No data found for the selected date
         console.log(`DEBUG - No data found for ${dateStr}, using zero values`);
         
-        setTodayOnlyCalories({
+        setTodayCalories({
           current: 0,
           goal: calorieGoal,
           lastUpdated: new Date().toISOString(),
-          isLoading: false,
-          date: dateStr,
-          isToday: isToday
+          isLoading: false
         });
       }
     } catch (error) {
       console.error('Error loading selected date calories:', error);
-      setTodayOnlyCalories(prev => ({
+      setTodayCalories(prev => ({
         ...prev,
         isLoading: false
       }));
@@ -210,12 +204,10 @@ export default function HomeScreen() {
     console.log(`DEBUG - Setting up real-time listener for date: ${dateStr} (isToday: ${isToday})`);
     
     // Set loading state only if not already loading
-    if (!todayOnlyCalories.isLoading) {
-      setTodayOnlyCalories(prev => ({
+    if (!todayCalories.isLoading) {
+      setTodayCalories(prev => ({
         ...prev,
-        isLoading: true,
-        date: dateStr,
-        isToday: isToday
+        isLoading: true
       }));
     }
     
@@ -233,38 +225,34 @@ export default function HomeScreen() {
         calorieGoal = macros.calories.goal;
       } else {
         // For non-today dates, use the existing goal or default to 2000
-        calorieGoal = todayOnlyCalories.goal > 0 ? todayOnlyCalories.goal : 2000;
+        calorieGoal = todayCalories.goal > 0 ? todayCalories.goal : 2000;
       }
       
       if (docSnap.exists()) {
         const data = docSnap.data();
         console.log(`DEBUG - Document data: ${JSON.stringify(data)}`);
         
-        setTodayOnlyCalories({
+        setTodayCalories({
           current: data.calories || 0,
           goal: calorieGoal,
           lastUpdated: new Date().toISOString(),
-          isLoading: false,
-          date: dateStr,
-          isToday: isToday
+          isLoading: false
         });
       } else {
         console.log(`DEBUG - No document exists for date: ${dateStr}`);
         
-        setTodayOnlyCalories({
+        setTodayCalories({
           current: 0,
           goal: calorieGoal,
           lastUpdated: new Date().toISOString(),
-          isLoading: false,
-          date: dateStr,
-          isToday: isToday
+          isLoading: false
         });
       }
     }, (error) => {
       console.error(`ERROR - Failed to listen to data for date ${dateStr}:`, error);
       
       // On error, still update state to non-loading but mark the error
-      setTodayOnlyCalories(prev => ({
+      setTodayCalories(prev => ({
         ...prev,
         isLoading: false,
         error: true
@@ -276,7 +264,7 @@ export default function HomeScreen() {
       console.log(`DEBUG - Cleaning up listener for date: ${dateStr}`);
       unsubscribe();
     };
-  }, [user, selectedDate, macros.calories.goal, todayOnlyCalories.goal]);
+  }, [user, selectedDate, macros.calories.goal, todayCalories.goal]);
 
   // Handle date selection from WeeklyOverview
   const onDateSelect = useCallback((date: Date) => {
@@ -551,7 +539,7 @@ export default function HomeScreen() {
           if (data.calories !== macros.calories.current) {
             console.log(`DEBUG - Syncing calories: Firebase=${data.calories}, Context=${macros.calories.current}`);
             
-            setTodayOnlyCalories(prev => ({
+            setTodayCalories(prev => ({
               ...prev,
               current: data.calories || 0,
               lastUpdated: new Date().toISOString()
@@ -576,8 +564,8 @@ export default function HomeScreen() {
       console.log(`DEBUG - Syncing from nutrition context: ${macros.calories.current} calories`);
       
       // Only update if different to avoid render loops
-      if (todayOnlyCalories.current !== macros.calories.current) {
-        setTodayOnlyCalories(prev => ({
+      if (todayCalories.current !== macros.calories.current) {
+        setTodayCalories(prev => ({
           ...prev,
           current: macros.calories.current,
           goal: macros.calories.goal > 0 ? macros.calories.goal : prev.goal,
@@ -585,7 +573,7 @@ export default function HomeScreen() {
         }));
       }
     }
-  }, [selectedDate, macros.calories, todayOnlyCalories.current]);
+  }, [selectedDate, macros.calories, todayCalories.current]);
 
   // Modify your Firebase listener setup to avoid duplicate listeners:
   useEffect(() => {
@@ -721,6 +709,143 @@ export default function HomeScreen() {
     };
   }, []);
 
+  // Add function to load today's calories specifically
+  const loadTodayCalories = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      console.log(`DEBUG - Loading today's calories specifically for the calorie card`);
+      
+      // Set loading state
+      setTodayCalories(prev => ({
+        ...prev,
+        isLoading: true
+      }));
+      
+      const todayStr = format(new Date(), 'yyyy-MM-dd');
+      
+      // Reference to today's dailyMacros document
+      const docRef = doc(db, 'users', user.uid, 'dailyMacros', todayStr);
+      const docSnap = await getDoc(docRef);
+      
+      // Get goal from macros context or from Firebase
+      let calorieGoal = 0;
+      
+      // Prefer the macros context value as it's most up-to-date
+      if (macros.calories.goal > 0) {
+        calorieGoal = macros.calories.goal;
+        console.log(`DEBUG - Using today's calorie goal from context: ${calorieGoal}`);
+      } else {
+        try {
+          // If context doesn't have the goal, fetch from Firebase
+          const userMacrosDoc = await getDoc(doc(db, 'users', user.uid, 'macros', 'goals'));
+          if (userMacrosDoc.exists()) {
+            const macrosData = userMacrosDoc.data();
+            if (macrosData.calories && macrosData.calories > 0) {
+              calorieGoal = macrosData.calories;
+              console.log(`DEBUG - Using calorie goal from Firebase: ${calorieGoal}`);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching user macros goals:', error);
+        }
+      }
+      
+      // Default goal if nothing found
+      if (calorieGoal <= 0) {
+        calorieGoal = 2000;
+        console.log(`DEBUG - Using default calorie goal: ${calorieGoal}`);
+      }
+      
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        console.log(`DEBUG - Found today's data:`, JSON.stringify(data));
+        
+        setTodayCalories({
+          current: data.calories || 0,
+          goal: calorieGoal,
+          lastUpdated: new Date().toISOString(),
+          isLoading: false
+        });
+      } else {
+        // No data found for today
+        console.log(`DEBUG - No data found for today, using zero values`);
+        
+        setTodayCalories({
+          current: 0,
+          goal: calorieGoal,
+          lastUpdated: new Date().toISOString(),
+          isLoading: false
+        });
+      }
+    } catch (error) {
+      console.error('Error loading today\'s calories:', error);
+      setTodayCalories(prev => ({
+        ...prev,
+        isLoading: false
+      }));
+    }
+  }, [user, macros.calories.goal]);
+
+  // Call loadTodayCalories when component mounts and when macros change
+  useEffect(() => {
+    loadTodayCalories();
+  }, [loadTodayCalories]);
+  
+  // Set up real-time listener for today's calories specifically
+  useEffect(() => {
+    if (!user) return;
+    
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    console.log(`DEBUG - Setting up real-time listener for today's calories: ${todayStr}`);
+    
+    // Reference to today's dailyMacros document
+    const docRef = doc(db, 'users', user.uid, 'dailyMacros', todayStr);
+    
+    // Set up the listener
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+      console.log(`DEBUG - Real-time update for today's calories`);
+      
+      // Get goal from macros context
+      let calorieGoal = macros.calories.goal > 0 ? macros.calories.goal : todayCalories.goal;
+      
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        console.log(`DEBUG - Today's data updated: ${JSON.stringify(data)}`);
+        
+        setTodayCalories({
+          current: data.calories || 0,
+          goal: calorieGoal,
+          lastUpdated: new Date().toISOString(),
+          isLoading: false
+        });
+      } else {
+        console.log(`DEBUG - No document exists for today`);
+        
+        setTodayCalories({
+          current: 0,
+          goal: calorieGoal,
+          lastUpdated: new Date().toISOString(),
+          isLoading: false
+        });
+      }
+    }, (error) => {
+      console.error(`ERROR - Failed to listen to today's data:`, error);
+      
+      setTodayCalories(prev => ({
+        ...prev,
+        isLoading: false,
+        error: true
+      }));
+    });
+    
+    // Cleanup function
+    return () => {
+      console.log(`DEBUG - Cleaning up listener for today's calories`);
+      unsubscribe();
+    };
+  }, [user, macros.calories.goal, todayCalories.goal]);
+
   return (
     <SafeAreaView style={{ 
       flex: 1, 
@@ -798,30 +923,23 @@ export default function HomeScreen() {
             flexDirection: 'row', 
             gap: 8,
           }}>
-            {/* Daily Calories Card - Updated to use todayOnlyCalories instead of macros */}
+            {/* Daily Calories Card - ALWAYS shows today's calories */}
             <View style={styles.sectionCard}>
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionTitleContainer}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <Ionicons name="flame-outline" size={24} color="#000000" />
                     <Text style={styles.sectionTitle}>
-                      {todayOnlyCalories.isToday ? "Calories" : "Daily Calories"}
+                      Calories
                     </Text>
                   </View>
-                  {!todayOnlyCalories.isToday && (
-                    <View style={styles.dateIndicator}>
-                      <Text style={styles.dateIndicatorText}>
-                        {format(new Date(todayOnlyCalories.date), 'MMM d')}
-                      </Text>
-                    </View>
-                  )}
                 </View>
                 <Pressable onPress={() => console.log('Calories info pressed')}>
                   <Ionicons name="information-circle-outline" size={24} color="#666666" />
                 </Pressable>
               </View>
 
-              {todayOnlyCalories.isLoading ? (
+              {todayCalories.isLoading ? (
                 <View style={styles.loadingContainer}>
                   <Text style={styles.loadingText}>Loading data...</Text>
                 </View>
@@ -853,7 +971,7 @@ export default function HomeScreen() {
                         strokeWidth="12"
                         fill="none"
                         strokeDasharray={`${2 * Math.PI * 80}`}
-                        strokeDashoffset={2 * Math.PI * 80 * (1 - Math.min(todayOnlyCalories.current / todayOnlyCalories.goal, 1))}
+                        strokeDashoffset={2 * Math.PI * 80 * (1 - Math.min(todayCalories.current / todayCalories.goal, 1))}
                       />
                     </Svg>
 
@@ -863,7 +981,7 @@ export default function HomeScreen() {
                         fontWeight: '700', 
                         color: '#000000',
                       }}>
-                        {Math.round(todayOnlyCalories.current)}
+                        {Math.round(todayCalories.current)}
                       </Text>
                       <Text style={{
                         fontSize: 14,
@@ -877,10 +995,10 @@ export default function HomeScreen() {
                   
                   <View style={styles.calorieDetails}>
                     <Text style={styles.calorieInfoText}>
-                      {Math.round(todayOnlyCalories.goal - todayOnlyCalories.current)} calories left
+                      {Math.round(todayCalories.goal - todayCalories.current)} calories left
                     </Text>
                     <Text style={styles.calorieTargetText}>
-                      Goal: {Math.round(todayOnlyCalories.goal)} calories
+                      Goal: {Math.round(todayCalories.goal)} calories
                     </Text>
                   </View>
                 </View>
