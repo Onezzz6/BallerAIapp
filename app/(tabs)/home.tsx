@@ -429,17 +429,100 @@ export default function HomeScreen() {
     return 0;
   }, [macros]);
 
-  // IMPORTANT: Add fallback to current day data when no historical data is found
+  // Fix the filter logic in the nutrition adherence calculation
   useEffect(() => {
-    // If nutrition adherence is 0% but we have current data, use that as fallback
-    if (nutritionAdherence === 0) {
-      const currentScore = calculateCurrentAdherence();
-      if (currentScore > 0) {
-        console.log(`DEBUG - Using current day's data as fallback for nutrition adherence: ${currentScore}%`);
-        setNutritionAdherence(currentScore);
+    if (!user) return;
+
+    // Get dates for query - we want yesterday and 7 days before that
+    const today = new Date();
+    const yesterday = subDays(today, 1);
+    const eightDaysAgo = subDays(today, 8); // 7 days before yesterday
+    
+    // Format dates for query
+    const yesterdayStr = format(yesterday, 'yyyy-MM-dd');
+    const eightDaysAgoStr = format(eightDaysAgo, 'yyyy-MM-dd');
+    
+    console.log(`DEBUG - Fetching historical nutrition data for adherence calculation`);
+    console.log(`DEBUG - Date range: ${eightDaysAgoStr} to ${yesterdayStr} (excluding today ${format(today, 'yyyy-MM-dd')})`);
+
+    // Get all documents once rather than using a real-time listener
+    const fetchNutritionHistory = async () => {
+      try {
+        // Reference to the dailyMacros collection
+        const dailyMacrosRef = collection(db, 'users', user.uid, 'dailyMacros');
+        
+        // Get all documents (we'll filter in memory)
+        const querySnapshot = await getDocs(dailyMacrosRef);
+        
+        // Include days in the date range, from 7 days before yesterday up to yesterday
+        const validDocs = querySnapshot.docs.filter(doc => {
+          const dateId = doc.id;
+          return dateId >= eightDaysAgoStr && dateId <= yesterdayStr;
+        });
+        
+        console.log(`DEBUG - Found ${validDocs.length} dailyMacros documents in date range: ${eightDaysAgoStr} to ${yesterdayStr}`);
+        
+        // Only process documents with actual nutrition data (at least one meal logged)
+        const docsWithData = validDocs.filter(doc => {
+          const data = doc.data();
+          // Only count days where at least one macro has been recorded
+          return (data.calories > 0 || data.protein > 0 || data.carbs > 0 || data.fats > 0);
+        });
+        
+        console.log(`DEBUG - Found ${docsWithData.length} documents with actual nutrition data (at least one meal logged)`);
+        
+        // Array to hold valid adherence scores
+        const validScores: number[] = [];
+        
+        // Process each day's nutrition data
+        docsWithData.forEach(doc => {
+          const data = doc.data();
+          console.log(`DEBUG - Processing dailyMacros doc for ${doc.id}:`, JSON.stringify(data));
+          
+          // Calculate this day's adherence score
+          const dayScore = calculateDayScore(data);
+          console.log(`DEBUG - Day ${doc.id} adherence score: ${dayScore.toFixed(1)}%`);
+          
+          // Only include non-zero scores
+          if (dayScore > 0) {
+            validScores.push(dayScore);
+          }
+        });
+        
+        // Calculate average adherence from valid days only
+        if (validScores.length > 0) {
+          const averageAdherence = Math.round(
+            validScores.reduce((sum, score) => sum + score, 0) / validScores.length
+          );
+          console.log(`DEBUG - Final adherence from ${validScores.length} days: ${averageAdherence}%`);
+          setNutritionAdherence(averageAdherence);
+        } else {
+          // No valid historical data found
+          console.log('DEBUG - No valid historical nutrition data found for adherence calculation');
+          setNutritionAdherence(0);
+        }
+      } catch (error) {
+        console.error('Error calculating nutrition adherence:', error);
+        setNutritionAdherence(0);
       }
-    }
-  }, [nutritionAdherence, calculateCurrentAdherence]);
+    };
+    
+    // Execute the fetch function
+    fetchNutritionHistory();
+    
+    // Also set up a listener for any changes to the dailyMacros collection
+    // that should trigger a recalculation
+    const dailyMacrosRef = collection(db, 'users', user.uid, 'dailyMacros');
+    const unsubscribe = onSnapshot(dailyMacrosRef, () => {
+      console.log('DEBUG - Daily macros collection changed, recalculating adherence');
+      fetchNutritionHistory();
+    });
+    
+    return () => {
+      console.log('DEBUG - Cleaning up nutrition adherence recalculation listener');
+      unsubscribe();
+    };
+  }, [user, calculateDayScore]);
 
   // Add a specific listener for today's data to ensure real-time updates from the nutrition tab
   useEffect(() => {
@@ -503,108 +586,6 @@ export default function HomeScreen() {
       }
     }
   }, [selectedDate, macros.calories, todayOnlyCalories.current]);
-
-  // Fix the filter logic in the nutrition adherence calculation
-  useEffect(() => {
-    if (!user) return;
-
-    // Get dates for query - we want to get data from the past 7 days 
-    const today = new Date();
-    const sevenDaysAgo = subDays(today, 7);
-    
-    // Format dates for query
-    const todayStr = format(today, 'yyyy-MM-dd');
-    const sevenDaysAgoStr = format(sevenDaysAgo, 'yyyy-MM-dd');
-    
-    console.log(`DEBUG - Fetching historical nutrition data for adherence calculation`);
-    console.log(`DEBUG - Date range: ${sevenDaysAgoStr} to ${todayStr} (excluding today)`);
-
-    // Get all documents once rather than using a real-time listener
-    // This reduces the number of listeners and prevents unnecessary updates
-    const fetchNutritionHistory = async () => {
-      try {
-        // Reference to the dailyMacros collection
-        const dailyMacrosRef = collection(db, 'users', user.uid, 'dailyMacros');
-        
-        // Get all documents (we'll filter in memory)
-        const querySnapshot = await getDocs(dailyMacrosRef);
-        
-        // Include days in the date range, excluding today
-        const validDocs = querySnapshot.docs.filter(doc => {
-          const dateId = doc.id;
-          return dateId >= sevenDaysAgoStr && dateId < todayStr;
-        });
-        
-        console.log(`DEBUG - Found ${validDocs.length} dailyMacros documents in date range`);
-        
-        // Only process documents with actual nutrition data
-        const docsWithData = validDocs.filter(doc => {
-          const data = doc.data();
-          return (data.calories > 0 || data.protein > 0 || data.carbs > 0 || data.fats > 0);
-        });
-        
-        console.log(`DEBUG - Found ${docsWithData.length} documents with actual nutrition data`);
-        
-        // Array to hold valid adherence scores
-        const validScores: number[] = [];
-        
-        // Process each day's nutrition data
-        docsWithData.forEach(doc => {
-          const data = doc.data();
-          console.log(`DEBUG - Processing dailyMacros doc for ${doc.id}:`, JSON.stringify(data));
-          
-          // Calculate this day's adherence score
-          const dayScore = calculateDayScore(data);
-          console.log(`DEBUG - Day ${doc.id} adherence score: ${dayScore.toFixed(1)}%`);
-          
-          // Only include non-zero scores
-          if (dayScore > 0) {
-            validScores.push(dayScore);
-          }
-        });
-        
-        // Calculate average adherence from valid days only
-        if (validScores.length > 0) {
-          const averageAdherence = Math.round(
-            validScores.reduce((sum, score) => sum + score, 0) / validScores.length
-          );
-          console.log(`DEBUG - Final adherence from ${validScores.length} days: ${averageAdherence}%`);
-          setNutritionAdherence(averageAdherence);
-        } else {
-          console.log('DEBUG - No valid nutrition data found for adherence calculation');
-          
-          // Use today's data as fallback if available
-          const currentScore = calculateCurrentAdherence();
-          if (currentScore > 0) {
-            console.log(`DEBUG - Using current day's data as fallback: ${currentScore}%`);
-            setNutritionAdherence(currentScore);
-          } else {
-            console.log('DEBUG - No fallback data available, setting adherence to 0%');
-            setNutritionAdherence(0);
-          }
-        }
-      } catch (error) {
-        console.error('Error calculating nutrition adherence:', error);
-        setNutritionAdherence(0);
-      }
-    };
-    
-    // Execute the fetch function
-    fetchNutritionHistory();
-    
-    // Also set up a listener for any changes to the dailyMacros collection
-    // that should trigger a recalculation
-    const dailyMacrosRef = collection(db, 'users', user.uid, 'dailyMacros');
-    const unsubscribe = onSnapshot(dailyMacrosRef, () => {
-      console.log('DEBUG - Daily macros collection changed, recalculating adherence');
-      fetchNutritionHistory();
-    });
-    
-    return () => {
-      console.log('DEBUG - Cleaning up nutrition adherence recalculation listener');
-      unsubscribe();
-    };
-  }, [user, calculateDayScore, calculateCurrentAdherence]);
 
   // Modify your Firebase listener setup to avoid duplicate listeners:
   useEffect(() => {
