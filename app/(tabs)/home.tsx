@@ -30,23 +30,24 @@ export default function HomeScreen() {
   const [recoveryData, setRecoveryData] = useState<any>(null);
   const [nutritionData, setNutritionData] = useState<any[]>([]);
   
-  // Update todayCalories state to include additional tracking
-  const [todayCalories, setTodayCalories] = useState({
+  const [todayOnlyCalories, setTodayOnlyCalories] = useState({
     current: 0,
-    goal: 0, // Initialize to 0 instead of 2000 to indicate "not loaded yet"
+    goal: 0,
     lastUpdated: new Date().toISOString(),
-    isLoading: true // Add loading state
+    isLoading: true,
+    date: format(new Date(), 'yyyy-MM-dd'),
+    isToday: true
   });
   
-  const debounceTimerRef = useRef(null);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   
-  const updateCaloriesWithDebounce = (newCaloriesData) => {
+  const updateCaloriesWithDebounce = (newCaloriesData: any) => {
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
     
     debounceTimerRef.current = setTimeout(() => {
-      setTodayCalories(newCaloriesData);
+      setTodayOnlyCalories(newCaloriesData);
       debounceTimerRef.current = null;
     }, 300); // 300ms debounce time
   };
@@ -58,8 +59,8 @@ export default function HomeScreen() {
   
   // Debug effect for today's calories
   useEffect(() => {
-    console.log(`DEBUG - Today's calories state updated: ${JSON.stringify(todayCalories)}`);
-  }, [todayCalories]);
+    console.log(`DEBUG - Today's calories state updated: ${JSON.stringify(todayOnlyCalories)}`);
+  }, [todayOnlyCalories]);
   
   // Debug effect for macros context
   useEffect(() => {
@@ -67,14 +68,14 @@ export default function HomeScreen() {
     
     // IMPORTANT: Immediately update the goal from macros context when it becomes available
     // This ensures we don't show the default goal when a real goal exists
-    if (macros.calories.goal > 0 && todayCalories.goal !== macros.calories.goal) {
+    if (macros.calories.goal > 0 && todayOnlyCalories.goal !== macros.calories.goal) {
       console.log(`DEBUG - Updating goal from macros context: ${macros.calories.goal} calories`);
-      setTodayCalories(prev => ({
+      setTodayOnlyCalories(prev => ({
         ...prev,
         goal: macros.calories.goal
       }));
     }
-  }, [macros, todayCalories.goal]);
+  }, [macros, todayOnlyCalories.goal]);
   
   // IMPORTANT: Remove the context syncing effect that was causing issues
   // We no longer want to sync with the macros context for current calories
@@ -98,7 +99,7 @@ export default function HomeScreen() {
             const macrosData = userMacrosDoc.data();
             if (macrosData.calories && macrosData.calories > 0) {
               console.log(`DEBUG - Immediately loaded goal from Firebase: ${macrosData.calories} calories`);
-              setTodayCalories(prev => ({
+              setTodayOnlyCalories(prev => ({
                 ...prev,
                 goal: macrosData.calories
               }));
@@ -113,238 +114,191 @@ export default function HomeScreen() {
     fetchUserData();
   }, [user]);
 
-  // Single comprehensive useEffect to handle real-time calorie tracking
-  useEffect(() => {
+  // Function to load selected date calories
+  const loadSelectedDateCalories = useCallback(async (date: Date) => {
     if (!user) return;
     
-    // Get today's date in yyyy-MM-dd format - this ensures we always get TODAY'S data
-    const today = new Date();
-    const todayStr = format(today, 'yyyy-MM-dd');
-    
-    console.log(`DEBUG - STARTING DEDICATED TODAY-ONLY CALORIE TRACKING FOR: ${todayStr}`);
-    
-    // Show loading state
-    setTodayCalories(prev => ({
-      ...prev,
-      isLoading: true
-    }));
-    
-    // IMPORTANT: First attempt to get the goal from context, which is more reliable
-    // This addresses the issue where default 2000 was showing even though user had 2932 goal
-    if (macros && macros.calories && macros.calories.goal > 0) {
-      console.log(`DEBUG - IMMEDIATELY using goal from context: ${macros.calories.goal} calories`);
-      setTodayCalories(prev => ({
+    try {
+      console.log(`DEBUG - Loading calories for date: ${format(date, 'yyyy-MM-dd')}`);
+      
+      // Set loading state
+      setTodayOnlyCalories(prev => ({
         ...prev,
-        goal: macros.calories.goal
+        isLoading: true
       }));
-    }
-    
-    // Step 1: Set up real-time listener FIRST to ensure we never miss updates
-    // This is crucial for the real-time tracking functionality
-    console.log(`DEBUG - Setting up TODAY-ONLY listener for: users/${user.uid}/dailyMacros/${todayStr}`);
-    const todayDocRef = doc(db, 'users', user.uid, 'dailyMacros', todayStr);
-    
-    // Track the last known calories value to detect additions and deletions
-    let lastKnownCalories = 0;
-    
-    const unsubscribe = onSnapshot(todayDocRef, (doc) => {
-      if (doc.exists()) {
-        const data = doc.data();
-        const currentCalories = data.calories || 0;
-        
-        console.log(`DEBUG - TODAY REAL-TIME UPDATE: ${currentCalories} calories consumed today (previous: ${lastKnownCalories})`);
-        
-        // Check if calories have changed to detect meal additions or deletions
-        if (currentCalories > lastKnownCalories) {
-          console.log(`DEBUG - MEAL ADDED: Calories increased from ${lastKnownCalories} to ${currentCalories}`);
-        } else if (currentCalories < lastKnownCalories) {
-          console.log(`DEBUG - MEAL DELETED: Calories decreased from ${lastKnownCalories} to ${currentCalories}`);
-          
-          // Double check by fetching meals directly to verify
-          fetchTodayMacros().then((totals: { calories: number, protein: number, carbs: number, fats: number }) => {
-            if (Math.abs(totals.calories - currentCalories) > 0.1) {
-              console.log(`DEBUG - DISCREPANCY AFTER DELETION: dailyMacros shows ${currentCalories} but meals total is ${totals.calories}`);
-              // Update UI immediately with the correct value from meals
-              setTodayCalories(prev => ({
-                ...prev,
-                current: totals.calories,
-                lastUpdated: new Date().toISOString()
-              }));
-            }
-          });
-        } else {
-          console.log(`DEBUG - NO CHANGE IN CALORIES: Still at ${currentCalories}`);
-        }
-        
-        // Update our tracking variable
-        lastKnownCalories = currentCalories;
-        
-        // Always use the most accurate goal available (priority order)
-        // 1. Context goal if available
-        // 2. Current goal in state if it's not 0 or default
-        // 3. Fall back to default if nothing else available
-        const currentGoal = macros.calories.goal > 0 
-          ? macros.calories.goal 
-          : (todayCalories.goal > 0 ? todayCalories.goal : 2932);
-        
-        setTodayCalories(prev => ({
-          ...prev,
-          current: currentCalories,
-          goal: currentGoal,
-          lastUpdated: new Date().toISOString(),
-          isLoading: false
-        }));
+      
+      const dateStr = format(date, 'yyyy-MM-dd');
+      const isToday = format(new Date(), 'yyyy-MM-dd') === dateStr;
+      
+      // Use the same path as the nutrition tab to access dailyMacros
+      const docRef = doc(db, 'users', user.uid, 'dailyMacros', dateStr);
+      const docSnap = await getDoc(docRef);
+      
+      // Get goal from macros context or from Firebase
+      let calorieGoal = 0;
+      
+      // For today, prefer the macros context value as it's most up-to-date
+      if (isToday && macros.calories.goal > 0) {
+        calorieGoal = macros.calories.goal;
+        console.log(`DEBUG - Using today's calorie goal from context: ${calorieGoal}`);
       } else {
-        console.log('DEBUG - Real-time update: No data for today yet or ALL MEALS DELETED');
-        
-        // If we previously had calories but now document doesn't exist,
-        // it likely means all meals were deleted
-        if (lastKnownCalories > 0) {
-          console.log(`DEBUG - ALL MEALS DELETED: Previously had ${lastKnownCalories} calories, now document doesn't exist`);
-          lastKnownCalories = 0;
+        try {
+          // For other days or if context doesn't have the goal, fetch from Firebase
+          const userMacrosDoc = await getDoc(doc(db, 'users', user.uid, 'macros', 'goals'));
+          if (userMacrosDoc.exists()) {
+            const macrosData = userMacrosDoc.data();
+            if (macrosData.calories && macrosData.calories > 0) {
+              calorieGoal = macrosData.calories;
+              console.log(`DEBUG - Using calorie goal from Firebase: ${calorieGoal}`);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching user macros goals:', error);
         }
-        
-        // Still update the goal even if there's no data
-        const currentGoal = macros.calories.goal > 0 
-          ? macros.calories.goal 
-          : (todayCalories.goal > 0 ? todayCalories.goal : 2932);
-        
-        setTodayCalories(prev => ({
-          ...prev,
-          current: 0,
-          goal: currentGoal,
-          lastUpdated: new Date().toISOString(),
-          isLoading: false
-        }));
       }
-    }, (error) => {
-      console.error('Error with real-time calorie listener:', error);
-      setTodayCalories(prev => ({
+      
+      // Default goal if nothing found
+      if (calorieGoal <= 0) {
+        calorieGoal = 2000;
+        console.log(`DEBUG - Using default calorie goal: ${calorieGoal}`);
+      }
+      
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        console.log(`DEBUG - Found data for ${dateStr}:`, JSON.stringify(data));
+        
+        setTodayOnlyCalories({
+          current: data.calories || 0,
+          goal: calorieGoal,
+          lastUpdated: new Date().toISOString(),
+          isLoading: false,
+          date: dateStr,
+          isToday: isToday
+        });
+      } else {
+        // No data found for the selected date
+        console.log(`DEBUG - No data found for ${dateStr}, using zero values`);
+        
+        setTodayOnlyCalories({
+          current: 0,
+          goal: calorieGoal,
+          lastUpdated: new Date().toISOString(),
+          isLoading: false,
+          date: dateStr,
+          isToday: isToday
+        });
+      }
+    } catch (error) {
+      console.error('Error loading selected date calories:', error);
+      setTodayOnlyCalories(prev => ({
         ...prev,
         isLoading: false
       }));
-    });
-    
-    // Step 2: As a fallback, also directly fetch data right now
-    // This helps address the issue where the nutrition page needs to be reloaded to see data
-    const fetchTodayMacros = async (forceRefresh = false) => {
-      try {
-        // IMPORTANT: First try to get the data directory from dailyMacros collection
-        // This matches how the nutrition page saves data
-        const todayDocRef = doc(db, 'users', user.uid, 'dailyMacros', todayStr);
-        const todayDoc = await getDoc(todayDocRef);
-        
-        if (todayDoc.exists()) {
-          const data = todayDoc.data();
-          console.log(`DEBUG - FOUND TODAY'S DATA: ${JSON.stringify(data)}`);
-          return {
-            calories: data.calories || 0,
-            protein: data.protein || 0,
-            carbs: data.carbs || 0, 
-            fats: data.fats || 0
-          };
-        }
-        
-        // If no data in dailyMacros, as a last resort calculate from meals
-        console.log(`DEBUG - No data in dailyMacros, checking meals collection`);
-        const startOfDay = new Date(today);
-        startOfDay.setHours(0, 0, 0, 0);
-        const endOfDay = new Date(today);
-        endOfDay.setHours(23, 59, 59, 999);
-        
-        const mealsQuery = query(
-          collection(db, 'meals'),
-          where('userId', '==', user.uid),
-          where('timestamp', '>=', startOfDay.toISOString()),
-          where('timestamp', '<=', endOfDay.toISOString())
-        );
-        
-        const mealsSnapshot = await getDocs(mealsQuery);
-        
-        if (mealsSnapshot.empty) {
-          console.log(`DEBUG - No meals found for today`);
-          return { calories: 0, protein: 0, carbs: 0, fats: 0 };
-        }
-        
-        // Calculate totals from meals
-        const totals = mealsSnapshot.docs.reduce((acc, mealDoc) => {
-          const meal = mealDoc.data();
-          return {
-            calories: acc.calories + (meal.totalMacros?.calories || 0),
-            protein: acc.protein + (meal.totalMacros?.protein || 0),
-            carbs: acc.carbs + (meal.totalMacros?.carbs || 0),
-            fats: acc.fats + (meal.totalMacros?.fats || 0)
-          };
-        }, { calories: 0, protein: 0, carbs: 0, fats: 0 });
-        
-        console.log(`DEBUG - Calculated from meals: ${JSON.stringify(totals)}`);
-        
-        // Also save this data to dailyMacros to ensure consistency
-        await setDoc(todayDocRef, {
-          ...totals,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        });
-        
-        // Add retry logic if we get inconsistent data
-        if (forceRefresh) {
-          console.log('DEBUG - Force refreshing meal data from database');
-          // Force a fresh query instead of using cache
-          const freshMealsQuery = query(
-            collection(db, 'meals'),
-            where('userId', '==', user.uid),
-            where('timestamp', '>=', startOfDay.toISOString()),
-            where('timestamp', '<=', endOfDay.toISOString())
-          );
-          
-          const freshMealsSnapshot = await getDocs(freshMealsQuery);
-          // Rest of calculation code...
-        }
-        
-        return totals;
-      } catch (error) {
-        console.error('Error fetching today macros:', error);
-        return { calories: 0, protein: 0, carbs: 0, fats: 0 };
-      }
-    };
-    
-    // Execute the fetch after setting up real-time listener
-    fetchTodayMacros().then(data => {
-      console.log(`DEBUG - Fetched today's data: ${JSON.stringify(data)}`);
-      
-      // Only update if we haven't already received a real-time update
-      setTodayCalories(prev => {
-        // If we're still loading, update with the fetched data
-        if (prev.isLoading) {
-          // Use the best available goal value with a fallback hierarchy:
-          // 1. Context goal if available
-          // 2. Current goal in state if not 0
-          // 3. Goal from Firebase if we found one
-          // 4. Safe fallback of 2932 (known user value)
-          const bestGoal = macros.calories.goal > 0 
-            ? macros.calories.goal 
-            : (prev.goal > 0 
-                ? prev.goal 
-                : 2932);
-          
-          return {
-            current: data.calories,
-            goal: bestGoal,
-            lastUpdated: new Date().toISOString(),
-            isLoading: false
-          };
-        }
-        // Otherwise keep existing values (from real-time updates)
-        return prev;
-      });
-    });
-    
-    return () => {
-      console.log('DEBUG - Cleaning up TODAY-only calorie tracking listeners');
-      unsubscribe();
-    };
+    }
   }, [user, macros.calories.goal]);
   
+  // Set up a real-time listener for the selected date with improved error handling
+  useEffect(() => {
+    if (!user) return;
+    
+    // Whether a date is selected or not, always set up a listener
+    // If no date is selected, use today's date
+    const dateToUse = selectedDate || new Date();
+    const dateStr = format(dateToUse, 'yyyy-MM-dd');
+    const isToday = format(new Date(), 'yyyy-MM-dd') === dateStr;
+    
+    console.log(`DEBUG - Setting up real-time listener for date: ${dateStr} (isToday: ${isToday})`);
+    
+    // Set loading state only if not already loading
+    if (!todayOnlyCalories.isLoading) {
+      setTodayOnlyCalories(prev => ({
+        ...prev,
+        isLoading: true,
+        date: dateStr,
+        isToday: isToday
+      }));
+    }
+    
+    // Reference to the dailyMacros document for the selected date
+    const docRef = doc(db, 'users', user.uid, 'dailyMacros', dateStr);
+    
+    // Set up the listener with error handling
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+      console.log(`DEBUG - Real-time update for date: ${dateStr}`);
+      
+      // Get goal from macros context for today, or use stored goal for other days
+      let calorieGoal;
+      
+      if (isToday && macros.calories.goal > 0) {
+        calorieGoal = macros.calories.goal;
+      } else {
+        // For non-today dates, use the existing goal or default to 2000
+        calorieGoal = todayOnlyCalories.goal > 0 ? todayOnlyCalories.goal : 2000;
+      }
+      
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        console.log(`DEBUG - Document data: ${JSON.stringify(data)}`);
+        
+        setTodayOnlyCalories({
+          current: data.calories || 0,
+          goal: calorieGoal,
+          lastUpdated: new Date().toISOString(),
+          isLoading: false,
+          date: dateStr,
+          isToday: isToday
+        });
+      } else {
+        console.log(`DEBUG - No document exists for date: ${dateStr}`);
+        
+        setTodayOnlyCalories({
+          current: 0,
+          goal: calorieGoal,
+          lastUpdated: new Date().toISOString(),
+          isLoading: false,
+          date: dateStr,
+          isToday: isToday
+        });
+      }
+    }, (error) => {
+      console.error(`ERROR - Failed to listen to data for date ${dateStr}:`, error);
+      
+      // On error, still update state to non-loading but mark the error
+      setTodayOnlyCalories(prev => ({
+        ...prev,
+        isLoading: false,
+        error: true
+      }));
+    });
+    
+    // Cleanup function
+    return () => {
+      console.log(`DEBUG - Cleaning up listener for date: ${dateStr}`);
+      unsubscribe();
+    };
+  }, [user, selectedDate, macros.calories.goal, todayOnlyCalories.goal]);
+
+  // Handle date selection from WeeklyOverview
+  const onDateSelect = useCallback((date: Date) => {
+    console.log(`DEBUG - Date selected: ${format(date, 'yyyy-MM-dd')}`);
+    
+    // If the selected date is the same as the currently selected date,
+    // deselect it and go back to today's data
+    if (selectedDate && format(selectedDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')) {
+      console.log('DEBUG - Deselecting date and returning to today');
+      setSelectedDate(null);
+      
+      // Explicitly load today's data
+      loadSelectedDateCalories(new Date());
+    } else {
+      console.log(`DEBUG - Switching to date: ${format(date, 'yyyy-MM-dd')}`);
+      setSelectedDate(date);
+      
+      // Load the selected date's data
+      loadSelectedDateCalories(date);
+    }
+  }, [selectedDate, loadSelectedDateCalories]);
+
   // Generate week days
   const today = new Date();
   const startOfTheWeek = startOfWeek(today);
@@ -447,7 +401,7 @@ export default function HomeScreen() {
     return score;
   }, [macros]);
 
-  // Add a function to calculate adherence from current macros if no data is found
+  // Modify the function to calculate adherence from current macros if no data is found
   const calculateCurrentAdherence = useCallback(() => {
     // Only calculate if we have current values
     if (macros.calories.current > 0 || macros.protein.current > 0 || macros.carbs.current > 0 || macros.fats.current > 0) {
@@ -475,48 +429,131 @@ export default function HomeScreen() {
     return 0;
   }, [macros]);
 
-  // Set up real-time listener for nutrition data
+  // IMPORTANT: Add fallback to current day data when no historical data is found
+  useEffect(() => {
+    // If nutrition adherence is 0% but we have current data, use that as fallback
+    if (nutritionAdherence === 0) {
+      const currentScore = calculateCurrentAdherence();
+      if (currentScore > 0) {
+        console.log(`DEBUG - Using current day's data as fallback for nutrition adherence: ${currentScore}%`);
+        setNutritionAdherence(currentScore);
+      }
+    }
+  }, [nutritionAdherence, calculateCurrentAdherence]);
+
+  // Add a specific listener for today's data to ensure real-time updates from the nutrition tab
+  useEffect(() => {
+    if (!user) return;
+    
+    const today = new Date();
+    const todayStr = format(today, 'yyyy-MM-dd');
+    
+    console.log(`DEBUG - Setting up dedicated listener for today's data: ${todayStr}`);
+    
+    // Reference to today's dailyMacros document
+    const docRef = doc(db, 'users', user.uid, 'dailyMacros', todayStr);
+    
+    // Set up the listener with error handling
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+      // Only process if we're on the today view (not viewing a past date)
+      if (!selectedDate) {
+        console.log(`DEBUG - Real-time update for today's nutrition data`);
+        
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          console.log(`DEBUG - Today's data updated: ${JSON.stringify(data)}`);
+          
+          // If we have macros in the context but they don't match what's in Firebase
+          // then update the calorie card (ensures sync with nutrition tab)
+          if (data.calories !== macros.calories.current) {
+            console.log(`DEBUG - Syncing calories: Firebase=${data.calories}, Context=${macros.calories.current}`);
+            
+            setTodayOnlyCalories(prev => ({
+              ...prev,
+              current: data.calories || 0,
+              lastUpdated: new Date().toISOString()
+            }));
+          }
+        }
+      }
+    }, (error) => {
+      console.error('Error listening to today\'s nutrition data:', error);
+    });
+    
+    return () => {
+      console.log('DEBUG - Cleaning up today\'s nutrition data listener');
+      unsubscribe();
+    };
+  }, [user, selectedDate, macros.calories.current]);
+
+  // Helper to sync with today's data in context when the tab becomes active
+  useEffect(() => {
+    // If we're viewing today and have fresh context data, update the calorie card
+    if (!selectedDate && macros.calories.current >= 0) {
+      console.log(`DEBUG - Syncing from nutrition context: ${macros.calories.current} calories`);
+      
+      // Only update if different to avoid render loops
+      if (todayOnlyCalories.current !== macros.calories.current) {
+        setTodayOnlyCalories(prev => ({
+          ...prev,
+          current: macros.calories.current,
+          goal: macros.calories.goal > 0 ? macros.calories.goal : prev.goal,
+          lastUpdated: new Date().toISOString()
+        }));
+      }
+    }
+  }, [selectedDate, macros.calories, todayOnlyCalories.current]);
+
+  // Fix the filter logic in the nutrition adherence calculation
   useEffect(() => {
     if (!user) return;
 
-    // Get dates for query
+    // Get dates for query - we want to get data from the past 7 days 
     const today = new Date();
-    const sevenDaysAgo = new Date(today);
-    sevenDaysAgo.setDate(today.getDate() - 7);
-
-    // Format dates for query - make sure we're using the exact same format as the database
+    const sevenDaysAgo = subDays(today, 7);
+    
+    // Format dates for query
     const todayStr = format(today, 'yyyy-MM-dd');
     const sevenDaysAgoStr = format(sevenDaysAgo, 'yyyy-MM-dd');
     
-    console.log(`DEBUG [uid:${user.uid}] - Fetching nutrition adherence from ${sevenDaysAgoStr} to ${todayStr}`);
+    console.log(`DEBUG - Fetching historical nutrition data for adherence calculation`);
+    console.log(`DEBUG - Date range: ${sevenDaysAgoStr} to ${todayStr} (excluding today)`);
 
-    // Update this to query dailyMacros collection instead of nutrition collection
-    const dailyMacrosRef = collection(db, 'users', user.uid, 'dailyMacros');
-    console.log(`DEBUG - Using dailyMacros collection: users/${user.uid}/dailyMacros`);
-    
-    // This will listen for changes in the dailyMacros collection
-    const unsubscribe = onSnapshot(dailyMacrosRef, async (snapshot) => {
-      console.log(`DEBUG - Received ${snapshot.size} dailyMacros documents in snapshot`);
-      
-      // Filter documents for the past 7 days, excluding today
-      const validDocs = snapshot.docs.filter(doc => {
-        const dateId = doc.id;
-        return dateId >= sevenDaysAgoStr && dateId < todayStr;
-      });
-      
-      console.log(`DEBUG - Found ${validDocs.length} dailyMacros documents for adherence calculation`);
-      
-      // Array to hold valid adherence scores (only for days with data)
-      const validScores: number[] = [];
-      
-      // Process each day's nutrition data
-      validDocs.forEach(doc => {
-        const data = doc.data();
-        console.log(`DEBUG - Processing dailyMacros doc for ${doc.id}:`, JSON.stringify(data));
+    // Get all documents once rather than using a real-time listener
+    // This reduces the number of listeners and prevents unnecessary updates
+    const fetchNutritionHistory = async () => {
+      try {
+        // Reference to the dailyMacros collection
+        const dailyMacrosRef = collection(db, 'users', user.uid, 'dailyMacros');
         
-        // Only calculate score if there is actual nutrition data (user logged meals)
-        if (data.calories > 0 || data.protein > 0 || data.carbs > 0 || data.fats > 0) {
-          // Calculate this day's adherence score using the same logic as nutrition page
+        // Get all documents (we'll filter in memory)
+        const querySnapshot = await getDocs(dailyMacrosRef);
+        
+        // Include days in the date range, excluding today
+        const validDocs = querySnapshot.docs.filter(doc => {
+          const dateId = doc.id;
+          return dateId >= sevenDaysAgoStr && dateId < todayStr;
+        });
+        
+        console.log(`DEBUG - Found ${validDocs.length} dailyMacros documents in date range`);
+        
+        // Only process documents with actual nutrition data
+        const docsWithData = validDocs.filter(doc => {
+          const data = doc.data();
+          return (data.calories > 0 || data.protein > 0 || data.carbs > 0 || data.fats > 0);
+        });
+        
+        console.log(`DEBUG - Found ${docsWithData.length} documents with actual nutrition data`);
+        
+        // Array to hold valid adherence scores
+        const validScores: number[] = [];
+        
+        // Process each day's nutrition data
+        docsWithData.forEach(doc => {
+          const data = doc.data();
+          console.log(`DEBUG - Processing dailyMacros doc for ${doc.id}:`, JSON.stringify(data));
+          
+          // Calculate this day's adherence score
           const dayScore = calculateDayScore(data);
           console.log(`DEBUG - Day ${doc.id} adherence score: ${dayScore.toFixed(1)}%`);
           
@@ -524,28 +561,70 @@ export default function HomeScreen() {
           if (dayScore > 0) {
             validScores.push(dayScore);
           }
+        });
+        
+        // Calculate average adherence from valid days only
+        if (validScores.length > 0) {
+          const averageAdherence = Math.round(
+            validScores.reduce((sum, score) => sum + score, 0) / validScores.length
+          );
+          console.log(`DEBUG - Final adherence from ${validScores.length} days: ${averageAdherence}%`);
+          setNutritionAdherence(averageAdherence);
         } else {
-          console.log(`DEBUG - Skipping day ${doc.id} - no nutrition data`);
+          console.log('DEBUG - No valid nutrition data found for adherence calculation');
+          
+          // Use today's data as fallback if available
+          const currentScore = calculateCurrentAdherence();
+          if (currentScore > 0) {
+            console.log(`DEBUG - Using current day's data as fallback: ${currentScore}%`);
+            setNutritionAdherence(currentScore);
+          } else {
+            console.log('DEBUG - No fallback data available, setting adherence to 0%');
+            setNutritionAdherence(0);
+          }
         }
-      });
-      
-      // Calculate average adherence from valid days only
-      if (validScores.length > 0) {
-        const averageAdherence = Math.round(
-          validScores.reduce((sum, score) => sum + score, 0) / validScores.length
-        );
-        console.log(`DEBUG - Final adherence from ${validScores.length} days: ${averageAdherence}%`);
-        console.log(`DEBUG - SETTING NUTRITION ADHERENCE TO: ${averageAdherence}%`);
-        setNutritionAdherence(averageAdherence);
-      } else {
-        console.log('DEBUG - No valid nutrition data found for adherence calculation');
-        console.log('DEBUG - SETTING NUTRITION ADHERENCE TO: 0%');
+      } catch (error) {
+        console.error('Error calculating nutrition adherence:', error);
         setNutritionAdherence(0);
       }
+    };
+    
+    // Execute the fetch function
+    fetchNutritionHistory();
+    
+    // Also set up a listener for any changes to the dailyMacros collection
+    // that should trigger a recalculation
+    const dailyMacrosRef = collection(db, 'users', user.uid, 'dailyMacros');
+    const unsubscribe = onSnapshot(dailyMacrosRef, () => {
+      console.log('DEBUG - Daily macros collection changed, recalculating adherence');
+      fetchNutritionHistory();
     });
     
-    return () => unsubscribe();
-  }, [user, calculateDayScore]);
+    return () => {
+      console.log('DEBUG - Cleaning up nutrition adherence recalculation listener');
+      unsubscribe();
+    };
+  }, [user, calculateDayScore, calculateCurrentAdherence]);
+
+  // Modify your Firebase listener setup to avoid duplicate listeners:
+  useEffect(() => {
+    if (!user) return;
+    
+    console.log('DEBUG - Setting up main data listeners');
+    
+    // Keep track of active listeners
+    const subscriptions: (() => void)[] = [];
+    
+    // Only set up the specific listeners we need
+    // 1. Listener for today's calories (already set up elsewhere)
+    // 2. Listener for recovery data (already set up elsewhere)
+    
+    // Clean up ALL subscriptions when component unmounts
+    return () => {
+      console.log(`DEBUG - Cleaning up ${subscriptions.length} global subscriptions`);
+      subscriptions.forEach(unsubscribe => unsubscribe());
+    };
+  }, [user]);
 
   // Calculate readiness score based on recovery data
   const calculateReadinessScore = useCallback((data: any) => {
@@ -661,78 +740,6 @@ export default function HomeScreen() {
     };
   }, []);
 
-  // Modify your Firebase listener setup:
-  useEffect(() => {
-    if (!user) return;
-    
-    // Create an array to track all active subscriptions
-    const subscriptions = [];
-    
-    // Add listeners to the array when creating them
-    const unsubscribeDailyMacros = onSnapshot(collection(db, 'users', user.uid, 'dailyMacros'), async (snapshot) => {
-      console.log(`DEBUG - Received ${snapshot.size} dailyMacros documents in snapshot`);
-      
-      // Filter documents for the past 7 days, excluding today
-      const validDocs = snapshot.docs.filter(doc => {
-        const dateId = doc.id;
-        const today = new Date();
-        const todayStr = format(today, 'yyyy-MM-dd');
-        return dateId >= format(today, 'yyyy-MM-dd') && dateId < todayStr;
-      });
-      
-      console.log(`DEBUG - Found ${validDocs.length} dailyMacros documents for adherence calculation`);
-      
-      // Array to hold valid adherence scores (only for days with data)
-      const validScores: number[] = [];
-      
-      // Process each day's nutrition data
-      validDocs.forEach(doc => {
-        const data = doc.data();
-        console.log(`DEBUG - Processing dailyMacros doc for ${doc.id}:`, JSON.stringify(data));
-        
-        // Only calculate score if there is actual nutrition data (user logged meals)
-        if (data.calories > 0 || data.protein > 0 || data.carbs > 0 || data.fats > 0) {
-          // Calculate this day's adherence score using the same logic as nutrition page
-          const dayScore = calculateDayScore(data);
-          console.log(`DEBUG - Day ${doc.id} adherence score: ${dayScore.toFixed(1)}%`);
-          
-          // Only include non-zero scores
-          if (dayScore > 0) {
-            validScores.push(dayScore);
-          }
-        } else {
-          console.log(`DEBUG - Skipping day ${doc.id} - no nutrition data`);
-        }
-      });
-      
-      // Calculate average adherence from valid days only
-      if (validScores.length > 0) {
-        const averageAdherence = Math.round(
-          validScores.reduce((sum, score) => sum + score, 0) / validScores.length
-        );
-        console.log(`DEBUG - Final adherence from ${validScores.length} days: ${averageAdherence}%`);
-        console.log(`DEBUG - SETTING NUTRITION ADHERENCE TO: ${averageAdherence}%`);
-        setNutritionAdherence(averageAdherence);
-      } else {
-        console.log('DEBUG - No valid nutrition data found for adherence calculation');
-        console.log('DEBUG - SETTING NUTRITION ADHERENCE TO: 0%');
-        setNutritionAdherence(0);
-      }
-    });
-    subscriptions.push(unsubscribeDailyMacros);
-    
-    const unsubscribeNutrition = onSnapshot(collection(db, 'users', user.uid, 'nutrition'), async (snapshot) => {
-      console.log(`DEBUG - Received ${snapshot.size} nutrition documents in snapshot`);
-    });
-    subscriptions.push(unsubscribeNutrition);
-    
-    // Clean up ALL subscriptions when component unmounts
-    return () => {
-      console.log(`DEBUG - Cleaning up ${subscriptions.length} subscriptions`);
-      subscriptions.forEach(unsubscribe => unsubscribe());
-    };
-  }, [user, calculateDayScore]);
-
   return (
     <SafeAreaView style={{ 
       flex: 1, 
@@ -810,160 +817,93 @@ export default function HomeScreen() {
             flexDirection: 'row', 
             gap: 8,
           }}>
-            {/* Daily Calories Card - Updated to use todayCalories instead of macros */}
-            <View style={{
-              flex: 1,
-              backgroundColor: '#99E86C',
-              borderRadius: 24,
-              padding: 16,
-              gap: 24,
-              shadowColor: '#000000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 4,
-              elevation: 4,
-              borderWidth: 1,
-              borderColor: '#E5E5E5',
-              minHeight: 280,
-            }}>
-              <View style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '100%',
-              }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Ionicons 
-                    name="nutrition-outline" 
-                    size={24} 
-                    color="#000000"
-                  />
-                  <Text style={{
-                    fontSize: 20,
-                    fontWeight: '600',
-                    color: '#000000',
-                  }}>today's calories</Text>
+            {/* Daily Calories Card - Updated to use todayOnlyCalories instead of macros */}
+            <View style={styles.sectionCard}>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionTitleContainer}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Ionicons name="flame-outline" size={24} color="#000000" />
+                    <Text style={styles.sectionTitle}>
+                      {todayOnlyCalories.isToday ? "Calories" : "Daily Calories"}
+                    </Text>
+                  </View>
+                  {!todayOnlyCalories.isToday && (
+                    <View style={styles.dateIndicator}>
+                      <Text style={styles.dateIndicatorText}>
+                        {format(new Date(todayOnlyCalories.date), 'MMM d')}
+                      </Text>
+                    </View>
+                  )}
                 </View>
+                <Pressable onPress={() => console.log('Calories info pressed')}>
+                  <Ionicons name="information-circle-outline" size={24} color="#666666" />
+                </Pressable>
               </View>
 
-              <View style={{
-                alignItems: 'center',
-                gap: 24,
-              }}>
-                <View style={{
-                  width: 200,
-                  height: 200,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}>
-                  <View style={{
-                    width: '100%',
-                    height: '100%',
+              {todayOnlyCalories.isLoading ? (
+                <View style={styles.loadingContainer}>
+                  <Text style={styles.loadingText}>Loading data...</Text>
+                </View>
+              ) : (
+                <View style={styles.calorieContainerHome}>
+                  <View style={{ 
+                    width: 200,
+                    height: 200,
+                    justifyContent: 'center',
+                    alignItems: 'center',
                   }}>
-                    <View style={{
+                    <Svg width="200" height="200" style={{
                       position: 'absolute',
-                      left: 0,
-                      right: 0,
-                      top: 0,
-                      bottom: 0,
-                      alignItems: 'center',
-                      justifyContent: 'center',
+                      transform: [{ rotate: '-90deg' }],
                     }}>
-                      <View style={{ alignItems: 'center' }}>
-                        {todayCalories.isLoading ? (
-                          <React.Fragment>
-                            <Text style={{
-                              fontSize: 16,
-                              color: '#666666',
-                            }}>Loading today's data...</Text>
-                          </React.Fragment>
-                        ) : (
-                          <React.Fragment>
-                            <Text style={{
-                              fontSize: 32,
-                              fontWeight: '600',
-                              color: '#000000',
-                            }}>{todayCalories.current}</Text>
-                            <Text style={{
-                              fontSize: 14,
-                              color: '#666666',
-                            }}>consumed today</Text>
-                          </React.Fragment>
-                        )}
-                      </View>
-                    </View>
-                    <Svg width={200} height={200} style={StyleSheet.absoluteFill}>
-                      {/* Background Circle */}
                       <Circle
-                        cx={100}
-                        cy={100}
-                        r={80}
+                        cx="100"
+                        cy="100"
+                        r="80"
                         stroke="#ffffff"
-                        strokeWidth={12}
-                        fill="transparent"
+                        strokeWidth="12"
+                        fill="none"
                       />
-                      {/* Progress Circle - Calculate percentage for better accuracy */}
                       <Circle
-                        cx={100}
-                        cy={100}
-                        r={80}
+                        cx="100"
+                        cy="100"
+                        r="80"
                         stroke="#4064F6"
-                        strokeWidth={12}
-                        fill="transparent"
-                        strokeLinecap="round"
+                        strokeWidth="12"
+                        fill="none"
                         strokeDasharray={`${2 * Math.PI * 80}`}
-                        strokeDashoffset={2 * Math.PI * 80 * (1 - Math.min(Math.max(todayCalories.current / (todayCalories.goal || 1), 0), 1))}
-                        transform={`rotate(-90 100 100)`}
+                        strokeDashoffset={2 * Math.PI * 80 * (1 - Math.min(todayOnlyCalories.current / todayOnlyCalories.goal, 1))}
                       />
                     </Svg>
+
+                    <View style={{ alignItems: 'center' }}>
+                      <Text style={{ 
+                        fontSize: 40, 
+                        fontWeight: '700', 
+                        color: '#000000',
+                      }}>
+                        {Math.round(todayOnlyCalories.current)}
+                      </Text>
+                      <Text style={{
+                        fontSize: 14,
+                        color: '#666666',
+                        marginTop: -2,
+                      }}>
+                        consumed
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.calorieDetails}>
+                    <Text style={styles.calorieInfoText}>
+                      {Math.round(todayOnlyCalories.goal - todayOnlyCalories.current)} calories left
+                    </Text>
+                    <Text style={styles.calorieTargetText}>
+                      Goal: {Math.round(todayOnlyCalories.goal)} calories
+                    </Text>
                   </View>
                 </View>
-
-                <View style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 24,
-                }}>
-                  <View style={{ alignItems: 'center' }}>
-                    <Text style={{
-                      fontSize: 20,
-                      fontWeight: '600',
-                      color: '#000000',
-                    }}>{Math.max(todayCalories.goal - todayCalories.current, 0)}</Text>
-                    <Text style={{
-                      fontSize: 14,
-                      color: '#666666',
-                    }}>Remaining</Text>
-                  </View>
-
-                  <View style={{
-                    width: 1,
-                    height: 40,
-                    backgroundColor: '#E5E5E5',
-                  }} />
-
-                  <View style={{ alignItems: 'center' }}>
-                    <Text style={{
-                      fontSize: 20,
-                      fontWeight: '600',
-                      color: '#000000',
-                    }}>{todayCalories.goal}</Text>
-                    <Text style={{
-                      fontSize: 14,
-                      color: '#666666',
-                    }}>Goal</Text>
-                  </View>
-                </View>
-              </View>
-
-              <View style={{
-                position: 'absolute',
-                right: 16,
-                top: 16,
-                zIndex: 10,
-              }}>
-                {/* Refresh button removed as it was causing UI issues and reference errors */}
-              </View>
+              )}
             </View>
 
             {/* Readiness Card */}
@@ -1396,11 +1336,7 @@ export default function HomeScreen() {
             {/* Replace Calendar Days with WeeklyOverview */}
             <WeeklyOverview 
               selectedDate={selectedDate || new Date()}
-              onDateSelect={(date) => {
-                setSelectedDate(
-                  selectedDate?.toISOString() === date.toISOString() ? null : date
-                );
-              }}
+              onDateSelect={onDateSelect}
             />
 
             {/* Day Details - update to use selectedDate instead of selectedDay */}
@@ -1656,4 +1592,75 @@ export default function HomeScreen() {
       </Modal>
     </SafeAreaView>
   );
-} 
+}
+
+const styles = StyleSheet.create({
+  sectionCard: {
+    flex: 1,
+    backgroundColor: '#99E86C',
+    borderRadius: 24,
+    padding: 16,
+    gap: 24,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    minHeight: 280,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  sectionTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#000000',
+  },
+  dateIndicator: {
+    backgroundColor: '#E0E7FF',
+    borderRadius: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginLeft: 8,
+  },
+  dateIndicatorText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#4A72B2',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666666',
+  },
+  calorieContainerHome: {
+    alignItems: 'center',
+    gap: 16,
+  },
+  calorieDetails: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  calorieInfoText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+  },
+  calorieTargetText: {
+    fontSize: 14,
+    color: '#666666',
+  },
+}); 
