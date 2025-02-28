@@ -11,6 +11,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNutrition } from '../context/NutritionContext';
 import WeeklyOverview from '../components/WeeklyOverview';
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
+import CalorieProgress from '../components/CalorieProgress';
 
 export default function HomeScreen() {
   const { user } = useAuth();
@@ -923,86 +924,9 @@ export default function HomeScreen() {
             flexDirection: 'row', 
             gap: 8,
           }}>
-            {/* Daily Calories Card - ALWAYS shows today's calories */}
-            <View style={styles.sectionCard}>
-              <View style={styles.sectionHeader}>
-                <View style={styles.sectionTitleContainer}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Ionicons name="flame-outline" size={24} color="#000000" />
-                    <Text style={styles.sectionTitle}>
-                      Calories
-                    </Text>
-                  </View>
-                </View>
-                <Pressable onPress={() => console.log('Calories info pressed')}>
-                  <Ionicons name="information-circle-outline" size={24} color="#666666" />
-                </Pressable>
-              </View>
-
-              {todayCalories.isLoading ? (
-                <View style={styles.loadingContainer}>
-                  <Text style={styles.loadingText}>Loading data...</Text>
-                </View>
-              ) : (
-                <View style={styles.calorieContainerHome}>
-                  <View style={{ 
-                    width: 200,
-                    height: 200,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                  }}>
-                    <Svg width="200" height="200" style={{
-                      position: 'absolute',
-                      transform: [{ rotate: '-90deg' }],
-                    }}>
-                      <Circle
-                        cx="100"
-                        cy="100"
-                        r="80"
-                        stroke="#ffffff"
-                        strokeWidth="12"
-                        fill="none"
-                      />
-                      <Circle
-                        cx="100"
-                        cy="100"
-                        r="80"
-                        stroke="#4064F6"
-                        strokeWidth="12"
-                        fill="none"
-                        strokeDasharray={`${2 * Math.PI * 80}`}
-                        strokeDashoffset={2 * Math.PI * 80 * (1 - Math.min(todayCalories.current / todayCalories.goal, 1))}
-                      />
-                    </Svg>
-
-                    <View style={{ alignItems: 'center' }}>
-                      <Text style={{ 
-                        fontSize: 40, 
-                        fontWeight: '700', 
-                        color: '#000000',
-                      }}>
-                        {Math.round(todayCalories.current)}
-                      </Text>
-                      <Text style={{
-                        fontSize: 14,
-                        color: '#666666',
-                        marginTop: -2,
-                      }}>
-                        consumed
-                      </Text>
-                    </View>
-                  </View>
-                  
-                  <View style={styles.calorieDetails}>
-                    <Text style={styles.calorieInfoText}>
-                      {Math.round(todayCalories.goal - todayCalories.current)} calories left
-                    </Text>
-                    <Text style={styles.calorieTargetText}>
-                      Goal: {Math.round(todayCalories.goal)} calories
-                    </Text>
-                  </View>
-                </View>
-              )}
+            {/* Daily Calories Card - Now using CalorieProgress component */}
+            <View style={{ flex: 1 }}>
+              <CalorieProgress />
             </View>
 
             {/* Readiness Card */}

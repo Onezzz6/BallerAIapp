@@ -1,222 +1,214 @@
-import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, Text, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
+import { useNutrition } from '../context/NutritionContext';
 
-export default function CalorieProgress({ eaten, burned, goal }: { eaten: number; burned: number; goal: number }) {
-  const remaining = goal - eaten;
+export default function CalorieProgress() {
+  // Get data directly from the nutrition context
+  const { macros, isLoading } = useNutrition();
+  const eaten = macros.calories.current;
+  const goal = macros.calories.goal;
   const progress = Math.min(Math.max(eaten / goal, 0), 1);
 
   const showInfoAlert = () => {
     Alert.alert(
-      "No Data Yet",
-      "Start logging your meals to see your daily calorie progress. You can log meals from the nutrition tab.",
+      "Calorie Tracking",
+      "This card shows your daily calorie consumption progress. Track your meals in the nutrition tab to update your progress.",
       [{ text: "OK" }]
     );
   };
 
+  // Show loading indicator while data is being fetched
+  if (isLoading) {
+    return (
+      <View style={{
+        flex: 1,
+        padding: 16,
+        gap: 24,
+        borderRadius: 24,
+        backgroundColor: '#99E86C',
+        alignItems: 'center',
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 4,
+        borderWidth: 1,
+        borderColor: '#E5E5E5',
+        minHeight: 280,
+      }}>
+        <View style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}>
+          <ActivityIndicator size="large" color="#4A72B2" />
+          <Text style={{
+            marginTop: 16,
+            fontSize: 14,
+            color: '#666666',
+            textAlign: 'center',
+          }}>Loading your nutrition data...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  // Show empty state if no goal is set
   if (goal === 0) {
     return (
-      <View style={styles.calorieCard}>
-        <View style={styles.emptyStateContainer}>
-          <Pressable
-            onPress={showInfoAlert}
-            style={({ pressed }) => [
-              styles.infoButton,
-              { opacity: pressed ? 0.7 : 1 }
-            ]}
-          >
-            <Ionicons name="information-circle-outline" size={32} color="#666666" />
-            <Text style={styles.infoText}>Tap to learn how to start tracking</Text>
+      <View style={{
+        flex: 1,
+        padding: 16,
+        gap: 24,
+        borderRadius: 24,
+        backgroundColor: '#99E86C',
+        alignItems: 'center',
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 4,
+        borderWidth: 1,
+        borderColor: '#E5E5E5',
+        minHeight: 280,
+      }}>
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          width: '100%',
+        }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Ionicons name="flame-outline" size={24} color="#000000" />
+            <Text style={{
+              fontSize: 20,
+              fontWeight: '600',
+              color: '#000000',
+            }}>
+              Calories
+            </Text>
+          </View>
+          <Pressable onPress={showInfoAlert}>
+            <Ionicons name="information-circle-outline" size={24} color="#000000" />
           </Pressable>
+        </View>
+        
+        <View style={{ 
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}>
+          <Ionicons name="information-circle-outline" size={32} color="#666666" />
+          <Text style={{
+            marginTop: 8,
+            fontSize: 14,
+            color: '#666666',
+            textAlign: 'center',
+          }}>Tap to learn how to start tracking</Text>
         </View>
       </View>
     );
   }
 
   return (
-    <View style={styles.calorieCard}>
-      <View style={styles.calorieHeader}>
-        <Text style={styles.calorieTitle}>Daily Calories</Text>
-        <Text style={styles.calorieGoal}>Target: {goal} kcal</Text>
-      </View>
-
-      <View style={styles.calorieCircleContainer}>
-        <View style={styles.circleProgress}>
-          {/* Circular Progress */}
-          <View style={styles.progressCircle}>
-            <View style={styles.progressBackground}>
-              <View style={styles.progressValue}>
-                <Text style={styles.progressNumber}>{eaten}</Text>
-                <Text style={styles.progressLabel}>consumed</Text>
-              </View>
-            </View>
-            <Svg width={200} height={200} style={StyleSheet.absoluteFill}>
-              {/* Background Circle */}
-              <Circle
-                cx={100}
-                cy={100}
-                r={80}
-                stroke="#E5E5E5"
-                strokeWidth={12}
-                fill="transparent"
-              />
-              {/* Progress Circle */}
-              <Circle
-                cx={100}
-                cy={100}
-                r={80}
-                stroke="#4A72B2"
-                strokeWidth={12}
-                fill="transparent"
-                strokeLinecap="round"
-                strokeDasharray={`${2 * Math.PI * 80}`}
-                strokeDashoffset={2 * Math.PI * 80 * (1 - progress)}
-                transform={`rotate(-90 100 100)`}
-              />
-            </Svg>
-          </View>
+    <View style={{
+      flex: 1,
+      padding: 16,
+      gap: 24,
+      borderRadius: 24,
+      backgroundColor: '#99E86C',
+      alignItems: 'center',
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 4,
+      borderWidth: 1,
+      borderColor: '#E5E5E5',
+      minHeight: 280,
+    }}>
+      <View style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        width: '100%',
+      }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Ionicons name="flame-outline" size={24} color="#000000" />
+          <Text style={{
+            fontSize: 20,
+            fontWeight: '600',
+            color: '#000000',
+          }}>
+            Calories
+          </Text>
         </View>
-
-        {/* Stats below circle */}
-        <View style={styles.calorieStats}>
-          <View style={styles.calorieStat}>
-            <Text style={styles.calorieValue}>{remaining}</Text>
-            <Text style={styles.calorieLabel}>Remaining</Text>
-          </View>
-
-          <View style={styles.calorieDivider} />
-
-          <View style={styles.calorieStat}>
-            <Text style={styles.calorieValue}>{goal}</Text>
-            <Text style={styles.calorieLabel}>Goal</Text>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.dateSelector}>
-        <Pressable>
-          <Ionicons name="chevron-back" size={24} color="#000000" />
-        </Pressable>
-        <View style={styles.dateDisplay}>
-          <Ionicons name="calendar-outline" size={20} color="#666666" />
-          <Text style={styles.dateText}>Tuesday, Feb 4</Text>
-        </View>
-        <Pressable>
-          <Ionicons name="chevron-forward" size={24} color="#000000" />
+        <Pressable onPress={showInfoAlert}>
+          <Ionicons name="information-circle-outline" size={24} color="#000000" />
         </Pressable>
       </View>
+
+      <View style={{ 
+        width: 200,
+        height: 200,
+        justifyContent: 'center',
+        alignItems: 'center',
+      }}>
+        <Svg width="200" height="200" style={{
+          position: 'absolute',
+          transform: [{ rotate: '-90deg' }],
+        }}>
+          <Circle
+            cx="100"
+            cy="100"
+            r="80"
+            stroke="#ffffff"
+            strokeWidth="12"
+            fill="none"
+          />
+          <Circle
+            cx="100"
+            cy="100"
+            r="80"
+            stroke="#4064F6"
+            strokeWidth="12"
+            fill="none"
+            strokeLinecap="round"
+            strokeDasharray={`${2 * Math.PI * 80}`}
+            strokeDashoffset={2 * Math.PI * 80 * (1 - progress)}
+          />
+        </Svg>
+
+        <Text style={{ 
+          fontSize: 40, 
+          fontWeight: '700', 
+          color: '#000000',
+        }}>
+          {eaten}
+        </Text>
+        <Text style={{
+          fontSize: 14,
+          color: '#666666',
+        }}>
+          consumed
+        </Text>
+      </View>
+
+      <Text style={{ 
+        fontSize: 14, 
+        color: '#666666',
+        textAlign: 'center',
+      }}>
+        {eaten > 0 
+          ? eaten >= goal 
+            ? 'You\'ve reached your\ndaily calorie goal.'
+            : eaten >= goal * 0.7
+            ? 'Making good progress\ntoward your daily goal.'
+            : 'Keep tracking your meals\nto reach your goal.'
+          : 'Start logging meals\nto track your progress'
+        }
+      </Text>
     </View>
   );
-}
-
-const styles = StyleSheet.create({
-  calorieCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 24,
-    gap: 24,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  calorieHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  calorieTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#000000',
-  },
-  calorieGoal: {
-    fontSize: 16,
-    color: '#666666',
-  },
-  calorieCircleContainer: {
-    alignItems: 'center',
-    gap: 24,
-  },
-  circleProgress: {
-    width: 200,
-    height: 200,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  progressCircle: {
-    width: '100%',
-    height: '100%',
-  },
-  progressBackground: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  progressValue: {
-    alignItems: 'center',
-  },
-  progressNumber: {
-    fontSize: 32,
-    fontWeight: '600',
-    color: '#000000',
-  },
-  progressLabel: {
-    fontSize: 14,
-    color: '#666666',
-  },
-  calorieStats: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 24,
-  },
-  calorieStat: {
-    alignItems: 'center',
-  },
-  calorieValue: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#000000',
-  },
-  calorieLabel: {
-    fontSize: 14,
-    color: '#666666',
-  },
-  calorieDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: '#E5E5E5',
-  },
-  dateSelector: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  dateDisplay: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  dateText: {
-    fontSize: 16,
-    color: '#666666',
-  },
-  emptyStateContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    minHeight: 200, // Ensure minimum height for empty state
-  },
-  infoButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-  },
-  infoText: {
-    marginTop: 8,
-    fontSize: 14,
-    color: '#666666',
-    textAlign: 'center',
-  }
-}); 
+} 
