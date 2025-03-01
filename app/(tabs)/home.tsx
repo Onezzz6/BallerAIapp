@@ -375,13 +375,21 @@ export default function HomeScreen() {
     const { calories = 0, protein = 0, carbs = 0, fats = 0 } = data;
     
     console.log(`DEBUG - calculateDayScore called with:`, JSON.stringify(data));
-    console.log(`DEBUG - Using macros from context:`, JSON.stringify(macros));
     
-    // Use macros from the context
-    const caloriesScore = Math.min((calories / (macros.calories.goal || 1)) * 100, 100);
-    const proteinScore = Math.min((protein / (macros.protein.goal || 1)) * 100, 100);
-    const carbsScore = Math.min((carbs / (macros.carbs.goal || 1)) * 100, 100);
-    const fatsScore = Math.min((fats / (macros.fats.goal || 1)) * 100, 100);
+    // IMPORTANT: Use the goals that were stored with this day's data if available
+    // This ensures consistent scoring even if current goals change
+    const calorieGoal = data.calorieGoal || macros.calories.goal || 2000;
+    const proteinGoal = data.proteinGoal || macros.protein.goal || 150;
+    const carbsGoal = data.carbsGoal || macros.carbs.goal || 200;
+    const fatsGoal = data.fatsGoal || macros.fats.goal || 55;
+    
+    console.log(`DEBUG - Using goals for calculation: calories=${calorieGoal}, protein=${proteinGoal}, carbs=${carbsGoal}, fats=${fatsGoal}`);
+    
+    // Calculate scores using the appropriate goals for this specific day
+    const caloriesScore = Math.min((calories / (calorieGoal || 1)) * 100, 100);
+    const proteinScore = Math.min((protein / (proteinGoal || 1)) * 100, 100);
+    const carbsScore = Math.min((carbs / (carbsGoal || 1)) * 100, 100);
+    const fatsScore = Math.min((fats / (fatsGoal || 1)) * 100, 100);
 
     console.log(`DEBUG - Scores: calories=${caloriesScore.toFixed(1)}%, protein=${proteinScore.toFixed(1)}%, carbs=${carbsScore.toFixed(1)}%, fats=${fatsScore.toFixed(1)}%`);
 
@@ -428,17 +436,19 @@ export default function HomeScreen() {
   useEffect(() => {
     if (!user) return;
 
-    // Get dates for query - we want yesterday and 7 days before that
+    // Get dates for query - we want the last 7 completed days (excluding today)
     const today = new Date();
+    today.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
     const yesterday = subDays(today, 1);
     const eightDaysAgo = subDays(today, 8); // 7 days before yesterday
     
     // Format dates for query
     const yesterdayStr = format(yesterday, 'yyyy-MM-dd');
     const eightDaysAgoStr = format(eightDaysAgo, 'yyyy-MM-dd');
+    const todayStr = format(today, 'yyyy-MM-dd');
     
     console.log(`DEBUG - Fetching historical nutrition data for adherence calculation`);
-    console.log(`DEBUG - Date range: ${eightDaysAgoStr} to ${yesterdayStr} (excluding today ${format(today, 'yyyy-MM-dd')})`);
+    console.log(`DEBUG - Date range: ${eightDaysAgoStr} to ${yesterdayStr} (explicitly excluding today ${todayStr})`);
 
     // Get all documents once rather than using a real-time listener
     const fetchNutritionHistory = async () => {
@@ -449,18 +459,44 @@ export default function HomeScreen() {
         // Get all documents (we'll filter in memory)
         const querySnapshot = await getDocs(dailyMacrosRef);
         
+        // Get the user's macro goals document to use as backup if goals aren't stored with daily entries
+        const userMacrosDoc = await getDoc(doc(db, 'users', user.uid, 'macros', 'goals'));
+        let defaultGoals = {
+          calories: 2000,
+          protein: 150,
+          carbs: 200,
+          fats: 55
+        };
+        
+        if (userMacrosDoc.exists()) {
+          const goalsData = userMacrosDoc.data();
+          defaultGoals = {
+            calories: goalsData.calories || 2000,
+            protein: goalsData.protein || 150,
+            carbs: goalsData.carbs || 200,
+            fats: goalsData.fats || 55
+          };
+        }
+        
+        console.log(`DEBUG - Default goals if needed:`, JSON.stringify(defaultGoals));
+        
         // Include days in the date range, from 7 days before yesterday up to yesterday
+        // EXPLICITLY exclude today
         const validDocs = querySnapshot.docs.filter(doc => {
           const dateId = doc.id;
-          return dateId >= eightDaysAgoStr && dateId <= yesterdayStr;
+          return dateId >= eightDaysAgoStr && 
+                 dateId <= yesterdayStr && 
+                 dateId !== todayStr; // Extra check to ensure today is excluded
         });
         
         console.log(`DEBUG - Found ${validDocs.length} dailyMacros documents in date range: ${eightDaysAgoStr} to ${yesterdayStr}`);
         
         // Only process documents with actual nutrition data (at least one meal logged)
+        // This ensures we only count days where the user has logged something
         const docsWithData = validDocs.filter(doc => {
           const data = doc.data();
           // Only count days where at least one macro has been recorded
+          // This is how we identify days with logged meals
           return (data.calories > 0 || data.protein > 0 || data.carbs > 0 || data.fats > 0);
         });
         
@@ -470,9 +506,17 @@ export default function HomeScreen() {
         const validScores: number[] = [];
         
         // Process each day's nutrition data
-        docsWithData.forEach(doc => {
+        for (const doc of docsWithData) {
           const data = doc.data();
           console.log(`DEBUG - Processing dailyMacros doc for ${doc.id}:`, JSON.stringify(data));
+          
+          // If goals are not stored with this day's data, add the default goals
+          if (!data.calorieGoal) {
+            data.calorieGoal = defaultGoals.calories;
+            data.proteinGoal = defaultGoals.protein;
+            data.carbsGoal = defaultGoals.carbs;
+            data.fatsGoal = defaultGoals.fats;
+          }
           
           // Calculate this day's adherence score
           const dayScore = calculateDayScore(data);
@@ -482,7 +526,7 @@ export default function HomeScreen() {
           if (dayScore > 0) {
             validScores.push(dayScore);
           }
-        });
+        }
         
         // Calculate average adherence from valid days only
         if (validScores.length > 0) {
@@ -490,6 +534,8 @@ export default function HomeScreen() {
             validScores.reduce((sum, score) => sum + score, 0) / validScores.length
           );
           console.log(`DEBUG - Final adherence from ${validScores.length} days: ${averageAdherence}%`);
+          
+          // Cache the result to avoid excessive recalculations
           setNutritionAdherence(averageAdherence);
         } else {
           // No valid historical data found
@@ -506,11 +552,23 @@ export default function HomeScreen() {
     fetchNutritionHistory();
     
     // Also set up a listener for any changes to the dailyMacros collection
-    // that should trigger a recalculation
+    // that should trigger a recalculation, but only when documents in our date range change
     const dailyMacrosRef = collection(db, 'users', user.uid, 'dailyMacros');
-    const unsubscribe = onSnapshot(dailyMacrosRef, () => {
-      console.log('DEBUG - Daily macros collection changed, recalculating adherence');
-      fetchNutritionHistory();
+    const unsubscribe = onSnapshot(dailyMacrosRef, (snapshot) => {
+      // Check if any of the changed documents are within our date range (excluding today)
+      const needsRecalculation = snapshot.docChanges().some(change => {
+        const dateId = change.doc.id;
+        return dateId >= eightDaysAgoStr && 
+               dateId <= yesterdayStr && 
+               dateId !== todayStr;
+      });
+      
+      if (needsRecalculation) {
+        console.log('DEBUG - Historical dailyMacros documents changed, recalculating adherence');
+        fetchNutritionHistory();
+      } else {
+        console.log('DEBUG - Changes detected but not to historical documents, skipping recalculation');
+      }
     });
     
     return () => {
