@@ -923,18 +923,22 @@ export default function HomeScreen() {
           <View style={{ 
             flexDirection: 'row', 
             gap: 8,
+            width: '100%', // Ensure full container width
+            justifyContent: 'space-between',
           }}>
             {/* Daily Calories Card - Now using CalorieProgress component */}
-            <View style={{ flex: 1 }}>
+            <View style={{ 
+              width: '49%', // Slightly less than 50% to account for the gap
+            }}>
               <CalorieProgress />
             </View>
 
             {/* Readiness Card */}
             <View style={{
-              flex: 1,
+              width: '49%', // Slightly less than 50% to account for the gap
               padding: 16,
               gap: 24,
-              borderRadius: 24,
+              borderRadius: 16,
               backgroundColor: '#99E86C',
               alignItems: 'center',
               shadowColor: '#000000',
@@ -974,37 +978,37 @@ export default function HomeScreen() {
 
               {/* Progress Circle Container */}
               <View style={{ 
-                width: 200,
-                height: 200,
+                width: 180,
+                height: 180,
                 justifyContent: 'center',
                 alignItems: 'center',
               }}>
-                <Svg width="200" height="200" style={{
+                <Svg width="180" height="180" style={{
                   position: 'absolute',
                   transform: [{ rotate: '-90deg' }],
                 }}>
                   <Circle
-                    cx="100"
-                    cy="100"
-                    r="80"
+                    cx="90"
+                    cy="90"
+                    r="70"
                     stroke="#ffffff"
                     strokeWidth="12"
                     fill="none"
                   />
                   <Circle
-                    cx="100"
-                    cy="100"
-                    r="80"
+                    cx="90"
+                    cy="90"
+                    r="70"
                     stroke="#4064F6"
                     strokeWidth="12"
                     fill="none"
-                    strokeDasharray={`${2 * Math.PI * 80}`}
-                    strokeDashoffset={2 * Math.PI * 80 * (1 - readinessScore / 100)}
+                    strokeDasharray={`${2 * Math.PI * 70}`}
+                    strokeDashoffset={2 * Math.PI * 70 * (1 - readinessScore / 100)}
                   />
                 </Svg>
 
                 <Text style={{ 
-                  fontSize: 40, 
+                  fontSize: 34, 
                   fontWeight: '700', 
                   color: '#000000',
                 }}>
@@ -1049,13 +1053,15 @@ export default function HomeScreen() {
           <View style={{ 
             flexDirection: 'row', 
             gap: 8,
+            width: '100%',
+            justifyContent: 'space-between',
           }}>
             {/* Nutrition Adherence Card */}
             <View style={{
-              flex: 1,
+              width: '49%', // Slightly less than 50% to account for the gap
               padding: 16,
               gap: 24,
-              borderRadius: 24,
+              borderRadius: 16,
               backgroundColor: '#99E86C',
               alignItems: 'center',
               shadowColor: '#000000',
@@ -1094,37 +1100,37 @@ export default function HomeScreen() {
               </View>
 
               <View style={{ 
-                width: 200,
-                height: 200,
+                width: 180,
+                height: 180,
                 justifyContent: 'center',
                 alignItems: 'center',
               }}>
-                <Svg width="200" height="200" style={{
+                <Svg width="180" height="180" style={{
                   position: 'absolute',
                   transform: [{ rotate: '-90deg' }],
                 }}>
                   <Circle
-                    cx="100"
-                    cy="100"
-                    r="80"
+                    cx="90"
+                    cy="90"
+                    r="70"
                     stroke="#ffffff"
                     strokeWidth="12"
                     fill="none"
                   />
                   <Circle
-                    cx="100"
-                    cy="100"
-                    r="80"
+                    cx="90"
+                    cy="90"
+                    r="70"
                     stroke="#4064F6"
                     strokeWidth="12"
                     fill="none"
-                    strokeDasharray={`${2 * Math.PI * 80}`}
-                    strokeDashoffset={2 * Math.PI * 80 * (1 - nutritionAdherence / 100)}
+                    strokeDasharray={`${2 * Math.PI * 70}`}
+                    strokeDashoffset={2 * Math.PI * 70 * (1 - nutritionAdherence / 100)}
                   />
                 </Svg>
 
                 <Text style={{ 
-                  fontSize: 40, 
+                  fontSize: 34, 
                   fontWeight: '700', 
                   color: '#000000',
                 }}>
@@ -1150,10 +1156,10 @@ export default function HomeScreen() {
 
             {/* Recovery Card */}
             <View style={{
-              flex: 1,
+              width: '49%', // Slightly less than 50% to account for the gap
               padding: 16,
               gap: 24,
-              borderRadius: 24,
+              borderRadius: 16,
               backgroundColor: '#99E86C',
               alignItems: 'center',
               shadowColor: '#000000',
@@ -1185,37 +1191,37 @@ export default function HomeScreen() {
               
               {/* Progress Circle Container */}
               <View style={{ 
-                width: 200,
-                height: 200,
+                width: 180,
+                height: 180,
                 alignItems: 'center',
                 justifyContent: 'center',
               }}>
-                <Svg width="200" height="200">
+                <Svg width="180" height="180">
                   <Circle
-                    cx="100"
-                    cy="100"
-                    r="80"
+                    cx="90"
+                    cy="90"
+                    r="70"
                     stroke="#ffffff"
                     strokeWidth="12"
                     fill="none"
                   />
                   <Circle
-                    cx="100"
-                    cy="100"
-                    r="80"
+                    cx="90"
+                    cy="90"
+                    r="70"
                     stroke="#4064F6"
                     strokeWidth="12"
                     fill="none"
-                    strokeDasharray={`${2 * Math.PI * 80}`}
-                    strokeDashoffset={2 * Math.PI * 80 * (1 - 90 / 100)}
-                    transform="rotate(-90 100 100)"
+                    strokeDasharray={`${2 * Math.PI * 70}`}
+                    strokeDashoffset={2 * Math.PI * 70 * (1 - 90 / 100)}
+                    transform="rotate(-90 90 90)"
                   />
                 </Svg>
 
                 {/* Center Text */}
                 <Text style={{ 
                   position: 'absolute',
-                  fontSize: 40, 
+                  fontSize: 34, 
                   fontWeight: '700', 
                   color: '#000000',
                 }}>
