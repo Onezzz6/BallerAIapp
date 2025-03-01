@@ -46,16 +46,17 @@ export default function FitnessLevelScreen() {
       <View style={{
         flex: 1,
         paddingHorizontal: 24,
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 32,
-      }}>
+        paddingTop: 80,
+        paddingBottom: 24,
+        justifyContent: 'top',
+        alignItems: 'left',
+        gap: 48,
+       }}>
         <Text style={{
           fontSize: 28,
           color: '#000000',
           fontWeight: '600',
-          textAlign: 'center',
-          marginBottom: 20,
+          textAlign: 'left',
         }}>
           What's your current fitness level?
         </Text>

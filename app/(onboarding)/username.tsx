@@ -27,19 +27,19 @@ export default function UsernameScreen() {
       <View style={{
         flex: 1,
         paddingHorizontal: 24,
+        paddingTop: 80,
         paddingBottom: 24,
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 32,
+        justifyContent: 'top',
+        alignItems: 'left',
+        gap: 48,
       }}>
         <Text style={{
           fontSize: 28,
           color: '#000000',
           fontWeight: '600',
-          textAlign: 'center',
-          marginBottom: 20,
+          textAlign: 'left',
         }}>
-          What's your name?
+          What should I call you?
         </Text>
 
         <TextInput

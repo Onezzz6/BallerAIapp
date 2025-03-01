@@ -48,7 +48,7 @@ export default function IntroScreen() {
           textAlign: 'center',
           marginBottom: 32,
         }}>
-          I will help you reach your goals. Before we start, answer a few quick questions so i can customize everything just for you!
+          Please, answer a few quick questions, so I can customize everything just for you!
         </Text>
 
         <Button 

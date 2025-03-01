@@ -40,27 +40,28 @@ export default function MotivationReasonScreen() {
         <View style={{
           flex: 1,
           paddingHorizontal: 24,
-          justifyContent: 'center',
-          alignItems: 'center',
-          gap: 32,
+          paddingTop: 80,
+          paddingBottom: 24,
+          justifyContent: 'top',
+          alignItems: 'left',
+          gap: 48,
         }}>
           <Text style={{
             fontSize: 28,
             color: '#000000',
             fontWeight: '600',
-            textAlign: 'center',
-            marginBottom: 20,
+            textAlign: 'left',
           }}>
             Lastly, the most important part of becoming a pro!
           </Text>
 
           <Text style={{
-            fontSize: 20,
+            fontSize: 18,
             color: '#000000',
             fontWeight: '500',
-            textAlign: 'center',
+            textAlign: 'left',
           }}>
-            Tell me briefly what drives you on this journey?
+            Tell me briefly, what drives you on this journey?
           </Text>
 
           <TextInput
@@ -86,7 +87,7 @@ export default function MotivationReasonScreen() {
             title="Continue" 
             onPress={handleContinue}
             buttonStyle={{
-              backgroundColor: '#99E86C',
+              backgroundColor: '#007AFF',
               opacity: !motivation.trim() ? 0.5 : 1,
             }}
             disabled={!motivation.trim()}

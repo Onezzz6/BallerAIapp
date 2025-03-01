@@ -13,75 +13,39 @@ export default function AmbitionTransitionScreen() {
       style={{
         flex: 1,
         backgroundColor: '#ffffff',
+        padding: 24,
       }}
     >
-      {/* Header with Back Button and Logo */}
-      <View style={{
-        paddingTop: 48,
-        paddingHorizontal: 24,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-      }}>
-        <BackButton />
-        
-        <View style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 8,
-        }}>
-          <Image 
-            source={require('../../assets/images/BallerAILogo.png')}
-            style={{
-              width: 24,
-              height: 24,
-            }}
-            resizeMode="contain"
-          />
-          <Text style={{
-            fontSize: 20,
-            fontWeight: '600',
-            color: '#000000',
-          }}>
-            BallerAI
-          </Text>
-        </View>
-      </View>
-
+ 
       {/* Mascot */}
       <View style={{
-        alignItems: 'center',
-        marginTop: 20,
+       flex: 1,
+       justifyContent: 'center',
+       alignItems: 'center',
+       gap: 32,
       }}>
         <Image 
           source={require('../../assets/images/mascot.png')}
           style={{
-            width: 120,
-            height: 120,
+            width: 200,
+            height: 200,
+            resizeMode: 'contain',
+            marginBottom: 20,
           }}
           resizeMode="contain"
         />
-      </View>
-
-      <View style={{
-        flex: 1,
-        paddingHorizontal: 24,
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 32,
-      }}>
+ 
         <Text style={{
           fontSize: 28,
           color: '#000000',
           fontWeight: '600',
           textAlign: 'center',
-          marginBottom: 20,
         }}>
-          Great you clearly show ambition!
+          Great! You clearly show ambition!
         </Text>
 
         <Text style={{
-          fontSize: 20,
+          fontSize: 18,
           color: '#666666',
           textAlign: 'center',
         }}>

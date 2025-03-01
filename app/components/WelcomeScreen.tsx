@@ -75,33 +75,25 @@ export default function WelcomeScreen() {
         alignItems: 'center',
         gap: 24,
       }}>
+
         <Image
           source={require('../../assets/images/BallerAILogo.png')}
           style={{
             width: 120,
             height: 120,
             resizeMode: 'contain',
-            marginBottom: 20,
+            marginBottom: 0,
           }}
         />
         
         <Text style={{
-          fontSize: 28,
+          fontSize: 32,
           color: '#000000',
           fontWeight: '600',
           textAlign: 'center',
-          marginBottom: 12,
+          marginBottom: 0,
         }}>
-          Ready to become professional?
-        </Text>
-
-        <Text style={{
-          fontSize: 18,
-          color: '#000000',
-          opacity: 0.8,
-          textAlign: 'center',
-        }}>
-          Prevent, Perform, and Excel.
+          Ready to go pro?
         </Text>
 
         {!showSignIn ? (
@@ -115,7 +107,7 @@ export default function WelcomeScreen() {
               }}
             />
 
-            <View style={{ alignItems: 'center', gap: 12 }}>
+            <View style={{alignItems: 'center', gap: 12, marginTop: 48 }}>
               <Text style={{
                 fontSize: 14,
                 color: '#666666',

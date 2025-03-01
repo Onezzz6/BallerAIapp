@@ -43,18 +43,19 @@ export default function SkillLevelScreen() {
       />
       
       <View style={{
-        flex: 1,
-        paddingHorizontal: 24,
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 32,
+          flex: 1,
+          paddingHorizontal: 24,
+          paddingTop: 80,
+          paddingBottom: 24,
+          justifyContent: 'top',
+          alignItems: 'left',
+          gap: 48,
       }}>
         <Text style={{
           fontSize: 28,
           color: '#000000',
           fontWeight: '600',
-          textAlign: 'center',
-          marginBottom: 20,
+          textAlign: 'left',
         }}>
           What's your current level?
         </Text>

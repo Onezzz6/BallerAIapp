@@ -15,22 +15,22 @@ const ACTIVITY_LEVELS = [
   {
     id: 'light',
     title: 'Lightly Active',
-    description: '1-3 days/week',
+    description: 'Excercise 1-2 days/week',
   },
   {
     id: 'moderate',
     title: 'Moderately Active',
-    description: '3-5 days/week',
+    description: 'Excercise 3-5 days/week',
   },
   {
     id: 'very',
     title: 'Very Active',
-    description: '6-7 days/week',
+    description: 'Excercise 6-7 days/week',
   },
   {
     id: 'extra',
     title: 'Extra Active',
-    description: 'Training 2x per day',
+    description: 'Excercise 2x per day',
   },
 ];
 
@@ -55,16 +55,17 @@ export default function ActivityLevelScreen() {
       <View style={{
         flex: 1,
         paddingHorizontal: 24,
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 32,
+        paddingTop: 80,
+        paddingBottom: 24,
+        justifyContent: 'top',
+        alignItems: 'left',
+        gap: 48,
       }}>
         <Text style={{
           fontSize: 28,
           color: '#000000',
           fontWeight: '600',
-          textAlign: 'center',
-          marginBottom: 20,
+          textAlign: 'left',
         }}>
           What's your activity level?
         </Text>

@@ -9,14 +9,14 @@ export default function BackButton() {
       onPress={() => router.back()}
       style={({ pressed }) => ({
         opacity: pressed ? 0.7 : 1,
-        alignSelf: 'flex-start',
+        alignSelf: 'center',
       })}
     >
       <Image 
         source={require('../../assets/images/back-button.png')}
         style={{
-          width: 36,
-          height: 36,
+          width: 40,
+          height: 40,
         }}
         resizeMode="contain"
       />

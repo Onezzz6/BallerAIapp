@@ -15,10 +15,6 @@ export default function MotivationScreen() {
         backgroundColor: '#ffffff',
       }}
     >
-      <OnboardingHeader 
-        currentStep={5}
-        totalSteps={7}
-      />
       
       <View style={{
         flex: 1,
@@ -38,7 +34,7 @@ export default function MotivationScreen() {
 
         <View style={{ gap: 16 }}>
           <Text style={{
-            fontSize: 24,
+            fontSize: 28,
             color: '#000000',
             fontWeight: '600',
             textAlign: 'center',

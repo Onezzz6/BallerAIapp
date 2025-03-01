@@ -24,7 +24,7 @@ export default function OnboardingHeader({ currentStep, totalSteps }: Props) {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        height: 48, // Fixed height for consistency
+        height: 92, // Fixed height for consistency
       }}>
         <BackButton />
         
@@ -37,13 +37,13 @@ export default function OnboardingHeader({ currentStep, totalSteps }: Props) {
           <Image 
             source={require('../../assets/images/BallerAILogo.png')}
             style={{
-              width: 24,
-              height: 24,
+              width: 32,
+              height: 32,
             }}
             resizeMode="contain"
           />
           <Text style={{
-            fontSize: 20,
+            fontSize: 28,
             fontWeight: '600',
             color: '#000000',
           }}>
@@ -55,10 +55,10 @@ export default function OnboardingHeader({ currentStep, totalSteps }: Props) {
       {/* Progress Bar */}
       <View style={{
         width: '100%',
-        height: 4,
+        height: 12,
         backgroundColor: '#E5E5E5',
         borderRadius: 2,
-        marginTop: 24,
+        marginTop: 6,
       }}>
         <View style={{
           width: `${progress}%`,

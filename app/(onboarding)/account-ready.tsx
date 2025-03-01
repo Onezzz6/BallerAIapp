@@ -35,9 +35,8 @@ export default function AccountReadyScreen() {
           color: '#000000',
           fontWeight: '600',
           textAlign: 'center',
-          marginBottom: 20,
         }}>
-          Your Personalized account is ready!
+          Your personalized account is ready!
         </Text>
 
         <Text style={{
@@ -49,7 +48,7 @@ export default function AccountReadyScreen() {
         </Text>
 
         <Button 
-          title="Take the first step to becoming a pro!" 
+          title="Take the first step to become a pro!" 
           onPress={() => {
             router.push('/sign-up');
           }}
