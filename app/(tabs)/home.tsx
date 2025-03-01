@@ -3,15 +3,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { TextInput } from 'react-native';
+import { TextInput, ActivityIndicator } from 'react-native';
 import { format, startOfWeek, addDays, subDays } from 'date-fns';
-import { doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, setDoc, updateDoc, addDoc, increment, serverTimestamp } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
 import { useNutrition } from '../context/NutritionContext';
 import WeeklyOverview from '../components/WeeklyOverview';
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import CalorieProgress from '../components/CalorieProgress';
+import { askOpenAI } from '../utils/openai';
 
 export default function HomeScreen() {
   const { user } = useAuth();
@@ -21,6 +22,11 @@ export default function HomeScreen() {
   const progressPercentage = (currentCalories / calorieGoal) * 100;
   const [showQuestion, setShowQuestion] = useState(false);
   const [question, setQuestion] = useState('');
+  const [aiResponse, setAiResponse] = useState('');
+  const [questionCount, setQuestionCount] = useState(0);
+  const [maxQuestions, setMaxQuestions] = useState(5);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [userProfile, setUserProfile] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [nutritionScore, setNutritionScore] = useState(0);
@@ -847,6 +853,199 @@ export default function HomeScreen() {
     };
   }, [user, macros.calories.goal, todayCalories.goal]);
 
+  // Fetch user profile data including age, gender, injury history, etc.
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!user) return;
+      
+      try {
+        const userProfileDoc = await getDoc(doc(db, 'users', user.uid, 'profile', 'details'));
+        if (userProfileDoc.exists()) {
+          setUserProfile(userProfileDoc.data());
+        } else {
+          // Create a default profile if none exists
+          const defaultProfile = {
+            age: null,
+            gender: null,
+            height: null,
+            weight: null,
+            injuryHistory: [],
+            fitnessLevel: 'intermediate',
+            lastUpdated: new Date().toISOString()
+          };
+          setUserProfile(defaultProfile);
+          
+          // Save default profile to Firestore
+          await setDoc(doc(db, 'users', user.uid, 'profile', 'details'), defaultProfile);
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+      }
+    };
+    
+    fetchUserProfile();
+  }, [user]);
+  
+  // Add conversation history type and state variable after the existing state variables
+  const [questionHistory, setQuestionHistory] = useState<Array<{
+    question: string;
+    response: string;
+    timestamp: string;
+  }>>([]);
+
+  // Modify the checkDailyQuestionLimit function to be more reliable
+  useEffect(() => {
+    const checkDailyQuestionLimit = async () => {
+      if (!user) return;
+      
+      try {
+        const today = format(new Date(), 'yyyy-MM-dd');
+        const questionLimitDoc = await getDoc(doc(db, 'users', user.uid, 'aiQuestions', 'counter'));
+        
+        if (questionLimitDoc.exists()) {
+          const data = questionLimitDoc.data();
+          
+          // If data is from today, use it
+          if (data.date === today) {
+            setQuestionCount(data.count || 0);
+          } else {
+            // Reset counter for new day
+            await setDoc(doc(db, 'users', user.uid, 'aiQuestions', 'counter'), {
+              count: 0,
+              date: today,
+              maxQuestions: 5
+            });
+            setQuestionCount(0);
+            // Clear conversation history for new day
+            setQuestionHistory([]);
+          }
+          
+          // Set max questions from stored value
+          setMaxQuestions(data.maxQuestions || 5);
+        } else {
+          // Initialize counter document
+          await setDoc(doc(db, 'users', user.uid, 'aiQuestions', 'counter'), {
+            count: 0,
+            date: today,
+            maxQuestions: 5
+          });
+          setQuestionCount(0);
+        }
+
+        // Fetch today's conversation history
+        const questionsRef = collection(db, `users/${user.uid}/aiQuestions`);
+        const q = query(
+          questionsRef,
+          where('date', '==', today),
+          orderBy('timestamp', 'asc')
+        );
+        
+        const querySnapshot = await getDocs(q);
+        const history = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            question: data.question,
+            response: data.response,
+            timestamp: data.timestamp ? new Date(data.timestamp.toDate()).toISOString() : new Date().toISOString()
+          };
+        });
+        
+        setQuestionHistory(history);
+        
+      } catch (error) {
+        console.error('Error checking question limit or fetching history:', error);
+      }
+    };
+    
+    checkDailyQuestionLimit();
+  }, [user]);
+
+  // Update askAiQuestion to properly update the counter in Firebase
+  const askAiQuestion = async () => {
+    if (!question.trim() || questionCount >= maxQuestions) {
+      return;
+    }
+
+    try {
+      setIsAiLoading(true);
+      
+      // Save the current question to display it immediately
+      const currentQuestion = question;
+      setQuestion('');
+
+      // Create context from user profile
+      let userContext = '';
+      if (userProfile) {
+        userContext = `User profile: ${userProfile.age ? `Age: ${userProfile.age}, ` : ''}${userProfile.gender ? `Gender: ${userProfile.gender}, ` : ''}${userProfile.position ? `Position: ${userProfile.position}, ` : ''}${userProfile.dominantFoot ? `Dominant foot: ${userProfile.dominantFoot}, ` : ''}${userProfile.injuryHistory ? `Injury history: ${userProfile.injuryHistory}` : ''}`;
+      }
+
+      // Call OpenAI API using the utility function
+      const response = await askOpenAI(currentQuestion, userContext);
+      
+      // Update the conversation history with a temporary item
+      const newHistoryItem = {
+        question: currentQuestion,
+        response: response,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Add to conversation history
+      setQuestionHistory(prevHistory => [...prevHistory, newHistoryItem]);
+
+      // After getting a response, save the question and response to Firestore
+      if (user) {
+        try {
+          const todayStr = format(new Date(), 'yyyy-MM-dd');
+          const questionsRef = collection(db, `users/${user.uid}/aiQuestions`);
+          
+          await addDoc(questionsRef, {
+            question: currentQuestion,
+            response,
+            timestamp: serverTimestamp(),
+            date: todayStr
+          });
+
+          // Update the counter document directly rather than using increment
+          // This ensures the count is always accurate
+          const counterRef = doc(db, 'users', user.uid, 'aiQuestions', 'counter');
+          const newCount = questionCount + 1;
+          
+          await setDoc(counterRef, {
+            count: newCount,
+            date: todayStr,
+            maxQuestions: maxQuestions
+          }, { merge: true });
+
+          // Update local state
+          setQuestionCount(newCount);
+        } catch (error) {
+          console.error('Error saving question:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Error asking AI:', error);
+      setAiResponse('Sorry, there was an error processing your question. Please try again later.');
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
+  // Function to handle question input change with character limit
+  const handleQuestionChange = (text: string) => {
+    // Limit to 60 characters
+    if (text.length <= 60) {
+      setQuestion(text);
+    }
+  };
+  
+  // Reset response when closing question panel
+  useEffect(() => {
+    if (!showQuestion) {
+      setAiResponse('');
+      setQuestion('');
+    }
+  }, [showQuestion]);
+
   return (
     <SafeAreaView style={{ 
       flex: 1, 
@@ -1300,53 +1499,179 @@ export default function HomeScreen() {
               borderWidth: 1,
               borderColor: '#E5E5E5',
             }}>
-              <TextInput
-                value={question}
-                onChangeText={setQuestion}
-                placeholder="Ask anything about football..."
-                multiline
-                numberOfLines={3}
-                style={{
-                  borderWidth: 1,
-                  borderColor: '#E5E5E5',
-                  borderRadius: 12,
-                  padding: 16,
-                  fontSize: 16,
-                  textAlignVertical: 'top',
-                  minHeight: 100,
-                }}
-              />
-
-              {question && (
-                <View style={{ gap: 16 }}>
-                  <View style={{
-                    flexDirection: 'row',
-                    alignItems: 'flex-start',
-                    gap: 12,
-                  }}>
-                    <Image 
-                      source={require('../../assets/images/mascot.png')}
-                      style={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: 16,
-                      }}
-                    />
-                    <View style={{
-                      flex: 1,
-                      backgroundColor: '#F5F5FF',
-                      padding: 16,
-                      borderRadius: 12,
-                    }}>
-                      <Text style={{
-                        fontSize: 16,
-                        color: '#000000',
-                        lineHeight: 24,
-                      }}>
-                        Based on your profile and goals, here's my recommendation: Focus on incorporating more explosive exercises in your training routine. This will help improve your speed and agility on the field. Try adding box jumps and plyometric exercises 2-3 times per week.{'\n\n'}Remember to maintain proper form and gradually increase intensity!
-                      </Text>
-                    </View>
+              <View style={{ 
+                flexDirection: 'row', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                marginBottom: 8
+              }}>
+                <Text style={{ 
+                  fontSize: 18, 
+                  fontWeight: '600', 
+                  color: '#000000'
+                }}>
+                  Ask BallerAI
+                </Text>
+                <Text style={{ 
+                  fontSize: 14, 
+                  color: questionCount >= maxQuestions ? '#FF3B30' : '#666666'
+                }}>
+                  {maxQuestions - questionCount} of {maxQuestions} questions left today
+                </Text>
+              </View>
+              
+              {/* Display conversation history */}
+              {questionHistory.length > 0 && (
+                <ScrollView style={{ maxHeight: 300, marginBottom: 16 }}>
+                  <View style={{ gap: 20 }}>
+                    {questionHistory.map((item, index) => (
+                      <View key={index} style={{ gap: 12 }}>
+                        <View style={{
+                          flexDirection: 'row',
+                          alignItems: 'flex-start',
+                          justifyContent: 'flex-end',
+                          gap: 12,
+                        }}>
+                          <View style={{
+                            backgroundColor: '#E5F7FF',
+                            padding: 16,
+                            borderRadius: 12,
+                            borderTopRightRadius: 4,
+                            maxWidth: '80%',
+                          }}>
+                            <Text style={{
+                              fontSize: 16,
+                              color: '#000000',
+                            }}>
+                              {item.question}
+                            </Text>
+                          </View>
+                          <View style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: 16,
+                            backgroundColor: '#007AFF',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                          }}>
+                            <Ionicons name="person" size={18} color="#FFFFFF" />
+                          </View>
+                        </View>
+                        
+                        <View style={{
+                          flexDirection: 'row',
+                          alignItems: 'flex-start',
+                          gap: 12,
+                        }}>
+                          <Image 
+                            source={require('../../assets/images/mascot.png')}
+                            style={{
+                              width: 32,
+                              height: 32,
+                              borderRadius: 16,
+                            }}
+                          />
+                          <View style={{
+                            flex: 1,
+                            backgroundColor: '#F5F5FF',
+                            padding: 16,
+                            borderRadius: 12,
+                            borderTopLeftRadius: 4,
+                          }}>
+                            <Text style={{
+                              fontSize: 16,
+                              color: '#000000',
+                              lineHeight: 24,
+                            }}>
+                              {item.response}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                    ))}
                   </View>
+                </ScrollView>
+              )}
+              
+              <View style={{ position: 'relative' }}>
+                <TextInput
+                  value={question}
+                  onChangeText={handleQuestionChange}
+                  placeholder={questionCount >= maxQuestions ? "Daily limit reached. Try again tomorrow." : "Type your football question here..."}
+                  maxLength={60}
+                  multiline
+                  numberOfLines={2}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: '#E5E5E5',
+                    borderRadius: 12,
+                    padding: 16,
+                    fontSize: 16,
+                    textAlignVertical: 'top',
+                    minHeight: 80,
+                    backgroundColor: questionCount >= maxQuestions ? '#F5F5F5' : '#FFFFFF',
+                    color: questionCount >= maxQuestions ? '#999999' : '#000000',
+                  }}
+                  editable={questionCount < maxQuestions}
+                />
+                {questionCount < maxQuestions && (
+                  <Text style={{ 
+                    position: 'absolute',
+                    bottom: 4,
+                    right: 8,
+                    fontSize: 12,
+                    color: question.length >= 50 ? '#FF3B30' : '#666666',
+                  }}>
+                    {question.length}/60
+                  </Text>
+                )}
+              </View>
+              
+              <Pressable
+                onPress={askAiQuestion}
+                disabled={!question.trim() || questionCount >= maxQuestions || isAiLoading}
+                style={({ pressed }) => ({
+                  backgroundColor: !question.trim() || questionCount >= maxQuestions ? '#CCCCCC' : pressed ? '#3A2AEE' : '#4A3AFF',
+                  paddingVertical: 12,
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  opacity: questionCount >= maxQuestions ? 0.6 : pressed ? 0.9 : 1,
+                })}
+              >
+                <Text style={{
+                  fontSize: 16,
+                  fontWeight: '600',
+                  color: '#FFFFFF',
+                }}>
+                  {isAiLoading ? 'Thinking...' : questionCount >= maxQuestions ? 'Limit Reached' : 'Get Answer'}
+                </Text>
+              </Pressable>
+
+              {isAiLoading && (
+                <View style={{ 
+                  marginTop: 16, 
+                  alignItems: 'center', 
+                  justifyContent: 'center'
+                }}>
+                  <ActivityIndicator size="large" color="#4A3AFF" />
+                  <Text style={{ marginTop: 8, color: '#666666' }}>
+                    BallerAI is thinking...
+                  </Text>
+                </View>
+              )}
+
+              {/* Show limit reached message */}
+              {questionCount >= maxQuestions && (
+                <View style={{
+                  padding: 16,
+                  backgroundColor: '#FFF5F5',
+                  borderRadius: 12,
+                  marginTop: 8,
+                }}>
+                  <Text style={{ color: '#FF3B30', textAlign: 'center' }}>
+                    You've reached your daily limit of {maxQuestions} questions.
+                    Come back tomorrow for more!
+                  </Text>
                 </View>
               )}
             </View>
