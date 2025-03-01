@@ -31,7 +31,8 @@ export default function HomeScreen() {
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [nutritionScore, setNutritionScore] = useState(0);
   const [showNutritionInfo, setShowNutritionInfo] = useState(false);
-  const [nutritionAdherence, setNutritionAdherence] = useState(0);
+  const [nutritionAdherence, setNutritionAdherence] = useState(0); // Weekly average nutrition adherence
+  const [selectedDayAdherence, setSelectedDayAdherence] = useState(0); // NEW: Selected day's adherence
   const [readinessScore, setReadinessScore] = useState(0);
   const [showReadinessInfo, setShowReadinessInfo] = useState(false);
   const [recoveryData, setRecoveryData] = useState<any>(null);
@@ -274,20 +275,29 @@ export default function HomeScreen() {
   }, [user, selectedDate, macros.calories.goal, todayCalories.goal]);
 
   // Handle date selection from WeeklyOverview
-  const onDateSelect = useCallback((date: Date) => {
-    console.log(`DEBUG - Date selected: ${format(date, 'yyyy-MM-dd')}`);
+  const onDateSelect = useCallback((date: Date, adherenceScore?: number | null) => {
+    console.log(`DEBUG - Date selected: ${format(date, 'yyyy-MM-dd')} with adherence: ${adherenceScore}`);
     
     // If the selected date is the same as the currently selected date,
     // deselect it and go back to today's data
     if (selectedDate && format(selectedDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')) {
       console.log('DEBUG - Deselecting date and returning to today');
       setSelectedDate(null);
+      setSelectedDayAdherence(0); // Clear selected day adherence when deselecting
       
       // Explicitly load today's data
       loadSelectedDateCalories(new Date());
     } else {
       console.log(`DEBUG - Switching to date: ${format(date, 'yyyy-MM-dd')}`);
       setSelectedDate(date);
+      
+      // If we have an adherence score for this date, update the SELECTED DAY adherence
+      // but NOT the weekly adherence
+      if (adherenceScore !== undefined && adherenceScore !== null) {
+        setSelectedDayAdherence(adherenceScore);
+      } else {
+        setSelectedDayAdherence(0); // No data for this day
+      }
       
       // Load the selected date's data
       loadSelectedDateCalories(date);
@@ -1402,6 +1412,7 @@ export default function HomeScreen() {
                 </Pressable>
               </View>
 
+              {/* Weekly Nutrition Adherence Circle - Keeps showing the WEEKLY average */}
               <View style={{ 
                 width: 180,
                 height: 180,
@@ -1840,7 +1851,7 @@ export default function HomeScreen() {
                   flexWrap: 'wrap',
                   gap: 12,
                 }}>
-                  {/* Nutrition Score */}
+                  {/* Nutrition Score in the day details - Now shows the SELECTED DAY's adherence */}
                   <View style={{
                     flex: 1,
                     minWidth: '45%',
@@ -1855,7 +1866,7 @@ export default function HomeScreen() {
                       fontWeight: '600', 
                       color: '#FF9500' 
                     }}>
-                      {nutritionAdherence}%
+                      {selectedDayAdherence}%
                     </Text>
                   </View>
 
