@@ -893,7 +893,7 @@ export default function HomeScreen() {
     timestamp: string;
   }>>([]);
 
-  // Modify the checkDailyQuestionLimit function to be more reliable
+  // Modify the checkDailyQuestionLimit function to handle missing index
   useEffect(() => {
     const checkDailyQuestionLimit = async () => {
       if (!user) return;
@@ -932,25 +932,71 @@ export default function HomeScreen() {
           setQuestionCount(0);
         }
 
-        // Fetch today's conversation history
-        const questionsRef = collection(db, `users/${user.uid}/aiQuestions`);
-        const q = query(
-          questionsRef,
-          where('date', '==', today),
-          orderBy('timestamp', 'asc')
-        );
-        
-        const querySnapshot = await getDocs(q);
-        const history = querySnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            question: data.question,
-            response: data.response,
-            timestamp: data.timestamp ? new Date(data.timestamp.toDate()).toISOString() : new Date().toISOString()
-          };
-        });
-        
-        setQuestionHistory(history);
+        // Try to fetch today's conversation history - handling the case where index might be missing
+        try {
+          // First attempt with the optimal query (requires composite index)
+          const questionsRef = collection(db, `users/${user.uid}/aiQuestions`);
+          const q = query(
+            questionsRef,
+            where('date', '==', today),
+            orderBy('timestamp', 'asc')
+          );
+          
+          const querySnapshot = await getDocs(q);
+          const history = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              question: data.question,
+              response: data.response,
+              timestamp: data.timestamp ? new Date(data.timestamp.toDate()).toISOString() : new Date().toISOString()
+            };
+          });
+          
+          setQuestionHistory(history);
+        } catch (indexError) {
+          console.log("Index error detected, using fallback method to fetch questions");
+          
+          // Fallback method if index doesn't exist
+          try {
+            // Get all questions for today without ordering (doesn't require composite index)
+            const questionsRef = collection(db, `users/${user.uid}/aiQuestions`);
+            const simpleQuery = query(
+              questionsRef,
+              where('date', '==', today)
+            );
+            
+            const querySnapshot = await getDocs(simpleQuery);
+            
+            // Get all documents and sort them in memory
+            const history = querySnapshot.docs
+              .map(doc => {
+                const data = doc.data();
+                return {
+                  question: data.question,
+                  response: data.response,
+                  // Convert Firestore timestamp to Date object, or use a default if not available
+                  timestamp: data.timestamp ? new Date(data.timestamp.toDate()).toISOString() : new Date().toISOString()
+                };
+              })
+              // Sort by timestamp manually
+              .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+            
+            setQuestionHistory(history);
+            
+            // Display a message to the user suggesting they create the index
+            if (querySnapshot.docs.length > 0) {
+              console.warn(
+                "Please create the required Firebase index to optimize question loading: " +
+                "Go to your Firebase console → Firestore → Indexes and add a composite index on 'aiQuestions' " +
+                "collection with fields 'date' (Ascending) and 'timestamp' (Ascending)"
+              );
+            }
+          } catch (fallbackError) {
+            console.error("Even fallback query failed:", fallbackError);
+            // If all else fails, at least we'll have the question count correct
+            // The user can still ask questions up to their limit
+          }
+        }
         
       } catch (error) {
         console.error('Error checking question limit or fetching history:', error);
