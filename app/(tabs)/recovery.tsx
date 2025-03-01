@@ -40,6 +40,9 @@ export default function RecoveryScreen() {
     sleep: number;
     mood: number;
   } | null>(null);
+  const [planLoading, setPlanLoading] = useState(true);
+  const [isToday, setIsToday] = useState(true);
+  const [planExists, setPlanExists] = useState(false);
 
   // Fetch recovery data for selected date
   useEffect(() => {
@@ -71,6 +74,16 @@ export default function RecoveryScreen() {
     };
 
     fetchRecoveryData();
+    
+    // Check if selected date is today
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selected = new Date(selectedDate);
+    selected.setHours(0, 0, 0, 0);
+    setIsToday(today.getTime() === selected.getTime());
+    
+    // Load plan for the selected date
+    loadPlanForSelectedDate();
   }, [selectedDate, user]);
 
   // Check if today's data exists when component mounts
@@ -127,12 +140,81 @@ export default function RecoveryScreen() {
     }
   };
 
+  // Load the plan for the selected date
+  const loadPlanForSelectedDate = async () => {
+    if (!user) return;
+    
+    setPlanLoading(true);
+    setTodaysPlan(null);
+    setPlanExists(false);
+    
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    
+    try {
+      const planRef = doc(db, 'users', user.uid, 'recoveryPlans', dateStr);
+      const planSnap = await getDoc(planRef);
+      
+      if (planSnap.exists()) {
+        const planData = planSnap.data();
+        setTodaysPlan(planData.plan);
+        setPlanExists(true);
+        console.log(`Loaded saved plan for ${dateStr}:`, planData.plan);
+      } else {
+        setTodaysPlan(null);
+        setPlanExists(false);
+        console.log(`No plan exists for ${dateStr}`);
+      }
+    } catch (error) {
+      console.error('Error loading recovery plan:', error);
+    } finally {
+      setPlanLoading(false);
+    }
+  };
+
   const handleGeneratePlan = async () => {
     if (!user || !recoveryData.submitted) {
       Alert.alert('Error', 'Please submit today\'s recovery data first');
       return;
     }
-
+    
+    // Warn user about not being able to edit data after generating a plan
+    Alert.alert(
+      'Confirm Plan Generation',
+      'Once you generate a recovery plan, you will no longer be able to edit this day\'s recovery data. Continue?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Generate Plan',
+          onPress: () => {
+            // If plan already exists for the day, ask for confirmation
+            if (planExists) {
+              Alert.alert(
+                'Plan Already Exists',
+                'You already have a plan for this day. Generate a new one?',
+                [
+                  {
+                    text: 'Cancel',
+                    style: 'cancel'
+                  },
+                  {
+                    text: 'Generate New Plan',
+                    onPress: () => generatePlan()
+                  }
+                ]
+              );
+            } else {
+              generatePlan();
+            }
+          }
+        }
+      ]
+    );
+  };
+  
+  const generatePlan = async () => {
     setLoading(true);
 
     try {
@@ -196,15 +278,18 @@ The plan MUST:
         mood: recoveryData.mood || 5
       };
 
-      // Save the plan to Firebase
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      // Save the plan to Firebase with the current selected date
+      const dateStr = format(selectedDate, 'yyyy-MM-dd');
       
-      await setDoc(doc(db, 'users', user.uid, 'recoveryPlans', today.toISOString().split('T')[0]), {
+      await setDoc(doc(db, 'users', user.uid, 'recoveryPlans', dateStr), {
         plan: planText,
         createdAt: Timestamp.now(),
-        metrics: metricsToSave
+        metrics: metricsToSave,
+        date: dateStr
       });
+
+      setPlanExists(true);
+      console.log(`Recovery plan saved to Firebase for ${dateStr}`);
 
     } catch (error) {
       console.error('Error generating recovery plan:', error);
@@ -270,22 +355,25 @@ The plan MUST:
 
             <Text style={styles.dateText}>
               {format(selectedDate, 'MMMM do, yyyy')}
+              {isToday && <Text style={styles.todayIndicator}> (Today)</Text>}
             </Text>
 
             {/* Recovery Inputs */}
             <View style={styles.inputsContainer}>
               {recoveryData.submitted && !isEditing ? (
-                // Show submitted data with edit button
+                // Show submitted data with edit button if plan doesn't exist
                 <>
                   <View style={styles.submittedHeader}>
                     <Text style={styles.submittedText}>Submitted</Text>
-                    <Pressable
-                      style={styles.editButton}
-                      onPress={() => setIsEditing(true)}
-                    >
-                      <Ionicons name="create-outline" size={24} color="#FFFFFF" />
-                      <Text style={styles.editButtonText}>Edit</Text>
-                    </Pressable>
+                    {!planExists && (
+                      <Pressable
+                        style={styles.editButton}
+                        onPress={() => setIsEditing(true)}
+                      >
+                        <Ionicons name="create-outline" size={24} color="#FFFFFF" />
+                        <Text style={styles.editButtonText}>Edit</Text>
+                      </Pressable>
+                    )}
                   </View>
                   
                   <RecoverySlider
@@ -400,28 +488,96 @@ The plan MUST:
               </Pressable>
             )}
 
-            <Pressable
-              style={[
-                styles.generateButton, 
-                (!recoveryData.submitted || loading) && styles.generateButtonDisabled
-              ]}
-              onPress={handleGeneratePlan}
-              disabled={!recoveryData.submitted || loading}
-            >
-              <Text style={styles.generateButtonText}>
-                {loading ? 'Generating Plan...' : 
-                 !recoveryData.submitted ? 'Submit Today\'s Data First' : 
-                 'Generate Today\'s Recovery Plan'}
-              </Text>
-              <Ionicons name="fitness" size={20} color="#FFFFFF" />
-            </Pressable>
-
-            {todaysPlan && (
-              <View style={styles.planContainer}>
-                <Text style={styles.planTitle}>Today's Recovery Exercises</Text>
-                <Text style={styles.planText}>{todaysPlan}</Text>
+            {!recoveryData.submitted ? (
+              <View style={styles.infoMessageContainer}>
+                <Text style={styles.infoMessageText}>
+                  Submit your recovery data first to generate a plan
+                </Text>
               </View>
+            ) : !planExists ? (
+              <Pressable
+                style={[
+                  styles.generateButton, 
+                  loading && styles.generateButtonDisabled
+                ]}
+                onPress={handleGeneratePlan}
+                disabled={loading}
+              >
+                <Text style={styles.generateButtonText}>
+                  {loading ? 'Generating Plan...' : 'Generate Recovery Plan'}
+                </Text>
+                <Ionicons name="fitness" size={20} color="#FFFFFF" />
+              </Pressable>
+            ) : (
+              <Pressable
+                style={[
+                  styles.generateButton, 
+                  styles.generateButtonDisabled
+                ]}
+                disabled={true}
+              >
+                <Text style={styles.generateButtonText}>
+                  Plan Already Generated
+                </Text>
+                <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+              </Pressable>
             )}
+
+            {/* Plan Holder - Always visible with different states */}
+            <View style={[
+              styles.planHolderContainer,
+              !todaysPlan && !planLoading && styles.planHolderEmpty
+            ]}>
+              <View style={styles.planHolderHeader}>
+                <Text style={styles.planHolderTitle}>
+                  {isToday ? 'Your Plan For Today' : `Plan For ${format(selectedDate, 'MMM d')}`}
+                </Text>
+                {todaysPlan && (
+                  <View style={[
+                    styles.planStatusBadge,
+                    !isToday && styles.historicalBadge
+                  ]}>
+                    <Text style={styles.planStatusText}>
+                      {isToday ? 'Active' : 'Historical'}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              
+              {planLoading ? (
+                <View style={styles.planLoadingContainer}>
+                  <Ionicons name="hourglass-outline" size={24} color="#999999" />
+                  <Text style={styles.planLoadingText}>Loading plan...</Text>
+                </View>
+              ) : todaysPlan ? (
+                <View style={styles.planContentContainer}>
+                  <Text style={styles.planText}>{todaysPlan}</Text>
+                  <Text style={styles.planDateText}>
+                    Generated on {format(selectedDate, 'MMMM d, yyyy')}
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.emptyPlanContainer}>
+                  <Ionicons name="fitness-outline" size={32} color="#CCCCCC" />
+                  <Text style={styles.emptyPlanText}>
+                    {recoveryData.submitted 
+                      ? 'No plan generated yet'
+                      : 'Submit recovery data first'}
+                  </Text>
+                  {recoveryData.submitted ? (
+                    <Text style={styles.emptyPlanSubtext}>
+                      {isToday 
+                        ? 'Click the generate button to create your recovery plan'
+                        : 'Click the generate button to create a recovery plan for this day'}
+                    </Text>
+                  ) : (
+                    <Text style={styles.emptyPlanSubtext}>
+                      Submit your recovery data using the form above
+                    </Text>
+                  )}
+                </View>
+              )}
+            </View>
           </View>
         </ScrollView>
       </Animated.View>
@@ -731,6 +887,7 @@ const styles = StyleSheet.create({
   },
   generateButtonDisabled: {
     opacity: 0.5,
+    backgroundColor: '#666666',
   },
   planContainer: {
     marginTop: 24,
@@ -760,5 +917,109 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 24,
+  },
+  
+  // New styles for plan holder
+  planHolderContainer: {
+    marginTop: 24,
+    marginBottom: 24,
+    padding: 20,
+    backgroundColor: '#F5F9FF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E0E7FF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  planHolderEmpty: {
+    backgroundColor: '#F5F5F5',
+    borderColor: '#E5E5E5',
+    opacity: 0.9,
+  },
+  planHolderHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E7FF',
+  },
+  planHolderTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#3F63F6',
+  },
+  planStatusBadge: {
+    backgroundColor: '#99E86C',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  planStatusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  planLoadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 24,
+    gap: 12,
+  },
+  planLoadingText: {
+    fontSize: 16,
+    color: '#999999',
+  },
+  planContentContainer: {
+    padding: 12,
+  },
+  emptyPlanContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 32,
+    gap: 12,
+  },
+  emptyPlanText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#999999',
+    marginTop: 8,
+  },
+  emptyPlanSubtext: {
+    fontSize: 14,
+    color: '#AAAAAA',
+    textAlign: 'center',
+    paddingHorizontal: 16,
+  },
+  todayIndicator: {
+    color: '#3F63F6',
+    fontWeight: '600',
+  },
+  planDateText: {
+    fontSize: 12,
+    color: '#999999',
+    marginTop: 16,
+    fontStyle: 'italic',
+  },
+  historicalBadge: {
+    backgroundColor: '#6C99E8',
+  },
+  infoMessageContainer: {
+    marginHorizontal: 24,
+    marginVertical: 12,
+    padding: 12,
+    backgroundColor: '#F5F9FF',
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#3F63F6',
+  },
+  infoMessageText: {
+    fontSize: 14,
+    color: '#3F63F6',
+    textAlign: 'center',
   },
 }); 
