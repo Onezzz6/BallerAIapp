@@ -397,7 +397,12 @@ export default function TrainingScreen() {
         entering={FadeIn.duration(1000)}
         style={styles.container}
       >
-        <ScrollView style={styles.scrollView}>
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={{
+            paddingBottom: 90, // Add extra padding at the bottom to prevent content from being hidden behind the navigation bar
+          }}
+        >
           <View style={styles.content}>
             <Text style={styles.sectionTitle}>Focus Area</Text>
             <Text style={styles.subtitle}>Select your training focus to get a personalized plan</Text>

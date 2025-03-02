@@ -1,4 +1,4 @@
-import { View, Text, Image, ScrollView, Pressable, StyleSheet, Modal, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, Image, ScrollView, Pressable, StyleSheet, Modal, TouchableWithoutFeedback, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
@@ -1159,6 +1159,42 @@ export default function HomeScreen() {
     }
   }, [showQuestion]);
 
+  // Add refs for ScrollView and TextInput
+  const scrollViewRef = useRef<ScrollView>(null);
+  const questionInputRef = useRef<TextInput>(null);
+
+  // Enhanced function to handle smooth auto-scrolling when the text input is focused
+  const handleQuestionInputFocus = () => {
+    // First quick scroll to roughly the right position
+    if (scrollViewRef.current) {
+      scrollViewRef.current.scrollToEnd({ animated: true });
+    }
+    
+    // Then wait for the keyboard to fully appear before doing a final precise scroll
+    setTimeout(() => {
+      if (scrollViewRef.current) {
+        // Final scroll with a smooth animation to ensure input is perfectly visible
+        scrollViewRef.current.scrollToEnd({ 
+          animated: true 
+        });
+      }
+    }, 350); // Slightly longer timeout to ensure keyboard is fully visible
+  };
+
+  // Keep the existing effect to show the question section when opened, but don't auto-focus
+  useEffect(() => {
+    if (showQuestion && scrollViewRef.current) {
+      // Make the question section visible when it's opened
+      setTimeout(() => {
+        if (scrollViewRef.current) {
+          scrollViewRef.current.scrollToEnd({ 
+            animated: true 
+          });
+        }
+      }, 100);
+    }
+  }, [showQuestion]);
+
   return (
     <SafeAreaView style={{ 
       flex: 1, 
@@ -1217,712 +1253,711 @@ export default function HomeScreen() {
         </Text>
       </View>
 
-      <ScrollView 
-        style={{ 
-          flex: 1,
-          backgroundColor: '#FFFFFF',
-        }}
-        contentContainerStyle={{
-          padding: 8,
-          gap: 16,
-          paddingBottom: 20, // Add padding at the bottom to prevent content from being hidden behind the tab bar
-        }}
-        showsVerticalScrollIndicator={false} // Hide scroll indicator for cleaner look
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
       >
-        <View style={{ padding: 16, gap: 24 }}>
-          {/* Overview Section */}
-          <View style={{ 
-            alignItems: 'center',
-            paddingVertical: 16,
-            borderBottomWidth: 1,
-            borderBottomColor: '#E5E5E5',
-          }}>
-            <Text style={{ 
-              fontSize: 32, 
-              fontWeight: '600',
-              color: '#000000',
-            }}>
-              Todays Progress
-            </Text>
-          </View>
-                      
-          {/* First Row of Cards */}
-          <View style={{ 
-            flexDirection: 'row', 
-            gap: 8,
-            width: '100%', // Ensure full container width
-            justifyContent: 'space-between',
-          }}>
-            {/* Daily Calories Card - Now using CalorieProgress component */}
+        <ScrollView 
+          ref={scrollViewRef}
+          style={{ 
+            flex: 1,
+            backgroundColor: '#FFFFFF',
+          }}
+          contentContainerStyle={{
+            padding: 8,
+            gap: 16,
+            paddingBottom: 20, // Add padding at the bottom to prevent content from being hidden behind the tab bar
+          }}
+          showsVerticalScrollIndicator={false} // Hide scroll indicator for cleaner look
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={{ padding: 16, gap: 24 }}>
+            {/* Overview Section */}
             <View style={{ 
-              width: '49%', // Slightly less than 50% to account for the gap
-            }}>
-              <CalorieProgress />
-            </View>
-
-            {/* Readiness Card */}
-            <View style={{
-              width: '49%', // Slightly less than 50% to account for the gap
-              padding: 16,
-              gap: 24,
-              borderRadius: 16,
-              backgroundColor: '#99E86C',
               alignItems: 'center',
-              shadowColor: '#000000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 4,
-              elevation: 4,
-              borderWidth: 1,
-              borderColor: '#E5E5E5',
-              minHeight: 280,
+              paddingVertical: 16,
+              borderBottomWidth: 1,
+              borderBottomColor: '#E5E5E5',
             }}>
-              <View style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                width: '100%',
-              }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Ionicons name="trending-up" size={24} color="#000000" />
-                  <Text style={{
-                    fontSize: 20,
-                    fontWeight: '600',
-                    color: '#000000',
-                  }}>
-                    Readiness 
-                  </Text>
-                </View>
-                <Pressable
-                  onPress={() => setShowReadinessInfo(true)}
-                  style={({ pressed }) => ({
-                    opacity: pressed ? 0.7 : 1,
-                  })}
-                >
-                  <Ionicons name="information-circle-outline" size={24} color="#000000" />
-                </Pressable>
-              </View>
-
-              {/* Progress Circle Container */}
-              <View style={{ 
-                width: 180,
-                height: 180,
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}>
-                <Svg width="180" height="180" style={{
-                  position: 'absolute',
-                  transform: [{ rotate: '-90deg' }],
-                }}>
-                  <Circle
-                    cx="90"
-                    cy="90"
-                    r="70"
-                    stroke="#ffffff"
-                    strokeWidth="12"
-                    fill="none"
-                  />
-                  <Circle
-                    cx="90"
-                    cy="90"
-                    r="70"
-                    stroke="#4064F6"
-                    strokeWidth="12"
-                    fill="none"
-                    strokeDasharray={`${2 * Math.PI * 70}`}
-                    strokeDashoffset={2 * Math.PI * 70 * (1 - readinessScore / 100)}
-                  />
-                </Svg>
-
-                <Text style={{ 
-                  fontSize: 34, 
-                  fontWeight: '700', 
-                  color: '#000000',
-                }}>
-                  {readinessScore}%
-                </Text>
-              </View>
-
               <Text style={{ 
-                fontSize: 14, 
-                color: '#666666',
-                textAlign: 'center',
-              }}>
-                {readinessScore > 0 
-                  ? readinessScore >= 70 
-                    ? 'Your body is ready\nfor high intensity training!'
-                    : readinessScore >= 40
-                    ? 'Your body needs\nmoderate intensity today.'
-                    : 'Focus on recovery\ntoday, take it easy.'
-                  : 'Submit recovery data\nto see your score'
-                }
-              </Text>
-            </View>
-          </View>
-
-          {/* Weekly Progress Section Header */}
-          <View style={{ 
-            alignItems: 'center',
-            paddingVertical: 16,
-            borderBottomWidth: 1,
-            borderBottomColor: '#E5E5E5',
-          }}>
-            <Text style={{ 
-              fontSize: 32, 
-              fontWeight: '600',
-              color: '#000000',
-            }}>
-              Weekly Progress
-            </Text>
-          </View>
-
-          {/* Second Row of Cards */}
-          <View style={{ 
-            flexDirection: 'row', 
-            gap: 8,
-            width: '100%',
-            justifyContent: 'space-between',
-          }}>
-            {/* Nutrition Adherence Card */}
-            <View style={{
-              width: '49%', // Slightly less than 50% to account for the gap
-              padding: 16,
-              gap: 24,
-              borderRadius: 16,
-              backgroundColor: '#99E86C',
-              alignItems: 'center',
-              shadowColor: '#000000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 4,
-              elevation: 4,
-              borderWidth: 1,
-              borderColor: '#E5E5E5',
-              minHeight: 280,
-            }}>
-              <View style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                width: '100%',
-              }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Ionicons name="nutrition-outline" size={24} color="#000000" />
-                  <Text style={{
-                    fontSize: 20,
-                    fontWeight: '600',
-                    color: '#000000',
-                  }}>
-                    Nutrition
-                  </Text>
-                </View>
-                <Pressable
-                  onPress={() => setShowNutritionInfo(true)}
-                  style={({ pressed }) => ({
-                    opacity: pressed ? 0.7 : 1,
-                  })}
-                >
-                  <Ionicons name="information-circle-outline" size={24} color="#000000" />
-                </Pressable>
-              </View>
-
-              {/* Weekly Nutrition Adherence Circle - Keeps showing the WEEKLY average */}
-              <View style={{ 
-                width: 180,
-                height: 180,
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}>
-                <Svg width="180" height="180" style={{
-                  position: 'absolute',
-                  transform: [{ rotate: '-90deg' }],
-                }}>
-                  <Circle
-                    cx="90"
-                    cy="90"
-                    r="70"
-                    stroke="#ffffff"
-                    strokeWidth="12"
-                    fill="none"
-                  />
-                  <Circle
-                    cx="90"
-                    cy="90"
-                    r="70"
-                    stroke="#4064F6"
-                    strokeWidth="12"
-                    fill="none"
-                    strokeDasharray={`${2 * Math.PI * 70}`}
-                    strokeDashoffset={2 * Math.PI * 70 * (1 - nutritionAdherence / 100)}
-                  />
-                </Svg>
-
-                <Text style={{ 
-                  fontSize: 34, 
-                  fontWeight: '700', 
-                  color: '#000000',
-                }}>
-                  {nutritionAdherence}%
-                </Text>
-              </View>
-
-              <Text style={{ 
-                fontSize: 14, 
-                color: '#666666',
-                textAlign: 'center',
-              }}>
-                {nutritionAdherence > 0 
-                  ? nutritionAdherence >= 80
-                    ? 'Excellent nutrition habits\nthis week!'
-                    : nutritionAdherence >= 50
-                    ? 'Good nutrition habits\nthis week!'
-                    : 'Keep working on your\nnutrition goals!'
-                  : 'Start logging meals\nto improve your score'
-                }
-              </Text>
-            </View>
-
-            {/* Recovery Card */}
-            <View style={{
-              width: '49%', // Slightly less than 50% to account for the gap
-              padding: 16,
-              gap: 24,
-              borderRadius: 16,
-              backgroundColor: '#99E86C',
-              alignItems: 'center',
-              shadowColor: '#000000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 4,
-              elevation: 4,
-              borderWidth: 1,
-              borderColor: '#E5E5E5',
-              minHeight: 280,
-            }}>
-              <View style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '100%',
-              }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Ionicons name="pulse-outline" size={24} color="#000000" />
-                  <Text style={{
-                    fontSize: 20,
-                    fontWeight: '600',
-                    color: '#000000',
-                  }}>
-                    Recovery
-                  </Text>
-                </View>
-              </View>
-              
-              {/* Progress Circle Container */}
-              <View style={{ 
-                width: 180,
-                height: 180,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-                <Svg width="180" height="180">
-                  <Circle
-                    cx="90"
-                    cy="90"
-                    r="70"
-                    stroke="#ffffff"
-                    strokeWidth="12"
-                    fill="none"
-                  />
-                  <Circle
-                    cx="90"
-                    cy="90"
-                    r="70"
-                    stroke="#4064F6"
-                    strokeWidth="12"
-                    fill="none"
-                    strokeDasharray={`${2 * Math.PI * 70}`}
-                    strokeDashoffset={2 * Math.PI * 70 * (1 - 90 / 100)}
-                    transform="rotate(-90 90 90)"
-                  />
-                </Svg>
-
-                {/* Center Text */}
-                <Text style={{ 
-                  position: 'absolute',
-                  fontSize: 34, 
-                  fontWeight: '700', 
-                  color: '#000000',
-                }}>
-                  90%
-                </Text>
-              </View>
-
-              <Text style={{ 
-                fontSize: 14, 
-                color: '#666666',
-                textAlign: 'center',
-              }}>
-                Awesome! You did{'\n'}excellent recovery level.
-              </Text>
-            </View>
-          </View>
-
-          {/* Ask AI Section */}
-          <View style={{
-            backgroundColor: '#4A3AFF',
-            borderRadius: 24,
-            padding: 24,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{
-                fontSize: 24,
+                fontSize: 32, 
                 fontWeight: '600',
-                color: '#FFFFFF',
-                marginBottom: 8,
+                color: '#000000',
               }}>
-                Ask me a question.
+                Todays Progress
               </Text>
-              <Pressable
-                onPress={() => setShowQuestion(!showQuestion)}
-                style={({ pressed }) => ({
-                  backgroundColor: '#FFFFFF',
-                  paddingHorizontal: 20,
-                  paddingVertical: 10,
-                  borderRadius: 12,
-                  alignSelf: 'flex-start',
-                  opacity: pressed ? 0.9 : 1,
-                })}
-              >
-                <Text style={{
-                  fontSize: 16,
-                  fontWeight: '600',
-                  color: '#4A3AFF',
-                }}>
-                  {showQuestion ? 'Close' : 'Ask a question'}
-                </Text>
-              </Pressable>
             </View>
-
-            <Image 
-              source={require('../../assets/images/mascot.png')}
-              style={{
-                width: 120,
-                height: 120,
-                marginRight: -24,
-                marginBottom: -24,
-              }}
-              resizeMode="contain"
-            />
-          </View>
-
-          {/* Question Interface */}
-          {showQuestion && (
-            <View style={{
-              backgroundColor: '#FFFFFF',
-              borderRadius: 24,
-              padding: 24,
-              gap: 16,
-              borderWidth: 1,
-              borderColor: '#E5E5E5',
+                        
+            {/* First Row of Cards */}
+            <View style={{ 
+              flexDirection: 'row', 
+              gap: 8,
+              width: '100%', // Ensure full container width
+              justifyContent: 'space-between',
             }}>
+              {/* Daily Calories Card - Now using CalorieProgress component */}
               <View style={{ 
-                flexDirection: 'row', 
-                justifyContent: 'space-between', 
-                alignItems: 'center',
-                marginBottom: 8
+                width: '49%', // Slightly less than 50% to account for the gap
               }}>
-                <Text style={{ 
-                  fontSize: 18, 
-                  fontWeight: '600', 
-                  color: '#000000'
+                <CalorieProgress />
+              </View>
+
+              {/* Readiness Card */}
+              <View style={{
+                width: '49%', // Slightly less than 50% to account for the gap
+                padding: 16,
+                gap: 24,
+                borderRadius: 16,
+                backgroundColor: '#99E86C',
+                alignItems: 'center',
+                shadowColor: '#000000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 4,
+                borderWidth: 1,
+                borderColor: '#E5E5E5',
+                minHeight: 280,
+              }}>
+                <View style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  width: '100%',
                 }}>
-                  Ask BallerAI
-                </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Ionicons name="trending-up" size={24} color="#000000" />
+                    <Text style={{
+                      fontSize: 20,
+                      fontWeight: '600',
+                      color: '#000000',
+                    }}>
+                      Readiness 
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={() => setShowReadinessInfo(true)}
+                    style={({ pressed }) => ({
+                      opacity: pressed ? 0.7 : 1,
+                    })}
+                  >
+                    <Ionicons name="information-circle-outline" size={24} color="#000000" />
+                  </Pressable>
+                </View>
+
+                {/* Progress Circle Container */}
+                <View style={{ 
+                  width: 180,
+                  height: 180,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                  <Svg width="180" height="180" style={{
+                    position: 'absolute',
+                    transform: [{ rotate: '-90deg' }],
+                  }}>
+                    <Circle
+                      cx="90"
+                      cy="90"
+                      r="70"
+                      stroke="#ffffff"
+                      strokeWidth="12"
+                      fill="none"
+                    />
+                    <Circle
+                      cx="90"
+                      cy="90"
+                      r="70"
+                      stroke="#4064F6"
+                      strokeWidth="12"
+                      fill="none"
+                      strokeDasharray={`${2 * Math.PI * 70}`}
+                      strokeDashoffset={2 * Math.PI * 70 * (1 - readinessScore / 100)}
+                    />
+                  </Svg>
+
+                  <Text style={{ 
+                    fontSize: 34, 
+                    fontWeight: '700', 
+                    color: '#000000',
+                  }}>
+                    {readinessScore}%
+                  </Text>
+                </View>
+
                 <Text style={{ 
                   fontSize: 14, 
-                  color: questionCount >= maxQuestions ? '#FF3B30' : '#666666'
+                  color: '#666666',
+                  textAlign: 'center',
                 }}>
-                  {maxQuestions - questionCount} of {maxQuestions} questions left today
+                  {readinessScore > 0 
+                    ? readinessScore >= 70 
+                      ? 'Your body is ready\nfor high intensity training!'
+                      : readinessScore >= 40
+                      ? 'Your body needs\nmoderate intensity today.'
+                      : 'Focus on recovery\ntoday, take it easy.'
+                    : 'Submit recovery data\nto see your score'
+                  }
                 </Text>
               </View>
-              
-              {/* Display conversation history */}
-              {questionHistory.length > 0 && (
-                <ScrollView style={{ maxHeight: 300, marginBottom: 16 }}>
-                  <View style={{ gap: 20 }}>
-                    {questionHistory.map((item, index) => (
-                      <View key={index} style={{ gap: 12 }}>
-                        <View style={{
-                          flexDirection: 'row',
-                          alignItems: 'flex-start',
-                          justifyContent: 'flex-end',
-                          gap: 12,
-                        }}>
-                          <View style={{
-                            backgroundColor: '#E5F7FF',
-                            padding: 16,
-                            borderRadius: 12,
-                            borderTopRightRadius: 4,
-                            maxWidth: '80%',
-                          }}>
-                            <Text style={{
-                              fontSize: 16,
-                              color: '#000000',
-                            }}>
-                              {item.question}
-                            </Text>
-                          </View>
-                          <View style={{
-                            width: 32,
-                            height: 32,
-                            borderRadius: 16,
-                            backgroundColor: '#007AFF',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                          }}>
-                            <Ionicons name="person" size={18} color="#FFFFFF" />
-                          </View>
-                        </View>
-                        
-                        <View style={{
-                          flexDirection: 'row',
-                          alignItems: 'flex-start',
-                          gap: 12,
-                        }}>
-                          <Image 
-                            source={require('../../assets/images/mascot.png')}
-                            style={{
-                              width: 32,
-                              height: 32,
-                              borderRadius: 16,
-                            }}
-                          />
-                          <View style={{
-                            flex: 1,
-                            backgroundColor: '#F5F5FF',
-                            padding: 16,
-                            borderRadius: 12,
-                            borderTopLeftRadius: 4,
-                          }}>
-                            <Text style={{
-                              fontSize: 16,
-                              color: '#000000',
-                              lineHeight: 24,
-                            }}>
-                              {item.response}
-                            </Text>
-                          </View>
-                        </View>
-                      </View>
-                    ))}
-                  </View>
-                </ScrollView>
-              )}
-              
-              <View style={{ position: 'relative' }}>
-                <TextInput
-                  value={question}
-                  onChangeText={handleQuestionChange}
-                  placeholder={questionCount >= maxQuestions ? "Daily limit reached. Try again tomorrow." : "Type your football question here..."}
-                  maxLength={60}
-                  multiline
-                  numberOfLines={2}
-                  style={{
-                    borderWidth: 1,
-                    borderColor: '#E5E5E5',
-                    borderRadius: 12,
-                    padding: 16,
-                    fontSize: 16,
-                    textAlignVertical: 'top',
-                    minHeight: 80,
-                    backgroundColor: questionCount >= maxQuestions ? '#F5F5F5' : '#FFFFFF',
-                    color: questionCount >= maxQuestions ? '#999999' : '#000000',
-                  }}
-                  editable={questionCount < maxQuestions}
-                />
-                {questionCount < maxQuestions && (
-                  <Text style={{ 
-                    position: 'absolute',
-                    bottom: 4,
-                    right: 8,
-                    fontSize: 12,
-                    color: question.length >= 50 ? '#FF3B30' : '#666666',
-                  }}>
-                    {question.length}/60
-                  </Text>
-                )}
-              </View>
-              
-              <Pressable
-                onPress={askAiQuestion}
-                disabled={!question.trim() || questionCount >= maxQuestions || isAiLoading}
-                style={({ pressed }) => ({
-                  backgroundColor: !question.trim() || questionCount >= maxQuestions ? '#CCCCCC' : pressed ? '#3A2AEE' : '#4A3AFF',
-                  paddingVertical: 12,
-                  borderRadius: 12,
-                  alignItems: 'center',
-                  opacity: questionCount >= maxQuestions ? 0.6 : pressed ? 0.9 : 1,
-                })}
-              >
-                <Text style={{
-                  fontSize: 16,
-                  fontWeight: '600',
-                  color: '#FFFFFF',
-                }}>
-                  {isAiLoading ? 'Thinking...' : questionCount >= maxQuestions ? 'Limit Reached' : 'Get Answer'}
-                </Text>
-              </Pressable>
-
-              {isAiLoading && (
-                <View style={{ 
-                  marginTop: 16, 
-                  alignItems: 'center', 
-                  justifyContent: 'center'
-                }}>
-                  <ActivityIndicator size="large" color="#4A3AFF" />
-                  <Text style={{ marginTop: 8, color: '#666666' }}>
-                    BallerAI is thinking...
-                  </Text>
-                </View>
-              )}
-
-              {/* Show limit reached message */}
-              {questionCount >= maxQuestions && (
-                <View style={{
-                  padding: 16,
-                  backgroundColor: '#FFF5F5',
-                  borderRadius: 12,
-                  marginTop: 8,
-                }}>
-                  <Text style={{ color: '#FF3B30', textAlign: 'center' }}>
-                    You've reached your daily limit of {maxQuestions} questions.
-                    Come back tomorrow for more!
-                  </Text>
-                </View>
-              )}
             </View>
-          )}
 
-          {/* Day Details - still preserving this functionality for when a date is selected */}
-          {selectedDate && (
-            <View style={{
-              backgroundColor: '#FFFFFF',
-              borderRadius: 24,
-              padding: 24,
-              gap: 16,
-              borderWidth: 1,
-              borderColor: '#000000',
+            {/* Weekly Progress Section Header */}
+            <View style={{ 
+              alignItems: 'center',
+              paddingVertical: 16,
+              borderBottomWidth: 1,
+              borderBottomColor: '#E5E5E5',
             }}>
-              <View style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
+              <Text style={{ 
+                fontSize: 32, 
+                fontWeight: '600',
+                color: '#000000',
               }}>
-                <Text style={{
-                  fontSize: 18,
-                  fontWeight: '600',
-                  color: '#000000',
+                Weekly Progress
+              </Text>
+            </View>
+
+            {/* Second Row of Cards */}
+            <View style={{ 
+              flexDirection: 'row', 
+              gap: 8,
+              width: '100%',
+              justifyContent: 'space-between',
+            }}>
+              {/* Nutrition Adherence Card */}
+              <View style={{
+                width: '49%', // Slightly less than 50% to account for the gap
+                padding: 16,
+                gap: 24,
+                borderRadius: 16,
+                backgroundColor: '#99E86C',
+                alignItems: 'center',
+                shadowColor: '#000000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 4,
+                borderWidth: 1,
+                borderColor: '#E5E5E5',
+                minHeight: 280,
+              }}>
+                <View style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  width: '100%',
                 }}>
-                  {format(selectedDate, 'EEEE, MMMM d')}
-                </Text>
-                <Pressable
-                  onPress={() => setSelectedDate(null)}
-                  style={({ pressed }) => ({
-                    opacity: pressed ? 0.7 : 1,
-                  })}
-                >
-                  <Text style={{
-                    fontSize: 16,
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Ionicons name="nutrition-outline" size={24} color="#000000" />
+                    <Text style={{
+                      fontSize: 20,
+                      fontWeight: '600',
+                      color: '#000000',
+                    }}>
+                      Nutrition
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={() => setShowNutritionInfo(true)}
+                    style={({ pressed }) => ({
+                      opacity: pressed ? 0.7 : 1,
+                    })}
+                  >
+                    <Ionicons name="information-circle-outline" size={24} color="#000000" />
+                  </Pressable>
+                </View>
+
+                {/* Weekly Nutrition Adherence Circle - Keeps showing the WEEKLY average */}
+                <View style={{ 
+                  width: 180,
+                  height: 180,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                  <Svg width="180" height="180" style={{
+                    position: 'absolute',
+                    transform: [{ rotate: '-90deg' }],
+                  }}>
+                    <Circle
+                      cx="90"
+                      cy="90"
+                      r="70"
+                      stroke="#ffffff"
+                      strokeWidth="12"
+                      fill="none"
+                    />
+                    <Circle
+                      cx="90"
+                      cy="90"
+                      r="70"
+                      stroke="#4064F6"
+                      strokeWidth="12"
+                      fill="none"
+                      strokeDasharray={`${2 * Math.PI * 70}`}
+                      strokeDashoffset={2 * Math.PI * 70 * (1 - nutritionAdherence / 100)}
+                    />
+                  </Svg>
+
+                  <Text style={{ 
+                    fontSize: 34, 
+                    fontWeight: '700', 
                     color: '#000000',
                   }}>
-                    Close
+                    {nutritionAdherence}%
                   </Text>
-                </Pressable>
+                </View>
+
+                <Text style={{ 
+                  fontSize: 14, 
+                  color: '#666666',
+                  textAlign: 'center',
+                }}>
+                  {nutritionAdherence > 0 
+                    ? nutritionAdherence >= 80
+                      ? 'Excellent nutrition habits\nthis week!'
+                      : nutritionAdherence >= 50
+                      ? 'Good nutrition habits\nthis week!'
+                      : 'Keep working on your\nnutrition goals!'
+                    : 'Start logging meals\nto improve your score'
+                  }
+                </Text>
               </View>
 
-              {/* Scores Grid */}
+              {/* Recovery Card */}
               <View style={{
-                flexDirection: 'row',
-                flexWrap: 'wrap',
-                gap: 12,
+                width: '49%', // Slightly less than 50% to account for the gap
+                padding: 16,
+                gap: 24,
+                borderRadius: 16,
+                backgroundColor: '#99E86C',
+                alignItems: 'center',
+                shadowColor: '#000000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 4,
+                borderWidth: 1,
+                borderColor: '#E5E5E5',
+                minHeight: 280,
               }}>
-                {/* Nutrition Score in the day details - Now shows the SELECTED DAY's adherence */}
                 <View style={{
-                  flex: 1,
-                  minWidth: '45%',
-                  backgroundColor: '#FFF5EB',
-                  padding: 16,
-                  borderRadius: 16,
-                  gap: 8,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '100%',
                 }}>
-                  <Text style={{ fontSize: 14, color: '#666666' }}>Nutrition Adherence</Text>
-                  <Text style={{ 
-                    fontSize: 24, 
-                    fontWeight: '600', 
-                    color: '#FF9500' 
-                  }}>
-                    {selectedDayAdherence}%
-                  </Text>
-                </View>
-
-                {/* Recovery Score */}
-                <View style={{
-                  flex: 1,
-                  minWidth: '45%',
-                  backgroundColor: '#F5F5FF',
-                  padding: 16,
-                  borderRadius: 16,
-                  gap: 8,
-                }}>
-                  <Text style={{ fontSize: 14, color: '#666666' }}>Recovery Score</Text>
-                  <Text style={{ fontSize: 24, fontWeight: '600', color: '#4064F6' }}>90%</Text>
-                </View>
-
-                {/* Readiness Score */}
-                <View style={{
-                  flex: 1,
-                  minWidth: '45%',
-                  backgroundColor: '#F5F5FF',
-                  padding: 16,
-                  borderRadius: 16,
-                  gap: 8,
-                }}>
-                  <Text style={{ fontSize: 14, color: '#666666' }}>Readiness Score</Text>
-                  <Text style={{ fontSize: 24, fontWeight: '600', color: '#4A72B2' }}>{readinessScore}%</Text>
-                </View>
-
-                {/* Training Status */}
-                <View style={{
-                  flex: 1,
-                  minWidth: '45%',
-                  backgroundColor: '#F5F5FF',
-                  padding: 16,
-                  borderRadius: 16,
-                  gap: 8,
-                }}>
-                  <Text style={{ fontSize: 14, color: '#666666' }}>Training Status</Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Ionicons 
-                      name={selectedDate > new Date() ? 'time-outline' : 'checkmark-circle'} 
-                      size={24} 
-                      color={selectedDate > new Date() ? '#666666' : '#99E86C'} 
-                    />
-                    <Text style={{ 
-                      fontSize: 16, 
-                      color: selectedDate > new Date() ? '#666666' : '#000000',
+                    <Ionicons name="pulse-outline" size={24} color="#000000" />
+                    <Text style={{
+                      fontSize: 20,
+                      fontWeight: '600',
+                      color: '#000000',
                     }}>
-                      {selectedDate > new Date() ? 'Upcoming' : 'Completed'}
+                      Recovery
                     </Text>
                   </View>
                 </View>
+                
+                {/* Progress Circle Container */}
+                <View style={{ 
+                  width: 180,
+                  height: 180,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                  <Svg width="180" height="180">
+                    <Circle
+                      cx="90"
+                      cy="90"
+                      r="70"
+                      stroke="#ffffff"
+                      strokeWidth="12"
+                      fill="none"
+                    />
+                    <Circle
+                      cx="90"
+                      cy="90"
+                      r="70"
+                      stroke="#4064F6"
+                      strokeWidth="12"
+                      fill="none"
+                      strokeDasharray={`${2 * Math.PI * 70}`}
+                      strokeDashoffset={2 * Math.PI * 70 * (1 - 90 / 100)}
+                      transform="rotate(-90 90 90)"
+                    />
+                  </Svg>
+
+                  {/* Center Text */}
+                  <Text style={{ 
+                    position: 'absolute',
+                    fontSize: 34, 
+                    fontWeight: '700', 
+                    color: '#000000',
+                  }}>
+                    90%
+                  </Text>
+                </View>
+
+                <Text style={{ 
+                  fontSize: 14, 
+                  color: '#666666',
+                  textAlign: 'center',
+                }}>
+                  Awesome! You did{'\n'}excellent recovery level.
+                </Text>
               </View>
             </View>
-          )}
-        </View>
-      </ScrollView>
+
+            {/* Ask AI Section */}
+            <View style={{
+              backgroundColor: '#4A3AFF',
+              borderRadius: 24,
+              padding: 24,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{
+                  fontSize: 24,
+                  fontWeight: '600',
+                  color: '#FFFFFF',
+                  marginBottom: 8,
+                }}>
+                  Ask me a question.
+                </Text>
+                <Pressable
+                  onPress={() => setShowQuestion(!showQuestion)}
+                  style={({ pressed }) => ({
+                    backgroundColor: '#FFFFFF',
+                    paddingHorizontal: 20,
+                    paddingVertical: 10,
+                    borderRadius: 12,
+                    alignSelf: 'flex-start',
+                    opacity: pressed ? 0.9 : 1,
+                  })}
+                >
+                  <Text style={{
+                    fontSize: 16,
+                    fontWeight: '600',
+                    color: '#4A3AFF',
+                  }}>
+                    {showQuestion ? 'Close' : 'Ask a question'}
+                  </Text>
+                </Pressable>
+              </View>
+
+              <Image 
+                source={require('../../assets/images/mascot.png')}
+                style={{
+                  width: 120,
+                  height: 120,
+                  marginRight: -24,
+                  marginBottom: -24,
+                }}
+                resizeMode="contain"
+              />
+            </View>
+
+            {/* Question Interface */}
+            {showQuestion && (
+              <View style={{
+                padding: 24,
+                gap: 16,
+                backgroundColor: '#FFFFFF',
+                borderRadius: 24,
+                borderWidth: 1,
+                borderColor: '#000000',
+              }}>
+                <View style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}>
+                  <Text style={{
+                    fontSize: 20,
+                    fontWeight: '600',
+                    color: '#000000',
+                  }}>
+                    Ask me a question
+                  </Text>
+                  <Text style={{
+                    color: questionCount >= maxQuestions ? '#FF3B30' : '#666666', 
+                    fontSize: 14
+                  }}>
+                    {questionCount}/{maxQuestions} questions
+                  </Text>
+                </View>
+
+                {questionHistory.length > 0 && (
+                  <ScrollView style={{ maxHeight: 300, marginBottom: 16 }}>
+                    <View style={{ gap: 24 }}>
+                      {questionHistory.map((item, index) => (
+                        <View key={index} style={{ gap: 8 }}>
+                          <View style={{
+                            flexDirection: 'row',
+                            justifyContent: 'flex-end',
+                            gap: 8,
+                          }}>
+                            <View style={{
+                              backgroundColor: '#000000',
+                              padding: 16,
+                              borderRadius: 12,
+                              borderBottomRightRadius: 4,
+                              maxWidth: '80%',
+                            }}>
+                              <Text style={{
+                                fontSize: 16,
+                                color: '#FFFFFF',
+                              }}>
+                                {item.question}
+                              </Text>
+                            </View>
+                          </View>
+                          <View style={{
+                            flexDirection: 'row',
+                            gap: 8,
+                          }}>
+                            <Ionicons
+                              name="football"
+                              size={32}
+                              color="#4A3AFF"
+                              style={{
+                                backgroundColor: '#F5F5FF',
+                                padding: 8,
+                                borderRadius: 16,
+                              }}
+                            />
+                            <View style={{
+                              flex: 1,
+                              backgroundColor: '#F5F5FF',
+                              padding: 16,
+                              borderRadius: 12,
+                              borderTopLeftRadius: 4,
+                            }}>
+                              <Text style={{
+                                fontSize: 16,
+                                color: '#000000',
+                                lineHeight: 24,
+                              }}>
+                                {item.response}
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  </ScrollView>
+                )}
+                
+                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                  <View style={{ position: 'relative' }}>
+                    <TextInput
+                      ref={questionInputRef}
+                      value={question}
+                      onChangeText={handleQuestionChange}
+                      placeholder={questionCount >= maxQuestions ? "Daily limit reached. Try again tomorrow." : "Type your football question here..."}
+                      maxLength={60}
+                      multiline
+                      numberOfLines={2}
+                      style={{
+                        borderWidth: 1,
+                        borderColor: '#E5E5E5',
+                        borderRadius: 12,
+                        padding: 16,
+                        fontSize: 16,
+                        textAlignVertical: 'top',
+                        minHeight: 80,
+                        backgroundColor: questionCount >= maxQuestions ? '#F5F5F5' : '#FFFFFF',
+                        color: questionCount >= maxQuestions ? '#999999' : '#000000',
+                      }}
+                      editable={questionCount < maxQuestions}
+                      onFocus={handleQuestionInputFocus}
+                    />
+                    {questionCount < maxQuestions && (
+                      <Text style={{ 
+                        position: 'absolute',
+                        bottom: 4,
+                        right: 8,
+                        fontSize: 12,
+                        color: question.length >= 50 ? '#FF3B30' : '#666666',
+                      }}>
+                        {question.length}/60
+                      </Text>
+                    )}
+                  </View>
+                </TouchableWithoutFeedback>
+                
+                <Pressable
+                  onPress={askAiQuestion}
+                  disabled={!question.trim() || questionCount >= maxQuestions || isAiLoading}
+                  style={({ pressed }) => ({
+                    backgroundColor: !question.trim() || questionCount >= maxQuestions ? '#CCCCCC' : pressed ? '#3A2AEE' : '#4A3AFF',
+                    paddingVertical: 12,
+                    borderRadius: 12,
+                    alignItems: 'center',
+                    opacity: questionCount >= maxQuestions ? 0.6 : pressed ? 0.9 : 1,
+                  })}
+                >
+                  <Text style={{
+                    fontSize: 16,
+                    fontWeight: '600',
+                    color: '#FFFFFF',
+                  }}>
+                    {isAiLoading ? 'Thinking...' : questionCount >= maxQuestions ? 'Limit Reached' : 'Get Answer'}
+                  </Text>
+                </Pressable>
+
+                {isAiLoading && (
+                  <View style={{ 
+                    marginTop: 16, 
+                    alignItems: 'center', 
+                    justifyContent: 'center'
+                  }}>
+                    <ActivityIndicator size="large" color="#4A3AFF" />
+                    <Text style={{ marginTop: 8, color: '#666666' }}>
+                      BallerAI is thinking...
+                    </Text>
+                  </View>
+                )}
+
+                {/* Show limit reached message */}
+                {questionCount >= maxQuestions && (
+                  <View style={{
+                    padding: 16,
+                    backgroundColor: '#FFF5F5',
+                    borderRadius: 12,
+                    marginTop: 8,
+                  }}>
+                    <Text style={{ color: '#FF3B30', textAlign: 'center' }}>
+                      You've reached your daily limit of {maxQuestions} questions.
+                      Come back tomorrow for more!
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Day Details - still preserving this functionality for when a date is selected */}
+            {selectedDate && (
+              <View style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: 24,
+                padding: 24,
+                gap: 16,
+                borderWidth: 1,
+                borderColor: '#000000',
+              }}>
+                <View style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}>
+                  <Text style={{
+                    fontSize: 18,
+                    fontWeight: '600',
+                    color: '#000000',
+                  }}>
+                    {format(selectedDate, 'EEEE, MMMM d')}
+                  </Text>
+                  <Pressable
+                    onPress={() => setSelectedDate(null)}
+                    style={({ pressed }) => ({
+                      opacity: pressed ? 0.7 : 1,
+                    })}
+                  >
+                    <Text style={{
+                      fontSize: 16,
+                      color: '#000000',
+                    }}>
+                      Close
+                    </Text>
+                  </Pressable>
+                </View>
+
+                {/* Scores Grid */}
+                <View style={{
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  gap: 12,
+                }}>
+                  {/* Nutrition Score in the day details - Now shows the SELECTED DAY's adherence */}
+                  <View style={{
+                    flex: 1,
+                    minWidth: '45%',
+                    backgroundColor: '#FFF5EB',
+                    padding: 16,
+                    borderRadius: 16,
+                    gap: 8,
+                  }}>
+                    <Text style={{ fontSize: 14, color: '#666666' }}>Nutrition Adherence</Text>
+                    <Text style={{ 
+                      fontSize: 24, 
+                      fontWeight: '600', 
+                      color: '#FF9500' 
+                    }}>
+                      {selectedDayAdherence}%
+                    </Text>
+                  </View>
+
+                  {/* Recovery Score */}
+                  <View style={{
+                    flex: 1,
+                    minWidth: '45%',
+                    backgroundColor: '#F5F5FF',
+                    padding: 16,
+                    borderRadius: 16,
+                    gap: 8,
+                  }}>
+                    <Text style={{ fontSize: 14, color: '#666666' }}>Recovery Score</Text>
+                    <Text style={{ fontSize: 24, fontWeight: '600', color: '#4064F6' }}>90%</Text>
+                  </View>
+
+                  {/* Readiness Score */}
+                  <View style={{
+                    flex: 1,
+                    minWidth: '45%',
+                    backgroundColor: '#F5F5FF',
+                    padding: 16,
+                    borderRadius: 16,
+                    gap: 8,
+                  }}>
+                    <Text style={{ fontSize: 14, color: '#666666' }}>Readiness Score</Text>
+                    <Text style={{ fontSize: 24, fontWeight: '600', color: '#4A72B2' }}>{readinessScore}%</Text>
+                  </View>
+
+                  {/* Training Status */}
+                  <View style={{
+                    flex: 1,
+                    minWidth: '45%',
+                    backgroundColor: '#F5F5FF',
+                    padding: 16,
+                    borderRadius: 16,
+                    gap: 8,
+                  }}>
+                    <Text style={{ fontSize: 14, color: '#666666' }}>Training Status</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Ionicons 
+                        name={selectedDate > new Date() ? 'time-outline' : 'checkmark-circle'} 
+                        size={24} 
+                        color={selectedDate > new Date() ? '#666666' : '#99E86C'} 
+                      />
+                      <Text style={{ 
+                        fontSize: 16, 
+                        color: selectedDate > new Date() ? '#666666' : '#000000',
+                      }}>
+                        {selectedDate > new Date() ? 'Upcoming' : 'Completed'}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            )}
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       {/* Info Modal */}
       <Modal

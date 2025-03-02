@@ -281,6 +281,10 @@ The plan MUST:
       // Save the plan to Firebase with the current selected date
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
       
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+      
       await setDoc(doc(db, 'users', user.uid, 'recoveryPlans', dateStr), {
         plan: planText,
         createdAt: Timestamp.now(),
@@ -358,7 +362,12 @@ The plan MUST:
         entering={FadeIn.duration(1000)}
         style={styles.container}
       >
-        <ScrollView style={styles.scrollView}>
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={{
+            paddingBottom: 90, // Add extra padding at the bottom to prevent content from being hidden behind the navigation bar
+          }}
+        >
           <View style={styles.contentContainer}>
             {/* Weekly Overview */}
             <WeeklyOverview 

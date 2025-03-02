@@ -1845,7 +1845,12 @@ export default function NutritionScreen() {
         </Text>
       </View>
 
-      <ScrollView style={styles.container}>
+      <ScrollView 
+        style={styles.container}
+        contentContainerStyle={{
+          paddingBottom: 90, // Add extra padding at the bottom to prevent content from being hidden behind the navigation bar
+        }}
+      >
         {/* Weekly Overview */}
         <WeeklyOverview 
           selectedDate={selectedDate}

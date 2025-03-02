@@ -43,17 +43,20 @@ interface CustomButtonProps {
   onPress: () => void;
   buttonStyle?: any;
   icon?: React.ReactNode;
+  disabled?: boolean;
 }
 
 const CustomButton: React.FC<CustomButtonProps> = ({ 
   title, 
   onPress, 
   buttonStyle, 
-  icon 
+  icon,
+  disabled 
 }) => (
   <Pressable 
-    style={[styles.button, buttonStyle]} 
+    style={[styles.button, buttonStyle, disabled && { opacity: 0.5 }]} 
     onPress={onPress}
+    disabled={disabled}
   >
     {icon && icon}
     <Text style={styles.buttonText}>{title}</Text>
@@ -843,6 +846,7 @@ export default function ProfileScreen() {
                 setPassword('');
               }}
               buttonStyle={styles.cancelButton}
+              disabled={!password.trim()}
             />
             <CustomButton
               title="Confirm"
@@ -1013,7 +1017,7 @@ export default function ProfileScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <ScrollView>
+        <ScrollView contentContainerStyle={{ paddingBottom: 90 }}>
           {/* Profile Picture Section */}
           <View style={styles.profileSection}>
             <Pressable
@@ -1221,24 +1225,25 @@ export default function ProfileScreen() {
               </View>
             )}
           </View>
+          
+          {/* Button Container - Now inside the ScrollView after privacy section */}
+          <View style={styles.buttonContainer}>
+            <CustomButton
+              title="Log Out"
+              onPress={handleLogout}
+              buttonStyle={styles.logoutButton}
+            />
+            <CustomButton
+              title="Delete Account"
+              onPress={handleDeleteAccount}
+              buttonStyle={styles.deleteButton}
+            />
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
       {renderEditModal()}
       {renderReauthModal()}
-
-      <View style={styles.buttonContainer}>
-        <CustomButton
-          title="Log Out"
-          onPress={handleLogout}
-          buttonStyle={styles.logoutButton}
-        />
-        <CustomButton
-          title="Delete Account"
-          onPress={handleDeleteAccount}
-          buttonStyle={styles.deleteButton}
-        />
-      </View>
     </SafeAreaView>
   );
 }
