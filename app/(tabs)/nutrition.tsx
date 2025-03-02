@@ -1262,6 +1262,7 @@ export default function NutritionScreen() {
   } = useNutritionDate();
   const [weeklyData, setWeeklyData] = useState<DailyMacros[]>([]);
   const [isLoadingWeek, setIsLoadingWeek] = useState(true);
+  const [isUpdatingFromLoad, setIsUpdatingFromLoad] = useState(false);
 
   // Listen for tab navigation attempting to leave nutrition tab
   // If isLeavingNutrition is true, reset to today's date
@@ -1300,6 +1301,7 @@ export default function NutritionScreen() {
     if (!user) return;
     try {
       setIsLoading(true);
+      setIsUpdatingFromLoad(true);
       const dateString = formatDateId(selectedDate);
       
       // Get the goals (these stay constant)
@@ -1398,6 +1400,12 @@ export default function NutritionScreen() {
             fats: { current: dailyMacrosDoc.data().fats, goal: goals.fats }
           });
         }
+        
+        // Calculate and save adherence score directly instead of using setTimeout
+        const adherenceScore = calculateTodayAdherence();
+        console.log(`Calculated adherence score for ${dateString}: ${adherenceScore}%`);
+        await saveAdherenceScoreToFirebase(adherenceScore);
+        
       } else {
         // If no meals, set all current values to 0
         updateMacros({
@@ -1406,6 +1414,9 @@ export default function NutritionScreen() {
           carbs: { current: 0, goal: goals.carbs },
           fats: { current: 0, goal: goals.fats }
         });
+        
+        // Save 0% adherence score if no meals
+        await saveAdherenceScoreToFirebase(0);
       }
     } catch (error) {
       console.error('Error loading selected day data:', error);
@@ -1419,6 +1430,10 @@ export default function NutritionScreen() {
       });
     } finally {
       setIsLoading(false);
+      // Reset the flag after a delay to ensure state updates are complete
+      setTimeout(() => {
+        setIsUpdatingFromLoad(false);
+      }, 500);
     }
   };
 
@@ -1499,6 +1514,27 @@ export default function NutritionScreen() {
       throw error;
     }
   };
+
+  // Modify the useEffect to not run when isUpdatingFromLoad is true
+  useEffect(() => {
+    // Skip this effect if we're updating from loadSelectedDayData
+    if (isUpdatingFromLoad) {
+      console.log('Skipping adherence calculation because data is being loaded');
+      return;
+    }
+    
+    // Only update if user is logged in and macros exist
+    if (user && 
+        macros.calories.goal > 0 && 
+        (macros.calories.current > 0 || 
+         macros.protein.current > 0 || 
+         macros.carbs.current > 0 || 
+         macros.fats.current > 0)) {
+      const adherenceScore = calculateTodayAdherence();
+      console.log(`Macros updated - recalculating adherence score: ${adherenceScore}%`);
+      saveAdherenceScoreToFirebase(adherenceScore);
+    }
+  }, [macros, user, selectedDate, isUpdatingFromLoad]);
 
   // Update weekly data fetching
   useEffect(() => {
@@ -1732,6 +1768,26 @@ export default function NutritionScreen() {
     );
 
     return todayScore;
+  };
+
+  // Make saveAdherenceScoreToFirebase return a promise
+  const saveAdherenceScoreToFirebase = async (score: number) => {
+    if (!user) return;
+    
+    try {
+      const dateStr = formatDateId(selectedDate);
+      const adherenceRef = doc(db, 'users', user.uid, 'nutritionAdherence', dateStr);
+      
+      await setDoc(adherenceRef, {
+        adherenceScore: score,
+        date: dateStr,
+        timestamp: new Date().toISOString()
+      });
+      
+      console.log(`Adherence score (${score}%) saved to Firebase for ${dateStr}`);
+    } catch (error) {
+      console.error('Error saving adherence score to Firebase:', error);
+    }
   };
 
   return (

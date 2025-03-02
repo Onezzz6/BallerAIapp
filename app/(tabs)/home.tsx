@@ -9,7 +9,6 @@ import { doc, getDoc, onSnapshot, setDoc, updateDoc, addDoc, increment, serverTi
 import { db } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
 import { useNutrition } from '../context/NutritionContext';
-import WeeklyOverview from '../components/WeeklyOverview';
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import CalorieProgress from '../components/CalorieProgress';
 import { askOpenAI } from '../utils/openai';
@@ -1792,138 +1791,121 @@ export default function HomeScreen() {
             </View>
           )}
 
-          {/* Weekly Overview Section */}
-          <View style={{ gap: 16 }}>
-            <Text style={{
-              fontSize: 20,
-              fontWeight: '600',
-              color: '#000000',
+          {/* Day Details - still preserving this functionality for when a date is selected */}
+          {selectedDate && (
+            <View style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: 24,
+              padding: 24,
+              gap: 16,
+              borderWidth: 1,
+              borderColor: '#000000',
             }}>
-              Weekly Overview
-            </Text>
-
-            {/* Replace Calendar Days with WeeklyOverview */}
-            <WeeklyOverview 
-              selectedDate={selectedDate || new Date()}
-              onDateSelect={onDateSelect}
-            />
-
-            {/* Day Details - update to use selectedDate instead of selectedDay */}
-            {selectedDate && (
               <View style={{
-                backgroundColor: '#FFFFFF',
-                borderRadius: 24,
-                padding: 24,
-                gap: 16,
-                borderWidth: 1,
-                borderColor: '#000000',
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
               }}>
-                <View style={{
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
+                <Text style={{
+                  fontSize: 18,
+                  fontWeight: '600',
+                  color: '#000000',
                 }}>
+                  {format(selectedDate, 'EEEE, MMMM d')}
+                </Text>
+                <Pressable
+                  onPress={() => setSelectedDate(null)}
+                  style={({ pressed }) => ({
+                    opacity: pressed ? 0.7 : 1,
+                  })}
+                >
                   <Text style={{
-                    fontSize: 18,
-                    fontWeight: '600',
+                    fontSize: 16,
                     color: '#000000',
                   }}>
-                    {format(selectedDate, 'EEEE, MMMM d')}
+                    Close
                   </Text>
-                  <Pressable
-                    onPress={() => setSelectedDate(null)}
-                    style={({ pressed }) => ({
-                      opacity: pressed ? 0.7 : 1,
-                    })}
-                  >
-                    <Text style={{
-                      fontSize: 16,
-                      color: '#000000',
-                    }}>
-                      Close
-                    </Text>
-                  </Pressable>
+                </Pressable>
+              </View>
+
+              {/* Scores Grid */}
+              <View style={{
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                gap: 12,
+              }}>
+                {/* Nutrition Score in the day details - Now shows the SELECTED DAY's adherence */}
+                <View style={{
+                  flex: 1,
+                  minWidth: '45%',
+                  backgroundColor: '#FFF5EB',
+                  padding: 16,
+                  borderRadius: 16,
+                  gap: 8,
+                }}>
+                  <Text style={{ fontSize: 14, color: '#666666' }}>Nutrition Adherence</Text>
+                  <Text style={{ 
+                    fontSize: 24, 
+                    fontWeight: '600', 
+                    color: '#FF9500' 
+                  }}>
+                    {selectedDayAdherence}%
+                  </Text>
                 </View>
 
-                {/* Scores Grid */}
+                {/* Recovery Score */}
                 <View style={{
-                  flexDirection: 'row',
-                  flexWrap: 'wrap',
-                  gap: 12,
+                  flex: 1,
+                  minWidth: '45%',
+                  backgroundColor: '#F5F5FF',
+                  padding: 16,
+                  borderRadius: 16,
+                  gap: 8,
                 }}>
-                  {/* Nutrition Score in the day details - Now shows the SELECTED DAY's adherence */}
-                  <View style={{
-                    flex: 1,
-                    minWidth: '45%',
-                    backgroundColor: '#FFF5EB',
-                    padding: 16,
-                    borderRadius: 16,
-                    gap: 8,
-                  }}>
-                    <Text style={{ fontSize: 14, color: '#666666' }}>Nutrition Adherence</Text>
+                  <Text style={{ fontSize: 14, color: '#666666' }}>Recovery Score</Text>
+                  <Text style={{ fontSize: 24, fontWeight: '600', color: '#4064F6' }}>90%</Text>
+                </View>
+
+                {/* Readiness Score */}
+                <View style={{
+                  flex: 1,
+                  minWidth: '45%',
+                  backgroundColor: '#F5F5FF',
+                  padding: 16,
+                  borderRadius: 16,
+                  gap: 8,
+                }}>
+                  <Text style={{ fontSize: 14, color: '#666666' }}>Readiness Score</Text>
+                  <Text style={{ fontSize: 24, fontWeight: '600', color: '#4A72B2' }}>{readinessScore}%</Text>
+                </View>
+
+                {/* Training Status */}
+                <View style={{
+                  flex: 1,
+                  minWidth: '45%',
+                  backgroundColor: '#F5F5FF',
+                  padding: 16,
+                  borderRadius: 16,
+                  gap: 8,
+                }}>
+                  <Text style={{ fontSize: 14, color: '#666666' }}>Training Status</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Ionicons 
+                      name={selectedDate > new Date() ? 'time-outline' : 'checkmark-circle'} 
+                      size={24} 
+                      color={selectedDate > new Date() ? '#666666' : '#99E86C'} 
+                    />
                     <Text style={{ 
-                      fontSize: 24, 
-                      fontWeight: '600', 
-                      color: '#FF9500' 
+                      fontSize: 16, 
+                      color: selectedDate > new Date() ? '#666666' : '#000000',
                     }}>
-                      {selectedDayAdherence}%
+                      {selectedDate > new Date() ? 'Upcoming' : 'Completed'}
                     </Text>
-                  </View>
-
-                  {/* Recovery Score */}
-                  <View style={{
-                    flex: 1,
-                    minWidth: '45%',
-                    backgroundColor: '#F5F5FF',
-                    padding: 16,
-                    borderRadius: 16,
-                    gap: 8,
-                  }}>
-                    <Text style={{ fontSize: 14, color: '#666666' }}>Recovery Score</Text>
-                    <Text style={{ fontSize: 24, fontWeight: '600', color: '#4064F6' }}>90%</Text>
-                  </View>
-
-                  {/* Readiness Score */}
-                  <View style={{
-                    flex: 1,
-                    minWidth: '45%',
-                    backgroundColor: '#F5F5FF',
-                    padding: 16,
-                    borderRadius: 16,
-                    gap: 8,
-                  }}>
-                    <Text style={{ fontSize: 14, color: '#666666' }}>Readiness Score</Text>
-                    <Text style={{ fontSize: 24, fontWeight: '600', color: '#4A72B2' }}>{readinessScore}%</Text>
-                  </View>
-
-                  {/* Training Status */}
-                  <View style={{
-                    flex: 1,
-                    minWidth: '45%',
-                    backgroundColor: '#F5F5FF',
-                    padding: 16,
-                    borderRadius: 16,
-                    gap: 8,
-                  }}>
-                    <Text style={{ fontSize: 14, color: '#666666' }}>Training Status</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <Ionicons 
-                        name={selectedDate > new Date() ? 'time-outline' : 'checkmark-circle'} 
-                        size={24} 
-                        color={selectedDate > new Date() ? '#666666' : '#99E86C'} 
-                      />
-                      <Text style={{ 
-                        fontSize: 16, 
-                        color: selectedDate > new Date() ? '#666666' : '#000000',
-                      }}>
-                        {selectedDate > new Date() ? 'Upcoming' : 'Completed'}
-                      </Text>
-                    </View>
                   </View>
                 </View>
               </View>
-            )}
-          </View>
+            </View>
+          )}
         </View>
       </ScrollView>
 
