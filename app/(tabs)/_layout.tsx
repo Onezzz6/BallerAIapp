@@ -2,7 +2,7 @@ import { Tabs, useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect, createContext, useContext } from 'react';
 import { format } from 'date-fns';
-import { Pressable } from 'react-native';
+import { Pressable, Platform, Dimensions } from 'react-native';
 
 // Create a context to track and manage the selected date in the nutrition tab
 export const NutritionDateContext = createContext({
@@ -17,6 +17,13 @@ export const NutritionDateContext = createContext({
 export function useNutritionDate() {
   return useContext(NutritionDateContext);
 }
+
+// Define a custom height for the bottom tab bar to match Instagram
+const TAB_BAR_HEIGHT = 50; // Instagram-style height
+
+// We need to account for the home indicator on newer iPhones
+const BOTTOM_SPACE = Platform.OS === 'ios' && 
+                     (Dimensions.get('window').height > 800) ? 34 : 0;
 
 export default function TabLayout() {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -84,102 +91,106 @@ export default function TabLayout() {
     }}>
       <Tabs
         screenOptions={{
-          tabBarShowLabel: false,
+          tabBarActiveTintColor: '#000000',
+          tabBarInactiveTintColor: '#262626',
+          // Instagram-style tab bar
           tabBarStyle: {
+            height: TAB_BAR_HEIGHT,
             backgroundColor: '#FFFFFF',
-            borderTopWidth: 1,
-            borderTopColor: '#E5E5E5',
-            height: 50,
-            paddingBottom: 5,
+            borderTopWidth: 0.5,
+            borderTopColor: '#DBDBDB',
+            paddingVertical: 0,
+            paddingHorizontal: 0,
+            position: 'absolute',
+            bottom: BOTTOM_SPACE, // Position higher to leave space for home indicator
+            left: 0,
+            right: 0,
+            elevation: 0,
+            shadowOpacity: 0,
           },
+          // Make labels tiny or invisible like Instagram
+          tabBarLabelStyle: {
+            display: 'none', // Instagram style has no visible labels
+          },
+          tabBarIconStyle: {
+            marginTop: 0,
+          },
+          // Remove header to use our custom header in each screen
           headerShown: false,
         }}
       >
         <Tabs.Screen
           name="home"
+          listeners={{
+            tabPress: (e) => {
+              e.preventDefault();
+              handleTabPress('home');
+            },
+          }}
           options={{
-            tabBarIcon: ({ focused }) => (
-              <Ionicons
-                name={focused ? 'home' : 'home-outline'}
-                size={28}
-                color={focused ? '#99E86C' : '#000000'}
-              />
-            ),
-            tabBarButton: (props) => (
-              <Pressable
-                {...props}
-                onPress={() => handleTabPress('home')}
-              />
+            title: 'Home',
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons name={focused ? 'home' : 'home-outline'} size={30} color={color} />
             ),
           }}
         />
-
         <Tabs.Screen
           name="recovery"
+          listeners={{
+            tabPress: (e) => {
+              e.preventDefault();
+              handleTabPress('recovery');
+            },
+          }}
           options={{
-            tabBarIcon: ({ focused }) => (
-              <Ionicons
-                name={focused ? 'pulse' : 'pulse-outline'}
-                size={28}
-                color={focused ? '#99E86C' : '#000000'}
-              />
-            ),
-            tabBarButton: (props) => (
-              <Pressable
-                {...props}
-                onPress={() => handleTabPress('recovery')}
-              />
+            title: 'Recovery',
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons name={focused ? 'fitness' : 'fitness-outline'} size={30} color={color} />
             ),
           }}
         />
-
         <Tabs.Screen
           name="nutrition"
+          listeners={{
+            tabPress: (e) => {
+              e.preventDefault();
+              handleTabPress('nutrition');
+            },
+          }}
           options={{
-            tabBarIcon: ({ focused }) => (
-              <Ionicons
-                name={focused ? 'restaurant' : 'restaurant-outline'}
-                size={28}
-                color={focused ? '#99E86C' : '#000000'}
-              />
+            title: 'Nutrition',
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons name={focused ? 'nutrition' : 'nutrition-outline'} size={30} color={color} />
             ),
           }}
         />
-
         <Tabs.Screen
           name="training"
+          listeners={{
+            tabPress: (e) => {
+              e.preventDefault();
+              handleTabPress('training');
+            },
+          }}
           options={{
-            tabBarIcon: ({ focused }) => (
-              <Ionicons
-                name={focused ? 'barbell' : 'barbell-outline'}
-                size={28}
-                color={focused ? '#99E86C' : '#000000'}
-              />
-            ),
-            tabBarButton: (props) => (
-              <Pressable
-                {...props}
-                onPress={() => handleTabPress('training')}
-              />
+            title: 'Training',
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons name={focused ? 'football' : 'football-outline'} size={30} color={color} />
             ),
           }}
         />
-
         <Tabs.Screen
           name="profile"
+          listeners={{
+            tabPress: (e) => {
+              e.preventDefault();
+              handleTabPress('profile');
+            },
+          }}
           options={{
-            tabBarIcon: ({ focused }) => (
-              <Ionicons
-                name={focused ? 'person' : 'person-outline'}
-                size={28}
-                color={focused ? '#99E86C' : '#000000'}
-              />
-            ),
-            tabBarButton: (props) => (
-              <Pressable
-                {...props}
-                onPress={() => handleTabPress('profile')}
-              />
+            title: 'Profile',
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons name={focused ? 'person' : 'person-outline'} size={30} color={color} />
             ),
           }}
         />

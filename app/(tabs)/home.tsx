@@ -1166,30 +1166,42 @@ export default function HomeScreen() {
     }}>
       {/* Header */}
       <View style={{
-        paddingHorizontal: 24,
-        paddingTop: 24,
-        paddingBottom: 16,
-        backgroundColor: '#FFFFFF',
+        paddingTop: 4,
+        paddingHorizontal: 18,
+        backgroundColor: '#ffffff',
       }}>
-        {/* BallerAI Logo and Text */}
-        <View style={{ 
-          flexDirection: 'row', 
-          alignItems: 'center', 
-          gap: 8,
-          marginBottom: 16, // Add space between logo and title
+        {/* Header with Logo */}
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          height: 50, // Same height as OnboardingHeader
         }}>
-          <Image 
-            source={require('../../assets/images/BallerAILogo.png')}
-            style={{ width: 32, height: 32 }}
-            resizeMode="contain"
-          />
-          <Text style={{ 
-            fontSize: 24, 
-            fontWeight: '600', 
-            color: '#000000' 
+          {/* Empty View for spacing (instead of BackButton) */}
+          <View style={{ width: 32 }} />
+          
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            marginLeft: 'auto',
           }}>
-            BallerAI
-          </Text>
+            <Image 
+              source={require('../../assets/images/BallerAILogo.png')}
+              style={{
+                width: 32,
+                height: 32,
+              }}
+              resizeMode="contain"
+            />
+            <Text style={{
+              fontSize: 28,
+              fontWeight: '600',
+              color: '#000000',
+            }}>
+              BallerAI
+            </Text>
+          </View>
         </View>
 
         {/* Title */}
@@ -1198,6 +1210,7 @@ export default function HomeScreen() {
           fontWeight: '700',
           color: '#000000',
           textAlign: 'center',
+          marginTop: 24,
           marginBottom: 8,
         }}>
           Home
@@ -1212,7 +1225,9 @@ export default function HomeScreen() {
         contentContainerStyle={{
           padding: 8,
           gap: 16,
+          paddingBottom: 20, // Add padding at the bottom to prevent content from being hidden behind the tab bar
         }}
+        showsVerticalScrollIndicator={false} // Hide scroll indicator for cleaner look
       >
         <View style={{ padding: 16, gap: 24 }}>
           {/* Overview Section */}

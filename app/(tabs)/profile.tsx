@@ -956,26 +956,59 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.headerContainer}>
-        {/* BallerAI Logo and Text */}
-        <View style={styles.logoContainer}>
-          <Image 
-            source={require('../../assets/images/BallerAILogo.png')}
-            style={styles.logoImage}
-            resizeMode="contain"
-          />
-          <Text style={styles.logoText}>
-            BallerAI
-          </Text>
+      {/* Header - Fixed at top when scrolling */}
+      <View style={{
+        paddingTop: 4,
+        paddingHorizontal: 18,
+        backgroundColor: '#ffffff',
+      }}>
+        {/* Header with Logo */}
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          height: 50, // Same height as OnboardingHeader
+        }}>
+          {/* Empty View for spacing (instead of BackButton) */}
+          <View style={{ width: 32 }} />
+          
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            marginLeft: 'auto',
+          }}>
+            <Image 
+              source={require('../../assets/images/BallerAILogo.png')}
+              style={{
+                width: 32,
+                height: 32,
+              }}
+              resizeMode="contain"
+            />
+            <Text style={{
+              fontSize: 28,
+              fontWeight: '600',
+              color: '#000000',
+            }}>
+              BallerAI
+            </Text>
+          </View>
         </View>
 
         {/* Title */}
-        <Text style={styles.headerTitle}>
+        <Text style={{
+          fontSize: 32,
+          fontWeight: '700',
+          color: '#000000',
+          textAlign: 'center',
+          marginTop: 24,
+          marginBottom: 8,
+        }}>
           Profile
         </Text>
       </View>
-
+      
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}

@@ -301,52 +301,65 @@ The plan MUST:
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header - Moved outside ScrollView to stay fixed when scrolling */}
+      <View style={{
+        paddingTop: 4,
+        paddingHorizontal: 18,
+        backgroundColor: '#ffffff',
+      }}>
+        {/* Header with Logo */}
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          height: 50, // Same height as OnboardingHeader
+        }}>
+          {/* Empty View for spacing (instead of BackButton) */}
+          <View style={{ width: 32 }} />
+          
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            marginLeft: 'auto',
+          }}>
+            <Image 
+              source={require('../../assets/images/BallerAILogo.png')}
+              style={{
+                width: 32,
+                height: 32,
+              }}
+              resizeMode="contain"
+            />
+            <Text style={{
+              fontSize: 28,
+              fontWeight: '600',
+              color: '#000000',
+            }}>
+              BallerAI
+            </Text>
+          </View>
+        </View>
+
+        {/* Title */}
+        <Text style={{
+          fontSize: 32,
+          fontWeight: '700',
+          color: '#000000',
+          textAlign: 'center',
+          marginTop: 24,
+          marginBottom: 8,
+        }}>
+          Recovery
+        </Text>
+      </View>
+      
       <Animated.View 
         entering={FadeIn.duration(1000)}
         style={styles.container}
       >
         <ScrollView style={styles.scrollView}>
           <View style={styles.contentContainer}>
-            {/* Header */}
-            <View style={{
-              paddingHorizontal: 24,
-              paddingTop: 24,
-              paddingBottom: 16,
-              backgroundColor: '#FFFFFF',
-            }}>
-              {/* BallerAI Logo and Text */}
-              <View style={{ 
-                flexDirection: 'row', 
-                alignItems: 'center', 
-                gap: 8,
-                marginBottom: 16,
-              }}>
-                <Image 
-                  source={require('../../assets/images/BallerAILogo.png')}
-                  style={{ width: 32, height: 32 }}
-                  resizeMode="contain"
-                />
-                <Text style={{ 
-                  fontSize: 24, 
-                  fontWeight: '600', 
-                  color: '#000000' 
-                }}>
-                  BallerAI
-                </Text>
-              </View>
-
-              {/* Centered Recovery Title */}
-              <Text style={{
-                fontSize: 32,
-                fontWeight: '700',
-                color: '#000000',
-                textAlign: 'center',
-                marginBottom: 8,
-              }}>
-                Recovery
-              </Text>
-            </View>
-
             {/* Weekly Overview */}
             <WeeklyOverview 
               selectedDate={selectedDate}

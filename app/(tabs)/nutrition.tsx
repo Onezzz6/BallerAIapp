@@ -1792,52 +1792,66 @@ export default function NutritionScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header - Fixed at top when scrolling */}
       <View style={{
-        paddingHorizontal: 24,
-        paddingTop: 24,
-        paddingBottom: 16,
-        backgroundColor: '#FFFFFF',
+        paddingTop: 4,
+        paddingHorizontal: 18,
+        backgroundColor: '#ffffff',
       }}>
-        {/* BallerAI Logo and Text */}
-        <View style={{ 
-          flexDirection: 'row', 
-          alignItems: 'center', 
-          gap: 8,
-          marginBottom: 16,
+        {/* Header with Logo */}
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          height: 50, // Same height as OnboardingHeader
         }}>
-          <Image 
-            source={require('../../assets/images/BallerAILogo.png')}
-            style={{ width: 32, height: 32 }}
-            resizeMode="contain"
-          />
-          <Text style={{ 
-            fontSize: 24, 
-            fontWeight: '600', 
-            color: '#000000' 
+          {/* Empty View for spacing (instead of BackButton) */}
+          <View style={{ width: 32 }} />
+          
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            marginLeft: 'auto',
           }}>
-            BallerAI
-          </Text>
+            <Image 
+              source={require('../../assets/images/BallerAILogo.png')}
+              style={{
+                width: 32,
+                height: 32,
+              }}
+              resizeMode="contain"
+            />
+            <Text style={{
+              fontSize: 28,
+              fontWeight: '600',
+              color: '#000000',
+            }}>
+              BallerAI
+            </Text>
+          </View>
         </View>
 
-        {/* Centered Nutrition Title */}
+        {/* Title */}
         <Text style={{
           fontSize: 32,
           fontWeight: '700',
           color: '#000000',
           textAlign: 'center',
+          marginTop: 24,
           marginBottom: 8,
         }}>
           Nutrition
         </Text>
       </View>
 
-      {/* Weekly Overview */}
-      <WeeklyOverview 
-        selectedDate={selectedDate}
-        onDateSelect={setSelectedDate}
-      />
+      <ScrollView style={styles.container}>
+        {/* Weekly Overview */}
+        <WeeklyOverview 
+          selectedDate={selectedDate}
+          onDateSelect={setSelectedDate}
+        />
 
-      <ScrollView>
         <View style={styles.calorieCard}>
           <CalorieProgress 
             eaten={macros.calories.current}

@@ -1,4 +1,4 @@
-import { View, Text, SafeAreaView, StyleSheet, TextInput, Pressable, ScrollView, Alert } from 'react-native';
+import { View, Text, SafeAreaView, StyleSheet, TextInput, Pressable, ScrollView, Alert, Image } from 'react-native';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
@@ -340,14 +340,63 @@ export default function TrainingScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header - Fixed at top when scrolling */}
+      <View style={{
+        paddingTop: 4,
+        paddingHorizontal: 18,
+        backgroundColor: '#ffffff',
+      }}>
+        {/* Header with Logo */}
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          height: 50, // Same height as OnboardingHeader
+        }}>
+          {/* Empty View for spacing (instead of BackButton) */}
+          <View style={{ width: 32 }} />
+          
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            marginLeft: 'auto',
+          }}>
+            <Image 
+              source={require('../../assets/images/BallerAILogo.png')}
+              style={{
+                width: 32,
+                height: 32,
+              }}
+              resizeMode="contain"
+            />
+            <Text style={{
+              fontSize: 28,
+              fontWeight: '600',
+              color: '#000000',
+            }}>
+              BallerAI
+            </Text>
+          </View>
+        </View>
+
+        {/* Title */}
+        <Text style={{
+          fontSize: 32,
+          fontWeight: '700',
+          color: '#000000',
+          textAlign: 'center',
+          marginTop: 24,
+          marginBottom: 8,
+        }}>
+          Training
+        </Text>
+      </View>
+
       <Animated.View 
         entering={FadeIn.duration(1000)}
         style={styles.container}
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>Training</Text>
-        </View>
-
         <ScrollView style={styles.scrollView}>
           <View style={styles.content}>
             <Text style={styles.sectionTitle}>Focus Area</Text>
