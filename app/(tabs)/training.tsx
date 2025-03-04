@@ -1,12 +1,14 @@
 import { View, Text, SafeAreaView, StyleSheet, TextInput, Pressable, ScrollView, Alert, Image } from 'react-native';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 import { useTraining } from '../context/TrainingContext';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { OPENAI_API_KEY, DEEPSEEK_API_KEY } from '@env';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
+import { startOfWeek, endOfWeek, differenceInMilliseconds, format } from 'date-fns';
 
 type FocusArea = 'technique' | 'strength' | 'endurance' | 'speed' | 'overall';
 type GymAccess = 'yes' | 'no';
@@ -54,6 +56,8 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
   },
   generateButtonDisabled: {
     opacity: 0.5,
@@ -87,47 +91,49 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: '600',
     color: '#000000',
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#666666',
     marginBottom: 24,
   },
   optionsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 24,
+    gap: 12,
+    marginBottom: 32,
   },
   option: {
     flex: 1,
     minWidth: '45%',
     padding: 16,
-    borderRadius: 12,
-    borderWidth: 2,
+    borderRadius: 100,
+    borderWidth: 1,
     borderColor: '#E5E5E5',
     alignItems: 'center',
+    backgroundColor: '#FFFFFF',
   },
   selectedOption: {
-    backgroundColor: '#000022',
-    borderColor: '#000022',
+    backgroundColor: '#99E86C',
+    borderColor: '#99E86C',
   },
   optionText: {
-    fontSize: 14,
-    color: '#000000',
+    fontSize: 16,
+    color: '#666666',
   },
   selectedOptionText: {
-    color: '#FFFFFF',
+    color: '#000000',
+    fontWeight: '500',
   },
   dayContainer: {
     backgroundColor: '#F8F8F8',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   dayTitle: {
     fontSize: 16,
@@ -142,11 +148,12 @@ const styles = StyleSheet.create({
   },
   dayOption: {
     flex: 1,
-    padding: 8,
+    padding: 12,
     borderRadius: 100,
     borderWidth: 1,
     borderColor: '#E5E5E5',
     alignItems: 'center',
+    backgroundColor: '#FFFFFF',
   },
   selectedDayOption: {
     backgroundColor: '#E5E5E5',
@@ -157,8 +164,8 @@ const styles = StyleSheet.create({
     borderColor: '#FF9500',
   },
   selectedTrainingOption: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    backgroundColor: '#3F63F6',
+    borderColor: '#3F63F6',
   },
   dayOptionText: {
     fontSize: 14,
@@ -169,23 +176,37 @@ const styles = StyleSheet.create({
   },
   timeInput: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 100,
+    padding: 16,
     fontSize: 16,
     borderWidth: 1,
     borderColor: '#E5E5E5',
+    paddingLeft: 40,
   },
   subtitleInline: {
     fontSize: 14,
     color: '#666666',
     fontWeight: 'normal',
   },
+  clockIcon: {
+    position: 'absolute',
+    left: 16,
+    top: '50%',
+    transform: [{ translateY: -12 }],
+    zIndex: 1,
+  },
+  timerText: {
+    textAlign: 'center',
+    fontSize: 14,
+    color: '#666666',
+    marginTop: 8,
+  },
 });
 
 export default function TrainingScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const { addPlan, plans } = useTraining();
+  const { addPlan, plans, clearPlans } = useTraining();
   const [selectedFocus, setSelectedFocus] = useState<FocusArea | null>(null);
   const [gymAccess, setGymAccess] = useState<GymAccess | null>(null);
   const [schedule, setSchedule] = useState<Schedule>({
@@ -198,13 +219,68 @@ export default function TrainingScreen() {
     sunday: { type: 'off', duration: '' },
   });
   const [loading, setLoading] = useState(false);
+  const [timeUntilNextPlan, setTimeUntilNextPlan] = useState<string>('');
+  const [canGeneratePlan, setCanGeneratePlan] = useState(true);
 
   const focusOptions: FocusArea[] = ['technique', 'strength', 'endurance', 'speed', 'overall'];
   const gymOptions: GymAccess[] = ['yes', 'no'];
 
+  useEffect(() => {
+    const checkPlanGeneration = async () => {
+      if (!user) return;
+
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        const data = userDoc.data();
+        const lastPlanGenerated = data?.lastPlanGenerated?.toDate();
+
+        if (lastPlanGenerated) {
+          const currentWeekStart = startOfWeek(new Date(), { weekStartsOn: 1 }); // Monday
+          const lastPlanWeekStart = startOfWeek(lastPlanGenerated, { weekStartsOn: 1 });
+
+          if (format(currentWeekStart, 'yyyy-MM-dd') === format(lastPlanWeekStart, 'yyyy-MM-dd')) {
+            setCanGeneratePlan(false);
+          } else {
+            setCanGeneratePlan(true);
+            clearPlans();
+          }
+        }
+      } catch (error) {
+        console.error('Error checking plan generation:', error);
+      }
+    };
+
+    checkPlanGeneration();
+  }, [user]);
+
+  useEffect(() => {
+    const updateTimer = () => {
+      const now = new Date();
+      const sunday = endOfWeek(now, { weekStartsOn: 1 }); // Set to end of week (Sunday)
+      const timeLeft = differenceInMilliseconds(sunday, now);
+
+      if (timeLeft <= 0) {
+        setCanGeneratePlan(true);
+        setTimeUntilNextPlan('');
+        return;
+      }
+
+      const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+
+      setTimeUntilNextPlan(`${days}d ${hours}h ${minutes}m`);
+    };
+
+    const timer = setInterval(updateTimer, 60000); // Update every minute
+    updateTimer(); // Initial update
+
+    return () => clearInterval(timer);
+  }, []);
+
   const handleGeneratePlan = async () => {
-    if (!user || !selectedFocus) {
-      Alert.alert('Please select a focus area before generating a plan');
+    if (!user || !selectedFocus || !canGeneratePlan) {
+      Alert.alert('Cannot generate plan', 'Please wait until next week to generate a new plan');
       return;
     }
     setLoading(true);
@@ -215,30 +291,85 @@ export default function TrainingScreen() {
 
       if (!userData) throw new Error('User data not found');
 
-      const prompt = `Create a personal training plan for a footballer with the following information:
-        Age: ${userData.age}
-        Current Level: ${userData.skillLevel}
-        Gender: ${userData.gender}
-        Goal: ${userData.footballGoal}
-        Height: ${userData.height}cm
-        Weight: ${userData.weight}kg
-        Injury History: ${userData.injuryHistory}
-        Position: ${userData.position}
-        
-        Important Note: The following team training schedule is provided ONLY to help you understand the player's overall training load each day. DO NOT include or modify any team training sessions in your plan - these are managed by the team's coach.
-        
-        Current weekly schedule:
-        ${Object.entries(schedule)
-          .map(([day, data]) => `${day}: ${data.type === 'off' ? 'rest day' : `has ${data.duration} minutes of team ${data.type}`}`)
-          .join('\n')}
-        
-        The plan should:
-        - Only include personal training sessions
-        - Focus on ${selectedFocus}
-        - Be designed for solo training
-        - ${gymAccess === 'yes' ? 'Include gym exercises' : 'Only use ball, pitch, cones and goal'}
-        - Consider recovery time around team commitments
-        - Adjust intensity based on team training load that day`;
+      const prompt = `You are BallerAI, an expert in creating personalized football training plans. Create a clear training plan following this format:
+
+MONDAY
+1. [Duration] - [Exercise Name]
+   Setup: Brief setup instructions
+   Exercise: What to do
+   Focus: 1 key point to remember
+
+Example of good format:
+1. 15 minutes - Cone Dribbling
+   Setup: Place 6 cones in a zigzag, 2 meters apart
+   Exercise: Dribble through cones and back, then repeat
+   Focus: Close control, use both feet, 
+
+2. 15 minutes - Shooting Practice
+   Setup: place a few cones on the edge of the box
+   Exercise: Take shots aiming for corners 
+   Focus: on precision rather then power
+3. 10 mins - first touch drills
+   Setup: find a wall to practice first touch on
+   Exercise: try keeping the ball in the air while passing back n forth with the wall try different variations
+   Focus: clean touches and repetition
+Player Profile:
+Age: ${userData.age}
+Current Level: ${userData.skillLevel}
+Gender: ${userData.gender}
+Goal: ${userData.footballGoal}
+Height: ${userData.height}cm
+Weight: ${userData.weight}kg
+Injury History: ${userData.injuryHistory}
+Position: ${userData.position}
+
+Weekly Team Schedule:
+${Object.entries(schedule)
+  .map(([day, data]) => `${day.charAt(0).toUpperCase() + day.slice(1)}: ${data.type === 'off' ? 'Rest Day' : `${data.duration} minutes of team ${data.type}`}`)
+  .join('\n')}
+
+Important Requirements:
+1. Focus Area: ${selectedFocus}
+2. Equipment Available: ${gymAccess === 'yes' ? 'Gym equipment available' : 'Only ball, pitch, cones and goal'}
+
+Exercise Format:
+1. Duration and name should be clear
+2. Setup should be specific (distances, equipment)
+3. Exercise should explain what to do
+4. Focus points should be short and clear (1 point max)
+5. For gym exercises, reps/sets
+
+Session Structure:
+1. Warm-up (10-15 minutes)
+   Setup: Clear space
+   Exercise: Light jog, stretches
+   Focus: Gradually increase intensity
+
+2. Main exercises (15-20 minutes each)
+   - Include 2-3 focused exercises
+   - Each with setup, exercise, focus points
+   - Rest periods between sets if needed
+
+3. Cool-down (5-10 minutes)
+   Setup: Clear space
+   Exercise: Light jog, stretches
+   Focus: Gradually decrease intensity
+
+Training Rules:
+1. Maximum 2 non-football sessions per week
+2. Reduce intensity 2 days before game
+3. Light session 1 day before game
+4. Rest day after game
+5. Account for team training load
+6. Include at least one full rest day
+
+Remember:
+- Keep instructions clear and practical
+- Focus points should be observable actions
+- If it's a gym day, only include gym exercises
+- Consider injury history in exercise selection
+- Maintain proper progression throughout the week
+- Don't include coaching advice or technical details`;
 
       const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
         method: 'POST',
@@ -266,41 +397,57 @@ export default function TrainingScreen() {
       const planText = data.choices[0].message.content;
       const dailyPlans: { [key: string]: string } = {};
       
+      console.log('DEBUG - API Response Plan Text:', planText);
+      
       const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+      
+      const cleanAndFormatContent = (content: string): string => {
+        // Remove markdown symbols and clean up the text
+        let cleanContent = content
+          .replace(/\*\*/g, '') // Remove bold markers
+          .replace(/---/g, '') // Remove horizontal rules
+          .replace(/^\s*-\s*/gm, '') // Remove list markers
+          .replace(/\n\s*\n/g, '\n') // Remove extra blank lines
+          .trim();
+
+        // Split into sections and format as numbered list
+        const sections = cleanContent.split(/\d+\.\s+/).filter(Boolean);
+        if (sections.length > 0) {
+          // If content is already in a numbered format, clean it up
+          return sections.map((section, index) => 
+            `${index + 1}. ${section.trim()}`
+          ).join('\n\n');
+        } else {
+          // If content is not numbered, split by main sections and number them
+          const lines = cleanContent.split('\n').filter(line => line.trim());
+          return lines.map((line, index) => 
+            `${index + 1}. ${line.trim()}`
+          ).join('\n\n');
+        }
+      };
+
       days.forEach(day => {
         const dayRegex = new RegExp(
-          `(?:####\\s*\\*\\*${day}(?:\\s*\\([^)]*\\))?\\*\\*|` +
-          `###\\s*\\*\\*${day}(?:\\s*\\([^)]*\\))?\\*\\*|` +
-          `\\*\\*${day}(?:\\s*\\([^)]*\\))?\\*\\*|` +
-          `${day}:)` +
-          `[\\s\\S]*?` +
-          `(?=(?:` +
-            `####\\s*\\*\\*(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)(?:\\s*\\([^)]*\\))?\\*\\*|` +
-            `###\\s*\\*\\*(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)(?:\\s*\\([^)]*\\))?\\*\\*|` +
-            `\\*\\*(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)(?:\\s*\\([^)]*\\))?\\*\\*|` +
-            `---\\s*\\n|` +
-            `$` +
-          `))`,
+          `${day.toUpperCase()}\\s*\\n([\\s\\S]*?)(?=(?:${days.join('|').toUpperCase()}|$))`,
           'i'
         );
         
         const match = planText.match(dayRegex);
-        if (match) {
-          dailyPlans[day] = match[0].trim();
+        
+        console.log(`DEBUG - Parsing ${day}:`, {
+          pattern: dayRegex.toString(),
+          matched: !!match,
+          content: match ? match[1] : null
+        });
+        
+        if (match && match[1]) {
+          dailyPlans[day] = cleanAndFormatContent(match[1].trim());
         } else {
-          const sections = planText.split(/(?:###|####)/);
-          for (const section of sections) {
-            if (section.toLowerCase().includes(day.toLowerCase())) {
-              dailyPlans[day] = section.trim();
-              break;
-            }
-          }
-          
-          if (!dailyPlans[day]) {
-            dailyPlans[day] = `No specific training for ${day}.`;
-          }
+          dailyPlans[day] = `No specific training for ${day}.`;
         }
       });
+
+      console.log('DEBUG - Final Daily Plans:', dailyPlans);
 
       const planNumber = plans.length + 1;
       await addPlan({
@@ -309,6 +456,11 @@ export default function TrainingScreen() {
         schedule: dailyPlans,
       });
 
+      await setDoc(doc(db, 'users', user.uid), {
+        lastPlanGenerated: new Date(),
+      }, { merge: true });
+
+      setCanGeneratePlan(false);
       router.push('/training-plans');
     } catch (error) {
       console.error('Error generating plan:', error);
@@ -486,13 +638,21 @@ export default function TrainingScreen() {
                 </View>
                 {(daySchedule.type === 'game' || daySchedule.type === 'training') && (
                   <View style={styles.timeInputContainer}>
-                    <TextInput
-                      style={styles.timeInput}
-                      placeholder={`Enter ${daySchedule.type} time`}
-                      value={daySchedule.duration}
-                      onChangeText={(text) => updateDuration(day, text)}
-                      keyboardType="numeric"
-                    />
+                    <View style={{ position: 'relative' }}>
+                      <Ionicons 
+                        name="time-outline" 
+                        size={20} 
+                        color="#666666" 
+                        style={styles.clockIcon}
+                      />
+                      <TextInput
+                        style={styles.timeInput}
+                        placeholder={`Enter ${daySchedule.type} time`}
+                        value={daySchedule.duration}
+                        onChangeText={(text) => updateDuration(day, text)}
+                        keyboardType="numeric"
+                      />
+                    </View>
                   </View>
                 )}
               </View>
@@ -500,14 +660,23 @@ export default function TrainingScreen() {
 
             <View style={styles.buttonContainer}>
               <Pressable
-                style={[styles.generateButton, loading && styles.generateButtonDisabled]}
+                style={[
+                  styles.generateButton,
+                  (!canGeneratePlan || loading) && styles.generateButtonDisabled
+                ]}
                 onPress={handleGeneratePlan}
-                disabled={loading}
+                disabled={!canGeneratePlan || loading}
               >
                 <Text style={styles.generateButtonText}>
                   {loading ? 'Generating Plan...' : 'Generate Training Plan 🚀'}
                 </Text>
               </Pressable>
+
+              {!canGeneratePlan && timeUntilNextPlan && (
+                <Text style={styles.timerText}>
+                  Next week's plan available in: {timeUntilNextPlan}
+                </Text>
+              )}
 
               <Pressable
                 style={[

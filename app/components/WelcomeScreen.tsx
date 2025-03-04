@@ -102,7 +102,7 @@ export default function WelcomeScreen() {
               title="Get Started" 
               onPress={handleGetStarted}
               buttonStyle={{
-                backgroundColor: '#007AFF',
+                backgroundColor: '#4064F6',
                 marginBottom: 32,
               }}
             />
@@ -122,7 +122,7 @@ export default function WelcomeScreen() {
               >
                 <Text style={{
                   fontSize: 16,
-                  color: '#007AFF',
+                  color: '#4064F6',
                   fontWeight: '600',
                 }}>
                   Sign In
@@ -170,7 +170,7 @@ export default function WelcomeScreen() {
               onPress={handleSignIn}
               disabled={isLoading}
               buttonStyle={{
-                backgroundColor: '#007AFF',
+                backgroundColor: '#4064F6',
                 marginBottom: 16,
                 opacity: isLoading ? 0.5 : 1,
               }}

@@ -266,7 +266,7 @@ export default function PaywallScreen() {
             router.replace('/(tabs)/home');
           }}
           buttonStyle={{
-            backgroundColor: '#007AFF',
+            backgroundColor: '#4064F6',
           }}
         />
       </Animated.View>

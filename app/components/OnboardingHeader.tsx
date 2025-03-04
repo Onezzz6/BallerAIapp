@@ -57,14 +57,14 @@ export default function OnboardingHeader({ currentStep, totalSteps }: Props) {
         width: '100%',
         height: 12,
         backgroundColor: '#E5E5E5',
-        borderRadius: 2,
+        borderRadius: 8,
         marginTop: 6,
       }}>
         <View style={{
           width: `${progress}%`,
           height: '100%',
-          backgroundColor: '#007AFF',
-          borderRadius: 2,
+          backgroundColor: '#4064F6',
+          borderRadius: 8,
         }} />
       </View>
     </View>

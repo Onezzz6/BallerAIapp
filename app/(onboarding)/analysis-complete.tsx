@@ -43,7 +43,7 @@ export default function AnalysisCompleteScreen() {
             router.push('/training-frequency');
           }}
           buttonStyle={{
-            backgroundColor: '#007AFF',
+            backgroundColor: '#4064F6',
           }}
         />
       </View>

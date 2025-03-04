@@ -55,7 +55,7 @@ export default function IntroScreen() {
           title="Continue" 
           onPress={() => router.push('/(onboarding)/username')}
           buttonStyle={{
-            backgroundColor: '#007AFF',
+            backgroundColor: '#4064F6',
           }}
         />
       </View>

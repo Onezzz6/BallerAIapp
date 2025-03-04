@@ -108,7 +108,7 @@ export default function SignInScreen() {
         onPress={handleSubmit}
         disabled={isLoading}
         buttonStyle={{
-          backgroundColor: '#007AFF',
+          backgroundColor: '#4064F6',
           opacity: isLoading ? 0.5 : 1,
         }}
       />

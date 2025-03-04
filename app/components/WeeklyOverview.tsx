@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
   todayButton: {
     backgroundColor: '#F0F9FF', // Light blue background for today
     borderWidth: 1,
-    borderColor: '#007AFF',
+    borderColor: '#4064F6',
   },
   selectedDay: {
     backgroundColor: '#99E86C',
@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
     color: '#000000',
   },
   todayText: {
-    color: '#007AFF',
+    color: '#4064F6',
   },
   selectedText: {
     color: '#FFFFFF',

@@ -1260,14 +1260,9 @@ export default function HomeScreen() {
       >
         <ScrollView 
           ref={scrollViewRef}
-          style={{ 
-            flex: 1,
-            backgroundColor: '#FFFFFF',
-          }}
+          style={styles.scrollView}
           contentContainerStyle={{
-            padding: 8,
-            gap: 16,
-            paddingBottom: 20, // Add padding at the bottom to prevent content from being hidden behind the tab bar
+            paddingBottom: 90, // Add extra padding at the bottom to prevent content from being hidden behind the navigation bar
           }}
           showsVerticalScrollIndicator={false} // Hide scroll indicator for cleaner look
           keyboardShouldPersistTaps="handled"
@@ -2005,7 +2000,7 @@ export default function HomeScreen() {
                 <Pressable
                   onPress={() => setShowNutritionInfo(false)}
                   style={({ pressed }) => ({
-                    backgroundColor: '#007AFF',
+                    backgroundColor: '#4064F6',
                     padding: 16,
                     borderRadius: 12,
                     opacity: pressed ? 0.7 : 1,
@@ -2163,5 +2158,9 @@ const styles = StyleSheet.create({
   calorieTargetText: {
     fontSize: 14,
     color: '#666666',
+  },
+  scrollView: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
   },
 }); 

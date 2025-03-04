@@ -44,9 +44,9 @@ export default function ProgressIndicator() {
     <View style={{ width: '100%', alignItems: 'center', gap: 16 }}>
       <View style={{
         width: '80%',
-        height: 8,
+        height: 12,
         backgroundColor: '#E5E5E5',
-        borderRadius: 4,
+        borderRadius: 8,
         overflow: 'hidden',
       }}>
         <Animated.View style={{
@@ -55,8 +55,8 @@ export default function ProgressIndicator() {
             outputRange: ['0%', '100%'],
           }),
           height: '100%',
-          backgroundColor: '#007AFF',
-          borderRadius: 4,
+          backgroundColor: '#4064F6',
+          borderRadius: 8,
         }} />
       </View>
       <Text style={{

@@ -101,7 +101,7 @@ export default function FootballGoalScreen() {
           title="Continue" 
           onPress={handleContinue}
           buttonStyle={{
-            backgroundColor: '#007AFF',
+            backgroundColor: '#4064F6',
             opacity: !selected ? 0.5 : 1,
           }}
           disabled={!selected}

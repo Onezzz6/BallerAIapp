@@ -85,7 +85,7 @@ export default function NutritionScreen() {
             }
           }}
           buttonStyle={{
-            backgroundColor: '#007AFF',
+            backgroundColor: '#4064F6',
             opacity: focusedOnNutrition === null ? 0.5 : 1,
           }}
           disabled={focusedOnNutrition === null}

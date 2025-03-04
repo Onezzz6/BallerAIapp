@@ -105,7 +105,7 @@ export default function InjuryHistoryScreen() {
                   }
                 }}
                 buttonStyle={{
-                  backgroundColor: '#007AFF',
+                  backgroundColor: '#4064F6',
                   opacity: !injuryHistory.trim() ? 0.5 : 1,
                 }}
                 disabled={!injuryHistory.trim()}

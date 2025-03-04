@@ -21,7 +21,7 @@ export default function Button({
         onPress={onPress}
         disabled={disabled}
         style={({ pressed }) => ({
-          backgroundColor: '#007AFF',
+          backgroundColor: '#4064F6',
           padding: 16,
           borderRadius: 100,
           opacity: disabled ? 0.5 : pressed ? 0.8 : 1,

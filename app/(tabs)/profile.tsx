@@ -1012,7 +1012,7 @@ export default function ProfileScreen() {
           Profile
         </Text>
       </View>
-      
+
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
@@ -1065,9 +1065,9 @@ export default function ProfileScreen() {
                 <Ionicons 
                   name={isEditing ? "checkmark" : "pencil"} 
                   size={16} 
-                  color="#007AFF" 
+                  color="#4064F6" 
                 />
-                <Text style={{ color: '#007AFF', fontSize: 14 }}>
+                <Text style={{ color: '#4064F6', fontSize: 14 }}>
                   {isEditing ? 'Done' : 'Edit'}
                 </Text>
               </Pressable>
@@ -1093,7 +1093,7 @@ export default function ProfileScreen() {
                   <Ionicons 
                     name={detail.icon} 
                     size={24} 
-                    color={isEditing ? "#007AFF" : "#999999"} 
+                    color={isEditing ? "#4064F6" : "#999999"} 
                   />
                 </View>
                 <View style={styles.detailInfo}>
@@ -1113,8 +1113,8 @@ export default function ProfileScreen() {
                 </View>
                 {isEditing && (
                   <View style={styles.editIndicator}>
-                    <Ionicons name="pencil" size={16} color="#007AFF" />
-                    <Ionicons name="chevron-forward" size={20} color="#007AFF" />
+                    <Ionicons name="pencil" size={16} color="" />
+                    <Ionicons name="chevron-forward" size={20} color="#4064F6" />
                   </View>
                 )}
               </Pressable>
@@ -1363,7 +1363,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   logoutButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#4064F6',
   },
   deleteButton: {
     backgroundColor: '#FF3B30',
@@ -1452,7 +1452,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#4064F6',
     width: 32,
     height: 32,
     borderRadius: 16,
@@ -1486,7 +1486,7 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   editableValue: {
-    color: '#007AFF',
+    color: '#4064F6',
   },
   editIndicator: {
     flexDirection: 'row',
@@ -1613,7 +1613,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   reasonsButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#4064F6',
   },
   reasonsCancelButton: {
     backgroundColor: '#8E8E93',

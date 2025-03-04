@@ -58,7 +58,7 @@ export default function AmbitionTransitionScreen() {
             router.push('/training-frequency');
           }}
           buttonStyle={{
-            backgroundColor: '#007AFF',
+            backgroundColor: '#4064F6',
           }}
         />
       </View>

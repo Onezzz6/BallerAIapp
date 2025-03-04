@@ -314,6 +314,20 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal }: LogMealM
     fats: ''
   });
 
+  // Reset method when modal becomes visible
+  useEffect(() => {
+    if (visible) {
+      setMethod(null);
+      setManualEntry({
+        name: '',
+        calories: '',
+        protein: '',
+        carbs: '',
+        fats: ''
+      });
+    }
+  }, [visible]);
+
   const handleManualSubmit = async () => {
     try {
       const meal = {
