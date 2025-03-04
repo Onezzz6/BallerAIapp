@@ -1811,9 +1811,11 @@ export default function NutritionScreen() {
           {/* Title */}
           <Text style={{
             fontSize: 28,
-            fontWeight: '600',
+            fontWeight: '900',
             color: '#000000',
-          }} allowFontScaling={false}>
+          }} 
+          allowFontScaling={false}
+          maxFontSizeMultiplier={1.2}>
             Nutrition
           </Text>
 
@@ -1832,9 +1834,11 @@ export default function NutritionScreen() {
             />
             <Text style={{
               fontSize: 28,
-              fontWeight: '600',
+              fontWeight: '300',
               color: '#000000',
-            }} allowFontScaling={false}>
+            }} 
+            allowFontScaling={false}
+            maxFontSizeMultiplier={1.2}>
               BallerAI
             </Text>
           </View>

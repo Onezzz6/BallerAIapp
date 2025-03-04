@@ -1,4 +1,4 @@
-import { View, Text, SafeAreaView, StyleSheet, TextInput, Pressable, ScrollView, Alert, Image } from 'react-native';
+import { View, Text, SafeAreaView, StyleSheet, TextInput, Pressable, ScrollView, Alert, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
@@ -491,70 +491,71 @@ Remember:
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header - Fixed at top when scrolling */}
-      <View style={{
-        paddingTop: 4,
-        paddingHorizontal: 18,
-        backgroundColor: '#ffffff',
-      }}>
-        {/* Header with Logo */}
-        <View style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          height: 50, // Same height as OnboardingHeader
-        }}>
-          {/* Empty View for spacing (instead of BackButton) */}
-          <View style={{ width: 32 }} />
-          
-          <View style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 6,
-            marginLeft: 'auto',
-          }}>
-            <Image 
-              source={require('../../assets/images/BallerAILogo.png')}
-              style={{
-                width: 32,
-                height: 32,
-              }}
-              resizeMode="contain"
-            />
-            <Text style={{
-              fontSize: 28,
-              fontWeight: '600',
-              color: '#000000',
-            }}>
-              BallerAI
-            </Text>
-          </View>
-        </View>
-
-        {/* Title */}
-        <Text style={{
-          fontSize: 32,
-          fontWeight: '700',
-          color: '#000000',
-          textAlign: 'center',
-          marginTop: 24,
-          marginBottom: 8,
-        }}>
-          Training
-        </Text>
-      </View>
-
-      <Animated.View 
-        entering={FadeIn.duration(1000)}
-        style={styles.container}
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{
+        paddingBottom: 90, // Add extra padding at the bottom to prevent content from being hidden behind the navigation bar
+    }}>
+    <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
       >
-        <ScrollView 
+        <ScrollView
           style={styles.scrollView}
           contentContainerStyle={{
-            paddingBottom: 90, // Add extra padding at the bottom to prevent content from being hidden behind the navigation bar
+            paddingBottom: 90, // Add extra padding at the bottom
           }}
         >
+          {/* Header - Scrolls with content */}
+          <View style={{
+            paddingTop: 48,
+            paddingHorizontal: 24,
+            backgroundColor: '#ffffff',
+          }}>
+            {/* Header with Logo */}
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              height: 92, // Same height as OnboardingHeader
+            }}>
+              {/* Title */}
+              <Text style={{
+                fontSize: 28,
+                fontWeight: '900',
+                color: '#000000',
+              }} 
+              allowFontScaling={false}
+              maxFontSizeMultiplier={1.2}>
+                Training
+              </Text>
+
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+              }}>
+                <Image 
+                  source={require('../../assets/images/BallerAILogo.png')}
+                  style={{
+                    width: 32,
+                    height: 32,
+                  }}
+                  resizeMode="contain"
+                />
+                <Text style={{
+                  fontSize: 28,
+                  fontWeight: '300',
+                  color: '#000000',
+                }} 
+                allowFontScaling={false}
+                maxFontSizeMultiplier={1.2}>
+                  BallerAI
+                </Text>
+              </View>
+            </View>
+          </View>
+
           <View style={styles.content}>
             <Text style={styles.sectionTitle}>Focus Area</Text>
             <Text style={styles.subtitle}>Select your training focus to get a personalized plan</Text>
@@ -696,8 +697,8 @@ Remember:
             </View>
           </View>
         </ScrollView>
-      </Animated.View>
-    </SafeAreaView>
+      </KeyboardAvoidingView>
+    </ScrollView>
   );
 }
 

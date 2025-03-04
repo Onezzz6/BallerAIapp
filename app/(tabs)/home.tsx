@@ -1196,77 +1196,71 @@ export default function HomeScreen() {
   }, [showQuestion]);
 
   return (
-    <SafeAreaView style={{ 
-      flex: 1, 
-      backgroundColor: '#FFFFFF',  // Keep white background
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{
+        paddingBottom: 90, // Add extra padding at the bottom to prevent content from being hidden behind the navigation bar
     }}>
-      {/* Header */}
-      <View style={{
-        paddingTop: 4,
-        paddingHorizontal: 18,
-        backgroundColor: '#ffffff',
-      }}>
-        {/* Header with Logo */}
-        <View style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          height: 50, // Same height as OnboardingHeader
-        }}>
-          {/* Empty View for spacing (instead of BackButton) */}
-          <View style={{ width: 32 }} />
-          
-          <View style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 6,
-            marginLeft: 'auto',
-          }}>
-            <Image 
-              source={require('../../assets/images/BallerAILogo.png')}
-              style={{
-                width: 32,
-                height: 32,
-              }}
-              resizeMode="contain"
-            />
-            <Text style={{
-              fontSize: 28,
-              fontWeight: '600',
-              color: '#000000',
-            }}>
-              BallerAI
-            </Text>
-          </View>
-        </View>
-
-        {/* Title */}
-        <Text style={{
-          fontSize: 32,
-          fontWeight: '700',
-          color: '#000000',
-          textAlign: 'center',
-          marginTop: 24,
-          marginBottom: 8,
-        }}>
-          Home
-        </Text>
-      </View>
-
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
       >
-        <ScrollView 
-          ref={scrollViewRef}
+        <ScrollView
           style={styles.scrollView}
           contentContainerStyle={{
-            paddingBottom: 90, // Add extra padding at the bottom to prevent content from being hidden behind the navigation bar
+            paddingBottom: 90, // Add extra padding at the bottom
           }}
-          showsVerticalScrollIndicator={false} // Hide scroll indicator for cleaner look
-          keyboardShouldPersistTaps="handled"
         >
+          {/* Header - Scrolls with content */}
+          <View style={{
+            paddingTop: 48,
+            paddingHorizontal: 24,
+            backgroundColor: '#ffffff',
+          }}>
+            {/* Header with Logo */}
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              height: 92, // Same height as OnboardingHeader
+            }}>
+              {/* Title */}
+              <Text style={{
+                fontSize: 28,
+                fontWeight: '900',
+                color: '#000000',
+              }} 
+              allowFontScaling={false}
+              maxFontSizeMultiplier={1.2}>
+                Home
+              </Text>
+
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+              }}>
+                <Image 
+                  source={require('../../assets/images/BallerAILogo.png')}
+                  style={{
+                    width: 32,
+                    height: 32,
+                  }}
+                  resizeMode="contain"
+                />
+                <Text style={{
+                  fontSize: 28,
+                  fontWeight: '300',
+                  color: '#000000',
+                }} 
+                allowFontScaling={false}
+                maxFontSizeMultiplier={1.2}>
+                  BallerAI
+                </Text>
+              </View>
+            </View>
+          </View>
+
           <View style={{ padding: 16, gap: 24 }}>
             {/* Overview Section */}
             <View style={{ 
@@ -1276,11 +1270,11 @@ export default function HomeScreen() {
               borderBottomColor: '#E5E5E5',
             }}>
               <Text style={{ 
-                fontSize: 32, 
+                fontSize: 28, 
                 fontWeight: '600',
                 color: '#000000',
               }}>
-                Todays Progress
+                Today's Progress
               </Text>
             </View>
                         
@@ -1406,7 +1400,7 @@ export default function HomeScreen() {
               borderBottomColor: '#E5E5E5',
             }}>
               <Text style={{ 
-                fontSize: 32, 
+                fontSize: 28, 
                 fontWeight: '600',
                 color: '#000000',
               }}>
@@ -2086,78 +2080,14 @@ export default function HomeScreen() {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
-    </SafeAreaView>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  sectionCard: {
+  container: {
     flex: 1,
-    backgroundColor: '#99E86C',
-    borderRadius: 24,
-    padding: 16,
-    gap: 24,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
-    minHeight: 280,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  sectionTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#000000',
-  },
-  dateIndicator: {
-    backgroundColor: '#E0E7FF',
-    borderRadius: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginLeft: 8,
-  },
-  dateIndicatorText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#4A72B2',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#666666',
-  },
-  calorieContainerHome: {
-    alignItems: 'center',
-    gap: 16,
-  },
-  calorieDetails: {
-    alignItems: 'center',
-    gap: 4,
-  },
-  calorieInfoText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
-  },
-  calorieTargetText: {
-    fontSize: 14,
-    color: '#666666',
+    backgroundColor: '#FFFFFF',
   },
   scrollView: {
     flex: 1,
