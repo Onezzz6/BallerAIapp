@@ -19,11 +19,11 @@ export function useNutritionDate() {
 }
 
 // Define a custom height for the bottom tab bar to match Instagram
-const TAB_BAR_HEIGHT = 50; // Instagram-style height
+const TAB_BAR_HEIGHT = 84; // Instagram-style height
 
 // We need to account for the home indicator on newer iPhones
 const BOTTOM_SPACE = Platform.OS === 'ios' && 
-                     (Dimensions.get('window').height > 800) ? 34 : 0;
+                     (Dimensions.get('window').height > 800) ? 0 : 0;
 
 export default function TabLayout() {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -91,7 +91,7 @@ export default function TabLayout() {
     }}>
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: '#000000',
+          tabBarActiveTintColor: '#4064F6',
           tabBarInactiveTintColor: '#262626',
           // Instagram-style tab bar
           tabBarStyle: {
