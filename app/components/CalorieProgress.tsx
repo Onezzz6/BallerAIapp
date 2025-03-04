@@ -122,7 +122,7 @@ export default function CalorieProgress() {
       padding: 16,
       gap: 24,
       borderRadius: 16,
-      backgroundColor: '#99E86C',
+      backgroundColor: '#E2E8FE',
       alignItems: 'center',
       shadowColor: '#000000',
       shadowOffset: { width: 0, height: 2 },
@@ -146,10 +146,10 @@ export default function CalorieProgress() {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Ionicons name="flame-outline" size={24} color="#000000" />
           <Text style={{
-            fontSize: 20,
+            fontSize: 18,
             fontWeight: '600',
             color: '#000000',
-          }}>
+          }} allowFontScaling={false}>
             Calories
           </Text>
         </View>

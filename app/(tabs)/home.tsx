@@ -1298,7 +1298,7 @@ export default function HomeScreen() {
                 padding: 16,
                 gap: 24,
                 borderRadius: 16,
-                backgroundColor: '#99E86C',
+                backgroundColor: '#DCF4F5',
                 alignItems: 'center',
                 shadowColor: '#000000',
                 shadowOffset: { width: 0, height: 2 },
@@ -1318,10 +1318,10 @@ export default function HomeScreen() {
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <Ionicons name="trending-up" size={24} color="#000000" />
                     <Text style={{
-                      fontSize: 20,
+                      fontSize: 18,
                       fontWeight: '600',
                       color: '#000000',
-                    }}>
+                    }} allowFontScaling={false}>
                       Readiness 
                     </Text>
                   </View>
@@ -1358,9 +1358,10 @@ export default function HomeScreen() {
                       cx="90"
                       cy="90"
                       r="70"
-                      stroke="#4064F6"
+                      stroke="#17B3BB"
                       strokeWidth="12"
                       fill="none"
+                      strokeLinecap="round"
                       strokeDasharray={`${2 * Math.PI * 70}`}
                       strokeDashoffset={2 * Math.PI * 70 * (1 - readinessScore / 100)}
                     />
@@ -1410,10 +1411,8 @@ export default function HomeScreen() {
 
             {/* Second Row of Cards */}
             <View style={{ 
-              flexDirection: 'row', 
-              gap: 8,
               width: '100%',
-              justifyContent: 'space-between',
+              alignItems: 'center',
             }}>
               {/* Nutrition Adherence Card */}
               <View style={{
@@ -1421,7 +1420,7 @@ export default function HomeScreen() {
                 padding: 16,
                 gap: 24,
                 borderRadius: 16,
-                backgroundColor: '#99E86C',
+                backgroundColor: '#FFDDBB',
                 alignItems: 'center',
                 shadowColor: '#000000',
                 shadowOffset: { width: 0, height: 2 },
@@ -1444,7 +1443,7 @@ export default function HomeScreen() {
                       fontSize: 20,
                       fontWeight: '600',
                       color: '#000000',
-                    }}>
+                    }} allowFontScaling={false}>
                       Nutrition
                     </Text>
                   </View>
@@ -1481,9 +1480,10 @@ export default function HomeScreen() {
                       cx="90"
                       cy="90"
                       r="70"
-                      stroke="#4064F6"
+                      stroke="#ED7E1C"
                       strokeWidth="12"
                       fill="none"
+                      strokeLinecap="round"
                       strokeDasharray={`${2 * Math.PI * 70}`}
                       strokeDashoffset={2 * Math.PI * 70 * (1 - nutritionAdherence / 100)}
                     />
@@ -1513,90 +1513,6 @@ export default function HomeScreen() {
                   }
                 </Text>
               </View>
-
-              {/* Recovery Card */}
-              <View style={{
-                width: '49%', // Slightly less than 50% to account for the gap
-                padding: 16,
-                gap: 24,
-                borderRadius: 16,
-                backgroundColor: '#99E86C',
-                alignItems: 'center',
-                shadowColor: '#000000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.1,
-                shadowRadius: 4,
-                elevation: 4,
-                borderWidth: 1,
-                borderColor: '#E5E5E5',
-                minHeight: 280,
-              }}>
-                <View style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '100%',
-                }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Ionicons name="pulse-outline" size={24} color="#000000" />
-                    <Text style={{
-                      fontSize: 20,
-                      fontWeight: '600',
-                      color: '#000000',
-                    }}>
-                      Recovery
-                    </Text>
-                  </View>
-                </View>
-                
-                {/* Progress Circle Container */}
-                <View style={{ 
-                  width: 180,
-                  height: 180,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}>
-                  <Svg width="180" height="180">
-                    <Circle
-                      cx="90"
-                      cy="90"
-                      r="70"
-                      stroke="#ffffff"
-                      strokeWidth="12"
-                      fill="none"
-                    />
-                    <Circle
-                      cx="90"
-                      cy="90"
-                      r="70"
-                      stroke="#4064F6"
-                      strokeWidth="12"
-                      fill="none"
-                      strokeDasharray={`${2 * Math.PI * 70}`}
-                      strokeDashoffset={2 * Math.PI * 70 * (1 - 90 / 100)}
-                      transform="rotate(-90 90 90)"
-                    />
-                  </Svg>
-
-                  {/* Center Text */}
-                  <Text style={{ 
-                    position: 'absolute',
-                    fontSize: 34, 
-                    fontWeight: '700', 
-                    color: '#000000',
-                  }}>
-                    90%
-                  </Text>
-                </View>
-
-                <Text style={{ 
-                  fontSize: 14, 
-                  color: '#666666',
-                  textAlign: 'center',
-                }}>
-                  Awesome! You did{'\n'}excellent recovery level.
-                </Text>
-              </View>
             </View>
 
             {/* Ask AI Section */}
@@ -1615,7 +1531,7 @@ export default function HomeScreen() {
                   color: '#FFFFFF',
                   marginBottom: 8,
                 }}>
-                  Ask me a question.
+                  Ask me a question!
                 </Text>
                 <Pressable
                   onPress={() => setShowQuestion(!showQuestion)}
@@ -1633,7 +1549,7 @@ export default function HomeScreen() {
                     fontWeight: '600',
                     color: '#4A3AFF',
                   }}>
-                    {showQuestion ? 'Close' : 'Ask a question'}
+                    {showQuestion ? 'Close' : 'Ask Ballzy'}
                   </Text>
                 </Pressable>
               </View>
