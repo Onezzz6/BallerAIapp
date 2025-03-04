@@ -66,13 +66,13 @@ export default function ActivityLevelScreen() {
           color: '#000000',
           fontWeight: '600',
           textAlign: 'left',
-        }}>
+        }} allowFontScaling={false}>
           What's your activity level?
         </Text>
 
         <View style={{
           width: '100%',
-          gap: 12,
+          gap: 8,
         }}>
           {ACTIVITY_LEVELS.map((level) => (
             <Pressable
@@ -80,7 +80,7 @@ export default function ActivityLevelScreen() {
               onPress={() => setSelected(level.id)}
               style={({ pressed }) => ({
                 width: '100%',
-                padding: 20,
+                padding: 12,
                 backgroundColor: selected === level.id ? '#99E86C' : '#FFFFFF',
                 borderRadius: 12,
                 borderWidth: 2,
@@ -93,13 +93,13 @@ export default function ActivityLevelScreen() {
                 color: '#000000',
                 fontWeight: '600',
                 marginBottom: 4,
-              }}>
+              }} allowFontScaling={false}>
                 {level.title}
               </Text>
               <Text style={{
                 fontSize: 14,
                 color: '#666666',
-              }}>
+              }} allowFontScaling={false}>
                 {level.description}
               </Text>
             </Pressable>

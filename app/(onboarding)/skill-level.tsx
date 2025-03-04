@@ -56,7 +56,7 @@ export default function SkillLevelScreen() {
           color: '#000000',
           fontWeight: '600',
           textAlign: 'left',
-        }}>
+        }} allowFontScaling={false}>
           What's your current level?
         </Text>
 

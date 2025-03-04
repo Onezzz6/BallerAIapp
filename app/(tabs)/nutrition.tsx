@@ -153,7 +153,6 @@ function CalorieProgress({ eaten, burned, goal }: { eaten: number; burned: numbe
     <View style={styles.calorieCard}>
       <View style={styles.calorieHeader}>
         <Text style={styles.calorieTitle}>Daily Calories</Text>
-        <Text style={styles.calorieGoal}>Target: {goal} kcal</Text>
       </View>
 
       <View style={styles.calorieCircleContainer}>
@@ -172,7 +171,7 @@ function CalorieProgress({ eaten, burned, goal }: { eaten: number; burned: numbe
                 cx={100}
                 cy={100}
                 r={80}
-                stroke="#E5E5E5"
+                stroke="#FFFFFF"
                 strokeWidth={12}
                 fill="transparent"
               />
@@ -181,7 +180,7 @@ function CalorieProgress({ eaten, burned, goal }: { eaten: number; burned: numbe
                 cx={100}
                 cy={100}
                 r={80}
-                stroke="#4A72B2"
+                stroke="#4064F6"
                 strokeWidth={12}
                 fill="transparent"
                 strokeLinecap="round"
@@ -209,18 +208,6 @@ function CalorieProgress({ eaten, burned, goal }: { eaten: number; burned: numbe
         </View>
       </View>
 
-      <View style={styles.dateSelector}>
-        <Pressable>
-          <Ionicons name="chevron-back" size={24} color="#000000" />
-        </Pressable>
-        <View style={styles.dateDisplay}>
-          <Ionicons name="calendar-outline" size={20} color="#666666" />
-          <Text style={styles.dateText}>Tuesday, Feb 4</Text>
-        </View>
-        <Pressable>
-          <Ionicons name="chevron-forward" size={24} color="#000000" />
-        </Pressable>
-      </View>
     </View>
   );
 }
@@ -740,14 +727,12 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   calorieCard: {
-    backgroundColor: '#EEF3FB',
+    backgroundColor: '#E2E8FE',
     margin: 24,
     borderRadius: 24,
     padding: 24,
   },
   calorieHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 24,
   },
@@ -880,7 +865,7 @@ const styles = StyleSheet.create({
   adherenceContainer: {
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#E2E8FE',
     borderRadius: 12,
     marginTop: 16,
   },
@@ -903,7 +888,7 @@ const styles = StyleSheet.create({
   adherencePercentage: {
     fontSize: 32,
     fontWeight: '700',
-    color: '#4A72B2',
+    color: '#4064F6',
   },
   adherenceBar: {
     height: 8,
@@ -955,7 +940,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#4064F6',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 25,
@@ -1805,11 +1790,15 @@ export default function NutritionScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{
+        paddingBottom: 90, // Add extra padding at the bottom to prevent content from being hidden behind the navigation bar
+    }}>
       {/* Header - Fixed at top when scrolling */}
       <View style={{
-        paddingTop: 4,
-        paddingHorizontal: 18,
+        paddingTop: 48,
+        paddingHorizontal: 24,
         backgroundColor: '#ffffff',
       }}>
         {/* Header with Logo */}
@@ -1817,16 +1806,21 @@ export default function NutritionScreen() {
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
-          height: 50, // Same height as OnboardingHeader
+          height: 92, // Same height as OnboardingHeader
         }}>
-          {/* Empty View for spacing (instead of BackButton) */}
-          <View style={{ width: 32 }} />
-          
+          {/* Title */}
+          <Text style={{
+            fontSize: 28,
+            fontWeight: '600',
+            color: '#000000',
+          }} allowFontScaling={false}>
+            Nutrition
+          </Text>
+
           <View style={{
             flexDirection: 'row',
             alignItems: 'center',
             gap: 6,
-            marginLeft: 'auto',
           }}>
             <Image 
               source={require('../../assets/images/BallerAILogo.png')}
@@ -1840,23 +1834,11 @@ export default function NutritionScreen() {
               fontSize: 28,
               fontWeight: '600',
               color: '#000000',
-            }}>
+            }} allowFontScaling={false}>
               BallerAI
             </Text>
           </View>
         </View>
-
-        {/* Title */}
-        <Text style={{
-          fontSize: 32,
-          fontWeight: '700',
-          color: '#000000',
-          textAlign: 'center',
-          marginTop: 24,
-          marginBottom: 8,
-        }}>
-          Nutrition
-        </Text>
       </View>
 
       <ScrollView 
@@ -1911,7 +1893,7 @@ export default function NutritionScreen() {
             style={styles.logMealButton}
             onPress={() => setIsLogMealModalVisible(true)}
           >
-            <Text style={styles.logMealText}>Log meal</Text>
+            <Text style={styles.logMealText}>Log Meal</Text>
             <View style={styles.logMealIcon}>
               <Ionicons name="add" size={24} color="#FFFFFF" />
             </View>
@@ -1982,6 +1964,6 @@ export default function NutritionScreen() {
           <Text style={styles.loadingText}>Analyzing image...</Text>
         </View>
       )}
-    </SafeAreaView>
+    </ScrollView>
   );
 } 

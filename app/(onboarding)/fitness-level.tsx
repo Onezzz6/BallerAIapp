@@ -57,7 +57,7 @@ export default function FitnessLevelScreen() {
           color: '#000000',
           fontWeight: '600',
           textAlign: 'left',
-        }}>
+        }} allowFontScaling={false}>
           What's your current fitness level?
         </Text>
 

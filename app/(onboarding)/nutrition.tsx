@@ -38,7 +38,7 @@ export default function NutritionScreen() {
           color: '#000000',
           fontWeight: '600',
           textAlign: 'left',
-        }}>
+        }} allowFontScaling={false}>
           Do you focus on your nutrition?
         </Text>
 

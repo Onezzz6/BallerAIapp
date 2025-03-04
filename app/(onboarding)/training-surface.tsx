@@ -57,7 +57,7 @@ export default function TrainingSurfaceScreen() {
           color: '#000000',
           fontWeight: '600',
           textAlign: 'left',
-        }}>
+        }} allowFontScaling={false}>
           What surface do you usually train on?
         </Text>
 

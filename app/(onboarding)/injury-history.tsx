@@ -59,7 +59,7 @@ export default function InjuryHistoryScreen() {
                 color: '#000000',
                 fontWeight: '600',
                 textAlign: 'left',
-              }}>
+              }} allowFontScaling={false}>
                 Brief description of your injury history
               </Text>
 

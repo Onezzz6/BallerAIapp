@@ -38,7 +38,7 @@ export default function TeamStatusScreen() {
           color: '#000000',
           fontWeight: '600',
           textAlign: 'left',
-        }}>
+        }} allowFontScaling={false}>
           Do you train with a team?
         </Text>
 

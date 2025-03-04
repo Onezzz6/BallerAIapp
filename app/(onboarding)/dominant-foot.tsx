@@ -38,7 +38,7 @@ export default function DominantFootScreen() {
           color: '#000000',
           fontWeight: '600',
           textAlign: 'left',
-        }}>
+        }} allowFontScaling={false}>
           Which is your dominant foot?
         </Text>
 

@@ -38,7 +38,7 @@ export default function GenderScreen() {
           color: '#000000',
           fontWeight: '600',
           textAlign: 'left',
-        }}>
+        }} allowFontScaling={false}>
           What's your gender?
         </Text>
 

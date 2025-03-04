@@ -39,7 +39,7 @@ export default function SleepHoursScreen() {
           color: '#000000',
           fontWeight: '600',
           textAlign: 'left',
-        }}>
+        }} allowFontScaling={false}>
           Sleep duration on average?
         </Text>
 

@@ -64,7 +64,7 @@ export default function TrainingFrequencyScreen() {
           color: '#000000',
           fontWeight: '600',
           textAlign: 'left',
-        }}>
+        }} allowFontScaling={false}>
           How many days a week do you train football?
         </Text>
 

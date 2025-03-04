@@ -46,7 +46,7 @@ export default function OnboardingHeader({ currentStep, totalSteps }: Props) {
             fontSize: 28,
             fontWeight: '600',
             color: '#000000',
-          }}>
+          }} allowFontScaling={false}>
             BallerAI
           </Text>
         </View>

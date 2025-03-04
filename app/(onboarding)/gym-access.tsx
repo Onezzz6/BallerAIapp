@@ -45,7 +45,7 @@ export default function GymAccessScreen() {
           color: '#000000',
           fontWeight: '600',
           textAlign: 'left',
-        }}>
+        }} allowFontScaling={false}>
           Do you have access to gym equipment?
         </Text>
 

@@ -58,7 +58,7 @@ export default function PositionScreen() {
           color: '#000000',
           fontWeight: '600',
           textAlign: 'left',
-        }}>
+        }} allowFontScaling={false}>
           What's your favorite position?
         </Text>
 

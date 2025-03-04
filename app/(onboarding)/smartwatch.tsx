@@ -45,7 +45,7 @@ export default function SmartwatchScreen() {
           color: '#000000',
           fontWeight: '600',
           textAlign: 'left',
-        }}>
+        }} allowFontScaling={false}>
           Do you track your training with a smartwatch?
         </Text>
 

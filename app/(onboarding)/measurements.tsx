@@ -50,7 +50,7 @@ export default function MeasurementsScreen() {
                 color: '#000000',
                 fontWeight: '600',
                 textAlign: 'left',
-              }}>
+              }} allowFontScaling={false}>
                 Your measurements?
               </Text>
 

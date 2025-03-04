@@ -39,7 +39,7 @@ export default function AgeScreen() {
           color: '#000000',
           fontWeight: '600',
           textAlign: 'left',
-         }}>
+         }} allowFontScaling={false}>
           How old are you?
         </Text>
 

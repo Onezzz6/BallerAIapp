@@ -51,7 +51,7 @@ export default function MotivationReasonScreen() {
             color: '#000000',
             fontWeight: '600',
             textAlign: 'left',
-          }}>
+          }} allowFontScaling={false}>
             Lastly, the most important part of becoming a pro!
           </Text>
 

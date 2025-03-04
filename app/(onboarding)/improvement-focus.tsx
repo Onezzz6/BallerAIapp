@@ -61,13 +61,13 @@ export default function ImprovementFocusScreen() {
           color: '#000000',
           fontWeight: '600',
           textAlign: 'left',
-        }}>
+        }} allowFontScaling={false}>
           What do you want to improve most?
         </Text>
 
         <View style={{
           width: '100%',
-          gap: 12,
+          gap: 8,
         }}>
           {IMPROVEMENTS.map((area) => (
             <Pressable
@@ -75,7 +75,7 @@ export default function ImprovementFocusScreen() {
               onPress={() => setSelected(area.id)}
               style={({ pressed }) => ({
                 width: '100%',
-                padding: 20,
+                padding: 16,
                 backgroundColor: selected === area.id ? '#99E86C' : '#FFFFFF',
                 borderRadius: 12,
                 borderWidth: 2,
@@ -87,7 +87,7 @@ export default function ImprovementFocusScreen() {
                 fontSize: 18,
                 color: '#000000',
                 fontWeight: '600',
-              }}>
+              }} allowFontScaling={false}>
                 {area.title}
               </Text>
             </Pressable>
