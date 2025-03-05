@@ -1060,6 +1060,7 @@ export default function ProfileScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Player Details</Text>
+
               <Pressable
                 onPress={() => setIsEditing(!isEditing)}
                 style={({ pressed }) => ({
@@ -1070,11 +1071,11 @@ export default function ProfileScreen() {
                 })}
               >
                 <Ionicons 
-                  name={isEditing ? "checkmark" : "pencil"} 
-                  size={16} 
+                  name={isEditing ? "checkmark" : "create-outline"} 
+                  size={24} 
                   color="#4064F6" 
                 />
-                <Text style={{ color: '#4064F6', fontSize: 14 }}>
+                <Text style={{ color: '#4064F6', fontSize: 16 }}>
                   {isEditing ? 'Done' : 'Edit'}
                 </Text>
               </Pressable>
@@ -1374,9 +1375,11 @@ const styles = StyleSheet.create({
   },
   logoutButton: {
     backgroundColor: '#4064F6',
+    borderRadius: 36,
   },
   deleteButton: {
     backgroundColor: '#FF3B30',
+    borderRadius: 36,
   },
   cancelButton: {
     backgroundColor: '#8E8E93',

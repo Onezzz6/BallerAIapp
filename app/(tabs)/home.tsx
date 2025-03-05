@@ -1273,7 +1273,7 @@ export default function HomeScreen() {
                 fontSize: 28, 
                 fontWeight: '600',
                 color: '#000000',
-              }}>
+              }} allowFontScaling={false}>
                 Today's Progress
               </Text>
             </View>
@@ -1404,7 +1404,7 @@ export default function HomeScreen() {
                 fontSize: 28, 
                 fontWeight: '600',
                 color: '#000000',
-              }}>
+              }} allowFontScaling={false}>
                 Weekly Progress
               </Text>
             </View>

@@ -1903,9 +1903,7 @@ export default function NutritionScreen() {
             onPress={() => setIsLogMealModalVisible(true)}
           >
             <Text style={styles.logMealText}>Log Meal</Text>
-            <View style={styles.logMealIcon}>
-              <Ionicons name="add" size={24} color="#FFFFFF" />
-            </View>
+            <Ionicons name="add" size={20} color="#FFFFFF" />
           </Pressable>
         </View>
 
