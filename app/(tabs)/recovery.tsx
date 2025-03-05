@@ -545,59 +545,63 @@ The plan MUST:
             )}
 
             {/* Plan Holder - Always visible with different states */}
-            <View style={[
-              styles.planHolderContainer,
-              !todaysPlan && !planLoading && styles.planHolderEmpty
-            ]}>
-              <View style={styles.planHolderHeader}>
-                <Text style={styles.planHolderTitle}>
-                  {isToday ? 'Your Plan For Today' : `Plan For ${format(selectedDate, 'MMM d')}`}
-                </Text>
-                {todaysPlan && (
-                  <View style={[
-                    styles.planStatusBadge,
-                    !isToday && styles.historicalBadge
-                  ]}>
-                    <Text style={styles.planStatusText}>
-                      {isToday ? 'Active' : 'Historical'}
+            <View style={{
+              marginHorizontal: 24,
+            }}>
+              <View style={[
+                styles.planHolderContainer,
+                !todaysPlan && !planLoading && styles.planHolderEmpty
+              ]}>
+                <View style={styles.planHolderHeader}>
+                  <Text style={styles.planHolderTitle} allowFontScaling={false}>
+                    {isToday ? 'Your Plan for Today' : `Plan For ${format(selectedDate, 'MMM d')}`}
+                  </Text>
+                  {todaysPlan && (
+                    <View style={[
+                      styles.planStatusBadge,
+                      !isToday && styles.historicalBadge
+                    ]}>
+                      <Text style={styles.planStatusText}>
+                        {isToday ? 'Active' : 'Historical'}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                
+                {planLoading ? (
+                  <View style={styles.planLoadingContainer}>
+                    <Ionicons name="hourglass-outline" size={24} color="#999999" />
+                    <Text style={styles.planLoadingText}>Loading plan...</Text>
+                  </View>
+                ) : todaysPlan ? (
+                  <View style={styles.planContentContainer}>
+                    <Text style={styles.planText}>{todaysPlan}</Text>
+                    <Text style={styles.planDateText}>
+                      Generated on {format(selectedDate, 'MMMM d, yyyy')}
                     </Text>
+                  </View>
+                ) : (
+                  <View style={styles.emptyPlanContainer}>
+                    <Ionicons name="fitness-outline" size={32} color="#CCCCCC" />
+                    <Text style={styles.emptyPlanText}>
+                      {recoveryData.submitted 
+                        ? 'No plan generated yet'
+                        : 'Submit recovery data first'}
+                    </Text>
+                    {recoveryData.submitted ? (
+                      <Text style={styles.emptyPlanSubtext}>
+                        {isToday 
+                          ? 'Click the generate button to create your recovery plan'
+                          : 'Click the generate button to create a recovery plan for this day'}
+                      </Text>
+                    ) : (
+                      <Text style={styles.emptyPlanSubtext}>
+                        Submit your recovery data using the form above
+                      </Text>
+                    )}
                   </View>
                 )}
               </View>
-              
-              {planLoading ? (
-                <View style={styles.planLoadingContainer}>
-                  <Ionicons name="hourglass-outline" size={24} color="#999999" />
-                  <Text style={styles.planLoadingText}>Loading plan...</Text>
-                </View>
-              ) : todaysPlan ? (
-                <View style={styles.planContentContainer}>
-                  <Text style={styles.planText}>{todaysPlan}</Text>
-                  <Text style={styles.planDateText}>
-                    Generated on {format(selectedDate, 'MMMM d, yyyy')}
-                  </Text>
-                </View>
-              ) : (
-                <View style={styles.emptyPlanContainer}>
-                  <Ionicons name="fitness-outline" size={32} color="#CCCCCC" />
-                  <Text style={styles.emptyPlanText}>
-                    {recoveryData.submitted 
-                      ? 'No plan generated yet'
-                      : 'Submit recovery data first'}
-                  </Text>
-                  {recoveryData.submitted ? (
-                    <Text style={styles.emptyPlanSubtext}>
-                      {isToday 
-                        ? 'Click the generate button to create your recovery plan'
-                        : 'Click the generate button to create a recovery plan for this day'}
-                    </Text>
-                  ) : (
-                    <Text style={styles.emptyPlanSubtext}>
-                      Submit your recovery data using the form above
-                    </Text>
-                  )}
-                </View>
-              )}
             </View>
           </View>
         </ScrollView>
@@ -966,7 +970,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#E0E7FF',
-    shadowColor: '#000',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -987,7 +991,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E0E7FF',
   },
   planHolderTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
     color: '#000000',
   },

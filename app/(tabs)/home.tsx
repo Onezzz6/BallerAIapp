@@ -1539,7 +1539,7 @@ export default function HomeScreen() {
                     backgroundColor: '#FFFFFF',
                     paddingHorizontal: 20,
                     paddingVertical: 10,
-                    borderRadius: 12,
+                    borderRadius: 32,
                     alignSelf: 'flex-start',
                     opacity: pressed ? 0.9 : 1,
                   })}
@@ -1585,8 +1585,8 @@ export default function HomeScreen() {
                     fontSize: 20,
                     fontWeight: '600',
                     color: '#000000',
-                  }}>
-                    Ask me a question
+                  }} allowFontScaling={false}>
+                    Ask Ballzy
                   </Text>
                   <Text style={{
                     color: questionCount >= maxQuestions ? '#FF3B30' : '#666666', 
@@ -1701,7 +1701,7 @@ export default function HomeScreen() {
                   style={({ pressed }) => ({
                     backgroundColor: !question.trim() || questionCount >= maxQuestions ? '#CCCCCC' : pressed ? '#3A2AEE' : '#4A3AFF',
                     paddingVertical: 12,
-                    borderRadius: 12,
+                    borderRadius: 36,
                     alignItems: 'center',
                     opacity: questionCount >= maxQuestions ? 0.6 : pressed ? 0.9 : 1,
                   })}

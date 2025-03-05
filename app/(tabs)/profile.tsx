@@ -453,7 +453,7 @@ export default function ProfileScreen() {
                         updateUserField('age', editValue);
                       }
                     }}
-                    buttonStyle={{ backgroundColor: '#99E86C', flex: 1 }}
+                    buttonStyle={{ backgroundColor: '#4064F6', flex: 1 }}
                     disabled={isLoading}
                   />
                 </View>
@@ -919,7 +919,7 @@ export default function ProfileScreen() {
 
           <View style={styles.modalFooter}>
             <CustomButton
-              title="Send Feedback via Email"
+              title="Send Feedback"
               onPress={sendFeedbackEmail}
               buttonStyle={styles.feedbackButton}
               icon={<Ionicons name="mail-outline" size={24} color="#FFFFFF" style={{ marginRight: 8 }} />}
@@ -936,7 +936,7 @@ export default function ProfileScreen() {
                 buttonStyle={styles.cancelButton}
               />
               <CustomButton
-                title="Continue to Delete"
+                title="Delete"
                 onPress={() => {
                   setShowDeleteModal(false);
                   setShowReauthModal(true);
@@ -1383,6 +1383,7 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     backgroundColor: '#8E8E93',
+    borderRadius: 36,
   },
   modalContainer: {
     flex: 1,
@@ -1394,7 +1395,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     padding: 24,
     borderRadius: 20,
-    gap: 16,
+    gap: 8,
     maxHeight: '80%',
   },
   modalTitle: {
@@ -1412,20 +1413,24 @@ const styles = StyleSheet.create({
   },
   modalButtons: {
     flexDirection: 'row',
+    justifyContent: 'center',
     gap: 12,
   },
   modalFooter: {
+    justifyContent: 'center',
     gap: 16,
   },
   feedbackButton: {
-    backgroundColor: '#34C759',
+    backgroundColor: '#4064F6',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: 36,
     gap: 8,
   },
   actionButtons: {
     flexDirection: 'row',
+    justifyContent: 'center',
     gap: 12,
   },
   otherInput: {
@@ -1571,13 +1576,13 @@ const styles = StyleSheet.create({
   modalSubtitle: {
     fontSize: 14,
     color: '#666666',
-    marginBottom: 16,
+    marginBottom: 8,
     textAlign: 'center',
   },
   reasonButton: {
     width: '100%',
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 36,
     borderWidth: 2,
     borderColor: '#E5E5E5',
     backgroundColor: '#FFFFFF',
@@ -1592,7 +1597,7 @@ const styles = StyleSheet.create({
     color: '#000000',
   },
   selectedReasonText: {
-    color: '#FFFFFF',
+    color: '#000000',
   },
   reasonsContainer: {
     maxHeight: 300,
@@ -1606,19 +1611,19 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#000000',
-    marginBottom: 16,
+    marginBottom: 8,
   },
   reasonsSubtitle: {
     fontSize: 14,
     color: '#666666',
-    marginBottom: 16,
+    marginBottom: 8,
   },
   reasonsInput: {
     borderWidth: 1,
     borderColor: '#E5E5E5',
     borderRadius: 8,
     padding: 12,
-    marginBottom: 24,
+    marginBottom: 8,
   },
   reasonsFooter: {
     flexDirection: 'row',

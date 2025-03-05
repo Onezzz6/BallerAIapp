@@ -1968,7 +1968,7 @@ export default function NutritionScreen() {
       {isLoading && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#4A72B2" />
-          <Text style={styles.loadingText}>Analyzing image...</Text>
+          <Text style={styles.loadingText}>Analyzing meal...</Text>
         </View>
       )}
     </ScrollView>
