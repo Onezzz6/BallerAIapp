@@ -376,13 +376,11 @@ The plan MUST:
               onDateSelect={setSelectedDate}
             />
 
-            <Text style={styles.dateText}>
-              {format(selectedDate, 'MMMM do, yyyy')}
-              {isToday && <Text style={styles.todayIndicator}> (Today)</Text>}
-            </Text>
-
             {/* Recovery Inputs */}
             <View style={styles.inputsContainer}>
+              <View style={{alignItems: 'center'}}>
+                <Text style={styles.loadText}>Recovery Query</Text>
+              </View>
               {recoveryData.submitted && !isEditing ? (
                 // Show submitted data with edit button if plan doesn't exist
                 <>
@@ -401,8 +399,8 @@ The plan MUST:
                   
                   <RecoverySlider
                     icon="fitness"
-                    question="How intensive was the training?"
-                    value={recoveryData.soreness}
+                    question="How intense was the training yesterday?"
+                    value={recoveryData.fatigue}
                     onValueChange={() => {}}
                     min={1}
                     max={10}
@@ -412,7 +410,7 @@ The plan MUST:
                   <RecoverySlider
                     icon="medical"
                     question="How sore are you?"
-                    value={recoveryData.fatigue}
+                    value={recoveryData.soreness}
                     onValueChange={() => {}}
                     min={1}
                     max={10}
@@ -422,7 +420,7 @@ The plan MUST:
                   <RecoverySlider
                     icon="flash"
                     question="How tired do you feel overall?"
-                    value={recoveryData.sleep}
+                    value={recoveryData.mood}
                     onValueChange={() => {}}
                     min={1}
                     max={10}
@@ -431,8 +429,8 @@ The plan MUST:
                   />
                   <RecoverySlider
                     icon="moon"
-                    question="Sleep duration"
-                    value={recoveryData.mood}
+                    question="Sleep duration last night"
+                    value={recoveryData.sleep}
                     onValueChange={() => {}}
                     min={1}
                     max={10}
@@ -445,8 +443,8 @@ The plan MUST:
                 <>
                   <RecoverySlider
                     icon="fitness"
-                    question="How intensive was the training?"
-                    value={recoveryData.soreness}
+                    question="How intense was the training yesterday?"
+                    value={recoveryData.fatigue}
                     onValueChange={(value) => setRecoveryData(prev => ({
                       ...prev,
                       soreness: value
@@ -459,7 +457,7 @@ The plan MUST:
                   <RecoverySlider
                     icon="medical"
                     question="How sore are you?"
-                    value={recoveryData.fatigue}
+                    value={recoveryData.soreness}
                     onValueChange={(value) => setRecoveryData(prev => ({
                       ...prev,
                       fatigue: value
@@ -472,7 +470,7 @@ The plan MUST:
                   <RecoverySlider
                     icon="flash"
                     question="How tired do you feel overall?"
-                    value={recoveryData.sleep}
+                    value={recoveryData.mood}
                     onValueChange={(value) => setRecoveryData(prev => ({
                       ...prev,
                       sleep: value
@@ -484,8 +482,8 @@ The plan MUST:
                   />
                   <RecoverySlider
                     icon="moon"
-                    question="Sleep duration"
-                    value={recoveryData.mood}
+                    question="Sleep duration last night"
+                    value={recoveryData.sleep}
                     onValueChange={(value) => setRecoveryData(prev => ({
                       ...prev,
                       mood: value
@@ -781,11 +779,22 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   inputsContainer: {
+    backgroundColor: '#DCF4F5',
+    margin: 24,
     padding: 24,
+    borderRadius: 24,
     gap: 24,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
   },
   sliderContainer: {
-    gap: 12,
+    gap: 6,
+    paddingVertical: 8,
   },
   questionContainer: {
     flexDirection: 'row',
@@ -798,7 +807,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   sliderWrapper: {
-    height: 50,
+    height: 40,
     justifyContent: 'center',
   },
   trackContainer: {
@@ -819,6 +828,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 8,
+    paddingVertical: 0,
   },
   sliderLabel: {
     fontSize: 12,
@@ -835,11 +845,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#000000',
+    backgroundColor: '#4064F6',
     marginHorizontal: 24,
     marginTop: 24,
     marginBottom: 24,
-    paddingVertical: 16,
+    paddingVertical: 12,
     borderRadius: 32,
   },
   generateButtonText: {
@@ -853,9 +863,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
   },
+  loadText: {
+    fontSize: 20,
+    color: '#000000',
+    fontWeight: '600',
+  },
   submittedText: {
     fontSize: 18,
-    color: '#99E86C',
+    color: '#BBBBBB',
     fontWeight: '600',
   },
   editButton: {
@@ -865,7 +880,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#3F63F6',
     paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 24,
+    borderRadius: 36,
   },
   editButtonText: {
     fontSize: 16,
@@ -881,11 +896,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#99E86C',
+    backgroundColor: '#4064F6',
     marginHorizontal: 24,
-    marginTop: 24,
-    paddingVertical: 20,
-    borderRadius: 32,
+    paddingVertical: 12,
+    borderRadius: 36,
   },
   submitButtonText: {
     fontSize: 18,
@@ -939,7 +953,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   contentContainer: {
-    padding: 24,
+    flex: 1,
+    backgroundColor: '#FFFFFF',
   },
   
   // New styles for plan holder
@@ -973,8 +988,8 @@ const styles = StyleSheet.create({
   },
   planHolderTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#3F63F6',
+    fontWeight: '600',
+    color: '#000000',
   },
   planStatusBadge: {
     backgroundColor: '#99E86C',
@@ -1035,14 +1050,11 @@ const styles = StyleSheet.create({
     marginHorizontal: 24,
     marginVertical: 12,
     padding: 12,
-    backgroundColor: '#F5F9FF',
-    borderRadius: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: '#3F63F6',
+    backgroundColor: '#FFFFFF',
   },
   infoMessageText: {
     fontSize: 14,
-    color: '#3F63F6',
+    color: '#000000',
     textAlign: 'center',
   },
 }); 

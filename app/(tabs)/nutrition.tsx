@@ -729,8 +729,15 @@ const styles = StyleSheet.create({
   calorieCard: {
     backgroundColor: '#E2E8FE',
     margin: 24,
-    borderRadius: 24,
     padding: 24,
+    borderRadius: 24,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
   },
   calorieHeader: {
     alignItems: 'center',
@@ -1857,13 +1864,11 @@ export default function NutritionScreen() {
           onDateSelect={setSelectedDate}
         />
 
-        <View style={styles.calorieCard}>
-          <CalorieProgress 
-            eaten={macros.calories.current}
-            burned={0}
-            goal={macros.calories.goal}
-          />
-        </View>
+        <CalorieProgress 
+          eaten={macros.calories.current}
+          burned={0}
+          goal={macros.calories.goal}
+        />
 
         <View style={styles.macrosCard}>
           <MacroProgress
