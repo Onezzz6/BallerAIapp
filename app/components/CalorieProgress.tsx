@@ -209,14 +209,15 @@ export default function CalorieProgress() {
       <View style={{
         flexDirection: 'row',
         width: '100%',
-        justifyContent: 'space-around',
+        justifyContent: 'space-between',
+        alignItems: 'center',
       }}>
-        <View style={{ alignItems: 'center', paddingHorizontal: 8 }}>
+        <View style={{ alignItems: 'center', paddingHorizontal: 6 }}>
           <Text style={{
-            fontSize: 20,
+            fontSize: 18,
             fontWeight: '600',
             color: '#000000',
-          }}>
+          }} allowFontScaling={false}>
             {remaining}
           </Text>
           <Text style={{
@@ -228,12 +229,12 @@ export default function CalorieProgress() {
           </Text>
         </View>
 
-        <View style={{ alignItems: 'center', paddingHorizontal: 8 }}>
+        <View style={{ alignItems: 'center', paddingHorizontal: 6 }}>
           <Text style={{
-            fontSize: 20,
+            fontSize: 18,
             fontWeight: '600',
             color: '#000000',
-          }}>
+          }} allowFontScaling={false}>
             {goal}
           </Text>
           <Text style={{

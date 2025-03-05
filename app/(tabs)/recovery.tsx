@@ -447,7 +447,7 @@ The plan MUST:
                     value={recoveryData.fatigue}
                     onValueChange={(value) => setRecoveryData(prev => ({
                       ...prev,
-                      soreness: value
+                      fatigue: value
                     }))}
                     min={1}
                     max={10}
@@ -460,7 +460,7 @@ The plan MUST:
                     value={recoveryData.soreness}
                     onValueChange={(value) => setRecoveryData(prev => ({
                       ...prev,
-                      fatigue: value
+                      soreness: value
                     }))}
                     min={1}
                     max={10}
@@ -473,7 +473,7 @@ The plan MUST:
                     value={recoveryData.mood}
                     onValueChange={(value) => setRecoveryData(prev => ({
                       ...prev,
-                      sleep: value
+                      mood: value
                     }))}
                     min={1}
                     max={10}
@@ -486,7 +486,7 @@ The plan MUST:
                     value={recoveryData.sleep}
                     onValueChange={(value) => setRecoveryData(prev => ({
                       ...prev,
-                      mood: value
+                      sleep: value
                     }))}
                     min={1}
                     max={10}
