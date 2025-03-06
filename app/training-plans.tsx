@@ -1,5 +1,5 @@
 import { View, Text, SafeAreaView, ScrollView, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useTraining } from './context/TrainingContext';
@@ -7,6 +7,7 @@ import { useTraining } from './context/TrainingContext';
 export default function TrainingPlansScreen() {
   const router = useRouter();
   const { plans, loading, deletePlan } = useTraining();
+  const { fromTraining } = useLocalSearchParams<{ fromTraining: string }>();
 
   const handleDeletePlan = (planId: string) => {
     Alert.alert(
@@ -32,12 +33,23 @@ export default function TrainingPlansScreen() {
     );
   };
 
+  const handleBack = () => {
+    if (fromTraining === 'true') {
+      router.push({
+        pathname: '/(tabs)/training',
+        params: { fromTraining: 'true' }
+      });
+    } else {
+      router.back();
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#000000" />
+          <Pressable onPress={handleBack} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#000" />
           </Pressable>
           <Text style={styles.title}>This weeks training plan.</Text>
         </View>
@@ -52,8 +64,8 @@ export default function TrainingPlansScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#000000" />
+          <Pressable onPress={handleBack} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#000" />
           </Pressable>
           <Text style={styles.title}>This weeks training plan</Text>
         </View>
@@ -67,8 +79,8 @@ export default function TrainingPlansScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#000000" />
+        <Pressable onPress={handleBack} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#000" />
         </Pressable>
         <Text style={styles.title}>Your Training Plans</Text>
       </View>

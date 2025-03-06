@@ -1,4 +1,4 @@
-import { View, Text, Pressable, StyleSheet, Image, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Image, ScrollView, Alert, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
@@ -11,7 +11,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import WeeklyOverview from '../components/WeeklyOverview';
 import { OPENAI_API_KEY } from '@env';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 
 type RecoveryData = {
   soreness: number;
@@ -304,309 +304,334 @@ The plan MUST:
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={{
-        paddingBottom: 90, // Add extra padding at the bottom to prevent content from being hidden behind the navigation bar
-    }}>
-    <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
-      >
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={{
-            paddingBottom: 90, // Add extra padding at the bottom
-          }}
+    <>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={{
+          paddingBottom: 90, // Add extra padding at the bottom to prevent content from being hidden behind the navigation bar
+      }}>
+      <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }}
         >
-          {/* Header - Scrolls with content */}
-          <View style={{
-            paddingTop: 48,
-            paddingHorizontal: 24,
-            backgroundColor: '#ffffff',
-          }}>
-            {/* Header with Logo */}
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={{
+              paddingBottom: 90, // Add extra padding at the bottom
+            }}
+          >
+            {/* Header - Scrolls with content */}
             <View style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              height: 92, // Same height as OnboardingHeader
+              paddingTop: 48,
+              paddingHorizontal: 24,
+              backgroundColor: '#ffffff',
             }}>
-              {/* Title */}
-              <Text style={{
-                fontSize: 28,
-                fontWeight: '900',
-                color: '#000000',
-              }} 
-              allowFontScaling={false}
-              maxFontSizeMultiplier={1.2}>
-                Recovery
-              </Text>
-
+              {/* Header with Logo */}
               <View style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                gap: 6,
+                justifyContent: 'space-between',
+                height: 92, // Same height as OnboardingHeader
               }}>
-                <Image 
-                  source={require('../../assets/images/BallerAILogo.png')}
-                  style={{
-                    width: 32,
-                    height: 32,
-                  }}
-                  resizeMode="contain"
-                />
+                {/* Title */}
                 <Text style={{
                   fontSize: 28,
-                  fontWeight: '300',
+                  fontWeight: '900',
                   color: '#000000',
                 }} 
                 allowFontScaling={false}
                 maxFontSizeMultiplier={1.2}>
-                  BallerAI
+                  Recovery
                 </Text>
+
+                <View style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                }}>
+                  <Image 
+                    source={require('../../assets/images/BallerAILogo.png')}
+                    style={{
+                      width: 32,
+                      height: 32,
+                    }}
+                    resizeMode="contain"
+                  />
+                  <Text style={{
+                    fontSize: 28,
+                    fontWeight: '300',
+                    color: '#000000',
+                  }} 
+                  allowFontScaling={false}
+                  maxFontSizeMultiplier={1.2}>
+                    BallerAI
+                  </Text>
+                </View>
               </View>
             </View>
-          </View>
 
-          <View style={styles.contentContainer}>
-            {/* Weekly Overview */}
-            <WeeklyOverview 
-              selectedDate={selectedDate}
-              onDateSelect={setSelectedDate}
-            />
+            <View style={styles.contentContainer}>
+              {/* Weekly Overview */}
+              <WeeklyOverview 
+                selectedDate={selectedDate}
+                onDateSelect={setSelectedDate}
+              />
 
-            {/* Recovery Inputs */}
-            <View style={styles.inputsContainer}>
-              <View style={{alignItems: 'center'}}>
-                <Text style={styles.loadText}>Recovery Query</Text>
+              {/* Recovery Inputs */}
+              <View style={styles.inputsContainer}>
+                <View style={{alignItems: 'center'}}>
+                  <Text style={styles.loadText}>Recovery Query</Text>
+                </View>
+                {recoveryData.submitted && !isEditing ? (
+                  // Show submitted data with edit button if plan doesn't exist
+                  <>
+                    <View style={styles.submittedHeader}>
+                      <Text style={styles.submittedText}>Submitted</Text>
+                      {!planExists && (
+                        <Pressable
+                          style={styles.editButton}
+                          onPress={() => setIsEditing(true)}
+                        >
+                          <Ionicons name="create-outline" size={24} color="#FFFFFF" />
+                          <Text style={styles.editButtonText}>Edit</Text>
+                        </Pressable>
+                      )}
+                    </View>
+                    
+                    <RecoverySlider
+                      icon="fitness"
+                      question="How intense was the training yesterday?"
+                      value={recoveryData.fatigue}
+                      onValueChange={() => {}}
+                      min={1}
+                      max={10}
+                      disabled={true}
+                      type="intensity"
+                    />
+                    <RecoverySlider
+                      icon="medical"
+                      question="How sore are you?"
+                      value={recoveryData.soreness}
+                      onValueChange={() => {}}
+                      min={1}
+                      max={10}
+                      disabled={true}
+                      type="soreness"
+                    />
+                    <RecoverySlider
+                      icon="flash"
+                      question="How tired do you feel overall?"
+                      value={recoveryData.mood}
+                      onValueChange={() => {}}
+                      min={1}
+                      max={10}
+                      disabled={true}
+                      type="fatigue"
+                    />
+                    <RecoverySlider
+                      icon="moon"
+                      question="Sleep duration last night"
+                      value={recoveryData.sleep}
+                      onValueChange={() => {}}
+                      min={1}
+                      max={10}
+                      disabled={true}
+                      type="sleep"
+                    />
+                  </>
+                ) : (
+                  // Show editable sliders
+                  <>
+                    <RecoverySlider
+                      icon="fitness"
+                      question="How intense was the training yesterday?"
+                      value={recoveryData.fatigue}
+                      onValueChange={(value) => setRecoveryData(prev => ({
+                        ...prev,
+                        fatigue: value
+                      }))}
+                      min={1}
+                      max={10}
+                      disabled={false}
+                      type="intensity"
+                    />
+                    <RecoverySlider
+                      icon="medical"
+                      question="How sore are you?"
+                      value={recoveryData.soreness}
+                      onValueChange={(value) => setRecoveryData(prev => ({
+                        ...prev,
+                        soreness: value
+                      }))}
+                      min={1}
+                      max={10}
+                      disabled={false}
+                      type="soreness"
+                    />
+                    <RecoverySlider
+                      icon="flash"
+                      question="How tired do you feel overall?"
+                      value={recoveryData.mood}
+                      onValueChange={(value) => setRecoveryData(prev => ({
+                        ...prev,
+                        mood: value
+                      }))}
+                      min={1}
+                      max={10}
+                      disabled={false}
+                      type="fatigue"
+                    />
+                    <RecoverySlider
+                      icon="moon"
+                      question="Sleep duration last night"
+                      value={recoveryData.sleep}
+                      onValueChange={(value) => setRecoveryData(prev => ({
+                        ...prev,
+                        sleep: value
+                      }))}
+                      min={1}
+                      max={10}
+                      disabled={false}
+                      type="sleep"
+                    />
+                  </>
+                )}
               </View>
-              {recoveryData.submitted && !isEditing ? (
-                // Show submitted data with edit button if plan doesn't exist
-                <>
-                  <View style={styles.submittedHeader}>
-                    <Text style={styles.submittedText}>Submitted</Text>
-                    {!planExists && (
-                      <Pressable
-                        style={styles.editButton}
-                        onPress={() => setIsEditing(true)}
-                      >
-                        <Ionicons name="create-outline" size={24} color="#FFFFFF" />
-                        <Text style={styles.editButtonText}>Edit</Text>
-                      </Pressable>
+
+              {(!recoveryData.submitted || isEditing) && (
+                <Pressable 
+                  style={styles.submitButton}
+                  onPress={handleSubmit}
+                >
+                  <Text style={styles.submitButtonText}>
+                    {isEditing ? 'Update Recovery Data' : 'Submit Recovery Data'}
+                  </Text>
+                  <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                </Pressable>
+              )}
+
+              {!recoveryData.submitted ? (
+                <View style={styles.infoMessageContainer}>
+                  <Text style={styles.infoMessageText}>
+                    Submit your recovery data first to generate a plan
+                  </Text>
+                </View>
+              ) : !planExists ? (
+                <Pressable
+                  style={[
+                    styles.generateButton, 
+                    loading && styles.generateButtonDisabled
+                  ]}
+                  onPress={handleGeneratePlan}
+                  disabled={loading}
+                >
+                  <Text style={styles.generateButtonText}>
+                    {loading ? 'Generating Plan...' : 'Generate Recovery Plan'}
+                  </Text>
+                  <Ionicons name="fitness" size={20} color="#FFFFFF" />
+                </Pressable>
+              ) : (
+                <Pressable
+                  style={[
+                    styles.generateButton, 
+                    styles.generateButtonDisabled
+                  ]}
+                  disabled={true}
+                >
+                  <Text style={styles.generateButtonText}>
+                    Plan Already Generated
+                  </Text>
+                  <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                </Pressable>
+              )}
+
+              {/* Plan Holder - Always visible with different states */}
+              <View style={{
+                marginHorizontal: 24,
+              }}>
+                <View style={[
+                  styles.planHolderContainer,
+                  !todaysPlan && !planLoading && styles.planHolderEmpty
+                ]}>
+                  <View style={styles.planHolderHeader}>
+                    <Text style={styles.planHolderTitle} allowFontScaling={false}>
+                      {isToday ? 'Your Plan for Today' : `Plan For ${format(selectedDate, 'MMM d')}`}
+                    </Text>
+                    {todaysPlan && (
+                      <View style={[
+                        styles.planStatusBadge,
+                        !isToday && styles.historicalBadge
+                      ]}>
+                        <Text style={styles.planStatusText}>
+                          {isToday ? 'Active' : 'Historical'}
+                        </Text>
+                      </View>
                     )}
                   </View>
                   
-                  <RecoverySlider
-                    icon="fitness"
-                    question="How intense was the training yesterday?"
-                    value={recoveryData.fatigue}
-                    onValueChange={() => {}}
-                    min={1}
-                    max={10}
-                    disabled={true}
-                    type="intensity"
-                  />
-                  <RecoverySlider
-                    icon="medical"
-                    question="How sore are you?"
-                    value={recoveryData.soreness}
-                    onValueChange={() => {}}
-                    min={1}
-                    max={10}
-                    disabled={true}
-                    type="soreness"
-                  />
-                  <RecoverySlider
-                    icon="flash"
-                    question="How tired do you feel overall?"
-                    value={recoveryData.mood}
-                    onValueChange={() => {}}
-                    min={1}
-                    max={10}
-                    disabled={true}
-                    type="fatigue"
-                  />
-                  <RecoverySlider
-                    icon="moon"
-                    question="Sleep duration last night"
-                    value={recoveryData.sleep}
-                    onValueChange={() => {}}
-                    min={1}
-                    max={10}
-                    disabled={true}
-                    type="sleep"
-                  />
-                </>
-              ) : (
-                // Show editable sliders
-                <>
-                  <RecoverySlider
-                    icon="fitness"
-                    question="How intense was the training yesterday?"
-                    value={recoveryData.fatigue}
-                    onValueChange={(value) => setRecoveryData(prev => ({
-                      ...prev,
-                      fatigue: value
-                    }))}
-                    min={1}
-                    max={10}
-                    disabled={false}
-                    type="intensity"
-                  />
-                  <RecoverySlider
-                    icon="medical"
-                    question="How sore are you?"
-                    value={recoveryData.soreness}
-                    onValueChange={(value) => setRecoveryData(prev => ({
-                      ...prev,
-                      soreness: value
-                    }))}
-                    min={1}
-                    max={10}
-                    disabled={false}
-                    type="soreness"
-                  />
-                  <RecoverySlider
-                    icon="flash"
-                    question="How tired do you feel overall?"
-                    value={recoveryData.mood}
-                    onValueChange={(value) => setRecoveryData(prev => ({
-                      ...prev,
-                      mood: value
-                    }))}
-                    min={1}
-                    max={10}
-                    disabled={false}
-                    type="fatigue"
-                  />
-                  <RecoverySlider
-                    icon="moon"
-                    question="Sleep duration last night"
-                    value={recoveryData.sleep}
-                    onValueChange={(value) => setRecoveryData(prev => ({
-                      ...prev,
-                      sleep: value
-                    }))}
-                    min={1}
-                    max={10}
-                    disabled={false}
-                    type="sleep"
-                  />
-                </>
-              )}
-            </View>
-
-            {(!recoveryData.submitted || isEditing) && (
-              <Pressable 
-                style={styles.submitButton}
-                onPress={handleSubmit}
-              >
-                <Text style={styles.submitButtonText}>
-                  {isEditing ? 'Update Recovery Data' : 'Submit Recovery Data'}
-                </Text>
-                <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-              </Pressable>
-            )}
-
-            {!recoveryData.submitted ? (
-              <View style={styles.infoMessageContainer}>
-                <Text style={styles.infoMessageText}>
-                  Submit your recovery data first to generate a plan
-                </Text>
-              </View>
-            ) : !planExists ? (
-              <Pressable
-                style={[
-                  styles.generateButton, 
-                  loading && styles.generateButtonDisabled
-                ]}
-                onPress={handleGeneratePlan}
-                disabled={loading}
-              >
-                <Text style={styles.generateButtonText}>
-                  {loading ? 'Generating Plan...' : 'Generate Recovery Plan'}
-                </Text>
-                <Ionicons name="fitness" size={20} color="#FFFFFF" />
-              </Pressable>
-            ) : (
-              <Pressable
-                style={[
-                  styles.generateButton, 
-                  styles.generateButtonDisabled
-                ]}
-                disabled={true}
-              >
-                <Text style={styles.generateButtonText}>
-                  Plan Already Generated
-                </Text>
-                <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-              </Pressable>
-            )}
-
-            {/* Plan Holder - Always visible with different states */}
-            <View style={{
-              marginHorizontal: 24,
-            }}>
-              <View style={[
-                styles.planHolderContainer,
-                !todaysPlan && !planLoading && styles.planHolderEmpty
-              ]}>
-                <View style={styles.planHolderHeader}>
-                  <Text style={styles.planHolderTitle} allowFontScaling={false}>
-                    {isToday ? 'Your Plan for Today' : `Plan For ${format(selectedDate, 'MMM d')}`}
-                  </Text>
-                  {todaysPlan && (
-                    <View style={[
-                      styles.planStatusBadge,
-                      !isToday && styles.historicalBadge
-                    ]}>
-                      <Text style={styles.planStatusText}>
-                        {isToday ? 'Active' : 'Historical'}
+                  {planLoading ? (
+                    <View style={styles.planLoadingContainer}>
+                      <Ionicons name="hourglass-outline" size={24} color="#999999" />
+                      <Text style={styles.planLoadingText}>Loading plan...</Text>
+                    </View>
+                  ) : todaysPlan ? (
+                    <View style={styles.planContentContainer}>
+                      <Text style={styles.planText}>{todaysPlan}</Text>
+                      <Text style={styles.planDateText}>
+                        Generated on {format(selectedDate, 'MMMM d, yyyy')}
                       </Text>
+                    </View>
+                  ) : (
+                    <View style={styles.emptyPlanContainer}>
+                      <Ionicons name="fitness-outline" size={32} color="#CCCCCC" />
+                      <Text style={styles.emptyPlanText}>
+                        {recoveryData.submitted 
+                          ? 'No plan generated yet'
+                          : 'Submit recovery data first'}
+                      </Text>
+                      {recoveryData.submitted ? (
+                        <Text style={styles.emptyPlanSubtext}>
+                          {isToday 
+                            ? 'Click the generate button to create your recovery plan'
+                            : 'Click the generate button to create a recovery plan for this day'}
+                        </Text>
+                      ) : (
+                        <Text style={styles.emptyPlanSubtext}>
+                          Submit your recovery data using the form above
+                        </Text>
+                      )}
                     </View>
                   )}
                 </View>
-                
-                {planLoading ? (
-                  <View style={styles.planLoadingContainer}>
-                    <Ionicons name="hourglass-outline" size={24} color="#999999" />
-                    <Text style={styles.planLoadingText}>Loading plan...</Text>
-                  </View>
-                ) : todaysPlan ? (
-                  <View style={styles.planContentContainer}>
-                    <Text style={styles.planText}>{todaysPlan}</Text>
-                    <Text style={styles.planDateText}>
-                      Generated on {format(selectedDate, 'MMMM d, yyyy')}
-                    </Text>
-                  </View>
-                ) : (
-                  <View style={styles.emptyPlanContainer}>
-                    <Ionicons name="fitness-outline" size={32} color="#CCCCCC" />
-                    <Text style={styles.emptyPlanText}>
-                      {recoveryData.submitted 
-                        ? 'No plan generated yet'
-                        : 'Submit recovery data first'}
-                    </Text>
-                    {recoveryData.submitted ? (
-                      <Text style={styles.emptyPlanSubtext}>
-                        {isToday 
-                          ? 'Click the generate button to create your recovery plan'
-                          : 'Click the generate button to create a recovery plan for this day'}
-                      </Text>
-                    ) : (
-                      <Text style={styles.emptyPlanSubtext}>
-                        Submit your recovery data using the form above
-                      </Text>
-                    )}
-                  </View>
-                )}
               </View>
             </View>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </ScrollView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </ScrollView>
+      
+      {loading && (
+        <Animated.View 
+          style={styles.loadingOverlay}
+          entering={FadeIn.duration(300)}
+        >
+          <Animated.View 
+            style={styles.loadingContent}
+            entering={FadeInDown.duration(400).springify()}
+          >
+            <Image 
+              source={require('../../assets/images/mascot.png')}
+              style={styles.loadingMascot}
+              resizeMode="contain"
+            />
+            <Text style={styles.loadingTitle}>Generating Plan</Text>
+            <Text style={styles.loadingText}>
+              Please don't close the app while I generate the plan for you
+            </Text>
+            <ActivityIndicator size="large" color="#4064F6" />
+          </Animated.View>
+        </Animated.View>
+      )}
+    </>
   );
 }
 
@@ -1060,5 +1085,48 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#000000',
     textAlign: 'center',
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+    paddingHorizontal: 24,
+  },
+  loadingContent: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
+    width: '100%',
+    maxWidth: 320,
+  },
+  loadingMascot: {
+    width: 100,
+    height: 100,
+    marginBottom: 24,
+  },
+  loadingTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#000000',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666666',
+    textAlign: 'center',
+    marginBottom: 24,
   },
 }); 
