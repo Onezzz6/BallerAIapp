@@ -230,68 +230,13 @@ export default function TrainingScreen() {
     sunday: { type: 'off', duration: '' },
   });
   const [loading, setLoading] = useState(false);
-  const [timeUntilNextPlan, setTimeUntilNextPlan] = useState<string>('');
-  const [canGeneratePlan, setCanGeneratePlan] = useState(true);
 
   const focusOptions: FocusArea[] = ['technique', 'strength', 'endurance', 'speed', 'overall'];
   const gymOptions: GymAccess[] = ['yes', 'no'];
 
-  useEffect(() => {
-    const checkPlanGeneration = async () => {
-      if (!user) return;
-
-      try {
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        const data = userDoc.data();
-        const lastPlanGenerated = data?.lastPlanGenerated?.toDate();
-
-        if (lastPlanGenerated) {
-          const currentWeekStart = startOfWeek(new Date(), { weekStartsOn: 1 }); // Monday
-          const lastPlanWeekStart = startOfWeek(lastPlanGenerated, { weekStartsOn: 1 });
-
-          if (format(currentWeekStart, 'yyyy-MM-dd') === format(lastPlanWeekStart, 'yyyy-MM-dd')) {
-            setCanGeneratePlan(false);
-          } else {
-            setCanGeneratePlan(true);
-            clearPlans();
-          }
-        }
-      } catch (error) {
-        console.error('Error checking plan generation:', error);
-      }
-    };
-
-    checkPlanGeneration();
-  }, [user]);
-
-  useEffect(() => {
-    const updateTimer = () => {
-      const now = new Date();
-      const sunday = endOfWeek(now, { weekStartsOn: 1 }); // Set to end of week (Sunday)
-      const timeLeft = differenceInMilliseconds(sunday, now);
-
-      if (timeLeft <= 0) {
-        setCanGeneratePlan(true);
-        setTimeUntilNextPlan('');
-        return;
-      }
-
-      const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-
-      setTimeUntilNextPlan(`${days}d ${hours}h ${minutes}m`);
-    };
-
-    const timer = setInterval(updateTimer, 60000); // Update every minute
-    updateTimer(); // Initial update
-
-    return () => clearInterval(timer);
-  }, []);
-
   const handleGeneratePlan = async () => {
-    if (!user || !selectedFocus || !canGeneratePlan) {
-      Alert.alert('Cannot generate plan', 'Please wait until next week to generate a new plan');
+    if (!user || !selectedFocus) {
+      Alert.alert('Cannot generate plan', 'Please select a focus area');
       return;
     }
     setLoading(true);
@@ -302,85 +247,57 @@ export default function TrainingScreen() {
 
       if (!userData) throw new Error('User data not found');
 
-      const prompt = `You are BallerAI, an expert in creating personalized football training plans. Create a clear training plan following this format:
+      const prompt = `You are BallerAI. Your job is to create a training plan for the user. It should include rest of the week until sunday based on the following information
+this is an example of a plan for one day for this user.
+user onboarding answers:
+age ${userData.age}
+current level ${userData.skillLevel}
+gender "${userData.gender}"
+goal "${userData.footballGoal}"
+height ${userData.height}
+weight ${userData.weight}
+injuryHistory "${userData.injuryHistory}"
+position "${userData.position}"
 
-MONDAY
-1. [Duration] - [Exercise Name]
-   Setup: Brief setup instructions
-   Exercise: What to do
-   Focus: 1 key point to remember
+the user does not have access to the gym.
+assume the user will train alone.
+assume the user only has access to a ball, pitch, cones and a goal.
 
-Example of good format:
-1. 15 minutes - Cone Dribbling
-   Setup: Place 6 cones in a zigzag, 2 meters apart
-   Exercise: Dribble through cones and back, then repeat
-   Focus: Close control, use both feet, 
+Users' extra focus for the week is ${selectedFocus}.
 
-2. 15 minutes - Shooting Practice
-   Setup: place a few cones on the edge of the box
-   Exercise: Take shots aiming for corners 
-   Focus: on precision rather then power
-3. 10 mins - first touch drills
-   Setup: find a wall to practice first touch on
-   Exercise: try keeping the ball in the air while passing back n forth with the wall try different variations
-   Focus: clean touches and repetition
-Player Profile:
-Age: ${userData.age}
-Current Level: ${userData.skillLevel}
-Gender: ${userData.gender}
-Goal: ${userData.footballGoal}
-Height: ${userData.height}cm
-Weight: ${userData.weight}kg
-Injury History: ${userData.injuryHistory}
-Position: ${userData.position}
-
-Weekly Team Schedule:
+users team training amounts are:
 ${Object.entries(schedule)
-  .map(([day, data]) => `${day.charAt(0).toUpperCase() + day.slice(1)}: ${data.type === 'off' ? 'Rest Day' : `${data.duration} minutes of team ${data.type}`}`)
+  .map(([day, data]) => ` ${day} ${data.type === 'off' ? '0' : data.duration} mins`)
   .join('\n')}
 
-Important Requirements:
-1. Focus Area: ${selectedFocus}
-2. Equipment Available: ${gymAccess === 'yes' ? 'Gym equipment available' : 'Only ball, pitch, cones and goal'}
+Perfect training plan example for BallerAI based on this user's info.
+monday: technique based training. start with a 15 minute warm up, 10 mins jogging then 5 minutes of active stretching. Then start to do wall passes for 15 minutes with different variables switching after 5 mins each.Then he will set up 8 cones and start to dribble through and between them using both feet for 15 mins. After that, finishing inside the box for 15 mins. if with a friend do passes before finishing and one time finishing if alone do game like situations where you get ur foot open and finish with precision. then a light 5 min jog to get the fluids mowing and ur done.
+don't copy that, just take the detail and style of the training as a guideline for creating similar training sessions adapting to each user's specific info. When the users awnsers are different make sure you adjust accordingly the most important questions are age, current level and goal as a footballer. This example is just to get an idea of a good plan would be for this specific user, do not copy it just take the style and detail as guidance. The plan should be adjusted if the user has a game for example saturday. 2 days before a game has to frop the load a bit not a lot but noticably. 1 day before game has to be really light so only technical things and recovery based trainings.
+Keep the plan simple focus on the amount thats good for the player not so much on specific advice in terms of technique since its not correct from you. also remember if user chooses a focusd area it still dosent mean only that hes always a football player first so maximum 2 trainings unrelated to football per week.
 
-Exercise Format:
-1. Duration and name should be clear
-2. Setup should be specific (distances, equipment)
-3. Exercise should explain what to do
-4. Focus points should be short and clear (1 point max)
-5. For gym exercises, reps/sets
+VERY IMPORTANT: For any recovery days, simply tell the user to "Focus on recovery today" without providing specific recovery exercises. The app has a separate recovery page with dedicated recovery instructions.
 
-Session Structure:
-1. Warm-up (10-15 minutes)
-   Setup: Clear space
-   Exercise: Light jog, stretches
-   Focus: Gradually increase intensity
+IMPORTANT FORMAT INSTRUCTIONS:
+1. Format each day in FULL CAPS (example: "MONDAY")
+2. Write the plan for that day directly below it
+3. Separate each day's plan with a line break
+4. The plan should be in simple text format, no markdown, bold, or fancy formatting
+5. Start with MONDAY and include all 7 days of the week in order
 
-2. Main exercises (15-20 minutes each)
-   - Include 2-3 focused exercises
-   - Each with setup, exercise, focus points
-   - Rest periods between sets if needed
+Example of correct format:
+MONDAY
+10 min warm up - light jog and stretching
+15 min passing drills - wall passes varying distance
+15 min dribbling - cone drills focusing on control
+5 min cool down
 
-3. Cool-down (5-10 minutes)
-   Setup: Clear space
-   Exercise: Light jog, stretches
-   Focus: Gradually decrease intensity
+TUESDAY
+Rest day - team training day 90 mins
 
-Training Rules:
-1. Maximum 2 non-football sessions per week
-2. Reduce intensity 2 days before game
-3. Light session 1 day before game
-4. Rest day after game
-5. Account for team training load
-6. Include at least one full rest day
+WEDNESDAY
+Focus on recovery today
 
-Remember:
-- Keep instructions clear and practical
-- Focus points should be observable actions
-- If it's a gym day, only include gym exercises
-- Consider injury history in exercise selection
-- Maintain proper progression throughout the week
-- Don't include coaching advice or technical details`;
+[continue for all days]`;
 
       const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
         method: 'POST',
@@ -412,31 +329,7 @@ Remember:
       
       const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
       
-      const cleanAndFormatContent = (content: string): string => {
-        // Remove markdown symbols and clean up the text
-        let cleanContent = content
-          .replace(/\*\*/g, '') // Remove bold markers
-          .replace(/---/g, '') // Remove horizontal rules
-          .replace(/^\s*-\s*/gm, '') // Remove list markers
-          .replace(/\n\s*\n/g, '\n') // Remove extra blank lines
-          .trim();
-
-        // Split into sections and format as numbered list
-        const sections = cleanContent.split(/\d+\.\s+/).filter(Boolean);
-        if (sections.length > 0) {
-          // If content is already in a numbered format, clean it up
-          return sections.map((section, index) => 
-            `${index + 1}. ${section.trim()}`
-          ).join('\n\n');
-        } else {
-          // If content is not numbered, split by main sections and number them
-          const lines = cleanContent.split('\n').filter(line => line.trim());
-          return lines.map((line, index) => 
-            `${index + 1}. ${line.trim()}`
-          ).join('\n\n');
-        }
-      };
-
+      // Simple parse function to extract content between day headers
       days.forEach(day => {
         const dayRegex = new RegExp(
           `${day.toUpperCase()}\\s*\\n([\\s\\S]*?)(?=(?:${days.join('|').toUpperCase()}|$))`,
@@ -452,7 +345,7 @@ Remember:
         });
         
         if (match && match[1]) {
-          dailyPlans[day] = cleanAndFormatContent(match[1].trim());
+          dailyPlans[day] = match[1].trim();
         } else {
           dailyPlans[day] = `No specific training for ${day}.`;
         }
@@ -471,7 +364,6 @@ Remember:
         lastPlanGenerated: new Date(),
       }, { merge: true });
 
-      setCanGeneratePlan(false);
       router.push('/training-plans');
     } catch (error) {
       console.error('Error generating plan:', error);
@@ -680,22 +572,16 @@ Remember:
               <Pressable
                 style={[
                   styles.generateButton,
-                  (!canGeneratePlan || loading) && styles.generateButtonDisabled
+                  loading && styles.generateButtonDisabled
                 ]}
                 onPress={handleGeneratePlan}
-                disabled={!canGeneratePlan || loading}
+                disabled={loading}
               >
                 <Text style={styles.generateButtonText}>
                   {loading ? 'Generating Plan...' : 'Generate Training Plan'}
                 </Text>
                 <Ionicons name="football" size={20} color="#FFFFFF" />
               </Pressable>
-
-              {!canGeneratePlan && timeUntilNextPlan && (
-                <Text style={styles.timerText}>
-                  Next week's plan available in: {timeUntilNextPlan}
-                </Text>
-              )}
 
               <Pressable
                 style={[
