@@ -212,6 +212,47 @@ const styles = StyleSheet.create({
     color: '#666666',
     marginTop: 8,
   },
+  disabledContainer: {
+    opacity: 0.8,
+  },
+  disabledOption: {
+    opacity: 0.8,
+  },
+  disabledInput: {
+    backgroundColor: '#F0F0F0',
+    color: '#999999',
+  },
+  confirmButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4064F6',
+    padding: 12,
+    borderRadius: 100,
+    marginTop: 16,
+    gap: 8,
+  },
+  confirmButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4064F6',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 100,
+    gap: 8,
+    alignSelf: 'flex-start',
+    marginBottom: 4
+  },
+  editButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
+  },
 });
 
 export default function TrainingScreen() {
@@ -230,13 +271,15 @@ export default function TrainingScreen() {
     sunday: { type: 'off', duration: '' },
   });
   const [loading, setLoading] = useState(false);
+  const [scheduleConfirmed, setScheduleConfirmed] = useState(false);
 
   const focusOptions: FocusArea[] = ['technique', 'strength', 'endurance', 'speed', 'overall'];
   const gymOptions: GymAccess[] = ['yes', 'no'];
 
   const handleGeneratePlan = async () => {
-    if (!user || !selectedFocus) {
-      Alert.alert('Cannot generate plan', 'Please select a focus area');
+    if (!user || !selectedFocus || !gymAccess || !scheduleConfirmed) {
+      Alert.alert('Cannot generate plan', 
+        'Please select a focus area, answer the gym access question, and confirm your team training schedule.');
       return;
     }
     setLoading(true);
@@ -259,15 +302,15 @@ weight ${userData.weight}
 injuryHistory "${userData.injuryHistory}"
 position "${userData.position}"
 
-the user does not have access to the gym.
+the user ${gymAccess === 'yes' ? 'has' : 'does not have'} access to the gym.
 assume the user will train alone.
-assume the user only has access to a ball, pitch, cones and a goal.
+assume the user only has access to a ball, pitch, cones and a goal ${gymAccess === 'yes' ? 'and gym equipment' : ''}.
 
 Users' extra focus for the week is ${selectedFocus}.
 
 users team training amounts are:
 ${Object.entries(schedule)
-  .map(([day, data]) => ` ${day} ${data.type === 'off' ? '0' : data.duration} mins`)
+  .map(([day, data]) => ` ${day} ${data.type === 'off' ? '0' : data.type === 'game' ? 'GAME' : data.duration} mins`)
   .join('\n')}
 
 Perfect training plan example for BallerAI based on this user's info.
@@ -275,7 +318,11 @@ monday: technique based training. start with a 15 minute warm up, 10 mins joggin
 don't copy that, just take the detail and style of the training as a guideline for creating similar training sessions adapting to each user's specific info. When the users awnsers are different make sure you adjust accordingly the most important questions are age, current level and goal as a footballer. This example is just to get an idea of a good plan would be for this specific user, do not copy it just take the style and detail as guidance. The plan should be adjusted if the user has a game for example saturday. 2 days before a game has to frop the load a bit not a lot but noticably. 1 day before game has to be really light so only technical things and recovery based trainings.
 Keep the plan simple focus on the amount thats good for the player not so much on specific advice in terms of technique since its not correct from you. also remember if user chooses a focusd area it still dosent mean only that hes always a football player first so maximum 2 trainings unrelated to football per week.
 
-VERY IMPORTANT: For any recovery days, simply tell the user to "Focus on recovery today" without providing specific recovery exercises. The app has a separate recovery page with dedicated recovery instructions.
+VERY IMPORTANT TRAINING GUIDELINES:
+1. For any recovery days, simply tell the user to "Focus on recovery today" without providing specific recovery exercises. The app has a separate recovery page with dedicated recovery instructions.
+2. If the user has a game scheduled on any day, make the 2 days BEFORE that game much lighter in intensity. The day immediately before a game should be extremely light (technical work only) or recovery.
+3. If you include a gym session on any day, that should be the ONLY training for that day. Never mix gym and field work on the same day as users typically don't have access to both facilities at once.
+4. Only suggest gym-based training if the user has explicitly stated they have gym access.
 
 IMPORTANT FORMAT INSTRUCTIONS:
 1. Format each day in FULL CAPS (example: "MONDAY")
@@ -292,12 +339,24 @@ MONDAY
 5 min cool down
 
 TUESDAY
-Rest day - team training day 90 mins
+Gym session: 45 minutes of strength training focused on lower body
 
 WEDNESDAY
 Focus on recovery today
 
-[continue for all days]`;
+THURSDAY (Light training - game in 2 days)
+20 min very light technical work - focus on ball control
+10 min stretching
+
+FRIDAY (Pre-game day)
+Focus on recovery today
+Light stretching only
+
+SATURDAY
+Game day
+
+SUNDAY
+Focus on recovery today`;
 
       const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
         method: 'POST',
@@ -331,8 +390,9 @@ Focus on recovery today
       
       // Simple parse function to extract content between day headers
       days.forEach(day => {
+        // Updated regex to handle day headers with parenthetical notes
         const dayRegex = new RegExp(
-          `${day.toUpperCase()}\\s*\\n([\\s\\S]*?)(?=(?:${days.join('|').toUpperCase()}|$))`,
+          `${day.toUpperCase()}\\s*(?:\\([^)]+\\))?\\s*\\n([\\s\\S]*?)(?=(?:${days.join('|').toUpperCase()}\\s*(?:\\([^)]+\\))?\\s*\\n|$))`,
           'i'
         );
         
@@ -373,17 +433,39 @@ Focus on recovery today
     }
   };
 
+  const confirmSchedule = () => {
+    const missingDurations = Object.entries(schedule).some(([day, { type, duration }]) => 
+      (type === 'game' || type === 'training') && !duration
+    );
+    
+    if (missingDurations) {
+      Alert.alert('Missing information', 'Please enter duration for all game and training days.');
+      return;
+    }
+    
+    setScheduleConfirmed(true);
+  };
+
+  const editSchedule = () => {
+    setScheduleConfirmed(false);
+  };
+
   const updateSchedule = (day: string, type: 'off' | 'game' | 'training') => {
+    if (scheduleConfirmed) return;
+    
     setSchedule({
       ...schedule,
       [day]: {
         ...schedule[day as keyof typeof schedule],
         type,
+        ...(type === 'off' && { duration: '' })
       },
     });
   };
 
   const updateDuration = (day: string, duration: string) => {
+    if (scheduleConfirmed) return;
+    
     setSchedule({
       ...schedule,
       [day]: {
@@ -509,38 +591,62 @@ Focus on recovery today
               </View>
             </View>
 
-            <View style={styles.sectionBackgroundGray}>
-              <Text style={styles.sectionTitle}>Team Training schedule <Text style={styles.subtitleInline}>(minutes/day)</Text></Text>
+            <View style={[styles.sectionBackgroundGray, scheduleConfirmed && { opacity: 0.8 }]}>
+              <View style={{ 
+                flexDirection: 'row', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                marginBottom: 8,
+                flexWrap: 'wrap',
+                gap: 8
+              }}>
+                <Text style={[styles.sectionTitle, { flex: 1 }]}>Team Training schedule <Text style={styles.subtitleInline}>(minutes/day)</Text></Text>
+                {scheduleConfirmed && (
+                  <Pressable
+                    style={styles.editButton}
+                    onPress={editSchedule}
+                  >
+                    <Ionicons name="create-outline" size={18} color="#FFFFFF" />
+                    <Text style={styles.editButtonText}>Edit</Text>
+                  </Pressable>
+                )}
+              </View>
               <Text style={styles.subtitle}>Fill in your team training schedule so BallerAI can take this into consideration when making ur personalized training plan.</Text>
 
               {Object.entries(schedule).map(([day, daySchedule]) => (
-                <View key={day} style={styles.dayContainer}>
+                <View key={day} style={[styles.dayContainer, scheduleConfirmed && styles.disabledContainer]}>
                   <Text style={styles.dayTitle}>{day.toUpperCase()}</Text>
                   <View style={styles.dayOptions}>
                     <Pressable
                       style={[
                         styles.dayOption,
-                        daySchedule.type === 'off' && styles.selectedDayOption
+                        daySchedule.type === 'off' && styles.selectedDayOption,
+                        scheduleConfirmed && styles.disabledOption
                       ]}
                       onPress={() => updateSchedule(day, 'off')}
+                      disabled={scheduleConfirmed}
                     >
                       <Text style={styles.dayOptionText}>Off</Text>
                     </Pressable>
                     <Pressable
                       style={[
                         styles.dayOption,
-                        daySchedule.type === 'game' && styles.selectedGameOption
+                        daySchedule.type === 'game' && styles.selectedGameOption,
+                        scheduleConfirmed && styles.disabledOption
                       ]}
                       onPress={() => updateSchedule(day, 'game')}
+                      disabled={scheduleConfirmed}
                     >
                       <Text style={styles.dayOptionText}>Game</Text>
                     </Pressable>
                     <Pressable
                       style={[
                         styles.dayOption,
-                        daySchedule.type === 'training' && styles.selectedTrainingOption
+                        daySchedule.type === 'training' && styles.selectedTrainingOption,
+                        scheduleConfirmed && styles.disabledOption
                       ]}
                       onPress={() => updateSchedule(day, 'training')}
+                      disabled={scheduleConfirmed}
                     >
                       <Text style={styles.dayOptionText}>Training</Text>
                     </Pressable>
@@ -555,27 +661,38 @@ Focus on recovery today
                           style={styles.clockIcon}
                         />
                         <TextInput
-                          style={styles.timeInput}
+                          style={[styles.timeInput, scheduleConfirmed && styles.disabledInput]}
                           placeholder={`Enter ${daySchedule.type} time`}
                           value={daySchedule.duration}
                           onChangeText={(text) => updateDuration(day, text)}
                           keyboardType="numeric"
+                          editable={!scheduleConfirmed}
                         />
                       </View>
                     </View>
                   )}
                 </View>
               ))}
+              
+              {!scheduleConfirmed && (
+                <Pressable 
+                  style={styles.confirmButton}
+                  onPress={confirmSchedule}
+                >
+                  <Text style={styles.confirmButtonText}>Confirm Schedule</Text>
+                  <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                </Pressable>
+              )}
             </View>
 
             <View style={styles.buttonContainer}>
               <Pressable
                 style={[
                   styles.generateButton,
-                  loading && styles.generateButtonDisabled
+                  (loading || !scheduleConfirmed || !selectedFocus || !gymAccess) && styles.generateButtonDisabled
                 ]}
                 onPress={handleGeneratePlan}
-                disabled={loading}
+                disabled={loading || !scheduleConfirmed || !selectedFocus || !gymAccess}
               >
                 <Text style={styles.generateButtonText}>
                   {loading ? 'Generating Plan...' : 'Generate Training Plan'}
