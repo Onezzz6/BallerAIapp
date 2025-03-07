@@ -19,7 +19,10 @@ type RecoveryData = {
   sleep: number;
   mood: number;
   submitted?: boolean;
+  tools?: RecoveryTool[];
 };
+
+type RecoveryTool = 'Cold Exposure' | 'Foam Roller' | 'Cycling' | 'Swimming' | 'Compression' | 'Massage Gun' | 'Sauna' | 'Resistance Bands' | 'None';
 
 export default function RecoveryScreen() {
   const { user } = useAuth();
@@ -32,6 +35,8 @@ export default function RecoveryScreen() {
     mood: 5,
     submitted: false
   });
+  const [selectedTools, setSelectedTools] = useState<RecoveryTool[]>([]);
+  const [toolsConfirmed, setToolsConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [todaysPlan, setTodaysPlan] = useState<string | null>(null);
   const [todaysData, setTodaysData] = useState<{
@@ -55,7 +60,10 @@ export default function RecoveryScreen() {
       try {
         const docSnap = await getDoc(recoveryRef);
         if (docSnap.exists()) {
-          setRecoveryData(docSnap.data() as RecoveryData);
+          const data = docSnap.data() as RecoveryData & { tools?: RecoveryTool[] };
+          setRecoveryData(data);
+          setSelectedTools(data.tools || []);
+          setToolsConfirmed(Boolean(data.tools && data.tools.length > 0));
           setIsEditing(false);
         } else {
           // Reset form for new date with even numbers
@@ -66,6 +74,8 @@ export default function RecoveryScreen() {
             mood: 5,
             submitted: false
           });
+          setSelectedTools([]);
+          setToolsConfirmed(false);
           setIsEditing(true);
         }
       } catch (error) {
@@ -125,18 +135,47 @@ export default function RecoveryScreen() {
     const recoveryRef = doc(db, 'users', user.uid, 'recovery', dateStr);
     
     try {
+      // First, get the current document to preserve any existing tools data
+      const docSnap = await getDoc(recoveryRef);
+      let currentTools: RecoveryTool[] | undefined = undefined;
+      
+      // If document exists, extract the tools field
+      if (docSnap.exists()) {
+        const currentData = docSnap.data();
+        currentTools = currentData.tools;
+      }
+      
+      // Get the current slider values from local state
+      // These will be the exact positions where the user has set the sliders
       const updatedData = {
-        ...recoveryData,
+        soreness: recoveryData.soreness,
+        fatigue: recoveryData.fatigue,
+        sleep: recoveryData.sleep,
+        mood: recoveryData.mood,
         submitted: true,
         lastUpdated: new Date().toISOString(),
       };
       
+      // Only add tools if they exist and are not empty
+      if (currentTools && currentTools.length > 0) {
+        updatedData.tools = currentTools;
+      }
+      
+      console.log("Saving recovery data:", updatedData);
       await setDoc(recoveryRef, updatedData);
-      setRecoveryData(updatedData);
+      
+      // Update local state to reflect submitted status
+      setRecoveryData(prev => ({
+        ...prev,
+        submitted: true
+      }));
+      
       setIsEditing(false);
+      
+      // Do NOT modify toolsConfirmed state here
     } catch (error) {
       console.error('Error saving recovery data:', error);
-      alert('Failed to save data. Please try again.');
+      Alert.alert('Error', 'Failed to save data. Please try again.');
     }
   };
 
@@ -172,8 +211,15 @@ export default function RecoveryScreen() {
   };
 
   const handleGeneratePlan = async () => {
-    if (!user || !recoveryData.submitted) {
-      Alert.alert('Error', 'Please submit today\'s recovery data first');
+    if (!user) return;
+    
+    if (!recoveryData.submitted) {
+      Alert.alert('Error', 'Please submit your recovery data first');
+      return;
+    }
+    
+    if (!toolsConfirmed) {
+      Alert.alert('Error', 'Please confirm your recovery tools first');
       return;
     }
     
@@ -218,19 +264,26 @@ export default function RecoveryScreen() {
     setLoading(true);
 
     try {
-      const prompt = `Create a short, focused recovery plan with ONLY recovery exercises based on these metrics:
+      const toolsAvailable = selectedTools.length > 0 
+        ? `Available recovery tools: ${selectedTools.join(', ')}`
+        : "No special recovery tools available. Suggest only bodyweight movements, walking, jogging, and other equipment-free activities.";
+
+      const prompt = `Create a short, focused recovery plan based on these metrics:
 
 Muscle Soreness Level: ${recoveryData.soreness}/10
 Overall Fatigue: ${recoveryData.fatigue}/10
 Sleep Quality: ${recoveryData.sleep}/10
 Mood: ${recoveryData.mood}/10
 
+${toolsAvailable}
+
 The plan MUST:
 1. Be no longer than 5 lines total
 2. Include ONLY specific recovery exercises to perform today
 3. Do NOT include any nutrition, hydration, or sleep advice
 4. Focus only on physical recovery activities/exercises
-5. Be direct and easy to follow`;
+5. Be direct and easy to follow
+6. Only utilize the tools listed as available (if none selected, only suggest bodyweight exercises)`;
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -302,6 +355,80 @@ The plan MUST:
       setLoading(false);
     }
   };
+
+  const handleConfirmTools = async () => {
+    if (!user) return;
+    
+    if (selectedTools.length === 0) {
+      Alert.alert('Error', 'Please select at least one recovery tool or select "None"');
+      return;
+    }
+    
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    const recoveryRef = doc(db, 'users', user.uid, 'recovery', dateStr);
+    
+    try {
+      // Get current data first to avoid overwriting other fields
+      const docSnap = await getDoc(recoveryRef);
+      let currentData = {};
+      if (docSnap.exists()) {
+        currentData = docSnap.data();
+      }
+      
+      const updatedData = {
+        ...currentData,
+        tools: selectedTools,
+        lastUpdated: new Date().toISOString(),
+      };
+      
+      await setDoc(recoveryRef, updatedData, { merge: true });
+      setToolsConfirmed(true);
+      
+      // If recovery data is not yet submitted, remind the user
+      if (!recoveryData.submitted) {
+        Alert.alert('Tools Confirmed', 'Remember to also submit your recovery data to generate a plan.');
+      }
+    } catch (error) {
+      console.error('Error saving tools data:', error);
+      Alert.alert('Error', 'Failed to save tools data. Please try again.');
+    }
+  };
+
+  const toggleTool = (tool: RecoveryTool) => {
+    setToolsConfirmed(false); // Reset confirmed state when tools are changed
+    setSelectedTools(prev => {
+      // If selecting "None", clear all other selections
+      if (tool === "None") {
+        return prev.includes("None") ? [] : ["None"];
+      }
+      
+      // If selecting any other tool, remove "None" if it's selected
+      let newSelection = prev.filter(t => t !== "None");
+      
+      // Toggle the selected tool
+      if (newSelection.includes(tool)) {
+        newSelection = newSelection.filter(t => t !== tool);
+      } else {
+        newSelection = [...newSelection, tool];
+      }
+      
+      return newSelection;
+    });
+  };
+
+  // Add this useEffect to ensure recovery data is initialized correctly when component loads
+  useEffect(() => {
+    // Initialize recovery data with default values
+    if (!recoveryData.submitted) {
+      setRecoveryData({
+        soreness: 5,
+        fatigue: 5, 
+        sleep: 5,
+        mood: 5,
+        submitted: false
+      });
+    }
+  }, []);
 
   return (
     <>
@@ -494,42 +621,185 @@ The plan MUST:
                       disabled={false}
                       type="sleep"
                     />
+                    
+                    {/* Submit button inside the Recovery Query card */}
+                    <Pressable 
+                      style={[styles.submitButton, {marginTop: 16}]}
+                      onPress={handleSubmit}
+                    >
+                      <Text style={styles.submitButtonText}>
+                        {isEditing ? 'Update Recovery Data' : 'Submit Recovery Data'}
+                      </Text>
+                      <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                    </Pressable>
                   </>
                 )}
               </View>
 
-              {(!recoveryData.submitted || isEditing) && (
-                <Pressable 
-                  style={styles.submitButton}
-                  onPress={handleSubmit}
-                >
-                  <Text style={styles.submitButtonText}>
-                    {isEditing ? 'Update Recovery Data' : 'Submit Recovery Data'}
-                  </Text>
-                  <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-                </Pressable>
-              )}
-
-              {!recoveryData.submitted ? (
-                <View style={styles.infoMessageContainer}>
-                  <Text style={styles.infoMessageText}>
-                    Submit your recovery data first to generate a plan
-                  </Text>
+              {/* Recovery Tools Selection Card */}
+              <View style={[
+                styles.inputsContainer, 
+                planExists && styles.disabledContainer,
+                (toolsConfirmed && !planExists) && styles.confirmedContainer
+              ]}>
+                <View style={{alignItems: 'center'}}>
+                  <Text style={[
+                    styles.loadText,
+                    planExists && {color: '#999999'},
+                    (toolsConfirmed && !planExists) && {color: '#4064F6'}
+                  ]}>Recovery Tools</Text>
                 </View>
-              ) : !planExists ? (
-                <Pressable
-                  style={[
-                    styles.generateButton, 
-                    loading && styles.generateButtonDisabled
-                  ]}
-                  onPress={handleGeneratePlan}
-                  disabled={loading}
-                >
-                  <Text style={styles.generateButtonText}>
-                    {loading ? 'Generating Plan...' : 'Generate Recovery Plan'}
+                
+                {toolsConfirmed && !planExists ? (
+                  // Show confirmed header with edit button
+                  <View style={styles.submittedHeader}>
+                    <Text style={styles.submittedText}>Tools Confirmed</Text>
+                    <Pressable
+                      style={styles.editButton}
+                      onPress={() => setToolsConfirmed(false)}
+                    >
+                      <Ionicons name="create-outline" size={24} color="#FFFFFF" />
+                      <Text style={styles.editButtonText}>Edit</Text>
+                    </Pressable>
+                  </View>
+                ) : (
+                  <Text style={[
+                    styles.toolsSelectionText,
+                    planExists && {color: '#999999'},
+                    (toolsConfirmed && !planExists) && {color: '#999999'}
+                  ]}>
+                    Select the recovery tools you have access to:
                   </Text>
-                  <Ionicons name="fitness" size={20} color="#FFFFFF" />
-                </Pressable>
+                )}
+                
+                <View style={styles.toolsGrid}>
+                  <RecoveryToolButton 
+                    icon="snow-outline" 
+                    label="Cold Exposure" 
+                    selected={selectedTools.includes("Cold Exposure")}
+                    onPress={() => toggleTool("Cold Exposure")} 
+                    disabled={planExists || (toolsConfirmed && !isEditing)}
+                  />
+                  <RecoveryToolButton 
+                    icon="heart-outline" 
+                    label="Foam Roller" 
+                    selected={selectedTools.includes("Foam Roller")}
+                    onPress={() => toggleTool("Foam Roller")} 
+                    disabled={planExists || (toolsConfirmed && !isEditing)}
+                  />
+                  <RecoveryToolButton 
+                    icon="bicycle-outline" 
+                    label="Cycling" 
+                    selected={selectedTools.includes("Cycling")}
+                    onPress={() => toggleTool("Cycling")} 
+                    disabled={planExists || (toolsConfirmed && !isEditing)}
+                  />
+                  <RecoveryToolButton 
+                    icon="water-outline" 
+                    label="Swimming" 
+                    selected={selectedTools.includes("Swimming")}
+                    onPress={() => toggleTool("Swimming")} 
+                    disabled={planExists || (toolsConfirmed && !isEditing)}
+                  />
+                  <RecoveryToolButton 
+                    icon="pulse-outline" 
+                    label="Compression" 
+                    selected={selectedTools.includes("Compression")}
+                    onPress={() => toggleTool("Compression")} 
+                    disabled={planExists || (toolsConfirmed && !isEditing)}
+                  />
+                  <RecoveryToolButton 
+                    icon="flash-outline" 
+                    label="Massage Gun" 
+                    selected={selectedTools.includes("Massage Gun")}
+                    onPress={() => toggleTool("Massage Gun")} 
+                    disabled={planExists || (toolsConfirmed && !isEditing)}
+                  />
+                  <RecoveryToolButton 
+                    icon="flame-outline" 
+                    label="Sauna" 
+                    selected={selectedTools.includes("Sauna")}
+                    onPress={() => toggleTool("Sauna")} 
+                    disabled={planExists || (toolsConfirmed && !isEditing)}
+                  />
+                  <RecoveryToolButton 
+                    icon="barbell-outline" 
+                    label="Resistance Bands" 
+                    selected={selectedTools.includes("Resistance Bands")}
+                    onPress={() => toggleTool("Resistance Bands")} 
+                    disabled={planExists || (toolsConfirmed && !isEditing)}
+                  />
+                </View>
+                <View style={styles.noneToolContainer}>
+                  <RecoveryToolButton 
+                    icon="close-circle-outline" 
+                    label="None" 
+                    selected={selectedTools.includes("None")}
+                    onPress={() => toggleTool("None")} 
+                    disabled={planExists || (toolsConfirmed && !isEditing)}
+                  />
+                </View>
+                
+                {!planExists && !toolsConfirmed && (
+                  <Pressable 
+                    style={styles.submitButton}
+                    onPress={handleConfirmTools}
+                  >
+                    <Text style={styles.submitButtonText}>
+                      Confirm Tools
+                    </Text>
+                    <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                  </Pressable>
+                )}
+                
+                {toolsConfirmed && !planExists && (
+                  <Text style={[styles.toolsConfirmedText]}>
+                    Your selection has been saved
+                  </Text>
+                )}
+                
+                {!toolsConfirmed && !planExists && selectedTools.length === 0 && (
+                  <Text style={styles.toolsHelperText}>
+                    Please select at least one option
+                  </Text>
+                )}
+                
+                {planExists && (
+                  <Text style={[styles.toolsHelperText, {color: '#999999'}]}>
+                    Recovery plan already generated
+                  </Text>
+                )}
+              </View>
+
+              {/* Generate Plan Button or Status */}
+              {!planExists ? (
+                <>
+                  <Pressable
+                    style={[
+                      styles.generateButton, 
+                      (loading || !recoveryData.submitted || !toolsConfirmed) && styles.generateButtonDisabled
+                    ]}
+                    onPress={handleGeneratePlan}
+                    disabled={loading || !recoveryData.submitted || !toolsConfirmed}
+                  >
+                    <Text style={styles.generateButtonText}>
+                      {loading ? 'Generating Plan...' : 'Generate Recovery Plan'}
+                    </Text>
+                    <Ionicons name="fitness" size={20} color="#FFFFFF" />
+                  </Pressable>
+                  
+                  {(!recoveryData.submitted || !toolsConfirmed) && (
+                    <View style={styles.infoMessageContainer}>
+                      <Text style={styles.infoMessageText}>
+                        {!recoveryData.submitted && !toolsConfirmed 
+                          ? 'Submit your recovery data and confirm your tools to generate a plan'
+                          : !recoveryData.submitted 
+                            ? 'Submit your recovery data to generate a plan'
+                            : 'Confirm your recovery tools to generate a plan'}
+                      </Text>
+                    </View>
+                  )}
+                </>
               ) : (
                 <Pressable
                   style={[
@@ -731,6 +1001,56 @@ function RecoverySlider({
         ))}
       </View>
     </View>
+  );
+}
+
+// Recovery Tool Button Component
+function RecoveryToolButton({
+  icon,
+  label,
+  selected,
+  onPress,
+  disabled = false
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <Pressable
+      style={[
+        styles.toolButton,
+        selected && styles.toolButtonSelected,
+        disabled && styles.toolButtonDisabled
+      ]}
+      onPress={disabled ? undefined : onPress}
+      disabled={disabled}
+    >
+      <Ionicons 
+        name={icon} 
+        size={24} 
+        color={
+          disabled 
+            ? "#BBBBBB" 
+            : selected 
+              ? "#FFFFFF" 
+              : "#666666"
+        } 
+      />
+      <Text 
+        style={[
+          styles.toolButtonText,
+          selected && styles.toolButtonTextSelected,
+          disabled && styles.toolButtonTextDisabled
+        ]}
+        numberOfLines={2}
+        ellipsizeMode="tail"
+      >
+        {label}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -1128,5 +1448,79 @@ const styles = StyleSheet.create({
     color: '#666666',
     textAlign: 'center',
     marginBottom: 24,
+  },
+  toolsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginTop: 16,
+  },
+  toolButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '48%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  toolButtonSelected: {
+    backgroundColor: '#99E86C',
+  },
+  toolButtonText: {
+    fontSize: 14,
+    color: '#666666',
+    fontWeight: '500',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  toolButtonTextSelected: {
+    color: '#FFFFFF',
+  },
+  toolsSelectionText: {
+    fontSize: 16,
+    color: '#000000',
+    marginBottom: 8,
+  },
+  noneToolContainer: {
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  toolsHelperText: {
+    fontSize: 14,
+    color: '#F56C6C',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  toolButtonDisabled: {
+    backgroundColor: '#F5F5F5',
+    borderColor: '#EEEEEE',
+    borderWidth: 1,
+    opacity: 0.7,
+  },
+  toolButtonTextDisabled: {
+    color: '#BBBBBB',
+  },
+  disabledContainer: {
+    opacity: 0.7,
+    backgroundColor: '#F5F5F5',
+    borderColor: '#EEEEEE',
+  },
+  toolsConfirmedText: {
+    fontSize: 14,
+    color: '#4064F6',
+    textAlign: 'center',
+    marginTop: 16,
+    fontWeight: '500',
+  },
+  confirmedContainer: {
+    opacity: 0.8,
+    backgroundColor: '#F5F9FF',
+    borderColor: '#E0E7FF',
   },
 }); 
