@@ -44,6 +44,7 @@ export default function RecoveryScreen() {
   const [timeConfirmed, setTimeConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [todaysPlan, setTodaysPlan] = useState<string | null>(null);
+  const [planCompleted, setPlanCompleted] = useState(false);
   const [todaysData, setTodaysData] = useState<{
     soreness: number;
     fatigue: number;
@@ -207,6 +208,7 @@ export default function RecoveryScreen() {
     setPlanLoading(true);
     setTodaysPlan(null);
     setPlanExists(false);
+    setPlanCompleted(false);
     
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
     
@@ -218,10 +220,12 @@ export default function RecoveryScreen() {
         const planData = planSnap.data();
         setTodaysPlan(planData.plan);
         setPlanExists(true);
+        setPlanCompleted(planData.completed || false);
         console.log(`Loaded saved plan for ${dateStr}:`, planData.plan);
       } else {
         setTodaysPlan(null);
         setPlanExists(false);
+        setPlanCompleted(false);
         console.log(`No plan exists for ${dateStr}`);
       }
     } catch (error) {
@@ -393,7 +397,8 @@ IMPORTANT USAGE GUIDELINES:
         plan: planText,
         createdAt: Timestamp.now(),
         metrics: metricsToSave,
-        date: dateStr
+        date: dateStr,
+        completed: false
       });
 
       setPlanExists(true);
@@ -518,6 +523,32 @@ IMPORTANT USAGE GUIDELINES:
       });
     }
   }, []);
+
+  // Add function to toggle plan completion status
+  const togglePlanCompletion = async () => {
+    if (!user || !planExists) return;
+    
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    const planRef = doc(db, 'users', user.uid, 'recoveryPlans', dateStr);
+    
+    try {
+      // Toggle the completed status
+      const newCompletionStatus = !planCompleted;
+      
+      // Update Firebase
+      await setDoc(planRef, {
+        completed: newCompletionStatus
+      }, { merge: true });
+      
+      // Update local state
+      setPlanCompleted(newCompletionStatus);
+      
+      console.log(`Plan marked as ${newCompletionStatus ? 'completed' : 'incomplete'}`);
+    } catch (error) {
+      console.error('Error updating plan completion status:', error);
+      Alert.alert('Error', 'Failed to update completion status. Please try again.');
+    }
+  };
 
   return (
     <>
@@ -1143,6 +1174,33 @@ IMPORTANT USAGE GUIDELINES:
                       <Text style={styles.planDateText}>
                         Generated on {format(selectedDate, 'MMMM d, yyyy')}
                       </Text>
+                      
+                      {/* Completion status and button */}
+                      {planCompleted && (
+                        <View style={styles.completedBadgeContainer}>
+                          <View style={styles.completedBadge}>
+                            <Ionicons name="checkmark-outline" size={16} color="#FFFFFF" />
+                            <Text style={styles.completedBadgeText}>Completed</Text>
+                          </View>
+                        </View>
+                      )}
+                      
+                      <Pressable
+                        style={[
+                          styles.completionButton,
+                          planCompleted ? styles.incompleteButton : styles.completeButton
+                        ]}
+                        onPress={togglePlanCompletion}
+                      >
+                        <Text style={styles.completionButtonText}>
+                          {planCompleted ? 'Mark as Incomplete' : 'Mark as Completed'}
+                        </Text>
+                        <Ionicons 
+                          name={planCompleted ? "close" : "checkmark-circle"} 
+                          size={20} 
+                          color="#FFFFFF" 
+                        />
+                      </Pressable>
                     </View>
                   ) : (
                     <View style={styles.emptyPlanContainer}>
@@ -1862,5 +1920,44 @@ const styles = StyleSheet.create({
   submitButtonDisabled: {
     opacity: 0.5,
     backgroundColor: '#999999',
+  },
+  completionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 20,
+    paddingVertical: 12,
+    borderRadius: 36,
+  },
+  completeButton: {
+    backgroundColor: '#4064F6',
+  },
+  incompleteButton: {
+    backgroundColor: '#666666',
+  },
+  completionButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  completedBadgeContainer: {
+    alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  completedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#99E86C',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  completedBadgeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 }); 
