@@ -36,6 +36,9 @@ export default function HomeScreen() {
   const [showReadinessInfo, setShowReadinessInfo] = useState(false);
   const [recoveryData, setRecoveryData] = useState<any>(null);
   const [nutritionData, setNutritionData] = useState<any[]>([]);
+  // New state variables for recovery score
+  const [recoveryAdherence, setRecoveryAdherence] = useState(0); // Weekly average recovery adherence
+  const [showRecoveryInfo, setShowRecoveryInfo] = useState(false);
   
   const [todayCalories, setTodayCalories] = useState({
     current: 0,
@@ -1195,6 +1198,127 @@ export default function HomeScreen() {
     }
   }, [showQuestion]);
 
+  // Add a function to calculate the daily recovery score
+  const calculateDailyRecoveryScore = useCallback((sleepQuality: number, planCompleted: boolean) => {
+    // Sleep score - 9 hours (sleep quality of 9) is the ideal
+    // Scale is 1-10, so we'll calculate as a percentage of ideal (9)
+    const sleepScore = Math.min((sleepQuality / 9) * 100, 100);
+    
+    // Plan completion score - 100% if completed, 0% if not
+    const planScore = planCompleted ? 100 : 0;
+    
+    // Weight sleep as 60% and plan completion as 40% of the total score
+    const dailyScore = (sleepScore * 0.6) + (planScore * 0.4);
+    
+    return Math.round(dailyScore);
+  }, []);
+
+  // Add a function to fetch and calculate recovery adherence
+  const calculateRecoveryAdherence = useCallback(async () => {
+    if (!user) return 0;
+
+    try {
+      // Get dates for query - we want the last 7 completed days (excluding today)
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
+      const yesterday = subDays(today, 1);
+      const eightDaysAgo = subDays(today, 8); // 7 days before yesterday
+      
+      // Format dates for query
+      const yesterdayStr = format(yesterday, 'yyyy-MM-dd');
+      const eightDaysAgoStr = format(eightDaysAgo, 'yyyy-MM-dd');
+      const todayStr = format(today, 'yyyy-MM-dd');
+      
+      console.log(`DEBUG - Fetching historical recovery data for adherence calculation`);
+      console.log(`DEBUG - Date range: ${eightDaysAgoStr} to ${yesterdayStr} (explicitly excluding today ${todayStr})`);
+
+      // Array to hold valid recovery scores
+      const validScores: number[] = [];
+      
+      // Loop through the last 7 days
+      for (let i = 1; i <= 7; i++) {
+        const date = subDays(today, i);
+        const dateStr = format(date, 'yyyy-MM-dd');
+        
+        // Get recovery data for this day
+        const recoveryRef = doc(db, 'users', user.uid, 'recovery', dateStr);
+        const recoverySnap = await getDoc(recoveryRef);
+        
+        // Get recovery plan for this day to check completion status
+        const planRef = doc(db, 'users', user.uid, 'recoveryPlans', dateStr);
+        const planSnap = await getDoc(planRef);
+        
+        // Only include days where recovery data was submitted
+        if (recoverySnap.exists()) {
+          const data = recoverySnap.data();
+          
+          // Get sleep quality (in our app, this is mapped to "Sleep duration last night")
+          // Note that in the recovery data it's stored as "mood" due to the UI field mapping
+          const sleepQuality = data.sleep || 0;
+          
+          // Check if a plan exists and was completed
+          const planExists = planSnap.exists();
+          const planCompleted = planExists ? planSnap.data().completed || false : false;
+          
+          // Only calculate score if sleep data exists
+          if (sleepQuality > 0) {
+            const dailyScore = calculateDailyRecoveryScore(sleepQuality, planCompleted);
+            console.log(`DEBUG - Day ${dateStr} recovery score: ${dailyScore}% (Sleep: ${sleepQuality}, Plan completed: ${planCompleted})`);
+            validScores.push(dailyScore);
+          }
+        }
+      }
+      
+      // Calculate average adherence from valid days only
+      if (validScores.length > 0) {
+        const averageAdherence = Math.round(
+          validScores.reduce((sum, score) => sum + score, 0) / validScores.length
+        );
+        console.log(`DEBUG - Final recovery adherence from ${validScores.length} days: ${averageAdherence}%`);
+        
+        return averageAdherence;
+      } else {
+        // No valid historical data found
+        console.log('DEBUG - No valid historical recovery data found for adherence calculation');
+        return 0;
+      }
+    } catch (error) {
+      console.error('Error calculating recovery adherence:', error);
+      return 0;
+    }
+  }, [user, calculateDailyRecoveryScore]);
+
+  // Effect to calculate and set recovery adherence
+  useEffect(() => {
+    const fetchRecoveryAdherence = async () => {
+      const adherence = await calculateRecoveryAdherence();
+      setRecoveryAdherence(adherence);
+    };
+    
+    fetchRecoveryAdherence();
+    
+    // Set up a listener for changes to recovery data or plans
+    if (user) {
+      const recoveryCollectionRef = collection(db, 'users', user.uid, 'recovery');
+      const plansCollectionRef = collection(db, 'users', user.uid, 'recoveryPlans');
+      
+      const unsubscribeRecovery = onSnapshot(recoveryCollectionRef, () => {
+        console.log('DEBUG - Recovery data changed, recalculating adherence');
+        fetchRecoveryAdherence();
+      });
+      
+      const unsubscribePlans = onSnapshot(plansCollectionRef, () => {
+        console.log('DEBUG - Recovery plans changed, recalculating adherence');
+        fetchRecoveryAdherence();
+      });
+      
+      return () => {
+        unsubscribeRecovery();
+        unsubscribePlans();
+      };
+    }
+  }, [user, calculateRecoveryAdherence]);
+
   return (
     <ScrollView
       style={styles.container}
@@ -1550,7 +1674,7 @@ export default function HomeScreen() {
                     </Text>
                   </View>
                   <Pressable
-                    onPress={() => {}}
+                    onPress={() => setShowRecoveryInfo(true)}
                     style={({ pressed }) => ({
                       opacity: pressed ? 0.7 : 1,
                     })}
@@ -1587,7 +1711,7 @@ export default function HomeScreen() {
                       fill="none"
                       strokeLinecap="round"
                       strokeDasharray={`${2 * Math.PI * 70}`}
-                      strokeDashoffset={2 * Math.PI * 70 * 0.3} // Placeholder for 70% completion
+                      strokeDashoffset={2 * Math.PI * 70 * (1 - recoveryAdherence / 100)}
                     />
                   </Svg>
 
@@ -1596,7 +1720,7 @@ export default function HomeScreen() {
                     fontWeight: '700', 
                     color: '#000000',
                   }}>
-                    70%
+                    {recoveryAdherence}%
                   </Text>
                 </View>
 
@@ -1605,7 +1729,14 @@ export default function HomeScreen() {
                   color: '#666666',
                   textAlign: 'center',
                 }}>
-                  Good recovery routine.\nKeep it consistent!
+                  {recoveryAdherence > 0 
+                    ? recoveryAdherence >= 80
+                      ? 'Excellent recovery habits\nthis week!'
+                      : recoveryAdherence >= 50
+                      ? 'Good recovery routine.\nKeep it consistent!'
+                      : 'Focus on improving your\nsleep and recovery plans!'
+                    : 'Submit recovery data\nto see your score'
+                  }
                 </Text>
               </View>
             </View>
@@ -2079,6 +2210,70 @@ export default function HomeScreen() {
                     alignItems: 'center',
                   }}
                   onPress={() => setShowReadinessInfo(false)}
+                >
+                  <Text style={{
+                    color: '#FFFFFF',
+                    fontSize: 16,
+                    fontWeight: '600',
+                  }}>Got it</Text>
+                </Pressable>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* Recovery Info Modal */}
+      <Modal
+        visible={showRecoveryInfo}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowRecoveryInfo(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setShowRecoveryInfo(false)}>
+          <View style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 24,
+          }}>
+            <TouchableWithoutFeedback>
+              <View style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: 24,
+                padding: 24,
+                width: '100%',
+                maxWidth: 400,
+                gap: 16,
+              }}>
+                <Text style={{
+                  fontSize: 20,
+                  fontWeight: '600',
+                  color: '#000000',
+                }}>
+                  How Your Recovery Score Works
+                </Text>
+                <Text style={{
+                  fontSize: 16,
+                  color: '#666666',
+                  lineHeight: 24,
+                }}>
+                  Your recovery score shows how well you're managing your body's recovery.{'\n\n'}
+                  The score is calculated from:{'\n'}
+                  • Sleep quality - 9 hours is the ideal goal (60%){'\n'}
+                  • Recovery plan completion - completing your suggested recovery plans (40%){'\n\n'}
+                  The score reflects your recovery habits from the past 7 days (excluding today). Higher scores indicate better recovery practices, which help prevent injuries and improve performance.
+                </Text>
+                <Pressable
+                  style={{
+                    backgroundColor: '#4064F6',
+                    paddingVertical: 12,
+                    paddingHorizontal: 24,
+                    borderRadius: 12,
+                    alignItems: 'center',
+                  }}
+                  onPress={() => setShowRecoveryInfo(false)}
                 >
                   <Text style={{
                     color: '#FFFFFF',
