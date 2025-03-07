@@ -20,9 +20,12 @@ type RecoveryData = {
   mood: number;
   submitted?: boolean;
   tools?: RecoveryTool[];
+  timeAvailable?: string;
 };
 
 type RecoveryTool = 'Cold Exposure' | 'Foam Roller' | 'Cycling' | 'Swimming' | 'Compression' | 'Massage Gun' | 'Sauna' | 'Resistance Bands' | 'None';
+
+type TimeOption = '15 mins' | '30 mins' | '45 mins' | '1h+';
 
 export default function RecoveryScreen() {
   const { user } = useAuth();
@@ -37,6 +40,8 @@ export default function RecoveryScreen() {
   });
   const [selectedTools, setSelectedTools] = useState<RecoveryTool[]>([]);
   const [toolsConfirmed, setToolsConfirmed] = useState(false);
+  const [selectedTime, setSelectedTime] = useState<TimeOption | null>(null);
+  const [timeConfirmed, setTimeConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [todaysPlan, setTodaysPlan] = useState<string | null>(null);
   const [todaysData, setTodaysData] = useState<{
@@ -64,6 +69,13 @@ export default function RecoveryScreen() {
           setRecoveryData(data);
           setSelectedTools(data.tools || []);
           setToolsConfirmed(Boolean(data.tools && data.tools.length > 0));
+          if (data.timeAvailable) {
+            setSelectedTime(data.timeAvailable as TimeOption);
+            setTimeConfirmed(true);
+          } else {
+            setSelectedTime(null);
+            setTimeConfirmed(false);
+          }
           setIsEditing(false);
         } else {
           // Reset form for new date with even numbers
@@ -76,6 +88,8 @@ export default function RecoveryScreen() {
           });
           setSelectedTools([]);
           setToolsConfirmed(false);
+          setSelectedTime(null);
+          setTimeConfirmed(false);
           setIsEditing(true);
         }
       } catch (error) {
@@ -135,19 +149,12 @@ export default function RecoveryScreen() {
     const recoveryRef = doc(db, 'users', user.uid, 'recovery', dateStr);
     
     try {
-      // First, get the current document to preserve any existing tools data
+      // First, get the current document to preserve any existing tools data and time data
       const docSnap = await getDoc(recoveryRef);
-      let currentTools: RecoveryTool[] | undefined = undefined;
+      const currentData: Partial<RecoveryData> = docSnap.exists() ? docSnap.data() as RecoveryData : {};
       
-      // If document exists, extract the tools field
-      if (docSnap.exists()) {
-        const currentData = docSnap.data();
-        currentTools = currentData.tools;
-      }
-      
-      // Get the current slider values from local state
-      // These will be the exact positions where the user has set the sliders
-      const updatedData = {
+      // Create the base data object with required fields that cannot be undefined
+      const updatedData: Record<string, any> = {
         soreness: recoveryData.soreness,
         fatigue: recoveryData.fatigue,
         sleep: recoveryData.sleep,
@@ -156,23 +163,37 @@ export default function RecoveryScreen() {
         lastUpdated: new Date().toISOString(),
       };
       
-      // Only add tools if they exist and are not empty
-      if (currentTools && currentTools.length > 0) {
-        updatedData.tools = currentTools;
+      // Only add tools if they exist (either from current data or selected)
+      if (selectedTools.length > 0) {
+        updatedData.tools = selectedTools;
+      } else if (currentData.tools && currentData.tools.length > 0) {
+        updatedData.tools = currentData.tools;
+      }
+      
+      // Only add timeAvailable if it exists (either from current data or selected)
+      if (selectedTime) {
+        updatedData.timeAvailable = selectedTime;
+      } else if (currentData.timeAvailable) {
+        updatedData.timeAvailable = currentData.timeAvailable;
       }
       
       console.log("Saving recovery data:", updatedData);
       await setDoc(recoveryRef, updatedData);
       
-      // Update local state to reflect submitted status
-      setRecoveryData(prev => ({
-        ...prev,
-        submitted: true
-      }));
+      // Update local state to reflect submitted status and ensure it includes the same data we saved
+      setRecoveryData({
+        soreness: updatedData.soreness,
+        fatigue: updatedData.fatigue,
+        sleep: updatedData.sleep,
+        mood: updatedData.mood,
+        submitted: true,
+        tools: updatedData.tools,
+        timeAvailable: updatedData.timeAvailable
+      });
       
       setIsEditing(false);
       
-      // Do NOT modify toolsConfirmed state here
+      // Do NOT modify toolsConfirmed or timeConfirmed state here
     } catch (error) {
       console.error('Error saving recovery data:', error);
       Alert.alert('Error', 'Failed to save data. Please try again.');
@@ -223,6 +244,11 @@ export default function RecoveryScreen() {
       return;
     }
     
+    if (!timeConfirmed || !selectedTime) {
+      Alert.alert('Error', 'Please confirm how much time you have available');
+      return;
+    }
+    
     // Warn user about not being able to edit data after generating a plan
     Alert.alert(
       'Confirm Plan Generation',
@@ -268,6 +294,15 @@ export default function RecoveryScreen() {
         ? `Available recovery tools: ${selectedTools.join(', ')}`
         : "No special recovery tools available. Suggest only bodyweight movements, walking, jogging, and other equipment-free activities.";
 
+      // Add recovery tool guidelines
+      const recoveryToolGuidelines = `
+Important guidelines for recovery tools:
+- If recommending Cold Exposure, NEVER suggest more than 5 minutes in a row
+- If recommending Sauna, ALWAYS suggest a minimum of 10 minutes to get the benefits
+- If recommending Compression, ALWAYS suggest between 10-30 minutes (no more, no less)
+- DO NOT feel obligated to use all available tools - only suggest what is appropriate based on the metrics and time available
+      `.trim();
+
       const prompt = `Create a short, focused recovery plan based on these metrics:
 
 Muscle Soreness Level: ${recoveryData.soreness}/10
@@ -277,13 +312,19 @@ Mood: ${recoveryData.mood}/10
 
 ${toolsAvailable}
 
+Time Available: ${selectedTime}
+
+${recoveryToolGuidelines}
+
 The plan MUST:
 1. Be no longer than 5 lines total
 2. Include ONLY specific recovery exercises to perform today
 3. Do NOT include any nutrition, hydration, or sleep advice
 4. Focus only on physical recovery activities/exercises
 5. Be direct and easy to follow
-6. Only utilize the tools listed as available (if none selected, only suggest bodyweight exercises)`;
+6. Only utilize tools listed as available, but DO NOT try to use all of them - select only the most appropriate ones
+7. Create a plan that fits within the ${selectedTime} timeframe
+8. Follow the safety guidelines for Cold Exposure, Sauna, and Compression`;
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -296,7 +337,17 @@ The plan MUST:
           messages: [
             {
               role: 'system',
-              content: 'You are a professional sports recovery specialist focused on providing concise, exercise-only recovery plans. Keep your response under 5 lines and focus only on recovery exercises.'
+              content: `You are a professional sports recovery specialist focused on providing concise, exercise-only recovery plans that fit within a ${selectedTime} timeframe. Keep your response under 5 lines and focus only on recovery exercises. 
+              
+IMPORTANT SAFETY GUIDELINES: 
+- Cold exposure must NEVER exceed 5 minutes in a row
+- Sauna sessions must ALWAYS be at least 10 minutes to be effective
+- Compression must ALWAYS be between 10-30 minutes (no more, no less)
+
+IMPORTANT USAGE GUIDELINES:
+- Do NOT try to use all available tools in a single plan
+- Select only the most appropriate tools based on the athlete's metrics
+- Your job is to determine which tools would be most beneficial today, not to use everything available`
             },
             {
               role: 'user',
@@ -391,6 +442,44 @@ The plan MUST:
     } catch (error) {
       console.error('Error saving tools data:', error);
       Alert.alert('Error', 'Failed to save tools data. Please try again.');
+    }
+  };
+
+  const handleConfirmTime = async () => {
+    if (!user) return;
+    
+    if (!selectedTime) {
+      Alert.alert('Error', 'Please select how much time you have available');
+      return;
+    }
+    
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    const recoveryRef = doc(db, 'users', user.uid, 'recovery', dateStr);
+    
+    try {
+      // Get current data first to avoid overwriting other fields
+      const docSnap = await getDoc(recoveryRef);
+      let currentData = {};
+      if (docSnap.exists()) {
+        currentData = docSnap.data();
+      }
+      
+      const updatedData = {
+        ...currentData,
+        timeAvailable: selectedTime,
+        lastUpdated: new Date().toISOString(),
+      };
+      
+      await setDoc(recoveryRef, updatedData, { merge: true });
+      setTimeConfirmed(true);
+      
+      // If recovery data is not yet submitted, remind the user
+      if (!recoveryData.submitted || !toolsConfirmed) {
+        Alert.alert('Time Confirmed', 'Remember to also submit your recovery data and tools to generate a plan.');
+      }
+    } catch (error) {
+      console.error('Error saving time data:', error);
+      Alert.alert('Error', 'Failed to save time data. Please try again.');
     }
   };
 
@@ -771,16 +860,218 @@ The plan MUST:
                 )}
               </View>
 
+              {/* Recovery Time Card */}
+              <View style={[
+                styles.inputsContainer, 
+                planExists && styles.disabledContainer,
+                (timeConfirmed && !planExists) && styles.confirmedContainer
+              ]}>
+                <View style={{alignItems: 'center'}}>
+                  <Text style={[
+                    styles.loadText,
+                    planExists && {color: '#999999'},
+                    (timeConfirmed && !planExists) && {color: '#4064F6'}
+                  ]}>Recovery Time</Text>
+                </View>
+                
+                {timeConfirmed && !planExists ? (
+                  // Show confirmed header with edit button
+                  <View style={styles.submittedHeader}>
+                    <Text style={styles.submittedText}>Time Confirmed</Text>
+                    <Pressable
+                      style={styles.editButton}
+                      onPress={() => setTimeConfirmed(false)}
+                    >
+                      <Ionicons name="create-outline" size={24} color="#FFFFFF" />
+                      <Text style={styles.editButtonText}>Edit</Text>
+                    </Pressable>
+                  </View>
+                ) : (
+                  <Text style={[
+                    styles.toolsSelectionText,
+                    planExists && {color: '#999999'},
+                    (timeConfirmed && !planExists) && {color: '#999999'}
+                  ]}>
+                    How much time do you have for today's recovery plan?
+                  </Text>
+                )}
+                
+                {/* Time Options */}
+                <View style={styles.timeOptionsContainer}>
+                  <View style={styles.timeOptionsRow}>
+                    <Pressable 
+                      style={[
+                        styles.timeOptionButton,
+                        selectedTime === '15 mins' && styles.timeOptionSelected,
+                        (planExists || (timeConfirmed && !timeConfirmed)) && styles.timeOptionDisabled
+                      ]}
+                      onPress={() => setSelectedTime('15 mins')}
+                      disabled={planExists || (timeConfirmed && !isEditing)}
+                    >
+                      <Ionicons 
+                        name="time-outline" 
+                        size={24} 
+                        color={
+                          planExists || (timeConfirmed && !isEditing)
+                            ? "#BBBBBB" 
+                            : selectedTime === '15 mins'
+                              ? "#FFFFFF" 
+                              : "#666666"
+                        } 
+                      />
+                      <Text 
+                        style={[
+                          styles.timeOptionText,
+                          selectedTime === '15 mins' && styles.timeOptionTextSelected,
+                          (planExists || (timeConfirmed && !isEditing)) && styles.timeOptionTextDisabled
+                        ]}
+                      >
+                        15 mins
+                      </Text>
+                    </Pressable>
+                    
+                    <Pressable 
+                      style={[
+                        styles.timeOptionButton,
+                        selectedTime === '30 mins' && styles.timeOptionSelected,
+                        (planExists || (timeConfirmed && !timeConfirmed)) && styles.timeOptionDisabled
+                      ]}
+                      onPress={() => setSelectedTime('30 mins')}
+                      disabled={planExists || (timeConfirmed && !isEditing)}
+                    >
+                      <Ionicons 
+                        name="time-outline" 
+                        size={24} 
+                        color={
+                          planExists || (timeConfirmed && !isEditing)
+                            ? "#BBBBBB" 
+                            : selectedTime === '30 mins'
+                              ? "#FFFFFF" 
+                              : "#666666"
+                        } 
+                      />
+                      <Text 
+                        style={[
+                          styles.timeOptionText,
+                          selectedTime === '30 mins' && styles.timeOptionTextSelected,
+                          (planExists || (timeConfirmed && !isEditing)) && styles.timeOptionTextDisabled
+                        ]}
+                      >
+                        30 mins
+                      </Text>
+                    </Pressable>
+                  </View>
+                  
+                  <View style={styles.timeOptionsRow}>
+                    <Pressable 
+                      style={[
+                        styles.timeOptionButton,
+                        selectedTime === '45 mins' && styles.timeOptionSelected,
+                        (planExists || (timeConfirmed && !timeConfirmed)) && styles.timeOptionDisabled
+                      ]}
+                      onPress={() => setSelectedTime('45 mins')}
+                      disabled={planExists || (timeConfirmed && !isEditing)}
+                    >
+                      <Ionicons 
+                        name="time-outline" 
+                        size={24} 
+                        color={
+                          planExists || (timeConfirmed && !isEditing)
+                            ? "#BBBBBB" 
+                            : selectedTime === '45 mins'
+                              ? "#FFFFFF" 
+                              : "#666666"
+                        } 
+                      />
+                      <Text 
+                        style={[
+                          styles.timeOptionText,
+                          selectedTime === '45 mins' && styles.timeOptionTextSelected,
+                          (planExists || (timeConfirmed && !isEditing)) && styles.timeOptionTextDisabled
+                        ]}
+                      >
+                        45 mins
+                      </Text>
+                    </Pressable>
+                    
+                    <Pressable 
+                      style={[
+                        styles.timeOptionButton,
+                        selectedTime === '1h+' && styles.timeOptionSelected,
+                        (planExists || (timeConfirmed && !timeConfirmed)) && styles.timeOptionDisabled
+                      ]}
+                      onPress={() => setSelectedTime('1h+')}
+                      disabled={planExists || (timeConfirmed && !isEditing)}
+                    >
+                      <Ionicons 
+                        name="time-outline" 
+                        size={24} 
+                        color={
+                          planExists || (timeConfirmed && !isEditing)
+                            ? "#BBBBBB" 
+                            : selectedTime === '1h+'
+                              ? "#FFFFFF" 
+                              : "#666666"
+                        } 
+                      />
+                      <Text 
+                        style={[
+                          styles.timeOptionText,
+                          selectedTime === '1h+' && styles.timeOptionTextSelected,
+                          (planExists || (timeConfirmed && !isEditing)) && styles.timeOptionTextDisabled
+                        ]}
+                      >
+                        1h+
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+                
+                {!planExists && !timeConfirmed && (
+                  <Pressable 
+                    style={[
+                      styles.submitButton,
+                      !selectedTime && styles.submitButtonDisabled
+                    ]}
+                    onPress={handleConfirmTime}
+                    disabled={!selectedTime}
+                  >
+                    <Text style={styles.submitButtonText}>
+                      Confirm Time
+                    </Text>
+                    <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                  </Pressable>
+                )}
+                
+                {timeConfirmed && !planExists && (
+                  <Text style={[styles.toolsConfirmedText]}>
+                    Your time selection has been saved
+                  </Text>
+                )}
+                
+                {!timeConfirmed && !planExists && (
+                  <Text style={styles.toolsHelperText}>
+                    Please select how much time you have
+                  </Text>
+                )}
+                
+                {planExists && (
+                  <Text style={[styles.toolsHelperText, {color: '#999999'}]}>
+                    Recovery plan already generated
+                  </Text>
+                )}
+              </View>
+
               {/* Generate Plan Button or Status */}
               {!planExists ? (
                 <>
                   <Pressable
                     style={[
                       styles.generateButton, 
-                      (loading || !recoveryData.submitted || !toolsConfirmed) && styles.generateButtonDisabled
+                      (loading || !recoveryData.submitted || !toolsConfirmed || !timeConfirmed) && styles.generateButtonDisabled
                     ]}
                     onPress={handleGeneratePlan}
-                    disabled={loading || !recoveryData.submitted || !toolsConfirmed}
+                    disabled={loading || !recoveryData.submitted || !toolsConfirmed || !timeConfirmed}
                   >
                     <Text style={styles.generateButtonText}>
                       {loading ? 'Generating Plan...' : 'Generate Recovery Plan'}
@@ -788,14 +1079,16 @@ The plan MUST:
                     <Ionicons name="fitness" size={20} color="#FFFFFF" />
                   </Pressable>
                   
-                  {(!recoveryData.submitted || !toolsConfirmed) && (
+                  {(!recoveryData.submitted || !toolsConfirmed || !timeConfirmed) && (
                     <View style={styles.infoMessageContainer}>
                       <Text style={styles.infoMessageText}>
-                        {!recoveryData.submitted && !toolsConfirmed 
-                          ? 'Submit your recovery data and confirm your tools to generate a plan'
+                        {!recoveryData.submitted && !toolsConfirmed && !timeConfirmed
+                          ? 'Submit your recovery data, confirm your tools, and select available time to generate a plan'
                           : !recoveryData.submitted 
                             ? 'Submit your recovery data to generate a plan'
-                            : 'Confirm your recovery tools to generate a plan'}
+                            : !toolsConfirmed
+                              ? 'Confirm your recovery tools to generate a plan'
+                              : 'Confirm your available time to generate a plan'}
                       </Text>
                     </View>
                   )}
@@ -1522,5 +1815,52 @@ const styles = StyleSheet.create({
     opacity: 0.8,
     backgroundColor: '#F5F9FF',
     borderColor: '#E0E7FF',
+  },
+  timeOptionsContainer: {
+    marginTop: 16,
+  },
+  timeOptionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  timeOptionButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '48%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  timeOptionSelected: {
+    backgroundColor: '#99E86C',
+  },
+  timeOptionDisabled: {
+    backgroundColor: '#F5F5F5',
+    borderColor: '#EEEEEE',
+    borderWidth: 1,
+    opacity: 0.7,
+  },
+  timeOptionText: {
+    fontSize: 16,
+    color: '#666666',
+    fontWeight: '500',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  timeOptionTextSelected: {
+    color: '#FFFFFF',
+  },
+  timeOptionTextDisabled: {
+    color: '#BBBBBB',
+  },
+  submitButtonDisabled: {
+    opacity: 0.5,
+    backgroundColor: '#999999',
   },
 }); 
