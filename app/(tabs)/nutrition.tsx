@@ -337,11 +337,14 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal }: LogMealM
 
   const handleGallerySelect = async () => {
     try {
+      // Update to use newer API syntax with higher quality settings
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: "images", 
         allowsEditing: true,
         aspect: [4, 3],
-        quality: 1,
+        quality: 1.0, // Maximum quality to ensure best analysis
+        base64: false, // Let our service handle the base64 conversion
+        exif: false,   // Don't need extra metadata
       });
       if (!result.canceled) {
         onPhotoAnalysis(result.assets[0].uri);
@@ -360,11 +363,14 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal }: LogMealM
         return;
       }
 
+      // Update to use newer API syntax with higher quality settings
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: "images",
         allowsEditing: true,
         aspect: [4, 3],
-        quality: 1,
+        quality: 1.0, // Maximum quality to ensure best analysis
+        base64: false, // Let our service handle the base64 conversion
+        exif: false,   // Don't need extra metadata
       });
       if (!result.canceled) {
         onPhotoAnalysis(result.assets[0].uri);
@@ -498,7 +504,25 @@ function LoggedMeals({ meals, onDelete }: { meals: any[]; onDelete: (mealId: str
       {meals.map((meal) => (
         <View key={meal.id} style={styles.mealItem}>
           <View style={styles.mealInfo}>
-            <Text style={styles.mealName}>{meal.items[0].name}</Text>
+            {/* Show all food items instead of just the first one */}
+            {meal.items && meal.items.length > 0 ? (
+              <>
+                <Text style={styles.mealName}>
+                  {meal.items.map((item: any, index: number) => (
+                    index === meal.items.length - 1 
+                      ? item.name 
+                      : `${item.name}, `
+                  ))}
+                </Text>
+                {meal.items.length > 1 && (
+                  <Text style={styles.itemCount}>
+                    {meal.items.length} items
+                  </Text>
+                )}
+              </>
+            ) : (
+              <Text style={styles.mealName}>Unnamed meal</Text>
+            )}
             <Text style={styles.mealTime}>
               {format(new Date(meal.timestamp), 'h:mm a')}
             </Text>
@@ -1027,6 +1051,13 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#000000',
     marginBottom: 4,
+    flexShrink: 1,
+  },
+  itemCount: {
+    fontSize: 12,
+    color: '#666666',
+    marginBottom: 4,
+    fontStyle: 'italic',
   },
   mealTime: {
     fontSize: 14,
@@ -1034,6 +1065,7 @@ const styles = StyleSheet.create({
   },
   mealMacros: {
     alignItems: 'flex-end',
+    minWidth: 100,
   },
   mealCalories: {
     fontSize: 16,
@@ -1454,15 +1486,41 @@ export default function NutritionScreen() {
     }
 
     try {
-      // Convert single item to array if needed
-      const itemsArray = Array.isArray(items) ? items : items.items || [items];
+      console.log('Logging meal to Firestore:', JSON.stringify(items));
       
-      const totalMacros = itemsArray.reduce((acc: any, item: any) => ({
-        calories: acc.calories + (item.macros?.calories || 0),
-        protein: acc.protein + (item.macros?.protein || 0),
-        carbs: acc.carbs + (item.macros?.carbs || 0),
-        fats: acc.fats + (item.macros?.fats || 0)
-      }), { calories: 0, protein: 0, carbs: 0, fats: 0 });
+      // Handle both the new format with multiple items and the old format
+      let mealItems: any[] = [];
+      let totalMacros: any = { calories: 0, protein: 0, carbs: 0, fats: 0 };
+      
+      // Check if this is our new format with already calculated totalMacros
+      if (items.totalMacros && items.items && Array.isArray(items.items)) {
+        mealItems = items.items;
+        totalMacros = items.totalMacros;
+        console.log('Using pre-calculated total macros from multiple items');
+      } 
+      // Handle array of items but without total macros
+      else if (Array.isArray(items)) {
+        mealItems = items;
+        // Calculate totals
+        totalMacros = mealItems.reduce((acc: any, item: any) => ({
+          calories: acc.calories + (item.macros?.calories || 0),
+          protein: acc.protein + (item.macros?.protein || 0),
+          carbs: acc.carbs + (item.macros?.carbs || 0),
+          fats: acc.fats + (item.macros?.fats || 0)
+        }), { calories: 0, protein: 0, carbs: 0, fats: 0 });
+        console.log('Calculated total macros from array of items');
+      } 
+      // Legacy single item format
+      else {
+        mealItems = [items];
+        totalMacros = {
+          calories: items.macros?.calories || 0,
+          protein: items.macros?.protein || 0,
+          carbs: items.macros?.carbs || 0,
+          fats: items.macros?.fats || 0
+        };
+        console.log('Using single item for macros');
+      }
 
       // Use selected date for the meal timestamp
       const mealDate = new Date(selectedDate);
@@ -1472,7 +1530,7 @@ export default function NutritionScreen() {
       const mealData = {
         userId: user.uid,
         timestamp: mealDate.toISOString(),
-        items: itemsArray,
+        items: mealItems,
         totalMacros
       };
 
@@ -1697,47 +1755,60 @@ export default function NutritionScreen() {
     try {
       // First check if user is authenticated
       if (!user?.uid) {
+        console.error('User not authenticated');
         throw new Error('User must be logged in');
       }
 
-      // First upload the image to Firebase Storage
-      const storage = getStorage();
-      const filename = imageUri.substring(imageUri.lastIndexOf('/') + 1);
-      const storageRef = ref(storage, `food_images/${user.uid}/${filename}`);
+      console.log('Starting food image analysis for user:', user.uid);
+      console.log('Local image URI:', imageUri);
+      
+      // Analyze the image directly using the imageAnalysis service
+      // which now handles base64 encoding internally
+      try {
+        // Call the image analysis service with the local URI
+        console.log('Sending image to analysis service...');
+        const result = await imageAnalysis.analyzeImage(imageUri);
+        
+        console.log('Image analysis result:', JSON.stringify(result));
+        
+        if (!result?.items || !Array.isArray(result.items) || result.items.length === 0) {
+          console.error('Analysis result missing expected structure');
+          throw new Error('Analysis failed');
+        }
 
-      // Convert image uri to blob
-      const response = await fetch(imageUri);
-      const blob = await response.blob();
-      
-      // Upload to Firebase Storage
-      await uploadBytes(storageRef, blob);
-      
-      // Get the download URL
-      const downloadURL = await getDownloadURL(storageRef);
-      
-      // Now analyze the image using the public URL
-      const result = await imageAnalysis.analyzeImage(downloadURL);
-      
-      if (!result?.items?.[0]) {
-        throw new Error('Analysis failed');
+        // Calculate total macros for all food items
+        const totalMacros = result.items.reduce((total, item) => {
+          return {
+            calories: total.calories + item.macros.calories,
+            protein: total.protein + item.macros.protein,
+            carbs: total.carbs + item.macros.carbs,
+            fats: total.fats + item.macros.fats
+          };
+        }, { calories: 0, protein: 0, carbs: 0, fats: 0 });
+
+        console.log(`Found ${result.items.length} food items with total macros:`, JSON.stringify(totalMacros));
+
+        // Return all detected items along with the combined name
+        const combinedName = result.items.map(item => item.name).join(", ");
+
+        // Return the full result with all items
+        return {
+          items: result.items,
+          combinedName: combinedName,
+          totalMacros: totalMacros
+        };
+      } catch (analysisError: any) {
+        console.error('Error in image analysis:', analysisError);
+        throw analysisError;
       }
-
-      // Format the response
-      return {
-        items: [{
-          name: result.items[0].name,
-          macros: {
-            calories: result.items[0].macros.calories,
-            protein: result.items[0].macros.protein,
-            carbs: result.items[0].macros.carbs,
-            fats: result.items[0].macros.fats
-          }
-        }]
-      };
     } catch (error: any) {
       console.error('Error processing image:', error);
-      if (error.code === 'storage/unauthorized') {
-        Alert.alert('Error', 'Please ensure you are logged in');
+      
+      // Provide more specific user messages based on error type
+      if (error.message.includes('Failed to encode image')) {
+        Alert.alert('Error', 'This image format is not supported. Please try another image.');
+      } else if (error.message.includes('invalid_image')) {
+        Alert.alert('Error', 'The image could not be processed. Please ensure it clearly shows food items.');
       } else if (!error.message.includes('Analysis failed')) {
         Alert.alert(
           'Analysis Failed',
@@ -1747,7 +1818,48 @@ export default function NutritionScreen() {
           '• Only the intended food is in the picture'
         );
       }
+      
       throw error;
+    }
+  };
+  
+  // On photo analysis error handling
+  const handlePhotoAnalysis = async (imageUri: string) => {
+    try {
+      setIsLoading(true);
+      console.log('Starting photo analysis process for URI:', imageUri);
+      
+      const result = await analyzeImage(imageUri);
+      
+      if (!result) {
+        console.error('Analysis result is undefined or null');
+        return; // Exit silently if analysis failed
+      }
+      
+      console.log('Successfully analyzed image, logging meal');
+      await logMealToFirestore(result);
+      setIsLogMealModalVisible(false);
+      
+      // Refresh the data
+      await loadSelectedDayData();
+    } catch (error) {
+      // Enhanced error logging
+      if (error instanceof Error) {
+        console.error(`Error handling photo (${error.name}): ${error.message}`);
+        console.error('Error stack:', error.stack);
+        
+        // Only show general error if it's not already handled in analyzeImage
+        if (!error.message.includes('Analysis failed') && 
+            !error.message.includes('Failed to encode image') &&
+            !error.message.includes('invalid_image')) {
+          Alert.alert('Error', 'An unexpected error occurred while analyzing the image. Please try again with a different photo.');
+        }
+      } else {
+        console.error('Unknown error handling photo:', error);
+        Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -1928,27 +2040,7 @@ export default function NutritionScreen() {
       <LogMealModal
         visible={isLogMealModalVisible}
         onClose={() => setIsLogMealModalVisible(false)}
-        onPhotoAnalysis={async (imageUri: string) => {
-          try {
-            setIsLoading(true);
-            const result = await analyzeImage(imageUri);
-            if (!result) {
-              return; // Exit silently if analysis failed
-            }
-            await logMealToFirestore(result);
-            setIsLogMealModalVisible(false);
-            // Refresh the data
-            await loadSelectedDayData();
-          } catch (error) {
-            // Only show error if it's not an analysis failure
-            if (error instanceof Error && !error.message.includes('Analysis failed')) {
-              console.error('Error handling photo:', error);
-              Alert.alert('Error', 'Failed to process photo. Please try again.');
-            }
-          } finally {
-            setIsLoading(false);
-          }
-        }}
+        onPhotoAnalysis={handlePhotoAnalysis}
         onLogMeal={async (items) => {
           try {
             setIsLoading(true);
