@@ -1412,7 +1412,9 @@ export default function HomeScreen() {
             {/* Second Row of Cards */}
             <View style={{ 
               width: '100%',
-              alignItems: 'center',
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              gap: 8,
             }}>
               {/* Nutrition Adherence Card */}
               <View style={{
@@ -1511,6 +1513,99 @@ export default function HomeScreen() {
                       : 'Keep working on your\nnutrition goals!'
                     : 'Start logging meals\nto improve your score'
                   }
+                </Text>
+              </View>
+              
+              {/* New Recovery Card */}
+              <View style={{
+                width: '49%', // Slightly less than 50% to account for the gap
+                padding: 16,
+                gap: 24,
+                borderRadius: 16,
+                backgroundColor: '#DCF5DC', // Light green background
+                alignItems: 'center',
+                shadowColor: '#000000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 4,
+                borderWidth: 1,
+                borderColor: '#E5E5E5',
+                minHeight: 280,
+              }}>
+                <View style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  width: '100%',
+                }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Ionicons name="fitness-outline" size={24} color="#000000" />
+                    <Text style={{
+                      fontSize: 20,
+                      fontWeight: '600',
+                      color: '#000000',
+                    }} allowFontScaling={false}>
+                      Recovery
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={() => {}}
+                    style={({ pressed }) => ({
+                      opacity: pressed ? 0.7 : 1,
+                    })}
+                  >
+                    <Ionicons name="information-circle-outline" size={24} color="#000000" />
+                  </Pressable>
+                </View>
+
+                {/* Recovery Progress Circle */}
+                <View style={{ 
+                  width: 180,
+                  height: 180,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                  <Svg width="180" height="180" style={{
+                    position: 'absolute',
+                    transform: [{ rotate: '-90deg' }],
+                  }}>
+                    <Circle
+                      cx="90"
+                      cy="90"
+                      r="70"
+                      stroke="#ffffff"
+                      strokeWidth="12"
+                      fill="none"
+                    />
+                    <Circle
+                      cx="90"
+                      cy="90"
+                      r="70"
+                      stroke="#99E86C" // Green progress color
+                      strokeWidth="12"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeDasharray={`${2 * Math.PI * 70}`}
+                      strokeDashoffset={2 * Math.PI * 70 * 0.3} // Placeholder for 70% completion
+                    />
+                  </Svg>
+
+                  <Text style={{ 
+                    fontSize: 34, 
+                    fontWeight: '700', 
+                    color: '#000000',
+                  }}>
+                    70%
+                  </Text>
+                </View>
+
+                <Text style={{ 
+                  fontSize: 14, 
+                  color: '#666666',
+                  textAlign: 'center',
+                }}>
+                  Good recovery routine.\nKeep it consistent!
                 </Text>
               </View>
             </View>
