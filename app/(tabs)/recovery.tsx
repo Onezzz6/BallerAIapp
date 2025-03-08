@@ -10,8 +10,11 @@ import { useAuth } from '../context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import WeeklyOverview from '../components/WeeklyOverview';
-import { OPENAI_API_KEY } from '@env';
+import Constants from 'expo-constants';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+
+// Add this line to get the API key from Constants.expoConfig.extra
+const OPENAI_API_KEY = Constants.expoConfig?.extra?.openaiApiKey;
 
 type RecoveryData = {
   soreness: number;

@@ -14,7 +14,7 @@ export default function CalorieProgress() {
   const showInfoAlert = () => {
     Alert.alert(
       "Calorie Tracking",
-      "This card shows your daily calorie consumption progress. Track your meals in the nutrition tab to update your progress.",
+      "This card shows your current day's calorie consumption progress. Track your meals in the nutrition tab to update your progress.",
       [{ text: "OK" }]
     );
   };

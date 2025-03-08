@@ -6,6 +6,66 @@ export default {
     version: "1.0.0",
     orientation: "portrait",
     // ... other config
+    icon: "./assets/images/icon.png",
+    splash: {
+      image: "./assets/images/splash-icon.png",
+      resizeMode: "contain",
+      backgroundColor: "#ffffff"
+    },
+    experiments: {
+      tsconfigPaths: true,
+    },
+    android: {
+      package: "com.ballerai.app",
+      versionCode: 1,
+      adaptiveIcon: {
+        foregroundImage: "./assets/images/adaptive-icon.png",
+        backgroundColor: "#ffffff"
+      },
+      permissions: [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    ios: {
+      bundleIdentifier: "com.ballerbizoy.ballerai",
+      buildNumber: "1",
+      supportsTablet: true,
+      infoPlist: {
+        NSCameraUsageDescription: "This app uses the camera to analyze your meals for nutritional information.",
+        NSPhotoLibraryUsageDescription: "This app accesses your photos to analyze your meals for nutritional information.",
+        NSUserTrackingUsageDescription: "This app uses tracking to improve your experience and provide personalized content.",
+        UIBackgroundModes: ["fetch"],
+        ITSAppUsesNonExemptEncryption: false
+      }
+    },
+    jsEngine: "hermes",
+    newArchEnabled: true,
+    plugins: [
+      'expo-font',
+      'expo-camera',
+      'expo-image-picker',
+      'expo-file-system',
+      'expo-notifications',
+      [
+        'expo-build-properties',
+        {
+          ios: {
+            useFrameworks: 'static'
+          }
+        }
+      ]
+    ],
+    web: {
+      favicon: "./assets/favicon.png"
+    },
+    updates: {
+      fallbackToCacheTimeout: 0
+    },
+    assetBundlePatterns: [
+      "**/*"
+    ],
     extra: {
       firebaseApiKey: process.env.FIREBASE_API_KEY,
       firebaseAuthDomain: process.env.FIREBASE_AUTH_DOMAIN,
@@ -16,20 +76,12 @@ export default {
       firebaseAppId: process.env.FIREBASE_APP_ID,
       firebaseMeasurementId: process.env.FIREBASE_MEASUREMENT_ID,
       openaiApiKey: process.env.OPENAI_API_KEY,
+      googleApiKey: process.env.GOOGLE_API_KEY,
+      deepseekApiKey: process.env.DEEPSEEK_API_KEY,
+      eas: {
+        projectId: "eca84105-519c-4832-902e-d87afe59e858"
+      }
     },
-    experiments: {
-      tsconfigPaths: true,
-    },
-    android: {
-      package: "com.ballerai.app"
-    },
-    ios: {
-      bundleIdentifier: "com.ballerai.app"
-    },
-    jsEngine: "hermes",
-    newArchEnabled: true,
-    plugins: [
-      'expo-font',
-    ],
+    description: "BallerAI is a personalized AI coach for athletes to optimize recovery, nutrition, and performance."
   },
 }; 

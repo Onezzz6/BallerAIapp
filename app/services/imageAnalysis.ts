@@ -1,7 +1,9 @@
-import { OPENAI_API_KEY } from '@env';
+import Constants from 'expo-constants';
 import * as FileSystem from 'expo-file-system';
 
 console.log('Attempting to access env variables...');
+// Get API key from Constants instead
+const OPENAI_API_KEY = Constants.expoConfig?.extra?.openaiApiKey;
 console.log('OPENAI_API_KEY status:', OPENAI_API_KEY ? 'exists' : 'undefined');
 
 const analyzeImage = async (imageUri: string) => {

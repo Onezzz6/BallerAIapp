@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTraining } from '../context/TrainingContext';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { OPENAI_API_KEY, DEEPSEEK_API_KEY } from '@env';
+import Constants from 'expo-constants';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { startOfWeek, endOfWeek, differenceInMilliseconds, format } from 'date-fns';
@@ -23,6 +23,10 @@ type DaySchedule = {
 type Schedule = {
   [key: string]: DaySchedule;
 };
+
+// Add these lines to access the API keys from Constants
+const OPENAI_API_KEY = Constants.expoConfig?.extra?.openaiApiKey;
+const DEEPSEEK_API_KEY = Constants.expoConfig?.extra?.deepseekApiKey;
 
 const styles = StyleSheet.create({
   container: {

@@ -1,0 +1,47 @@
+{
+  "NSPrivacyAccessedAPITypes": [
+    {
+      "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+      "NSPrivacyAccessedAPITypeReasons": [
+        "CA92.1"
+      ]
+    },
+    {
+      "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+      "NSPrivacyAccessedAPITypeReasons": [
+        "1C8F.1"
+      ]
+    },
+    {
+      "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategorySystemBootTime",
+      "NSPrivacyAccessedAPITypeReasons": [
+        "C617.1"
+      ]
+    }
+  ],
+  "NSPrivacyCollectedDataTypes": [
+    {
+      "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypePhotoLibrary",
+      "NSPrivacyCollectedDataTypeLinked": false,
+      "NSPrivacyCollectedDataTypeTracking": false,
+      "NSPrivacyCollectedDataTypePurposes": [
+        {
+          "NSPrivacyCollectedDataTypePurpose": "6B35.1",
+          "NSPrivacyCollectedDataTypePurposeDescription": "For analyzing meal nutritional content"
+        }
+      ]
+    },
+    {
+      "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeUserHealth",
+      "NSPrivacyCollectedDataTypeLinked": false,
+      "NSPrivacyCollectedDataTypeTracking": false,
+      "NSPrivacyCollectedDataTypePurposes": [
+        {
+          "NSPrivacyCollectedDataTypePurpose": "CA94.1",
+          "NSPrivacyCollectedDataTypePurposeDescription": "To provide recovery recommendations"
+        }
+      ]
+    }
+  ],
+  "NSPrivacyTrackingDomains": []
+} 

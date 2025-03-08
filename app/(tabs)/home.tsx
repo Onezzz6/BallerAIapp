@@ -2119,19 +2119,16 @@ export default function HomeScreen() {
                   fontWeight: '600',
                   color: '#000000',
                 }}>
-                  How to Get Your Nutrition Score
+                  Your Nutrition Score
                 </Text>
                 <Text style={{
                   fontSize: 16,
                   color: '#666666',
                   lineHeight: 24,
                 }}>
-                  Your nutrition score shows how well you're meeting your daily macro goals.{'\n\n'}
-                  To start seeing your score:{'\n'}
-                  1. Go to the Nutrition tab{'\n'}
-                  2. Log your meals daily{'\n'}
-                  3. Track your progress over time{'\n\n'}
-                  The adherence score is calculated from your past 7 days of nutrition data (excluding today). Higher scores indicate better adherence to your macro goals.
+                  Your nutrition score is a percentage that shows how closely you've followed your macro goals in the last week.{'\n\n'}
+                  This score is meant to give you an idea of how consistent you've been with your nutrition recently, helping you identify patterns and make adjustments if needed.{'\n\n'}
+                  The score is calculated from your past 7 days of nutrition data (excluding today). Higher scores indicate better adherence to your macro goals.
                 </Text>
                 <Pressable
                   onPress={() => setShowNutritionInfo(false)}
@@ -2186,7 +2183,7 @@ export default function HomeScreen() {
                   fontWeight: '600',
                   color: '#000000',
                 }}>
-                  How Your Readiness Score Works
+                  Understanding Your Readiness Score
                 </Text>
                 <Text style={{
                   fontSize: 16,
@@ -2194,12 +2191,9 @@ export default function HomeScreen() {
                   lineHeight: 24,
                 }}>
                   Your readiness score indicates how prepared your body is for training today.{'\n\n'}
-                  The score is calculated from:{'\n'}
-                  • Training intensity - higher intensity lowers your score{'\n'}
-                  • Muscle soreness - more soreness lowers your score{'\n'}
-                  • Overall fatigue - more fatigue lowers your score{'\n'}
-                  • Sleep duration - more sleep improves your score{'\n\n'}
-                  Getting 9+ hours of sleep gives you a significant boost to your readiness!
+                  This score is calculated based on the physical load your body has endured recently and represents your approximate recovery level for the day.{'\n\n'}
+                  The readiness score helps you visualize your body's current state and can guide you in taking preventive measures to manage your training load if needed.{'\n\n'}
+                  Listen to your body - a lower score might suggest you need more recovery time before intense training.
                 </Text>
                 <Pressable
                   style={{
@@ -2252,18 +2246,16 @@ export default function HomeScreen() {
                   fontWeight: '600',
                   color: '#000000',
                 }}>
-                  How Your Recovery Score Works
+                  Understanding Your Recovery Score
                 </Text>
                 <Text style={{
                   fontSize: 16,
                   color: '#666666',
                   lineHeight: 24,
                 }}>
-                  Your recovery score shows how well you're managing your body's recovery.{'\n\n'}
-                  The score is calculated from:{'\n'}
-                  • Sleep quality - 9 hours is the ideal goal (60%){'\n'}
-                  • Recovery plan completion - completing your suggested recovery plans (40%){'\n\n'}
-                  The score reflects your recovery habits from the past 7 days (excluding today). Higher scores indicate better recovery practices, which help prevent injuries and improve performance.
+                  Your recovery score shows how consistently and well you're performing recovery habits like quality sleep, good nutrition, and completing your recovery plans.{'\n\n'}
+                  This score helps you visualize your overall consistency with recovery practices and identify areas where you might have room to improve.{'\n\n'}
+                  Important: This score doesn't represent your training readiness, as it doesn't take into account your training load. It simply reflects how good your recovery habits have been over the past 7 days.
                 </Text>
                 <Pressable
                   style={{
