@@ -40,4 +40,11 @@ export const askOpenAI = async (question: string, userContext: string) => {
     console.error('Error calling OpenAI API:', error);
     throw error;
   }
-}; 
+};
+
+// Create a default export with all utility functions
+const openAIUtils = {
+  askOpenAI,
+};
+
+export default openAIUtils; 
