@@ -2,6 +2,7 @@ import { View, Text, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Button from './components/Button';
+import BackButton from './components/BackButton';
 
 export default function IntroScreen() {
   const router = useRouter();
@@ -15,6 +16,16 @@ export default function IntroScreen() {
         padding: 24,
       }}
     >
+      {/* Back Button */}
+      <View style={{
+        position: 'absolute',
+        top: 48,
+        left: 24,
+        zIndex: 10,
+      }}>
+        <BackButton />
+      </View>
+      
       <View style={{
         flex: 1,
         justifyContent: 'center',
