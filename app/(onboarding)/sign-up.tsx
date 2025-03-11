@@ -1,10 +1,11 @@
-import { View, Text, TextInput, Alert, StyleSheet, Pressable } from 'react-native';
+import { View, Text, TextInput, Alert, StyleSheet, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import Button from '../components/Button';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import authService from '../services/auth';
 import { useOnboarding } from '../context/OnboardingContext';
+import * as AppleAuthentication from 'expo-apple-authentication';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -12,7 +13,18 @@ export default function SignUpScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAppleAvailable, setIsAppleAvailable] = useState(false);
   const { onboardingData } = useOnboarding();
+
+  // Check if Apple authentication is available on this device
+  useEffect(() => {
+    const checkAppleAuthAvailability = async () => {
+      const isAvailable = await AppleAuthentication.isAvailableAsync();
+      setIsAppleAvailable(isAvailable);
+    };
+    
+    checkAppleAuthAvailability();
+  }, []);
 
   const handleSubmit = async () => {
     if (!email || !password) {
@@ -59,6 +71,26 @@ export default function SignUpScreen() {
         Alert.alert(
           'Error',
           error.message || 'Failed to create account. Please try again.'
+        );
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    try {
+      setIsLoading(true);
+      
+      const user = await authService.signInWithApple();
+      if (user) {
+        router.replace('/(tabs)/home');
+      }
+    } catch (error: any) {
+      if (error.code !== 'ERR_CANCELED') { // Don't show error if user cancels
+        Alert.alert(
+          'Error',
+          'Failed to sign in with Apple. Please try again.'
         );
       }
     } finally {
@@ -113,6 +145,24 @@ export default function SignUpScreen() {
           opacity: isLoading ? 0.5 : 1,
         }}
       />
+
+      {/* Divider */}
+      <View style={styles.dividerContainer}>
+        <View style={styles.divider} />
+        <Text style={styles.dividerText}>OR</Text>
+        <View style={styles.divider} />
+      </View>
+
+      {/* Apple Sign In */}
+      {isAppleAvailable && (
+        <AppleAuthentication.AppleAuthenticationButton
+          buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP}
+          buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+          cornerRadius={8}
+          style={styles.appleButton}
+          onPress={handleAppleSignIn}
+        />
+      )}
     </View>
   );
 }
@@ -156,5 +206,24 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 12,
     top: 12,
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 24,
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E5E5E5',
+  },
+  dividerText: {
+    marginHorizontal: 16,
+    color: '#666666',
+    fontSize: 14,
+  },
+  appleButton: {
+    height: 50,
+    width: '100%',
   }
 }); 

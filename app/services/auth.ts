@@ -4,9 +4,10 @@ import {
   signOut,
   GoogleAuthProvider,
   signInWithPopup,
-  fetchSignInMethodsForEmail
+  fetchSignInMethodsForEmail,
+  OAuthProvider
 } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 
 type UserOnboardingData = {
@@ -107,6 +108,39 @@ const authService = {
       const provider = new GoogleAuthProvider();
       const userCredential = await signInWithPopup(auth, provider);
       return userCredential.user;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async signInWithApple() {
+    try {
+      const provider = new OAuthProvider('apple.com');
+      provider.addScope('email');
+      provider.addScope('name');
+      
+      const userCredential = await signInWithPopup(auth, provider);
+      const user = userCredential.user;
+      
+      // Check if user profile already exists in Firestore
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      
+      // If user doesn't exist in Firestore, create a profile
+      if (!userDoc.exists()) {
+        await setDoc(doc(db, 'users', user.uid), {
+          email: user.email,
+          createdAt: new Date(),
+          // Default onboarding data
+          hasSmartwatch: null,
+          footballGoal: null,
+          improvementFocus: null,
+          trainingFrequency: null,
+          hasGymAccess: null,
+          motivation: null
+        });
+      }
+      
+      return user;
     } catch (error) {
       throw error;
     }
