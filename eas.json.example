@@ -1,0 +1,58 @@
+{
+  "cli": {
+    "version": ">= 3.15.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "ios": {
+        "resourceClass": "m-medium",
+        "simulator": true
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "ios": {
+        "resourceClass": "m-medium"
+      }
+    },
+    "simple": {
+      "distribution": "store",
+      "ios": {
+        "resourceClass": "m-medium",
+        "buildConfiguration": "Release"
+      }
+    },
+    "production": {
+      "ios": {
+        "resourceClass": "m-medium",
+        "image": "latest"
+      },
+      "env": {
+        "FIREBASE_API_KEY": "[EXAMPLE-FIREBASE-API-KEY]",
+        "FIREBASE_AUTH_DOMAIN": "[EXAMPLE-FIREBASE-DOMAIN.firebaseapp.com]",
+        "FIREBASE_DATABASE_URL": "[EXAMPLE-DATABASE-URL.region.firebasedatabase.app]",
+        "FIREBASE_PROJECT_ID": "[EXAMPLE-PROJECT-ID]",
+        "FIREBASE_STORAGE_BUCKET": "[EXAMPLE-BUCKET.firebasestorage.app]",
+        "FIREBASE_MESSAGING_SENDER_ID": "[EXAMPLE-SENDER-ID]",
+        "FIREBASE_APP_ID": "[EXAMPLE-APP-ID-FORMAT]",
+        "FIREBASE_MEASUREMENT_ID": "[EXAMPLE-MEASUREMENT-ID]",
+        "OPENAI_API_KEY": "[EXAMPLE-OPENAI-API-KEY]",
+        "GOOGLE_API_KEY": "[EXAMPLE-GOOGLE-API-KEY]",
+        "DEEPSEEK_API_KEY": "[EXAMPLE-DEEPSEEK-API-KEY]"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "appleId": "[EXAMPLE-EMAIL@DOMAIN.com]",
+        "ascAppId": "[EXAMPLE-APP-ID]",
+        "appleTeamId": "[EXAMPLE-TEAM-ID]",
+        "companyName": "[EXAMPLE-COMPANY-NAME]"
+      }
+    }
+  }
+} 
