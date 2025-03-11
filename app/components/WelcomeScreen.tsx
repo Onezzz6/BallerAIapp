@@ -1,4 +1,4 @@
-import { View, Text, Image, Pressable, TextInput, Alert } from 'react-native';
+import { View, Text, Image, Pressable, TextInput, Alert, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Button from './Button';
@@ -15,6 +15,10 @@ export default function WelcomeScreen() {
 
   const handleGetStarted = () => {
     router.push('/intro');
+  };
+
+  const dismissKeyboard = () => {
+    Keyboard.dismiss();
   };
 
   const handleSignIn = async () => {
@@ -61,138 +65,140 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <Animated.View 
-      entering={FadeIn.duration(500)}
-      style={{
-        flex: 1,
-        backgroundColor: '#ffffff',
-        padding: 24,
-      }}
-    >
-      <View style={{
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 24,
-      }}>
-
-        <Image
-          source={require('../../assets/images/BallerAILogo.png')}
-          style={{
-            width: 120,
-            height: 120,
-            resizeMode: 'contain',
-            marginBottom: 0,
-          }}
-        />
-        
-        <Text style={{
-          fontSize: 32,
-          color: '#000000',
-          fontWeight: '600',
-          textAlign: 'center',
-          marginBottom: 0,
+    <TouchableWithoutFeedback onPress={dismissKeyboard}>
+      <Animated.View 
+        entering={FadeIn.duration(500)}
+        style={{
+          flex: 1,
+          backgroundColor: '#ffffff',
+          padding: 24,
+        }}
+      >
+        <View style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: 24,
         }}>
-          Ready to go pro?
-        </Text>
 
-        {!showSignIn ? (
-          <>
-            <Button 
-              title="Get Started" 
-              onPress={handleGetStarted}
-              buttonStyle={{
-                backgroundColor: '#4064F6',
-                marginBottom: 32,
-              }}
-            />
+          <Image
+            source={require('../../assets/images/BallerAILogo.png')}
+            style={{
+              width: 120,
+              height: 120,
+              resizeMode: 'contain',
+              marginBottom: 0,
+            }}
+          />
+          
+          <Text style={{
+            fontSize: 32,
+            color: '#000000',
+            fontWeight: '600',
+            textAlign: 'center',
+            marginBottom: 0,
+          }}>
+            Ready to go pro?
+          </Text>
 
-            <View style={{alignItems: 'center', gap: 12, marginTop: 48 }}>
-              <Text style={{
-                fontSize: 14,
-                color: '#666666',
-              }}>
-                Already have an account?
-              </Text>
+          {!showSignIn ? (
+            <>
+              <Button 
+                title="Get Started" 
+                onPress={handleGetStarted}
+                buttonStyle={{
+                  backgroundColor: '#4064F6',
+                  marginBottom: 32,
+                }}
+              />
+
+              <View style={{alignItems: 'center', gap: 12, marginTop: 48 }}>
+                <Text style={{
+                  fontSize: 14,
+                  color: '#666666',
+                }}>
+                  Already have an account?
+                </Text>
+                <Pressable
+                  onPress={() => setShowSignIn(true)}
+                  style={({ pressed }) => ({
+                    opacity: pressed ? 0.7 : 1,
+                  })}
+                >
+                  <Text style={{
+                    fontSize: 16,
+                    color: '#4064F6',
+                    fontWeight: '600',
+                  }}>
+                    Sign In
+                  </Text>
+                </Pressable>
+              </View>
+            </>
+          ) : (
+            <View style={{ width: '100%', gap: 16 }}>
+              <TextInput
+                value={email}
+                onChangeText={setEmail}
+                placeholder="Enter your email"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                style={{
+                  width: '100%',
+                  height: 50,
+                  borderWidth: 1,
+                  borderColor: '#E5E5E5',
+                  borderRadius: 12,
+                  paddingHorizontal: 16,
+                  fontSize: 16,
+                }}
+              />
+
+              <TextInput
+                value={password}
+                onChangeText={setPassword}
+                placeholder="Enter your password"
+                secureTextEntry
+                style={{
+                  width: '100%',
+                  height: 50,
+                  borderWidth: 1,
+                  borderColor: '#E5E5E5',
+                  borderRadius: 12,
+                  paddingHorizontal: 16,
+                  fontSize: 16,
+                }}
+              />
+
+              <Button 
+                title={isLoading ? "Signing In..." : "Sign In"}
+                onPress={handleSignIn}
+                disabled={isLoading}
+                buttonStyle={{
+                  backgroundColor: '#4064F6',
+                  marginBottom: 16,
+                  opacity: isLoading ? 0.5 : 1,
+                }}
+              />
+
               <Pressable
-                onPress={() => setShowSignIn(true)}
+                onPress={() => setShowSignIn(false)}
                 style={({ pressed }) => ({
                   opacity: pressed ? 0.7 : 1,
+                  alignItems: 'center',
                 })}
               >
                 <Text style={{
-                  fontSize: 16,
-                  color: '#4064F6',
-                  fontWeight: '600',
+                  fontSize: 14,
+                  color: '#666666',
                 }}>
-                  Sign In
+                  Back to sign up
                 </Text>
               </Pressable>
             </View>
-          </>
-        ) : (
-          <View style={{ width: '100%', gap: 16 }}>
-            <TextInput
-              value={email}
-              onChangeText={setEmail}
-              placeholder="Enter your email"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              style={{
-                width: '100%',
-                height: 50,
-                borderWidth: 1,
-                borderColor: '#E5E5E5',
-                borderRadius: 12,
-                paddingHorizontal: 16,
-                fontSize: 16,
-              }}
-            />
-
-            <TextInput
-              value={password}
-              onChangeText={setPassword}
-              placeholder="Enter your password"
-              secureTextEntry
-              style={{
-                width: '100%',
-                height: 50,
-                borderWidth: 1,
-                borderColor: '#E5E5E5',
-                borderRadius: 12,
-                paddingHorizontal: 16,
-                fontSize: 16,
-              }}
-            />
-
-            <Button 
-              title={isLoading ? "Signing In..." : "Sign In"}
-              onPress={handleSignIn}
-              disabled={isLoading}
-              buttonStyle={{
-                backgroundColor: '#4064F6',
-                marginBottom: 16,
-                opacity: isLoading ? 0.5 : 1,
-              }}
-            />
-
-            <Pressable
-              onPress={() => setShowSignIn(false)}
-              style={({ pressed }) => ({
-                opacity: pressed ? 0.7 : 1,
-                alignItems: 'center',
-              })}
-            >
-              <Text style={{
-                fontSize: 14,
-                color: '#666666',
-              }}>
-                Back to sign up
-              </Text>
-            </Pressable>
-          </View>
-        )}
-      </View>
-    </Animated.View>
+          )}
+        </View>
+      </Animated.View>
+    </TouchableWithoutFeedback>
   );
 } 
