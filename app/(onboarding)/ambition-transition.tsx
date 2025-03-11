@@ -49,7 +49,7 @@ export default function AmbitionTransitionScreen() {
           color: '#666666',
           textAlign: 'center',
         }}>
-          Last few questions to understand your current situation!
+          Last questions to understand your current situation!
         </Text>
 
         <Button 

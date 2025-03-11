@@ -10,7 +10,7 @@ import { Picker } from '@react-native-picker/picker';
 export default function SleepHoursScreen() {
   const router = useRouter();
   const { onboardingData, updateOnboardingData } = useOnboarding();
-  const [selected, setSelected] = useState<string | null>(onboardingData.sleepHours);
+  const [selected, setSelected] = useState<string | null>(onboardingData.sleepHours || '8');
 
   return (
     <Animated.View 
