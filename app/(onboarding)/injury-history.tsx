@@ -19,7 +19,7 @@ export default function InjuryHistoryScreen() {
   const router = useRouter();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [injuryHistory, setInjuryHistory] = useState(onboardingData.injuryHistory || '');
-  const CHARACTER_LIMIT = 100;
+  const CHARACTER_LIMIT = 300;
 
   return (
     <KeyboardAvoidingView 
