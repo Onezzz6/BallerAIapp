@@ -41,3 +41,4 @@ app-example
 .env
 .env.*
 !.env.example
+eas.json
