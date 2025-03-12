@@ -500,7 +500,7 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal }: LogMealM
 function LoggedMeals({ meals, onDelete }: { meals: any[]; onDelete: (mealId: string) => Promise<void> }) {
   return (
     <View style={styles.loggedMealsContainer}>
-      <Text style={styles.loggedMealsTitle}>Recent Meals</Text>
+      <Text style={styles.loggedMealsTitle}>Today's Meals</Text>
       {meals.map((meal) => (
         <View key={meal.id} style={styles.mealItem}>
           <View style={styles.mealInfo}>
