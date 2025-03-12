@@ -429,7 +429,7 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal }: LogMealM
                   />
                   <TextInput
                     style={styles.input}
-                    placeholder="Calories"
+                    placeholder="kcal"
                     keyboardType="numeric"
                     value={manualEntry.calories}
                     onChangeText={(text) => setManualEntry(prev => ({ ...prev, calories: text }))}
