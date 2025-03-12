@@ -1320,20 +1320,19 @@ export default function HomeScreen() {
   }, [user, calculateRecoveryAdherence]);
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={{
-        paddingBottom: 90, // Add extra padding at the bottom to prevent content from being hidden behind the navigation bar
-    }}>
+    <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={{
-            paddingBottom: 90, // Add extra padding at the bottom
-          }}
+          contentContainerStyle={styles.scrollViewContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={true}
+          bounces={true}
+          overScrollMode="never"
         >
           {/* Header - Scrolls with content */}
           <View style={{
@@ -2278,7 +2277,7 @@ export default function HomeScreen() {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
-    </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -2290,5 +2289,9 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  scrollViewContent: {
+    flexGrow: 1,
+    paddingBottom: 120,
   },
 }); 
