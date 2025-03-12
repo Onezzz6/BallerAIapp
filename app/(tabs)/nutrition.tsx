@@ -1338,7 +1338,10 @@ export default function NutritionScreen() {
   const loadSelectedDayData = async () => {
     if (!user) return;
     try {
-      setIsLoading(true);
+      // Only set loading state if we're analyzing or logging a meal
+      if (!isUpdatingFromLoad) {
+        setIsLoading(true);
+      }
       setIsUpdatingFromLoad(true);
       const dateString = formatDateId(selectedDate);
       
@@ -1467,7 +1470,10 @@ export default function NutritionScreen() {
         fats: { current: 0, goal: 70 }
       });
     } finally {
-      setIsLoading(false);
+      // Only clear loading state if we're analyzing or logging a meal
+      if (!isUpdatingFromLoad) {
+        setIsLoading(false);
+      }
       // Reset the flag after a delay to ensure state updates are complete
       setTimeout(() => {
         setIsUpdatingFromLoad(false);
@@ -2057,7 +2063,7 @@ export default function NutritionScreen() {
         }}
       />
 
-      {isLoading && (
+      {isLoading && selectedLoggingMethod === 'photo' && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#4A72B2" />
           <Text style={styles.loadingText}>Analyzing meal...</Text>

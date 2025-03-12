@@ -628,7 +628,10 @@ IMPORTANT USAGE GUIDELINES:
               />
 
               {/* Recovery Inputs */}
-              <View style={styles.inputsContainer}>
+              <Animated.View 
+                entering={FadeIn.duration(300)}
+                style={styles.inputsContainer}
+              >
                 <View style={{alignItems: 'center'}}>
                   <Text style={styles.loadText}>Recovery Query</Text>
                 </View>
@@ -757,14 +760,17 @@ IMPORTANT USAGE GUIDELINES:
                     </Pressable>
                   </>
                 )}
-              </View>
+              </Animated.View>
 
               {/* Recovery Tools Selection Card */}
-              <View style={[
-                styles.inputsContainer, 
-                planExists && styles.disabledContainer,
-                (toolsConfirmed && !planExists) && styles.confirmedContainer
-              ]}>
+              <Animated.View 
+                entering={FadeIn.duration(300)}
+                style={[
+                  styles.inputsContainer, 
+                  planExists && styles.disabledContainer,
+                  (toolsConfirmed && !planExists) && styles.confirmedContainer
+                ]}
+              >
                 <View style={{alignItems: 'center'}}>
                   <Text style={[
                     styles.loadText,
@@ -892,14 +898,17 @@ IMPORTANT USAGE GUIDELINES:
                     Recovery plan already generated
                   </Text>
                 )}
-              </View>
+              </Animated.View>
 
               {/* Recovery Time Card */}
-              <View style={[
-                styles.inputsContainer, 
-                planExists && styles.disabledContainer,
-                (timeConfirmed && !planExists) && styles.confirmedContainer
-              ]}>
+              <Animated.View 
+                entering={FadeIn.duration(300)}
+                style={[
+                  styles.inputsContainer, 
+                  planExists && styles.disabledContainer,
+                  (timeConfirmed && !planExists) && styles.confirmedContainer
+                ]}
+              >
                 <View style={{alignItems: 'center'}}>
                   <Text style={[
                     styles.loadText,
@@ -1094,53 +1103,57 @@ IMPORTANT USAGE GUIDELINES:
                     Recovery plan already generated
                   </Text>
                 )}
-              </View>
+              </Animated.View>
 
               {/* Generate Plan Button or Status */}
-              {!planExists ? (
-                <>
+              <Animated.View 
+                entering={FadeIn.duration(300)}
+              >
+                {!planExists ? (
+                  <>
+                    <Pressable
+                      style={[
+                        styles.generateButton, 
+                        (loading || !recoveryData.submitted || !toolsConfirmed || !timeConfirmed) && styles.generateButtonDisabled
+                      ]}
+                      onPress={handleGeneratePlan}
+                      disabled={loading || !recoveryData.submitted || !toolsConfirmed || !timeConfirmed}
+                    >
+                      <Text style={styles.generateButtonText}>
+                        {loading ? 'Generating Plan...' : 'Generate Recovery Plan'}
+                      </Text>
+                      <Ionicons name="fitness" size={20} color="#FFFFFF" />
+                    </Pressable>
+                    
+                    {(!recoveryData.submitted || !toolsConfirmed || !timeConfirmed) && (
+                      <View style={styles.infoMessageContainer}>
+                        <Text style={styles.infoMessageText}>
+                          {!recoveryData.submitted && !toolsConfirmed && !timeConfirmed
+                            ? 'Submit your recovery data, confirm your tools, and select available time to generate a plan'
+                            : !recoveryData.submitted 
+                              ? 'Submit your recovery data to generate a plan'
+                              : !toolsConfirmed
+                                ? 'Confirm your recovery tools to generate a plan'
+                                : 'Confirm your available time to generate a plan'}
+                        </Text>
+                      </View>
+                    )}
+                  </>
+                ) : (
                   <Pressable
                     style={[
                       styles.generateButton, 
-                      (loading || !recoveryData.submitted || !toolsConfirmed || !timeConfirmed) && styles.generateButtonDisabled
+                      styles.generateButtonDisabled
                     ]}
-                    onPress={handleGeneratePlan}
-                    disabled={loading || !recoveryData.submitted || !toolsConfirmed || !timeConfirmed}
+                    disabled={true}
                   >
                     <Text style={styles.generateButtonText}>
-                      {loading ? 'Generating Plan...' : 'Generate Recovery Plan'}
+                      Plan Already Generated
                     </Text>
-                    <Ionicons name="fitness" size={20} color="#FFFFFF" />
+                    <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
                   </Pressable>
-                  
-                  {(!recoveryData.submitted || !toolsConfirmed || !timeConfirmed) && (
-                    <View style={styles.infoMessageContainer}>
-                      <Text style={styles.infoMessageText}>
-                        {!recoveryData.submitted && !toolsConfirmed && !timeConfirmed
-                          ? 'Submit your recovery data, confirm your tools, and select available time to generate a plan'
-                          : !recoveryData.submitted 
-                            ? 'Submit your recovery data to generate a plan'
-                            : !toolsConfirmed
-                              ? 'Confirm your recovery tools to generate a plan'
-                              : 'Confirm your available time to generate a plan'}
-                      </Text>
-                    </View>
-                  )}
-                </>
-              ) : (
-                <Pressable
-                  style={[
-                    styles.generateButton, 
-                    styles.generateButtonDisabled
-                  ]}
-                  disabled={true}
-                >
-                  <Text style={styles.generateButtonText}>
-                    Plan Already Generated
-                  </Text>
-                  <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-                </Pressable>
-              )}
+                )}
+              </Animated.View>
 
               {/* Plan Holder - Always visible with different states */}
               <View style={{
