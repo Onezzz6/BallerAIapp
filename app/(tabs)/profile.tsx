@@ -1057,302 +1057,303 @@ export default function ProfileScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{
+        flexGrow: 1,
+        paddingBottom: 90,
+      }}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={true}
+      bounces={true}
+      overScrollMode="auto"
+      alwaysBounceVertical={true}
+    >
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={{
-            paddingBottom: 90,
-          }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          bounces={true}
-        >
-          {/* Header - Scrolls with content */}
+        {/* Header - Scrolls with content */}
+        <View style={{
+          paddingTop: 48,
+          paddingHorizontal: 24,
+          backgroundColor: '#ffffff',
+        }}>
+          {/* Header with Logo */}
           <View style={{
-            paddingTop: 48,
-            paddingHorizontal: 24,
-            backgroundColor: '#ffffff',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            height: 92,
           }}>
-            {/* Header with Logo */}
+            {/* Title */}
+            <Text style={{
+              fontSize: 28,
+              fontWeight: '900',
+              color: '#000000',
+            }} 
+            allowFontScaling={false}
+            maxFontSizeMultiplier={1.2}>
+              Profile
+            </Text>
+
             <View style={{
               flexDirection: 'row',
               alignItems: 'center',
-              justifyContent: 'space-between',
-              height: 92, // Same height as OnboardingHeader
+              gap: 6,
             }}>
-              {/* Title */}
+              <Image 
+                source={require('../../assets/images/BallerAILogo.png')}
+                style={{
+                  width: 32,
+                  height: 32,
+                }}
+                resizeMode="contain"
+              />
               <Text style={{
                 fontSize: 28,
-                fontWeight: '900',
+                fontWeight: '300',
                 color: '#000000',
               }} 
               allowFontScaling={false}
               maxFontSizeMultiplier={1.2}>
-                Profile
+                BallerAI
               </Text>
-
-              <View style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-              }}>
-                <Image 
-                  source={require('../../assets/images/BallerAILogo.png')}
-                  style={{
-                    width: 32,
-                    height: 32,
-                  }}
-                  resizeMode="contain"
-                />
-                <Text style={{
-                  fontSize: 28,
-                  fontWeight: '300',
-                  color: '#000000',
-                }} 
-                allowFontScaling={false}
-                maxFontSizeMultiplier={1.2}>
-                  BallerAI
-                </Text>
-              </View>
             </View>
           </View>
+        </View>
 
-          {/* Main content starts here */}
-          {/* Profile Picture Section */}
-          <View style={styles.profileSection}>
-            <Pressable
-              onPress={pickImage} 
-              style={styles.profileImageContainer}
-              disabled={isLoading}
-            >
-              {profileImage ? (
-                <Image 
-                  source={{ uri: profileImage }} 
-                  style={styles.profileImage}
-                />
-              ) : (
-                <View style={styles.profileImagePlaceholder}>
-                  <Ionicons name="person" size={40} color="#666666" />
-                </View>
-              )}
-              <View style={styles.editIconContainer}>
-                {isLoading ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Ionicons name="camera" size={14} color="#FFFFFF" />
-                )}
-              </View>
-            </Pressable>
-
-            <View style={styles.usernameContainer}>
-              <Text style={styles.username}>{userData?.username || "User"}</Text>
-            </View>
-          </View>
-
-          {/* Profile Info Section */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Player Details</Text>
-
-              <Pressable
-                onPress={() => setIsEditing(!isEditing)}
-                style={({ pressed }) => ({
-                  opacity: pressed ? 0.7 : 1,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 4,
-                })}
-              >
-                <Ionicons 
-                  name={isEditing ? "checkmark" : "create-outline"} 
-                  size={24} 
-                  color="#4064F6" 
-                />
-                <Text style={{ color: '#4064F6', fontSize: 16 }}>
-                  {isEditing ? 'Done' : 'Edit'}
-                </Text>
-              </Pressable>
-            </View>
-
-            {profileDetails.map((detail, index) => (
-              <Pressable 
-                key={index} 
-                style={[
-                  styles.detailRow,
-                  !isEditing && styles.disabledRow,
-                  isEditing && styles.editableRow
-                ]}
-                onPress={() => {
-                  if (isEditing) {
-                    setEditingField(detail.field);
-                    setEditValue(detail.value?.toString() || '');
-                  }
-                }}
-                disabled={!isEditing}
-              >
-                <View style={styles.detailIcon}>
-                  <Ionicons 
-                    name={detail.icon} 
-                    size={24} 
-                    color={isEditing ? "#4064F6" : "#999999"} 
-                  />
-                </View>
-                <View style={styles.detailInfo}>
-                  <Text style={[
-                    styles.detailLabel,
-                    !isEditing && styles.disabledText
-                  ]}>
-                    {detail.label}
-                  </Text>
-                  <Text style={[
-                    styles.detailValue,
-                    !isEditing && styles.disabledText,
-                    isEditing && styles.editableValue
-                  ]}>
-                    {detail.value} {detail.unit}
-                  </Text>
-                </View>
-                {isEditing && (
-                  <View style={styles.editIndicator}>
-                    <Ionicons name="pencil" size={16} color="" />
-                    <Ionicons name="chevron-forward" size={20} color="#4064F6" />
-                  </View>
-                )}
-              </Pressable>
-            ))}
-          </View>
-
-          {/* Privacy Policy Accordion */}
-          <View style={styles.privacySection}>
-            <Pressable 
-              style={styles.privacyHeader}
-              onPress={() => setIsPrivacyExpanded(!isPrivacyExpanded)}
-            >
-              <Text style={styles.privacyTitle}>Privacy Policy</Text>
-              <Ionicons 
-                name={isPrivacyExpanded ? 'chevron-up' : 'chevron-down'} 
-                size={24} 
-                color="#666666" 
+        {/* Main content starts here */}
+        {/* Profile Picture Section */}
+        <View style={styles.profileSection}>
+          <Pressable
+            onPress={pickImage} 
+            style={styles.profileImageContainer}
+            disabled={isLoading}
+          >
+            {profileImage ? (
+              <Image 
+                source={{ uri: profileImage }} 
+                style={styles.profileImage}
               />
-            </Pressable>
-            
-            {isPrivacyExpanded && (
-              <View style={styles.privacyContent}>
-                <Text style={styles.privacyText}>
-                  BallerAI Privacy Policy{'\n'}
-                  Effective Date [19.2.2025]{'\n\n'}
-
-                  1. Introduction{'\n'}
-                  BallerAI ("we," "our," or "us") is committed to protecting the privacy of our users ("you"). This Privacy Policy explains how we collect, use, disclose, and safeguard your personal data when you use our BallerAI app, which provides personalized training plans, recovery plans, nutrition goals, calorie calculations, and team performance tracking. By accessing or using the app, you agree to the practices described in this policy.{'\n\n'}
-
-                  2. Information We Collect{'\n'}
-                  A. Personal Information You Provide{'\n'}
-                  When you register or use our app, we may collect information that can identify you, including but not limited to:{'\n\n'}
-
-                  • Account Information: Your name, email address, password, and profile picture.{'\n'}
-                  • Personal Attributes: Gender, age, height, weight, dominant foot, and injury history.{'\n'}
-                  • Health and Fitness Data: Training details, recovery plan inputs, nutrition goals, calorie intake, physical activity levels, sleep patterns, and dietary preferences.{'\n'}
-                  • Team Information: If you use team management features, data related to team names, player profiles, and recovery/performance metrics.{'\n'}
-                  • Payment Information: Billing details and payment history if you subscribe to premium features.{'\n\n'}
-
-                  B. Data Collected Automatically{'\n'}
-                  When you use our app, we may also collect:{'\n\n'}
-
-                  • Usage Data: IP address, device information, operating system, app usage logs, and performance data.{'\n'}
-                  • Cookies and Similar Technologies: To enhance user experience and analyze trends.{'\n\n'}
-
-                  3. How We Use Your Information{'\n'}
-                  We use the data we collect for various purposes, including:{'\n\n'}
-
-                  • Providing and Personalizing Services: To create and customize your training, recovery, and nutrition plans based on your inputs.{'\n'}
-                  • Improving the App: To analyze usage patterns, conduct research, and improve our app features and user experience.{'\n'}
-                  • Communication: To send you notifications, updates, customer support communications, and marketing messages.{'\n'}
-                  • Team Management: To enable features for teams, allowing coaches or administrators to track players' performance and recovery.{'\n'}
-                  • Compliance and Legal Obligations: To comply with applicable laws, regulations, and legal processes.{'\n\n'}
-
-                  4. Legal Basis for Processing (For Users in the EU){'\n'}
-                  Under the General Data Protection Regulation (GDPR), we process your personal data based on the following legal grounds:{'\n\n'}
-
-                  • Consent: When you explicitly consent to the collection and use of your data.{'\n'}
-                  • Contractual Necessity: To provide the services you request.{'\n'}
-                  • Legitimate Interest: To improve our app, perform analytics, and develop new features.{'\n'}
-                  • Compliance with Legal Obligations: To meet legal requirements and regulatory obligations.{'\n\n'}
-
-                  5. Data Sharing and Disclosure{'\n'}
-                  We may share your information with:{'\n\n'}
-
-                  • Service Providers: Third-party vendors who perform services on our behalf.{'\n'}
-                  • Team Administrators: If you use team features, your information may be accessible to designated team coaches or administrators.{'\n'}
-                  • Legal and Regulatory Authorities: When required by law or to protect our rights.{'\n'}
-                  • Business Transfers: In the event of a merger, acquisition, or sale of assets.{'\n\n'}
-
-                  6. Data Retention{'\n'}
-                  We will retain your personal data for as long as necessary to:{'\n\n'}
-
-                  • Provide the services you have requested.{'\n'}
-                  • Comply with legal obligations.{'\n'}
-                  • Resolve disputes and enforce our agreements.{'\n\n'}
-
-                  7. Data Security{'\n'}
-                  We implement industry-standard security measures to protect your data from unauthorized access, alteration, disclosure, or destruction.{'\n\n'}
-
-                  8. International Data Transfers{'\n'}
-                  Your information may be processed in countries outside your country of residence, including the United States and European Economic Area (EEA) countries.{'\n\n'}
-
-                  9. Your Rights{'\n'}
-                  Depending on your jurisdiction, you may have the following rights:{'\n\n'}
-
-                  • Access: The right to request copies of your data.{'\n'}
-                  • Correction: The right to have inaccurate data corrected.{'\n'}
-                  • Deletion: The right to request deletion of your data.{'\n'}
-                  • Restriction: The right to request restrictions on processing.{'\n'}
-                  • Objection: The right to object to the processing of your data.{'\n'}
-                  • Data Portability: The right to request data transfer.{'\n\n'}
-
-                  10. Children's Privacy{'\n'}
-                  Our app is intended for users who are 18 years or older. We do not knowingly collect personal data from individuals under 18.{'\n\n'}
-
-                  11. Updates to This Privacy Policy{'\n'}
-                  We may update this Privacy Policy from time to time to reflect changes in our practices or legal requirements.{'\n\n'}
-
-                  12. Contact Us{'\n'}
-                  If you have questions or concerns, please contact us at:{'\n\n'}
-
-                  BallerAI Privacy Team{'\n'}
-                  Email: ballerai.official@gmail.com{'\n\n'}
-
-                  Last Updated: [18.2.2025]
-                </Text>
+            ) : (
+              <View style={styles.profileImagePlaceholder}>
+                <Ionicons name="person" size={40} color="#666666" />
               </View>
             )}
+            <View style={styles.editIconContainer}>
+              {isLoading ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Ionicons name="camera" size={14} color="#FFFFFF" />
+              )}
+            </View>
+          </Pressable>
+
+          <View style={styles.usernameContainer}>
+            <Text style={styles.username}>{userData?.username || "User"}</Text>
           </View>
+        </View>
+
+        {/* Profile Info Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Player Details</Text>
+
+            <Pressable
+              onPress={() => setIsEditing(!isEditing)}
+              style={({ pressed }) => ({
+                opacity: pressed ? 0.7 : 1,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+              })}
+            >
+              <Ionicons 
+                name={isEditing ? "checkmark" : "create-outline"} 
+                size={24} 
+                color="#4064F6" 
+              />
+              <Text style={{ color: '#4064F6', fontSize: 16 }}>
+                {isEditing ? 'Done' : 'Edit'}
+              </Text>
+            </Pressable>
+          </View>
+
+          {profileDetails.map((detail, index) => (
+            <Pressable 
+              key={index} 
+              style={[
+                styles.detailRow,
+                !isEditing && styles.disabledRow,
+                isEditing && styles.editableRow
+              ]}
+              onPress={() => {
+                if (isEditing) {
+                  setEditingField(detail.field);
+                  setEditValue(detail.value?.toString() || '');
+                }
+              }}
+              disabled={!isEditing}
+            >
+              <View style={styles.detailIcon}>
+                <Ionicons 
+                  name={detail.icon} 
+                  size={24} 
+                  color={isEditing ? "#4064F6" : "#999999"} 
+                />
+              </View>
+              <View style={styles.detailInfo}>
+                <Text style={[
+                  styles.detailLabel,
+                  !isEditing && styles.disabledText
+                ]}>
+                  {detail.label}
+                </Text>
+                <Text style={[
+                  styles.detailValue,
+                  !isEditing && styles.disabledText,
+                  isEditing && styles.editableValue
+                ]}>
+                  {detail.value} {detail.unit}
+                </Text>
+              </View>
+              {isEditing && (
+                <View style={styles.editIndicator}>
+                  <Ionicons name="pencil" size={16} color="" />
+                  <Ionicons name="chevron-forward" size={20} color="#4064F6" />
+                </View>
+              )}
+            </Pressable>
+          ))}
+        </View>
+
+        {/* Privacy Policy Accordion */}
+        <View style={styles.privacySection}>
+          <Pressable 
+            style={styles.privacyHeader}
+            onPress={() => setIsPrivacyExpanded(!isPrivacyExpanded)}
+          >
+            <Text style={styles.privacyTitle}>Privacy Policy</Text>
+            <Ionicons 
+              name={isPrivacyExpanded ? 'chevron-up' : 'chevron-down'} 
+              size={24} 
+              color="#666666" 
+            />
+          </Pressable>
           
-          {/* Button Container - Now inside the ScrollView after privacy section */}
-          <View style={styles.buttonContainer}>
-            <Button
-              title="Log Out"
-              onPress={handleLogout}
-              buttonStyle={{ backgroundColor: '#4064F6' }}
-              textStyle={{ color: '#FFFFFF' }}
-            />
-            <Button
-              title="Delete Account"
-              onPress={handleDeleteAccount}
-              buttonStyle={{ backgroundColor: '#FF3B30' }}
-              textStyle={{ color: '#FFFFFF' }}
-            />
-          </View>
-        </ScrollView>
+          {isPrivacyExpanded && (
+            <View style={styles.privacyContent}>
+              <Text style={styles.privacyText}>
+                BallerAI Privacy Policy{'\n'}
+                Effective Date [19.2.2025]{'\n\n'}
+
+                1. Introduction{'\n'}
+                BallerAI ("we," "our," or "us") is committed to protecting the privacy of our users ("you"). This Privacy Policy explains how we collect, use, disclose, and safeguard your personal data when you use our BallerAI app, which provides personalized training plans, recovery plans, nutrition goals, calorie calculations, and team performance tracking. By accessing or using the app, you agree to the practices described in this policy.{'\n\n'}
+
+                2. Information We Collect{'\n'}
+                A. Personal Information You Provide{'\n'}
+                When you register or use our app, we may collect information that can identify you, including but not limited to:{'\n\n'}
+
+                • Account Information: Your name, email address, password, and profile picture.{'\n'}
+                • Personal Attributes: Gender, age, height, weight, dominant foot, and injury history.{'\n'}
+                • Health and Fitness Data: Training details, recovery plan inputs, nutrition goals, calorie intake, physical activity levels, sleep patterns, and dietary preferences.{'\n'}
+                • Team Information: If you use team management features, data related to team names, player profiles, and recovery/performance metrics.{'\n'}
+                • Payment Information: Billing details and payment history if you subscribe to premium features.{'\n\n'}
+
+                B. Data Collected Automatically{'\n'}
+                When you use our app, we may also collect:{'\n\n'}
+
+                • Usage Data: IP address, device information, operating system, app usage logs, and performance data.{'\n'}
+                • Cookies and Similar Technologies: To enhance user experience and analyze trends.{'\n\n'}
+
+                3. How We Use Your Information{'\n'}
+                We use the data we collect for various purposes, including:{'\n\n'}
+
+                • Providing and Personalizing Services: To create and customize your training, recovery, and nutrition plans based on your inputs.{'\n'}
+                • Improving the App: To analyze usage patterns, conduct research, and improve our app features and user experience.{'\n'}
+                • Communication: To send you notifications, updates, customer support communications, and marketing messages.{'\n'}
+                • Team Management: To enable features for teams, allowing coaches or administrators to track players' performance and recovery.{'\n'}
+                • Compliance and Legal Obligations: To comply with applicable laws, regulations, and legal processes.{'\n\n'}
+
+                4. Legal Basis for Processing (For Users in the EU){'\n'}
+                Under the General Data Protection Regulation (GDPR), we process your personal data based on the following legal grounds:{'\n\n'}
+
+                • Consent: When you explicitly consent to the collection and use of your data.{'\n'}
+                • Contractual Necessity: To provide the services you request.{'\n'}
+                • Legitimate Interest: To improve our app, perform analytics, and develop new features.{'\n'}
+                • Compliance with Legal Obligations: To meet legal requirements and regulatory obligations.{'\n\n'}
+
+                5. Data Sharing and Disclosure{'\n'}
+                We may share your information with:{'\n\n'}
+
+                • Service Providers: Third-party vendors who perform services on our behalf.{'\n'}
+                • Team Administrators: If you use team features, your information may be accessible to designated team coaches or administrators.{'\n'}
+                • Legal and Regulatory Authorities: When required by law or to protect our rights.{'\n'}
+                • Business Transfers: In the event of a merger, acquisition, or sale of assets.{'\n\n'}
+
+                6. Data Retention{'\n'}
+                We will retain your personal data for as long as necessary to:{'\n\n'}
+
+                • Provide the services you have requested.{'\n'}
+                • Comply with legal obligations.{'\n'}
+                • Resolve disputes and enforce our agreements.{'\n\n'}
+
+                7. Data Security{'\n'}
+                We implement industry-standard security measures to protect your data from unauthorized access, alteration, disclosure, or destruction.{'\n\n'}
+
+                8. International Data Transfers{'\n'}
+                Your information may be processed in countries outside your country of residence, including the United States and European Economic Area (EEA) countries.{'\n\n'}
+
+                9. Your Rights{'\n'}
+                Depending on your jurisdiction, you may have the following rights:{'\n\n'}
+
+                • Access: The right to request copies of your data.{'\n'}
+                • Correction: The right to have inaccurate data corrected.{'\n'}
+                • Deletion: The right to request deletion of your data.{'\n'}
+                • Restriction: The right to request restrictions on processing.{'\n'}
+                • Objection: The right to object to the processing of your data.{'\n'}
+                • Data Portability: The right to request data transfer.{'\n\n'}
+
+                10. Children's Privacy{'\n'}
+                Our app is intended for users who are 18 years or older. We do not knowingly collect personal data from individuals under 18.{'\n\n'}
+
+                11. Updates to This Privacy Policy{'\n'}
+                We may update this Privacy Policy from time to time to reflect changes in our practices or legal requirements.{'\n\n'}
+
+                12. Contact Us{'\n'}
+                If you have questions or concerns, please contact us at:{'\n\n'}
+
+                BallerAI Privacy Team{'\n'}
+                Email: ballerai.official@gmail.com{'\n\n'}
+
+                Last Updated: [18.2.2025]
+              </Text>
+            </View>
+          )}
+        </View>
+        
+        {/* Button Container - Now inside the ScrollView after privacy section */}
+        <View style={styles.buttonContainer}>
+          <Button
+            title="Log Out"
+            onPress={handleLogout}
+            buttonStyle={{ backgroundColor: '#4064F6' }}
+            textStyle={{ color: '#FFFFFF' }}
+          />
+          <Button
+            title="Delete Account"
+            onPress={handleDeleteAccount}
+            buttonStyle={{ backgroundColor: '#FF3B30' }}
+            textStyle={{ color: '#FFFFFF' }}
+          />
+        </View>
       </KeyboardAvoidingView>
 
       {renderEditModal()}
       {renderReauthModal()}
-    </SafeAreaView>
+    </ScrollView>
   );
 }
 

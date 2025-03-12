@@ -558,691 +558,692 @@ IMPORTANT USAGE GUIDELINES:
       <ScrollView
         style={styles.container}
         contentContainerStyle={{
-          paddingBottom: 90, // Add extra padding at the bottom to prevent content from being hidden behind the navigation bar
-      }}>
-      <KeyboardAvoidingView
+          flexGrow: 1,
+          paddingBottom: Platform.OS === 'ios' ? 180 : 140,
+        }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={true}
+        bounces={true}
+        overScrollMode="auto"
+        alwaysBounceVertical={true}
+      >
+        <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={{ flex: 1 }}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 40}
         >
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={{
-              paddingBottom: 90, // Add extra padding at the bottom
-            }}
-          >
-            {/* Header - Scrolls with content */}
+          {/* Header - Scrolls with content */}
+          <View style={{
+            paddingTop: 48,
+            paddingHorizontal: 24,
+            backgroundColor: '#ffffff',
+          }}>
+            {/* Header with Logo */}
             <View style={{
-              paddingTop: 48,
-              paddingHorizontal: 24,
-              backgroundColor: '#ffffff',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              height: 92, // Same height as OnboardingHeader
             }}>
-              {/* Header with Logo */}
+              {/* Title */}
+              <Text style={{
+                fontSize: 28,
+                fontWeight: '900',
+                color: '#000000',
+              }} 
+              allowFontScaling={false}
+              maxFontSizeMultiplier={1.2}>
+                Recovery
+              </Text>
+
               <View style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                justifyContent: 'space-between',
-                height: 92, // Same height as OnboardingHeader
+                gap: 6,
               }}>
-                {/* Title */}
+                <Image 
+                  source={require('../../assets/images/BallerAILogo.png')}
+                  style={{
+                    width: 32,
+                    height: 32,
+                  }}
+                  resizeMode="contain"
+                />
                 <Text style={{
                   fontSize: 28,
-                  fontWeight: '900',
+                  fontWeight: '300',
                   color: '#000000',
                 }} 
                 allowFontScaling={false}
                 maxFontSizeMultiplier={1.2}>
-                  Recovery
+                  BallerAI
                 </Text>
-
-                <View style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 6,
-                }}>
-                  <Image 
-                    source={require('../../assets/images/BallerAILogo.png')}
-                    style={{
-                      width: 32,
-                      height: 32,
-                    }}
-                    resizeMode="contain"
-                  />
-                  <Text style={{
-                    fontSize: 28,
-                    fontWeight: '300',
-                    color: '#000000',
-                  }} 
-                  allowFontScaling={false}
-                  maxFontSizeMultiplier={1.2}>
-                    BallerAI
-                  </Text>
-                </View>
               </View>
             </View>
+          </View>
 
-            <View style={styles.contentContainer}>
-              {/* Weekly Overview */}
-              <WeeklyOverview 
-                selectedDate={selectedDate}
-                onDateSelect={setSelectedDate}
-              />
+          <View style={styles.contentContainer}>
+            {/* Weekly Overview */}
+            <WeeklyOverview 
+              selectedDate={selectedDate}
+              onDateSelect={setSelectedDate}
+            />
 
-              {/* Recovery Inputs */}
-              <Animated.View 
-                entering={FadeIn.duration(300)}
-                style={styles.inputsContainer}
-              >
-                <View style={{alignItems: 'center'}}>
-                  <Text style={styles.loadText}>Recovery Query</Text>
-                </View>
-                {recoveryData.submitted && !isEditing ? (
-                  // Show submitted data with edit button if plan doesn't exist
-                  <>
-                    <View style={styles.submittedHeader}>
-                      <Text style={styles.submittedText}>Submitted</Text>
-                      {!planExists && (
-                        <Pressable
-                          style={styles.editButton}
-                          onPress={() => setIsEditing(true)}
-                        >
-                          <Ionicons name="create-outline" size={24} color="#FFFFFF" />
-                          <Text style={styles.editButtonText}>Edit</Text>
-                        </Pressable>
-                      )}
-                    </View>
-                    
-                    <RecoverySlider
-                      icon="fitness"
-                      question="How intense was the training yesterday?"
-                      value={recoveryData.fatigue}
-                      onValueChange={() => {}}
-                      min={1}
-                      max={10}
-                      disabled={true}
-                      type="intensity"
-                    />
-                    <RecoverySlider
-                      icon="medical"
-                      question="How sore are you?"
-                      value={recoveryData.soreness}
-                      onValueChange={() => {}}
-                      min={1}
-                      max={10}
-                      disabled={true}
-                      type="soreness"
-                    />
-                    <RecoverySlider
-                      icon="flash"
-                      question="How tired do you feel overall?"
-                      value={recoveryData.mood}
-                      onValueChange={() => {}}
-                      min={1}
-                      max={10}
-                      disabled={true}
-                      type="fatigue"
-                    />
-                    <RecoverySlider
-                      icon="moon"
-                      question="Sleep duration last night"
-                      value={recoveryData.sleep}
-                      onValueChange={() => {}}
-                      min={1}
-                      max={10}
-                      disabled={true}
-                      type="sleep"
-                    />
-                  </>
-                ) : (
-                  // Show editable sliders
-                  <>
-                    <RecoverySlider
-                      icon="fitness"
-                      question="How intense was the training yesterday?"
-                      value={recoveryData.fatigue}
-                      onValueChange={(value) => setRecoveryData(prev => ({
-                        ...prev,
-                        fatigue: value
-                      }))}
-                      min={1}
-                      max={10}
-                      disabled={false}
-                      type="intensity"
-                    />
-                    <RecoverySlider
-                      icon="medical"
-                      question="How sore are you?"
-                      value={recoveryData.soreness}
-                      onValueChange={(value) => setRecoveryData(prev => ({
-                        ...prev,
-                        soreness: value
-                      }))}
-                      min={1}
-                      max={10}
-                      disabled={false}
-                      type="soreness"
-                    />
-                    <RecoverySlider
-                      icon="flash"
-                      question="How tired do you feel overall?"
-                      value={recoveryData.mood}
-                      onValueChange={(value) => setRecoveryData(prev => ({
-                        ...prev,
-                        mood: value
-                      }))}
-                      min={1}
-                      max={10}
-                      disabled={false}
-                      type="fatigue"
-                    />
-                    <RecoverySlider
-                      icon="moon"
-                      question="Sleep duration last night"
-                      value={recoveryData.sleep}
-                      onValueChange={(value) => setRecoveryData(prev => ({
-                        ...prev,
-                        sleep: value
-                      }))}
-                      min={1}
-                      max={10}
-                      disabled={false}
-                      type="sleep"
-                    />
-                    
-                    {/* Submit button inside the Recovery Query card */}
-                    <Pressable 
-                      style={[styles.submitButton, {marginTop: 16}]}
-                      onPress={handleSubmit}
-                    >
-                      <Text style={styles.submitButtonText}>
-                        {isEditing ? 'Update Recovery Data' : 'Submit Recovery Data'}
-                      </Text>
-                      <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-                    </Pressable>
-                  </>
-                )}
-              </Animated.View>
-
-              {/* Recovery Tools Selection Card */}
-              <Animated.View 
-                entering={FadeIn.duration(300)}
-                style={[
-                  styles.inputsContainer, 
-                  planExists && styles.disabledContainer,
-                  (toolsConfirmed && !planExists) && styles.confirmedContainer
-                ]}
-              >
-                <View style={{alignItems: 'center'}}>
-                  <Text style={[
-                    styles.loadText,
-                    planExists && {color: '#999999'},
-                    (toolsConfirmed && !planExists) && {color: '#4064F6'}
-                  ]}>Recovery Tools</Text>
-                </View>
-                
-                {toolsConfirmed && !planExists ? (
-                  // Show confirmed header with edit button
+            {/* Recovery Inputs */}
+            <Animated.View 
+              entering={FadeIn.duration(300)}
+              style={styles.inputsContainer}
+            >
+              <View style={{alignItems: 'center'}}>
+                <Text style={styles.loadText}>Recovery Query</Text>
+              </View>
+              {recoveryData.submitted && !isEditing ? (
+                // Show submitted data with edit button if plan doesn't exist
+                <>
                   <View style={styles.submittedHeader}>
-                    <Text style={styles.submittedText}>Tools Confirmed</Text>
-                    <Pressable
-                      style={styles.editButton}
-                      onPress={() => setToolsConfirmed(false)}
-                    >
-                      <Ionicons name="create-outline" size={24} color="#FFFFFF" />
-                      <Text style={styles.editButtonText}>Edit</Text>
-                    </Pressable>
-                  </View>
-                ) : (
-                  <Text style={[
-                    styles.toolsSelectionText,
-                    planExists && {color: '#999999'},
-                    (toolsConfirmed && !planExists) && {color: '#999999'}
-                  ]}>
-                    Select the recovery tools you have access to:
-                  </Text>
-                )}
-                
-                <View style={styles.toolsGrid}>
-                  <RecoveryToolButton 
-                    icon="snow-outline" 
-                    label="Cold Exposure" 
-                    selected={selectedTools.includes("Cold Exposure")}
-                    onPress={() => toggleTool("Cold Exposure")} 
-                    disabled={planExists || (toolsConfirmed && !isEditing)}
-                  />
-                  <RecoveryToolButton 
-                    icon="heart-outline" 
-                    label="Foam Roller" 
-                    selected={selectedTools.includes("Foam Roller")}
-                    onPress={() => toggleTool("Foam Roller")} 
-                    disabled={planExists || (toolsConfirmed && !isEditing)}
-                  />
-                  <RecoveryToolButton 
-                    icon="bicycle-outline" 
-                    label="Cycling" 
-                    selected={selectedTools.includes("Cycling")}
-                    onPress={() => toggleTool("Cycling")} 
-                    disabled={planExists || (toolsConfirmed && !isEditing)}
-                  />
-                  <RecoveryToolButton 
-                    icon="water-outline" 
-                    label="Swimming" 
-                    selected={selectedTools.includes("Swimming")}
-                    onPress={() => toggleTool("Swimming")} 
-                    disabled={planExists || (toolsConfirmed && !isEditing)}
-                  />
-                  <RecoveryToolButton 
-                    icon="pulse-outline" 
-                    label="Compression" 
-                    selected={selectedTools.includes("Compression")}
-                    onPress={() => toggleTool("Compression")} 
-                    disabled={planExists || (toolsConfirmed && !isEditing)}
-                  />
-                  <RecoveryToolButton 
-                    icon="flash-outline" 
-                    label="Massage Gun" 
-                    selected={selectedTools.includes("Massage Gun")}
-                    onPress={() => toggleTool("Massage Gun")} 
-                    disabled={planExists || (toolsConfirmed && !isEditing)}
-                  />
-                  <RecoveryToolButton 
-                    icon="flame-outline" 
-                    label="Sauna" 
-                    selected={selectedTools.includes("Sauna")}
-                    onPress={() => toggleTool("Sauna")} 
-                    disabled={planExists || (toolsConfirmed && !isEditing)}
-                  />
-                  <RecoveryToolButton 
-                    icon="barbell-outline" 
-                    label="Resistance Bands" 
-                    selected={selectedTools.includes("Resistance Bands")}
-                    onPress={() => toggleTool("Resistance Bands")} 
-                    disabled={planExists || (toolsConfirmed && !isEditing)}
-                  />
-                </View>
-                <View style={styles.noneToolContainer}>
-                  <RecoveryToolButton 
-                    icon="close-circle-outline" 
-                    label="None" 
-                    selected={selectedTools.includes("None")}
-                    onPress={() => toggleTool("None")} 
-                    disabled={planExists || (toolsConfirmed && !isEditing)}
-                  />
-                </View>
-                
-                {!planExists && !toolsConfirmed && (
-                  <Pressable 
-                    style={styles.submitButton}
-                    onPress={handleConfirmTools}
-                  >
-                    <Text style={styles.submitButtonText}>
-                      Confirm Tools
-                    </Text>
-                    <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-                  </Pressable>
-                )}
-                
-                {toolsConfirmed && !planExists && (
-                  <Text style={[styles.toolsConfirmedText]}>
-                    Your selection has been saved
-                  </Text>
-                )}
-                
-                {!toolsConfirmed && !planExists && selectedTools.length === 0 && (
-                  <Text style={styles.toolsHelperText}>
-                    Please select at least one option
-                  </Text>
-                )}
-                
-                {planExists && (
-                  <Text style={[styles.toolsHelperText, {color: '#999999'}]}>
-                    Recovery plan already generated
-                  </Text>
-                )}
-              </Animated.View>
-
-              {/* Recovery Time Card */}
-              <Animated.View 
-                entering={FadeIn.duration(300)}
-                style={[
-                  styles.inputsContainer, 
-                  planExists && styles.disabledContainer,
-                  (timeConfirmed && !planExists) && styles.confirmedContainer
-                ]}
-              >
-                <View style={{alignItems: 'center'}}>
-                  <Text style={[
-                    styles.loadText,
-                    planExists && {color: '#999999'},
-                    (timeConfirmed && !planExists) && {color: '#4064F6'}
-                  ]}>Recovery Time</Text>
-                </View>
-                
-                {timeConfirmed && !planExists ? (
-                  // Show confirmed header with edit button
-                  <View style={styles.submittedHeader}>
-                    <Text style={styles.submittedText}>Time Confirmed</Text>
-                    <Pressable
-                      style={styles.editButton}
-                      onPress={() => setTimeConfirmed(false)}
-                    >
-                      <Ionicons name="create-outline" size={24} color="#FFFFFF" />
-                      <Text style={styles.editButtonText}>Edit</Text>
-                    </Pressable>
-                  </View>
-                ) : (
-                  <Text style={[
-                    styles.toolsSelectionText,
-                    planExists && {color: '#999999'},
-                    (timeConfirmed && !planExists) && {color: '#999999'}
-                  ]}>
-                    How much time do you have for today's recovery plan?
-                  </Text>
-                )}
-                
-                {/* Time Options */}
-                <View style={styles.timeOptionsContainer}>
-                  <View style={styles.timeOptionsRow}>
-                    <Pressable 
-                      style={[
-                        styles.timeOptionButton,
-                        selectedTime === '15 mins' && styles.timeOptionSelected,
-                        (planExists || (timeConfirmed && !timeConfirmed)) && styles.timeOptionDisabled
-                      ]}
-                      onPress={() => setSelectedTime('15 mins')}
-                      disabled={planExists || (timeConfirmed && !isEditing)}
-                    >
-                      <Ionicons 
-                        name="time-outline" 
-                        size={24} 
-                        color={
-                          planExists || (timeConfirmed && !isEditing)
-                            ? "#BBBBBB" 
-                            : selectedTime === '15 mins'
-                              ? "#FFFFFF" 
-                              : "#666666"
-                        } 
-                      />
-                      <Text 
-                        style={[
-                          styles.timeOptionText,
-                          selectedTime === '15 mins' && styles.timeOptionTextSelected,
-                          (planExists || (timeConfirmed && !isEditing)) && styles.timeOptionTextDisabled
-                        ]}
+                    <Text style={styles.submittedText}>Submitted</Text>
+                    {!planExists && (
+                      <Pressable
+                        style={styles.editButton}
+                        onPress={() => setIsEditing(true)}
                       >
-                        15 mins
-                      </Text>
-                    </Pressable>
-                    
-                    <Pressable 
-                      style={[
-                        styles.timeOptionButton,
-                        selectedTime === '30 mins' && styles.timeOptionSelected,
-                        (planExists || (timeConfirmed && !timeConfirmed)) && styles.timeOptionDisabled
-                      ]}
-                      onPress={() => setSelectedTime('30 mins')}
-                      disabled={planExists || (timeConfirmed && !isEditing)}
-                    >
-                      <Ionicons 
-                        name="time-outline" 
-                        size={24} 
-                        color={
-                          planExists || (timeConfirmed && !isEditing)
-                            ? "#BBBBBB" 
-                            : selectedTime === '30 mins'
-                              ? "#FFFFFF" 
-                              : "#666666"
-                        } 
-                      />
-                      <Text 
-                        style={[
-                          styles.timeOptionText,
-                          selectedTime === '30 mins' && styles.timeOptionTextSelected,
-                          (planExists || (timeConfirmed && !isEditing)) && styles.timeOptionTextDisabled
-                        ]}
-                      >
-                        30 mins
-                      </Text>
-                    </Pressable>
+                        <Ionicons name="create-outline" size={24} color="#FFFFFF" />
+                        <Text style={styles.editButtonText}>Edit</Text>
+                      </Pressable>
+                    )}
                   </View>
                   
-                  <View style={styles.timeOptionsRow}>
-                    <Pressable 
-                      style={[
-                        styles.timeOptionButton,
-                        selectedTime === '45 mins' && styles.timeOptionSelected,
-                        (planExists || (timeConfirmed && !timeConfirmed)) && styles.timeOptionDisabled
-                      ]}
-                      onPress={() => setSelectedTime('45 mins')}
-                      disabled={planExists || (timeConfirmed && !isEditing)}
-                    >
-                      <Ionicons 
-                        name="time-outline" 
-                        size={24} 
-                        color={
-                          planExists || (timeConfirmed && !isEditing)
-                            ? "#BBBBBB" 
-                            : selectedTime === '45 mins'
-                              ? "#FFFFFF" 
-                              : "#666666"
-                        } 
-                      />
-                      <Text 
-                        style={[
-                          styles.timeOptionText,
-                          selectedTime === '45 mins' && styles.timeOptionTextSelected,
-                          (planExists || (timeConfirmed && !isEditing)) && styles.timeOptionTextDisabled
-                        ]}
-                      >
-                        45 mins
-                      </Text>
-                    </Pressable>
-                    
-                    <Pressable 
-                      style={[
-                        styles.timeOptionButton,
-                        selectedTime === '1h+' && styles.timeOptionSelected,
-                        (planExists || (timeConfirmed && !timeConfirmed)) && styles.timeOptionDisabled
-                      ]}
-                      onPress={() => setSelectedTime('1h+')}
-                      disabled={planExists || (timeConfirmed && !isEditing)}
-                    >
-                      <Ionicons 
-                        name="time-outline" 
-                        size={24} 
-                        color={
-                          planExists || (timeConfirmed && !isEditing)
-                            ? "#BBBBBB" 
-                            : selectedTime === '1h+'
-                              ? "#FFFFFF" 
-                              : "#666666"
-                        } 
-                      />
-                      <Text 
-                        style={[
-                          styles.timeOptionText,
-                          selectedTime === '1h+' && styles.timeOptionTextSelected,
-                          (planExists || (timeConfirmed && !isEditing)) && styles.timeOptionTextDisabled
-                        ]}
-                      >
-                        1h+
-                      </Text>
-                    </Pressable>
-                  </View>
-                </View>
-                
-                {!planExists && !timeConfirmed && (
+                  <RecoverySlider
+                    icon="fitness"
+                    question="How intense was the training yesterday?"
+                    value={recoveryData.fatigue}
+                    onValueChange={() => {}}
+                    min={1}
+                    max={10}
+                    disabled={true}
+                    type="intensity"
+                  />
+                  <RecoverySlider
+                    icon="medical"
+                    question="How sore are you?"
+                    value={recoveryData.soreness}
+                    onValueChange={() => {}}
+                    min={1}
+                    max={10}
+                    disabled={true}
+                    type="soreness"
+                  />
+                  <RecoverySlider
+                    icon="flash"
+                    question="How tired do you feel overall?"
+                    value={recoveryData.mood}
+                    onValueChange={() => {}}
+                    min={1}
+                    max={10}
+                    disabled={true}
+                    type="fatigue"
+                  />
+                  <RecoverySlider
+                    icon="moon"
+                    question="Sleep duration last night"
+                    value={recoveryData.sleep}
+                    onValueChange={() => {}}
+                    min={1}
+                    max={10}
+                    disabled={true}
+                    type="sleep"
+                  />
+                </>
+              ) : (
+                // Show editable sliders
+                <>
+                  <RecoverySlider
+                    icon="fitness"
+                    question="How intense was the training yesterday?"
+                    value={recoveryData.fatigue}
+                    onValueChange={(value) => setRecoveryData(prev => ({
+                      ...prev,
+                      fatigue: value
+                    }))}
+                    min={1}
+                    max={10}
+                    disabled={false}
+                    type="intensity"
+                  />
+                  <RecoverySlider
+                    icon="medical"
+                    question="How sore are you?"
+                    value={recoveryData.soreness}
+                    onValueChange={(value) => setRecoveryData(prev => ({
+                      ...prev,
+                      soreness: value
+                    }))}
+                    min={1}
+                    max={10}
+                    disabled={false}
+                    type="soreness"
+                  />
+                  <RecoverySlider
+                    icon="flash"
+                    question="How tired do you feel overall?"
+                    value={recoveryData.mood}
+                    onValueChange={(value) => setRecoveryData(prev => ({
+                      ...prev,
+                      mood: value
+                    }))}
+                    min={1}
+                    max={10}
+                    disabled={false}
+                    type="fatigue"
+                  />
+                  <RecoverySlider
+                    icon="moon"
+                    question="Sleep duration last night"
+                    value={recoveryData.sleep}
+                    onValueChange={(value) => setRecoveryData(prev => ({
+                      ...prev,
+                      sleep: value
+                    }))}
+                    min={1}
+                    max={10}
+                    disabled={false}
+                    type="sleep"
+                  />
+                  
+                  {/* Submit button inside the Recovery Query card */}
                   <Pressable 
-                    style={[
-                      styles.submitButton,
-                      !selectedTime && styles.submitButtonDisabled
-                    ]}
-                    onPress={handleConfirmTime}
-                    disabled={!selectedTime}
+                    style={[styles.submitButton, {marginTop: 16}]}
+                    onPress={handleSubmit}
                   >
                     <Text style={styles.submitButtonText}>
-                      Confirm Time
+                      {isEditing ? 'Update Recovery Data' : 'Submit Recovery Data'}
                     </Text>
                     <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
                   </Pressable>
-                )}
-                
-                {timeConfirmed && !planExists && (
-                  <Text style={[styles.toolsConfirmedText]}>
-                    Your time selection has been saved
-                  </Text>
-                )}
-                
-                {!timeConfirmed && !planExists && (
-                  <Text style={styles.toolsHelperText}>
-                    Please select how much time you have
-                  </Text>
-                )}
-                
-                {planExists && (
-                  <Text style={[styles.toolsHelperText, {color: '#999999'}]}>
-                    Recovery plan already generated
-                  </Text>
-                )}
-              </Animated.View>
+                </>
+              )}
+            </Animated.View>
 
-              {/* Generate Plan Button or Status */}
-              <Animated.View 
-                entering={FadeIn.duration(300)}
-              >
-                {!planExists ? (
-                  <>
-                    <Pressable
+            {/* Recovery Tools Selection Card */}
+            <Animated.View 
+              entering={FadeIn.duration(300)}
+              style={[
+                styles.inputsContainer, 
+                planExists && styles.disabledContainer,
+                (toolsConfirmed && !planExists) && styles.confirmedContainer
+              ]}
+            >
+              <View style={{alignItems: 'center'}}>
+                <Text style={[
+                  styles.loadText,
+                  planExists && {color: '#999999'},
+                  (toolsConfirmed && !planExists) && {color: '#4064F6'}
+                ]}>Recovery Tools</Text>
+              </View>
+              
+              {toolsConfirmed && !planExists ? (
+                // Show confirmed header with edit button
+                <View style={styles.submittedHeader}>
+                  <Text style={styles.submittedText}>Tools Confirmed</Text>
+                  <Pressable
+                    style={styles.editButton}
+                    onPress={() => setToolsConfirmed(false)}
+                  >
+                    <Ionicons name="create-outline" size={24} color="#FFFFFF" />
+                    <Text style={styles.editButtonText}>Edit</Text>
+                  </Pressable>
+                </View>
+              ) : (
+                <Text style={[
+                  styles.toolsSelectionText,
+                  planExists && {color: '#999999'},
+                  (toolsConfirmed && !planExists) && {color: '#999999'}
+                ]}>
+                  Select the recovery tools you have access to:
+                </Text>
+              )}
+              
+              <View style={styles.toolsGrid}>
+                <RecoveryToolButton 
+                  icon="snow-outline" 
+                  label="Cold Exposure" 
+                  selected={selectedTools.includes("Cold Exposure")}
+                  onPress={() => toggleTool("Cold Exposure")} 
+                  disabled={planExists || (toolsConfirmed && !isEditing)}
+                />
+                <RecoveryToolButton 
+                  icon="heart-outline" 
+                  label="Foam Roller" 
+                  selected={selectedTools.includes("Foam Roller")}
+                  onPress={() => toggleTool("Foam Roller")} 
+                  disabled={planExists || (toolsConfirmed && !isEditing)}
+                />
+                <RecoveryToolButton 
+                  icon="bicycle-outline" 
+                  label="Cycling" 
+                  selected={selectedTools.includes("Cycling")}
+                  onPress={() => toggleTool("Cycling")} 
+                  disabled={planExists || (toolsConfirmed && !isEditing)}
+                />
+                <RecoveryToolButton 
+                  icon="water-outline" 
+                  label="Swimming" 
+                  selected={selectedTools.includes("Swimming")}
+                  onPress={() => toggleTool("Swimming")} 
+                  disabled={planExists || (toolsConfirmed && !isEditing)}
+                />
+                <RecoveryToolButton 
+                  icon="pulse-outline" 
+                  label="Compression" 
+                  selected={selectedTools.includes("Compression")}
+                  onPress={() => toggleTool("Compression")} 
+                  disabled={planExists || (toolsConfirmed && !isEditing)}
+                />
+                <RecoveryToolButton 
+                  icon="flash-outline" 
+                  label="Massage Gun" 
+                  selected={selectedTools.includes("Massage Gun")}
+                  onPress={() => toggleTool("Massage Gun")} 
+                  disabled={planExists || (toolsConfirmed && !isEditing)}
+                />
+                <RecoveryToolButton 
+                  icon="flame-outline" 
+                  label="Sauna" 
+                  selected={selectedTools.includes("Sauna")}
+                  onPress={() => toggleTool("Sauna")} 
+                  disabled={planExists || (toolsConfirmed && !isEditing)}
+                />
+                <RecoveryToolButton 
+                  icon="barbell-outline" 
+                  label="Resistance Bands" 
+                  selected={selectedTools.includes("Resistance Bands")}
+                  onPress={() => toggleTool("Resistance Bands")} 
+                  disabled={planExists || (toolsConfirmed && !isEditing)}
+                />
+              </View>
+              <View style={styles.noneToolContainer}>
+                <RecoveryToolButton 
+                  icon="close-circle-outline" 
+                  label="None" 
+                  selected={selectedTools.includes("None")}
+                  onPress={() => toggleTool("None")} 
+                  disabled={planExists || (toolsConfirmed && !isEditing)}
+                />
+              </View>
+              
+              {!planExists && !toolsConfirmed && (
+                <Pressable 
+                  style={styles.submitButton}
+                  onPress={handleConfirmTools}
+                >
+                  <Text style={styles.submitButtonText}>
+                    Confirm Tools
+                  </Text>
+                  <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                </Pressable>
+              )}
+              
+              {toolsConfirmed && !planExists && (
+                <Text style={[styles.toolsConfirmedText]}>
+                  Your selection has been saved
+                </Text>
+              )}
+              
+              {!toolsConfirmed && !planExists && selectedTools.length === 0 && (
+                <Text style={styles.toolsHelperText}>
+                  Please select at least one option
+                </Text>
+              )}
+              
+              {planExists && (
+                <Text style={[styles.toolsHelperText, {color: '#999999'}]}>
+                  Recovery plan already generated
+                </Text>
+              )}
+            </Animated.View>
+
+            {/* Recovery Time Card */}
+            <Animated.View 
+              entering={FadeIn.duration(300)}
+              style={[
+                styles.inputsContainer, 
+                planExists && styles.disabledContainer,
+                (timeConfirmed && !planExists) && styles.confirmedContainer
+              ]}
+            >
+              <View style={{alignItems: 'center'}}>
+                <Text style={[
+                  styles.loadText,
+                  planExists && {color: '#999999'},
+                  (timeConfirmed && !planExists) && {color: '#4064F6'}
+                ]}>Recovery Time</Text>
+              </View>
+              
+              {timeConfirmed && !planExists ? (
+                // Show confirmed header with edit button
+                <View style={styles.submittedHeader}>
+                  <Text style={styles.submittedText}>Time Confirmed</Text>
+                  <Pressable
+                    style={styles.editButton}
+                    onPress={() => setTimeConfirmed(false)}
+                  >
+                    <Ionicons name="create-outline" size={24} color="#FFFFFF" />
+                    <Text style={styles.editButtonText}>Edit</Text>
+                  </Pressable>
+                </View>
+              ) : (
+                <Text style={[
+                  styles.toolsSelectionText,
+                  planExists && {color: '#999999'},
+                  (timeConfirmed && !planExists) && {color: '#999999'}
+                ]}>
+                  How much time do you have for today's recovery plan?
+                </Text>
+              )}
+              
+              {/* Time Options */}
+              <View style={styles.timeOptionsContainer}>
+                <View style={styles.timeOptionsRow}>
+                  <Pressable 
+                    style={[
+                      styles.timeOptionButton,
+                      selectedTime === '15 mins' && styles.timeOptionSelected,
+                      (planExists || (timeConfirmed && !timeConfirmed)) && styles.timeOptionDisabled
+                    ]}
+                    onPress={() => setSelectedTime('15 mins')}
+                    disabled={planExists || (timeConfirmed && !isEditing)}
+                  >
+                    <Ionicons 
+                      name="time-outline" 
+                      size={24} 
+                      color={
+                        planExists || (timeConfirmed && !isEditing)
+                          ? "#BBBBBB" 
+                          : selectedTime === '15 mins'
+                            ? "#FFFFFF" 
+                            : "#666666"
+                      } 
+                    />
+                    <Text 
                       style={[
-                        styles.generateButton, 
-                        (loading || !recoveryData.submitted || !toolsConfirmed || !timeConfirmed) && styles.generateButtonDisabled
+                        styles.timeOptionText,
+                        selectedTime === '15 mins' && styles.timeOptionTextSelected,
+                        (planExists || (timeConfirmed && !isEditing)) && styles.timeOptionTextDisabled
                       ]}
-                      onPress={handleGeneratePlan}
-                      disabled={loading || !recoveryData.submitted || !toolsConfirmed || !timeConfirmed}
                     >
-                      <Text style={styles.generateButtonText}>
-                        {loading ? 'Generating Plan...' : 'Generate Recovery Plan'}
-                      </Text>
-                      <Ionicons name="fitness" size={20} color="#FFFFFF" />
-                    </Pressable>
-                    
-                    {(!recoveryData.submitted || !toolsConfirmed || !timeConfirmed) && (
-                      <View style={styles.infoMessageContainer}>
-                        <Text style={styles.infoMessageText}>
-                          {!recoveryData.submitted && !toolsConfirmed && !timeConfirmed
-                            ? 'Submit your recovery data, confirm your tools, and select available time to generate a plan'
-                            : !recoveryData.submitted 
-                              ? 'Submit your recovery data to generate a plan'
-                              : !toolsConfirmed
-                                ? 'Confirm your recovery tools to generate a plan'
-                                : 'Confirm your available time to generate a plan'}
-                        </Text>
-                      </View>
-                    )}
-                  </>
-                ) : (
+                      15 mins
+                    </Text>
+                  </Pressable>
+                  
+                  <Pressable 
+                    style={[
+                      styles.timeOptionButton,
+                      selectedTime === '30 mins' && styles.timeOptionSelected,
+                      (planExists || (timeConfirmed && !timeConfirmed)) && styles.timeOptionDisabled
+                    ]}
+                    onPress={() => setSelectedTime('30 mins')}
+                    disabled={planExists || (timeConfirmed && !isEditing)}
+                  >
+                    <Ionicons 
+                      name="time-outline" 
+                      size={24} 
+                      color={
+                        planExists || (timeConfirmed && !isEditing)
+                          ? "#BBBBBB" 
+                          : selectedTime === '30 mins'
+                            ? "#FFFFFF" 
+                            : "#666666"
+                      } 
+                    />
+                    <Text 
+                      style={[
+                        styles.timeOptionText,
+                        selectedTime === '30 mins' && styles.timeOptionTextSelected,
+                        (planExists || (timeConfirmed && !isEditing)) && styles.timeOptionTextDisabled
+                      ]}
+                    >
+                      30 mins
+                    </Text>
+                  </Pressable>
+                </View>
+                
+                <View style={styles.timeOptionsRow}>
+                  <Pressable 
+                    style={[
+                      styles.timeOptionButton,
+                      selectedTime === '45 mins' && styles.timeOptionSelected,
+                      (planExists || (timeConfirmed && !timeConfirmed)) && styles.timeOptionDisabled
+                    ]}
+                    onPress={() => setSelectedTime('45 mins')}
+                    disabled={planExists || (timeConfirmed && !isEditing)}
+                  >
+                    <Ionicons 
+                      name="time-outline" 
+                      size={24} 
+                      color={
+                        planExists || (timeConfirmed && !isEditing)
+                          ? "#BBBBBB" 
+                          : selectedTime === '45 mins'
+                            ? "#FFFFFF" 
+                            : "#666666"
+                      } 
+                    />
+                    <Text 
+                      style={[
+                        styles.timeOptionText,
+                        selectedTime === '45 mins' && styles.timeOptionTextSelected,
+                        (planExists || (timeConfirmed && !isEditing)) && styles.timeOptionTextDisabled
+                      ]}
+                    >
+                      45 mins
+                    </Text>
+                  </Pressable>
+                  
+                  <Pressable 
+                    style={[
+                      styles.timeOptionButton,
+                      selectedTime === '1h+' && styles.timeOptionSelected,
+                      (planExists || (timeConfirmed && !timeConfirmed)) && styles.timeOptionDisabled
+                    ]}
+                    onPress={() => setSelectedTime('1h+')}
+                    disabled={planExists || (timeConfirmed && !isEditing)}
+                  >
+                    <Ionicons 
+                      name="time-outline" 
+                      size={24} 
+                      color={
+                        planExists || (timeConfirmed && !isEditing)
+                          ? "#BBBBBB" 
+                          : selectedTime === '1h+'
+                            ? "#FFFFFF" 
+                            : "#666666"
+                      } 
+                    />
+                    <Text 
+                      style={[
+                        styles.timeOptionText,
+                        selectedTime === '1h+' && styles.timeOptionTextSelected,
+                        (planExists || (timeConfirmed && !isEditing)) && styles.timeOptionTextDisabled
+                      ]}
+                    >
+                      1h+
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+              
+              {!planExists && !timeConfirmed && (
+                <Pressable 
+                  style={[
+                    styles.submitButton,
+                    !selectedTime && styles.submitButtonDisabled
+                  ]}
+                  onPress={handleConfirmTime}
+                  disabled={!selectedTime}
+                >
+                  <Text style={styles.submitButtonText}>
+                    Confirm Time
+                  </Text>
+                  <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                </Pressable>
+              )}
+              
+              {timeConfirmed && !planExists && (
+                <Text style={[styles.toolsConfirmedText]}>
+                  Your time selection has been saved
+                </Text>
+              )}
+              
+              {!timeConfirmed && !planExists && (
+                <Text style={styles.toolsHelperText}>
+                  Please select how much time you have
+                </Text>
+              )}
+              
+              {planExists && (
+                <Text style={[styles.toolsHelperText, {color: '#999999'}]}>
+                  Recovery plan already generated
+                </Text>
+              )}
+            </Animated.View>
+
+            {/* Generate Plan Button or Status */}
+            <Animated.View 
+              entering={FadeIn.duration(300)}
+            >
+              {!planExists ? (
+                <>
                   <Pressable
                     style={[
                       styles.generateButton, 
-                      styles.generateButtonDisabled
+                      (loading || !recoveryData.submitted || !toolsConfirmed || !timeConfirmed) && styles.generateButtonDisabled
                     ]}
-                    disabled={true}
+                    onPress={handleGeneratePlan}
+                    disabled={loading || !recoveryData.submitted || !toolsConfirmed || !timeConfirmed}
                   >
                     <Text style={styles.generateButtonText}>
-                      Plan Already Generated
+                      {loading ? 'Generating Plan...' : 'Generate Recovery Plan'}
                     </Text>
-                    <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                    <Ionicons name="fitness" size={20} color="#FFFFFF" />
                   </Pressable>
-                )}
-              </Animated.View>
-
-              {/* Plan Holder - Always visible with different states */}
-              <View style={{
-                marginHorizontal: 24,
-              }}>
-                <View style={[
-                  styles.planHolderContainer,
-                  !todaysPlan && !planLoading && styles.planHolderEmpty
-                ]}>
-                  <View style={styles.planHolderHeader}>
-                    <Text style={styles.planHolderTitle} allowFontScaling={false}>
-                      {isToday ? 'Your Plan for Today' : `Plan For ${format(selectedDate, 'MMM d')}`}
-                    </Text>
-                    {todaysPlan && (
-                      <View style={[
-                        styles.planStatusBadge,
-                        !isToday && styles.historicalBadge
-                      ]}>
-                        <Text style={styles.planStatusText}>
-                          {isToday ? 'Active' : 'Historical'}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
                   
-                  {planLoading ? (
-                    <View style={styles.planLoadingContainer}>
-                      <Ionicons name="hourglass-outline" size={24} color="#999999" />
-                      <Text style={styles.planLoadingText}>Loading plan...</Text>
-                    </View>
-                  ) : todaysPlan ? (
-                    <View style={styles.planContentContainer}>
-                      <Text style={styles.planText}>{todaysPlan}</Text>
-                      <Text style={styles.planDateText}>
-                        Generated on {format(selectedDate, 'MMMM d, yyyy')}
+                  {(!recoveryData.submitted || !toolsConfirmed || !timeConfirmed) && (
+                    <View style={styles.infoMessageContainer}>
+                      <Text style={styles.infoMessageText}>
+                        {!recoveryData.submitted && !toolsConfirmed && !timeConfirmed
+                          ? 'Submit your recovery data, confirm your tools, and select available time to generate a plan'
+                          : !recoveryData.submitted 
+                            ? 'Submit your recovery data to generate a plan'
+                            : !toolsConfirmed
+                              ? 'Confirm your recovery tools to generate a plan'
+                              : 'Confirm your available time to generate a plan'}
                       </Text>
-                      
-                      {/* Completion status and button */}
-                      {planCompleted && (
-                        <View style={styles.completedBadgeContainer}>
-                          <View style={styles.completedBadge}>
-                            <Ionicons name="checkmark-outline" size={16} color="#FFFFFF" />
-                            <Text style={styles.completedBadgeText}>Completed</Text>
-                          </View>
-                        </View>
-                      )}
-                      
-                      <Pressable
-                        style={[
-                          styles.completionButton,
-                          planCompleted ? styles.incompleteButton : styles.completeButton
-                        ]}
-                        onPress={togglePlanCompletion}
-                      >
-                        <Text style={styles.completionButtonText}>
-                          {planCompleted ? 'Mark as Incomplete' : 'Mark as Completed'}
-                        </Text>
-                        <Ionicons 
-                          name={planCompleted ? "close" : "checkmark-circle"} 
-                          size={20} 
-                          color="#FFFFFF" 
-                        />
-                      </Pressable>
                     </View>
-                  ) : (
-                    <View style={styles.emptyPlanContainer}>
-                      <Ionicons name="fitness-outline" size={32} color="#CCCCCC" />
-                      <Text style={styles.emptyPlanText}>
-                        {recoveryData.submitted 
-                          ? 'No plan generated yet'
-                          : 'Submit recovery data first'}
+                  )}
+                </>
+              ) : (
+                <Pressable
+                  style={[
+                    styles.generateButton, 
+                    styles.generateButtonDisabled
+                  ]}
+                  disabled={true}
+                >
+                  <Text style={styles.generateButtonText}>
+                    Plan Already Generated
+                  </Text>
+                  <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                </Pressable>
+              )}
+            </Animated.View>
+
+            {/* Plan Holder - Always visible with different states */}
+            <View style={{
+              marginHorizontal: 24,
+            }}>
+              <View style={[
+                styles.planHolderContainer,
+                !todaysPlan && !planLoading && styles.planHolderEmpty
+              ]}>
+                <View style={styles.planHolderHeader}>
+                  <Text style={styles.planHolderTitle} allowFontScaling={false}>
+                    {isToday ? 'Your Plan for Today' : `Plan For ${format(selectedDate, 'MMM d')}`}
+                  </Text>
+                  {todaysPlan && (
+                    <View style={[
+                      styles.planStatusBadge,
+                      !isToday && styles.historicalBadge
+                    ]}>
+                      <Text style={styles.planStatusText}>
+                        {isToday ? 'Active' : 'Historical'}
                       </Text>
-                      {recoveryData.submitted ? (
-                        <Text style={styles.emptyPlanSubtext}>
-                          {isToday 
-                            ? 'Click the generate button to create your recovery plan'
-                            : 'Click the generate button to create a recovery plan for this day'}
-                        </Text>
-                      ) : (
-                        <Text style={styles.emptyPlanSubtext}>
-                          Submit your recovery data using the form above
-                        </Text>
-                      )}
                     </View>
                   )}
                 </View>
+                
+                {planLoading ? (
+                  <View style={styles.planLoadingContainer}>
+                    <Ionicons name="hourglass-outline" size={24} color="#999999" />
+                    <Text style={styles.planLoadingText}>Loading plan...</Text>
+                  </View>
+                ) : todaysPlan ? (
+                  <View style={styles.planContentContainer}>
+                    <Text style={styles.planText}>{todaysPlan}</Text>
+                    <Text style={styles.planDateText}>
+                      Generated on {format(selectedDate, 'MMMM d, yyyy')}
+                    </Text>
+                    
+                    {/* Completion status and button */}
+                    {planCompleted && (
+                      <View style={styles.completedBadgeContainer}>
+                        <View style={styles.completedBadge}>
+                          <Ionicons name="checkmark-outline" size={16} color="#FFFFFF" />
+                          <Text style={styles.completedBadgeText}>Completed</Text>
+                        </View>
+                      </View>
+                    )}
+                    
+                    <Pressable
+                      style={[
+                        styles.completionButton,
+                        planCompleted ? styles.incompleteButton : styles.completeButton
+                      ]}
+                      onPress={togglePlanCompletion}
+                    >
+                      <Text style={styles.completionButtonText}>
+                        {planCompleted ? 'Mark as Incomplete' : 'Mark as Completed'}
+                      </Text>
+                      <Ionicons 
+                        name={planCompleted ? "close" : "checkmark-circle"} 
+                        size={20} 
+                        color="#FFFFFF" 
+                      />
+                    </Pressable>
+                  </View>
+                ) : (
+                  <View style={styles.emptyPlanContainer}>
+                    <Ionicons name="fitness-outline" size={32} color="#CCCCCC" />
+                    <Text style={styles.emptyPlanText}>
+                      {recoveryData.submitted 
+                        ? 'No plan generated yet'
+                        : 'Submit recovery data first'}
+                    </Text>
+                    {recoveryData.submitted ? (
+                      <Text style={styles.emptyPlanSubtext}>
+                        {isToday 
+                          ? 'Click the generate button to create your recovery plan'
+                          : 'Click the generate button to create a recovery plan for this day'}
+                      </Text>
+                    ) : (
+                      <Text style={styles.emptyPlanSubtext}>
+                        Submit your recovery data using the form above
+                      </Text>
+                    )}
+                  </View>
+                )}
               </View>
             </View>
-          </ScrollView>
+          </View>
         </KeyboardAvoidingView>
       </ScrollView>
       

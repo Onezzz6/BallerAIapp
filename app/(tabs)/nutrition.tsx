@@ -1918,8 +1918,14 @@ export default function NutritionScreen() {
     <ScrollView
       style={styles.container}
       contentContainerStyle={{
-        paddingBottom: 90, // Add extra padding at the bottom to prevent content from being hidden behind the navigation bar
-    }}>
+        flexGrow: 1,
+        paddingBottom: 120,
+      }}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={true}
+      bounces={true}
+      overScrollMode="never"
+    >
       {/* Header - Fixed at top when scrolling */}
       <View style={{
         paddingTop: 48,
@@ -1931,7 +1937,7 @@ export default function NutritionScreen() {
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
-          height: 92, // Same height as OnboardingHeader
+          height: 92,
         }}>
           {/* Title */}
           <Text style={{
@@ -1970,80 +1976,73 @@ export default function NutritionScreen() {
         </View>
       </View>
 
-      <ScrollView 
-        style={styles.container}
-        contentContainerStyle={{
-          paddingBottom: 90, // Add extra padding at the bottom to prevent content from being hidden behind the navigation bar
-        }}
-      >
-        {/* Weekly Overview */}
-        <WeeklyOverview 
-          selectedDate={selectedDate}
-          onDateSelect={setSelectedDate}
-        />
+      {/* Weekly Overview */}
+      <WeeklyOverview 
+        selectedDate={selectedDate}
+        onDateSelect={setSelectedDate}
+      />
 
-        <CalorieProgress 
-          eaten={macros.calories.current}
-          burned={0}
-          goal={macros.calories.goal}
-        />
+      <CalorieProgress 
+        eaten={macros.calories.current}
+        burned={0}
+        goal={macros.calories.goal}
+      />
 
-        <View style={styles.macrosCard}>
-          <MacroProgress
-            type="Protein"
-            current={macros.protein.current}
-            goal={macros.protein.goal}
-            color="#FF6B6B"
-          />
-          <MacroProgress
-            type="Carbs"
-            current={macros.carbs.current}
-            goal={macros.carbs.goal}
-            color="#4ECDC4"
-          />
-          <MacroProgress
-            type="Fats"
-            current={macros.fats.current}
-            goal={macros.fats.goal}
-            color="#FFD93D"
-          />
-          
-          <View style={styles.adherenceContainer}>
-            <Text style={styles.adherenceTitle}>Nutrition Adherence</Text>
-            <Text style={styles.adherenceSubtitle}>Today's Progress</Text>
-            <Text style={styles.adherencePercentage}>{calculateTodayAdherence()}%</Text>
-          </View>
+      <View style={styles.macrosCard}>
+        <MacroProgress
+          type="Protein"
+          current={macros.protein.current}
+          goal={macros.protein.goal}
+          color="#FF6B6B"
+        />
+        <MacroProgress
+          type="Carbs"
+          current={macros.carbs.current}
+          goal={macros.carbs.goal}
+          color="#4ECDC4"
+        />
+        <MacroProgress
+          type="Fats"
+          current={macros.fats.current}
+          goal={macros.fats.goal}
+          color="#FFD93D"
+        />
+        
+        <View style={styles.adherenceContainer}>
+          <Text style={styles.adherenceTitle}>Nutrition Adherence</Text>
+          <Text style={styles.adherenceSubtitle}>Today's Progress</Text>
+          <Text style={styles.adherencePercentage}>{calculateTodayAdherence()}%</Text>
         </View>
+      </View>
 
-        <View style={styles.mealsSection}>
-          <Pressable
-            style={styles.logMealButton}
-            onPress={() => setIsLogMealModalVisible(true)}
-          >
-            <Text style={styles.logMealText}>Log Meal</Text>
-            <Ionicons name="add" size={20} color="#FFFFFF" />
-          </Pressable>
-        </View>
+      <View style={styles.mealsSection}>
+        <Pressable
+          style={styles.logMealButton}
+          onPress={() => setIsLogMealModalVisible(true)}
+        >
+          <Text style={styles.logMealText}>Log Meal</Text>
+          <Ionicons name="add" size={20} color="#FFFFFF" />
+        </Pressable>
+      </View>
 
-        <LoggedMeals 
-          meals={loggedMeals} 
-          onDelete={async (mealId: string) => {
-            try {
-              setIsLoading(true);
-              await deleteMeal(mealId);
-              // Show success message
-              Alert.alert('Success', 'Meal deleted successfully');
-              // Refresh weekly data to update the overview
-              await loadSelectedDayData();
-            } catch (error) {
-              console.error('Error deleting meal:', error);
-              Alert.alert('Error', 'Failed to delete meal');
-            } finally {
-              setIsLoading(false);
-            }
-          }} 
-        />
-      </ScrollView>
+      <LoggedMeals 
+        meals={loggedMeals} 
+        onDelete={async (mealId: string) => {
+          try {
+            setIsLoading(true);
+            await deleteMeal(mealId);
+            // Show success message
+            Alert.alert('Success', 'Meal deleted successfully');
+            // Refresh weekly data to update the overview
+            await loadSelectedDayData();
+          } catch (error) {
+            console.error('Error deleting meal:', error);
+            Alert.alert('Error', 'Failed to delete meal');
+          } finally {
+            setIsLoading(false);
+          }
+        }} 
+      />
 
       <LogMealModal
         visible={isLogMealModalVisible}

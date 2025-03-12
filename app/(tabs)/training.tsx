@@ -551,246 +551,245 @@ Focus on recovery today`;
         ref={scrollViewRef}
         style={styles.container}
         contentContainerStyle={{
-          paddingBottom: 90,
+          flexGrow: 1,
+          paddingBottom: 120,
         }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={true}
+        bounces={true}
+        overScrollMode="never"
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={{ flex: 1 }}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
         >
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={{
-              paddingBottom: 90, // Add extra padding at the bottom
-            }}
-          >
-            {/* Header - Scrolls with content */}
+          {/* Header - Scrolls with content */}
+          <View style={{
+            paddingTop: 48,
+            paddingHorizontal: 24,
+            backgroundColor: '#ffffff',
+          }}>
+            {/* Header with Logo */}
             <View style={{
-              paddingTop: 48,
-              paddingHorizontal: 24,
-              backgroundColor: '#ffffff',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              height: 92,
             }}>
-              {/* Header with Logo */}
+              {/* Title */}
+              <Text style={{
+                fontSize: 28,
+                fontWeight: '900',
+                color: '#000000',
+              }} 
+              allowFontScaling={false}
+              maxFontSizeMultiplier={1.2}>
+                Training
+              </Text>
+
               <View style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                justifyContent: 'space-between',
-                height: 92, // Same height as OnboardingHeader
+                gap: 6,
               }}>
-                {/* Title */}
+                <Image 
+                  source={require('../../assets/images/BallerAILogo.png')}
+                  style={{
+                    width: 32,
+                    height: 32,
+                  }}
+                  resizeMode="contain"
+                />
                 <Text style={{
                   fontSize: 28,
-                  fontWeight: '900',
+                  fontWeight: '300',
                   color: '#000000',
                 }} 
                 allowFontScaling={false}
                 maxFontSizeMultiplier={1.2}>
-                  Training
+                  BallerAI
                 </Text>
+              </View>
+            </View>
+          </View>
 
-                <View style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 6,
-                }}>
-                  <Image 
-                    source={require('../../assets/images/BallerAILogo.png')}
-                    style={{
-                      width: 32,
-                      height: 32,
-                    }}
-                    resizeMode="contain"
-                  />
-                  <Text style={{
-                    fontSize: 28,
-                    fontWeight: '300',
-                    color: '#000000',
-                  }} 
-                  allowFontScaling={false}
-                  maxFontSizeMultiplier={1.2}>
-                    BallerAI
-                  </Text>
-                </View>
+          <View style={styles.content}>
+            <View style={styles.sectionBackgroundGray}>
+              <Text style={styles.sectionTitle}>Focus Area</Text>
+              <Text style={styles.subtitle}>Select your training focus to get a personalized plan</Text>
+              
+              <View style={styles.optionsContainer}>
+                {focusOptions.map((focus) => (
+                  <Pressable
+                    key={focus}
+                    style={[
+                      styles.option,
+                      selectedFocus === focus && styles.selectedOption
+                    ]}
+                    onPress={() => setSelectedFocus(focus)}
+                  >
+                    <Text style={[
+                      styles.optionText,
+                      selectedFocus === focus && styles.selectedOptionText
+                    ]}>
+                      {focus.charAt(0).toUpperCase() + focus.slice(1)}
+                    </Text>
+                  </Pressable>
+                ))}
               </View>
             </View>
 
-            <View style={styles.content}>
-              <View style={styles.sectionBackgroundGray}>
-                <Text style={styles.sectionTitle}>Focus Area</Text>
-                <Text style={styles.subtitle}>Select your training focus to get a personalized plan</Text>
-                
-                <View style={styles.optionsContainer}>
-                  {focusOptions.map((focus) => (
-                    <Pressable
-                      key={focus}
-                      style={[
-                        styles.option,
-                        selectedFocus === focus && styles.selectedOption
-                      ]}
-                      onPress={() => setSelectedFocus(focus)}
-                    >
-                      <Text style={[
-                        styles.optionText,
-                        selectedFocus === focus && styles.selectedOptionText
-                      ]}>
-                        {focus.charAt(0).toUpperCase() + focus.slice(1)}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-
-              <View style={styles.sectionBackgroundGray}>
-                <Text style={styles.sectionTitle}>Gym Access</Text>
-                <Text style={styles.subtitle}>Do you have access to a gym?</Text>
-                <View style={styles.optionsContainer}>
-                  {gymOptions.map((option) => (
-                    <Pressable
-                      key={option}
-                      style={[
-                        styles.option,
-                        gymAccess === option && styles.selectedOption
-                      ]}
-                      onPress={() => setGymAccess(option)}
-                    >
-                      <Text style={[
-                        styles.optionText,
-                        gymAccess === option && styles.selectedOptionText
-                      ]}>
-                        {option === 'yes' ? 'Yes' : 'No'}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-
-              <View style={[styles.sectionBackgroundGray, scheduleConfirmed && { opacity: 0.8 }]}>
-                <View style={{ 
-                  flexDirection: 'row', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center', 
-                  marginBottom: 8,
-                  flexWrap: 'wrap',
-                  gap: 8
-                }}>
-                  <Text style={[styles.sectionTitle, { flex: 1 }]}>Team Training schedule <Text style={styles.subtitleInline}>(minutes/day)</Text></Text>
-                  {scheduleConfirmed && (
-                    <Pressable
-                      style={styles.editButton}
-                      onPress={editSchedule}
-                    >
-                      <Ionicons name="create-outline" size={18} color="#FFFFFF" />
-                      <Text style={styles.editButtonText}>Edit</Text>
-                    </Pressable>
-                  )}
-                </View>
-                <Text style={styles.subtitle}>Fill in your team training schedule so BallerAI can take this into consideration when making ur personalized training plan.</Text>
-
-                {Object.entries(schedule).map(([day, daySchedule]) => (
-                  <View key={day} style={[styles.dayContainer, scheduleConfirmed && styles.disabledContainer]}>
-                    <Text style={styles.dayTitle}>{day.toUpperCase()}</Text>
-                    <View style={styles.dayOptions}>
-                      <Pressable
-                        style={[
-                          styles.dayOption,
-                          daySchedule.type === 'off' && styles.selectedDayOption,
-                          scheduleConfirmed && styles.disabledOption
-                        ]}
-                        onPress={() => updateSchedule(day, 'off')}
-                        disabled={scheduleConfirmed}
-                      >
-                        <Text style={styles.dayOptionText}>Off</Text>
-                      </Pressable>
-                      <Pressable
-                        style={[
-                          styles.dayOption,
-                          daySchedule.type === 'game' && styles.selectedGameOption,
-                          scheduleConfirmed && styles.disabledOption
-                        ]}
-                        onPress={() => updateSchedule(day, 'game')}
-                        disabled={scheduleConfirmed}
-                      >
-                        <Text style={styles.dayOptionText}>Game</Text>
-                      </Pressable>
-                      <Pressable
-                        style={[
-                          styles.dayOption,
-                          daySchedule.type === 'training' && styles.selectedTrainingOption,
-                          scheduleConfirmed && styles.disabledOption
-                        ]}
-                        onPress={() => updateSchedule(day, 'training')}
-                        disabled={scheduleConfirmed}
-                      >
-                        <Text style={styles.dayOptionText}>Training</Text>
-                      </Pressable>
-                    </View>
-                    {(daySchedule.type === 'game' || daySchedule.type === 'training') && (
-                      <View style={styles.timeInputContainer}>
-                        <View style={{ position: 'relative' }}>
-                          <Ionicons 
-                            name="time-outline" 
-                            size={20} 
-                            color="#666666" 
-                            style={styles.clockIcon}
-                          />
-                          <TextInput
-                            style={[styles.timeInput, scheduleConfirmed && styles.disabledInput]}
-                            placeholder={`Enter ${daySchedule.type} time`}
-                            value={daySchedule.duration}
-                            onChangeText={(text) => updateDuration(day, text)}
-                            keyboardType="numeric"
-                            editable={!scheduleConfirmed}
-                          />
-                        </View>
-                      </View>
-                    )}
-                  </View>
-                ))}
-                
-                {!scheduleConfirmed && (
-                  <Pressable 
-                    style={styles.confirmButton}
-                    onPress={confirmSchedule}
+            <View style={styles.sectionBackgroundGray}>
+              <Text style={styles.sectionTitle}>Gym Access</Text>
+              <Text style={styles.subtitle}>Do you have access to a gym?</Text>
+              <View style={styles.optionsContainer}>
+                {gymOptions.map((option) => (
+                  <Pressable
+                    key={option}
+                    style={[
+                      styles.option,
+                      gymAccess === option && styles.selectedOption
+                    ]}
+                    onPress={() => setGymAccess(option)}
                   >
-                    <Text style={styles.confirmButtonText}>Confirm Schedule</Text>
-                    <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                    <Text style={[
+                      styles.optionText,
+                      gymAccess === option && styles.selectedOptionText
+                    ]}>
+                      {option === 'yes' ? 'Yes' : 'No'}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+
+            <View style={[styles.sectionBackgroundGray, scheduleConfirmed && { opacity: 0.8 }]}>
+              <View style={{ 
+                flexDirection: 'row', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                marginBottom: 8,
+                flexWrap: 'wrap',
+                gap: 8
+              }}>
+                <Text style={[styles.sectionTitle, { flex: 1 }]}>Team Training schedule <Text style={styles.subtitleInline}>(minutes/day)</Text></Text>
+                {scheduleConfirmed && (
+                  <Pressable
+                    style={styles.editButton}
+                    onPress={editSchedule}
+                  >
+                    <Ionicons name="create-outline" size={18} color="#FFFFFF" />
+                    <Text style={styles.editButtonText}>Edit</Text>
                   </Pressable>
                 )}
               </View>
+              <Text style={styles.subtitle}>Fill in your team training schedule so BallerAI can take this into consideration when making ur personalized training plan.</Text>
 
-              <View style={styles.buttonContainer}>
-                <Pressable
-                  style={[
-                    styles.generateButton,
-                    (loading || !scheduleConfirmed || !selectedFocus || !gymAccess) && styles.generateButtonDisabled
-                  ]}
-                  onPress={handleGeneratePlan}
-                  disabled={loading || !scheduleConfirmed || !selectedFocus || !gymAccess}
+              {Object.entries(schedule).map(([day, daySchedule]) => (
+                <View key={day} style={[styles.dayContainer, scheduleConfirmed && styles.disabledContainer]}>
+                  <Text style={styles.dayTitle}>{day.toUpperCase()}</Text>
+                  <View style={styles.dayOptions}>
+                    <Pressable
+                      style={[
+                        styles.dayOption,
+                        daySchedule.type === 'off' && styles.selectedDayOption,
+                        scheduleConfirmed && styles.disabledOption
+                      ]}
+                      onPress={() => updateSchedule(day, 'off')}
+                      disabled={scheduleConfirmed}
+                    >
+                      <Text style={styles.dayOptionText}>Off</Text>
+                    </Pressable>
+                    <Pressable
+                      style={[
+                        styles.dayOption,
+                        daySchedule.type === 'game' && styles.selectedGameOption,
+                        scheduleConfirmed && styles.disabledOption
+                      ]}
+                      onPress={() => updateSchedule(day, 'game')}
+                      disabled={scheduleConfirmed}
+                    >
+                      <Text style={styles.dayOptionText}>Game</Text>
+                    </Pressable>
+                    <Pressable
+                      style={[
+                        styles.dayOption,
+                        daySchedule.type === 'training' && styles.selectedTrainingOption,
+                        scheduleConfirmed && styles.disabledOption
+                      ]}
+                      onPress={() => updateSchedule(day, 'training')}
+                      disabled={scheduleConfirmed}
+                    >
+                      <Text style={styles.dayOptionText}>Training</Text>
+                    </Pressable>
+                  </View>
+                  {(daySchedule.type === 'game' || daySchedule.type === 'training') && (
+                    <View style={styles.timeInputContainer}>
+                      <View style={{ position: 'relative' }}>
+                        <Ionicons 
+                          name="time-outline" 
+                          size={20} 
+                          color="#666666" 
+                          style={styles.clockIcon}
+                        />
+                        <TextInput
+                          style={[styles.timeInput, scheduleConfirmed && styles.disabledInput]}
+                          placeholder={`Enter ${daySchedule.type} time`}
+                          value={daySchedule.duration}
+                          onChangeText={(text) => updateDuration(day, text)}
+                          keyboardType="numeric"
+                          editable={!scheduleConfirmed}
+                        />
+                      </View>
+                    </View>
+                  )}
+                </View>
+              ))}
+              
+              {!scheduleConfirmed && (
+                <Pressable 
+                  style={styles.confirmButton}
+                  onPress={confirmSchedule}
                 >
-                  <Text style={styles.generateButtonText}>
-                    {loading ? 'Generating Plan...' : 'Generate Training Plan'}
-                  </Text>
-                  <Ionicons name="football" size={20} color="#FFFFFF" />
+                  <Text style={styles.confirmButtonText}>Confirm Schedule</Text>
+                  <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
                 </Pressable>
-
-                <Pressable
-                  style={[
-                    styles.plansButton,
-                    !plans.length && styles.plansButtonDisabled
-                  ]}
-                  onPress={() => plans.length > 0 && handleGoToPlans()}
-                  disabled={!plans.length}
-                >
-                  <Text style={[
-                    styles.plansButtonText,
-                    !plans.length && styles.plansButtonTextDisabled
-                  ]}>
-                    Your Training Plans
-                  </Text>
-                </Pressable>
-              </View>
+              )}
             </View>
-          </ScrollView>
+
+            <View style={styles.buttonContainer}>
+              <Pressable
+                style={[
+                  styles.generateButton,
+                  (loading || !scheduleConfirmed || !selectedFocus || !gymAccess) && styles.generateButtonDisabled
+                ]}
+                onPress={handleGeneratePlan}
+                disabled={loading || !scheduleConfirmed || !selectedFocus || !gymAccess}
+              >
+                <Text style={styles.generateButtonText}>
+                  {loading ? 'Generating Plan...' : 'Generate Training Plan'}
+                </Text>
+                <Ionicons name="football" size={20} color="#FFFFFF" />
+              </Pressable>
+
+              <Pressable
+                style={[
+                  styles.plansButton,
+                  !plans.length && styles.plansButtonDisabled
+                ]}
+                onPress={() => plans.length > 0 && handleGoToPlans()}
+                disabled={!plans.length}
+              >
+                <Text style={[
+                  styles.plansButtonText,
+                  !plans.length && styles.plansButtonTextDisabled
+                ]}>
+                  Your Training Plans
+                </Text>
+              </Pressable>
+            </View>
+          </View>
         </KeyboardAvoidingView>
       </ScrollView>
       
