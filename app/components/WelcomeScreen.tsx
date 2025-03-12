@@ -5,12 +5,14 @@ import Button from './Button';
 import { useState } from 'react';
 import React from 'react';
 import authService from '../services/auth';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function WelcomeScreen() {
   const router = useRouter();
   const [showSignIn, setShowSignIn] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleGetStarted = () => {
@@ -154,21 +156,38 @@ export default function WelcomeScreen() {
                 }}
               />
 
-              <TextInput
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Enter your password"
-                secureTextEntry
-                style={{
-                  width: '100%',
-                  height: 50,
-                  borderWidth: 1,
-                  borderColor: '#E5E5E5',
-                  borderRadius: 12,
-                  paddingHorizontal: 16,
-                  fontSize: 16,
-                }}
-              />
+              <View style={{ position: 'relative' }}>
+                <TextInput
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="Enter your password"
+                  secureTextEntry={!showPassword}
+                  style={{
+                    width: '100%',
+                    height: 50,
+                    borderWidth: 1,
+                    borderColor: '#E5E5E5',
+                    borderRadius: 12,
+                    paddingHorizontal: 16,
+                    paddingRight: 50,
+                    fontSize: 16,
+                  }}
+                />
+                <Pressable
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: 12,
+                    top: 12,
+                  }}
+                >
+                  <Ionicons
+                    name={showPassword ? 'eye-off' : 'eye'}
+                    size={24}
+                    color="#666666"
+                  />
+                </Pressable>
+              </View>
 
               <Button 
                 title={isLoading ? "Signing In..." : "Sign In"}
