@@ -2031,6 +2031,8 @@ export default function NutritionScreen() {
             try {
               setIsLoading(true);
               await deleteMeal(mealId);
+              // Show success message
+              Alert.alert('Success', 'Meal deleted successfully');
               // Refresh weekly data to update the overview
               await loadSelectedDayData();
             } catch (error) {
