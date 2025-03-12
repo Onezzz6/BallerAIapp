@@ -13,6 +13,7 @@ import { getStorage, ref, uploadBytes, getDownloadURL, listAll, deleteObject } f
 import { useRouter } from 'expo-router';
 import authService from '../services/auth';
 import { Picker } from '@react-native-picker/picker';
+import CustomButton from '../components/CustomButton';
 
 type UserData = {
   username?: string;
@@ -37,46 +38,6 @@ type ProfileDetail = {
   icon: keyof typeof Ionicons.glyphMap;
   unit?: string;
 };
-
-interface CustomButtonProps {
-  title: string;
-  onPress: () => void;
-  buttonStyle?: any;
-  icon?: React.ReactNode;
-  disabled?: boolean;
-}
-
-const CustomButton: React.FC<CustomButtonProps> = ({ 
-  title, 
-  onPress, 
-  buttonStyle, 
-  icon,
-  disabled 
-}) => (
-  <Pressable 
-    style={[styles.button, buttonStyle, disabled && { opacity: 0.5 }]} 
-    onPress={onPress}
-    disabled={disabled}
-  >
-    {icon && icon}
-    <Text style={styles.buttonText}>{title}</Text>
-  </Pressable>
-);
-
-const buttonStyles = StyleSheet.create({
-  button: {
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
 
 export default function ProfileScreen() {
   const { user } = useAuth();
@@ -340,12 +301,6 @@ export default function ProfileScreen() {
 
   const renderEditModal = () => {
     if (editingField === 'gender') {
-      const genderOptions = [
-        { value: 'male', label: 'Male' },
-        { value: 'female', label: 'Female' },
-        { value: 'other', label: 'Other' }
-      ];
-
       return (
         <Modal
           visible={editingField === 'gender'}
@@ -356,52 +311,50 @@ export default function ProfileScreen() {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={{ flex: 1 }}
           >
-            <View style={styles.modalContainer}>
-              <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>
-                  What is your gender?
-                </Text>
-
-                <View style={styles.optionsContainer}>
-                  {genderOptions.map((option) => (
-                    <Pressable
-                      key={option.value}
-                      onPress={() => setEditValue(option.value)}
-                      style={({ pressed }) => [
-                        styles.optionButton,
-                        editValue === option.value && styles.selectedOption,
-                        { opacity: pressed ? 0.9 : 1 }
-                      ]}
+            <ScrollView 
+              contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.modalContainer}>
+                <View style={styles.modalContent}>
+                  <Text style={styles.modalTitle}>
+                    Edit {profileDetails.find(d => d.field === editingField)?.label}
+                  </Text>
+                  
+                  <View style={styles.pickerContainer}>
+                    <Picker
+                      selectedValue={editValue}
+                      onValueChange={(itemValue) => setEditValue(itemValue)}
+                      style={styles.picker}
                     >
-                      <Text style={[
-                        styles.optionText,
-                        editValue === option.value && styles.selectedOptionText
-                      ]}>
-                        {option.label}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
+                      <Picker.Item label="Male" value="male" />
+                      <Picker.Item label="Female" value="female" />
+                      <Picker.Item label="Other" value="other" />
+                    </Picker>
+                  </View>
 
-                <View style={styles.modalButtons}>
-                  <Button
-                    title="Cancel"
-                    onPress={() => setEditingField(null)}
-                    buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
-                  />
-                  <Button
-                    title="Save"
-                    onPress={() => {
-                      if (editValue) {
-                        updateUserField('gender', editValue);
-                      }
-                    }}
-                    buttonStyle={{ backgroundColor: '#99E86C', flex: 1 }}
-                    disabled={!editValue}
-                  />
+                  <View style={styles.modalButtons}>
+                    <Button
+                      title="Cancel"
+                      onPress={() => setEditingField(null)}
+                      buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
+                      textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
+                    />
+                    <Button
+                      title="Save"
+                      onPress={() => {
+                        if (editingField) {
+                          updateUserField(editingField, editValue);
+                        }
+                      }}
+                      buttonStyle={{ backgroundColor: '#4064F6', flex: 1 }}
+                      textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
+                      disabled={isLoading}
+                    />
+                  </View>
                 </View>
               </View>
-            </View>
+            </ScrollView>
           </KeyboardAvoidingView>
         </Modal>
       );
@@ -418,59 +371,60 @@ export default function ProfileScreen() {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={{ flex: 1 }}
           >
-            <View style={styles.modalContainer}>
-              <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>
-                  How old are you?
-                </Text>
+            <ScrollView 
+              contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.modalContainer}>
+                <View style={styles.modalContent}>
+                  <Text style={styles.modalTitle}>
+                    Edit {profileDetails.find(d => d.field === editingField)?.label}
+                  </Text>
+                  
+                  <View style={styles.pickerContainer}>
+                    <Picker
+                      selectedValue={editValue}
+                      onValueChange={(itemValue) => setEditValue(itemValue)}
+                      style={styles.picker}
+                    >
+                      {Array.from({ length: 83 }, (_, i) => i + 8).map((num) => (
+                        <Picker.Item
+                          key={num}
+                          label={num.toString()}
+                          value={num.toString()}
+                        />
+                      ))}
+                    </Picker>
+                  </View>
 
-                <View style={styles.pickerContainer}>
-                  <Picker
-                    selectedValue={editValue}
-                    onValueChange={(itemValue) => setEditValue(itemValue)}
-                    style={styles.picker}
-                  >
-                    {Array.from({ length: 83 }, (_, i) => i + 8).map((num) => (
-                      <Picker.Item
-                        key={num}
-                        label={num.toString()}
-                        value={num.toString()}
-                      />
-                    ))}
-                  </Picker>
-                </View>
-
-                <View style={styles.modalButtons}>
-                  <Button
-                    title="Cancel"
-                    onPress={() => setEditingField(null)}
-                    buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
-                  />
-                  <Button
-                    title="Save"
-                    onPress={() => {
-                      if (editValue) {
-                        updateUserField('age', editValue);
-                      }
-                    }}
-                    buttonStyle={{ backgroundColor: '#4064F6', flex: 1 }}
-                    disabled={isLoading}
-                  />
+                  <View style={styles.modalButtons}>
+                    <Button
+                      title="Cancel"
+                      onPress={() => setEditingField(null)}
+                      buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
+                      textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
+                    />
+                    <Button
+                      title="Save"
+                      onPress={() => {
+                        if (editingField) {
+                          updateUserField(editingField, editValue);
+                        }
+                      }}
+                      buttonStyle={{ backgroundColor: '#4064F6', flex: 1 }}
+                      textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
+                      disabled={isLoading}
+                    />
+                  </View>
                 </View>
               </View>
-            </View>
+            </ScrollView>
           </KeyboardAvoidingView>
         </Modal>
       );
     }
 
     if (editingField === 'dominantFoot') {
-      const footOptions = [
-        { value: 'left', label: 'Left' },
-        { value: 'right', label: 'Right' },
-        { value: 'both', label: 'Both' }
-      ];
-
       return (
         <Modal
           visible={editingField === 'dominantFoot'}
@@ -481,65 +435,56 @@ export default function ProfileScreen() {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={{ flex: 1 }}
           >
-            <View style={styles.modalContainer}>
-              <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>
-                  Which is your dominant foot?
-                </Text>
-
-                <View style={styles.optionsContainer}>
-                  {footOptions.map((option) => (
-                    <Pressable
-                      key={option.value}
-                      onPress={() => setEditValue(option.value)}
-                      style={({ pressed }) => [
-                        styles.optionButton,
-                        editValue === option.value && styles.selectedOption,
-                        { opacity: pressed ? 0.9 : 1 }
-                      ]}
+            <ScrollView 
+              contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.modalContainer}>
+                <View style={styles.modalContent}>
+                  <Text style={styles.modalTitle}>
+                    Edit {profileDetails.find(d => d.field === editingField)?.label}
+                  </Text>
+                  
+                  <View style={styles.pickerContainer}>
+                    <Picker
+                      selectedValue={editValue}
+                      onValueChange={(itemValue) => setEditValue(itemValue)}
+                      style={styles.picker}
                     >
-                      <Text style={[
-                        styles.optionText,
-                        editValue === option.value && styles.selectedOptionText
-                      ]}>
-                        {option.label}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
+                      <Picker.Item label="Left" value="left" />
+                      <Picker.Item label="Right" value="right" />
+                      <Picker.Item label="Both" value="both" />
+                    </Picker>
+                  </View>
 
-                <View style={styles.modalButtons}>
-                  <Button
-                    title="Cancel"
-                    onPress={() => setEditingField(null)}
-                    buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
-                  />
-                  <Button
-                    title="Save"
-                    onPress={() => {
-                      if (editValue) {
-                        updateUserField('dominantFoot', editValue);
-                      }
-                    }}
-                    buttonStyle={{ backgroundColor: '#99E86C', flex: 1 }}
-                    disabled={!editValue}
-                  />
+                  <View style={styles.modalButtons}>
+                    <Button
+                      title="Cancel"
+                      onPress={() => setEditingField(null)}
+                      buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
+                      textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
+                    />
+                    <Button
+                      title="Save"
+                      onPress={() => {
+                        if (editingField) {
+                          updateUserField(editingField, editValue);
+                        }
+                      }}
+                      buttonStyle={{ backgroundColor: '#4064F6', flex: 1 }}
+                      textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
+                      disabled={isLoading}
+                    />
+                  </View>
                 </View>
               </View>
-            </View>
+            </ScrollView>
           </KeyboardAvoidingView>
         </Modal>
       );
     }
 
     if (editingField === 'position') {
-      const POSITIONS = [
-        { id: 'goalkeeper', title: 'Goalkeeper' },
-        { id: 'defender', title: 'Defender' },
-        { id: 'midfielder', title: 'Midfielder' },
-        { id: 'forward', title: 'Forward' },
-      ];
-
       return (
         <Modal
           visible={editingField === 'position'}
@@ -550,52 +495,51 @@ export default function ProfileScreen() {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={{ flex: 1 }}
           >
-            <View style={styles.modalContainer}>
-              <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>
-                  What's your position?
-                </Text>
-
-                <View style={styles.optionsContainer}>
-                  {POSITIONS.map((position) => (
-                    <Pressable
-                      key={position.id}
-                      onPress={() => setEditValue(position.id)}
-                      style={({ pressed }) => [
-                        styles.optionButton,
-                        editValue === position.id && styles.selectedOption,
-                        { opacity: pressed ? 0.9 : 1 }
-                      ]}
+            <ScrollView 
+              contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.modalContainer}>
+                <View style={styles.modalContent}>
+                  <Text style={styles.modalTitle}>
+                    Edit {profileDetails.find(d => d.field === editingField)?.label}
+                  </Text>
+                  
+                  <View style={styles.pickerContainer}>
+                    <Picker
+                      selectedValue={editValue}
+                      onValueChange={(itemValue) => setEditValue(itemValue)}
+                      style={styles.picker}
                     >
-                      <Text style={[
-                        styles.optionText,
-                        editValue === position.id && styles.selectedOptionText
-                      ]}>
-                        {position.title}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
+                      <Picker.Item label="Goalkeeper" value="goalkeeper" />
+                      <Picker.Item label="Defender" value="defender" />
+                      <Picker.Item label="Midfielder" value="midfielder" />
+                      <Picker.Item label="Forward" value="forward" />
+                    </Picker>
+                  </View>
 
-                <View style={styles.modalButtons}>
-                  <Button
-                    title="Cancel"
-                    onPress={() => setEditingField(null)}
-                    buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
-                  />
-                  <Button
-                    title="Save"
-                    onPress={() => {
-                      if (editValue) {
-                        updateUserField('position', editValue);
-                      }
-                    }}
-                    buttonStyle={{ backgroundColor: '#99E86C', flex: 1 }}
-                    disabled={!editValue}
-                  />
+                  <View style={styles.modalButtons}>
+                    <Button
+                      title="Cancel"
+                      onPress={() => setEditingField(null)}
+                      buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
+                      textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
+                    />
+                    <Button
+                      title="Save"
+                      onPress={() => {
+                        if (editingField) {
+                          updateUserField(editingField, editValue);
+                        }
+                      }}
+                      buttonStyle={{ backgroundColor: '#4064F6', flex: 1 }}
+                      textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
+                      disabled={isLoading}
+                    />
+                  </View>
                 </View>
               </View>
-            </View>
+            </ScrollView>
           </KeyboardAvoidingView>
         </Modal>
       );
@@ -640,65 +584,72 @@ export default function ProfileScreen() {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={{ flex: 1 }}
           >
-            <View style={styles.modalContainer}>
-              <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>
-                  What's your activity level?
-                </Text>
+            <ScrollView 
+              contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.modalContainer}>
+                <View style={styles.modalContent}>
+                  <Text style={styles.modalTitle}>
+                    Edit {profileDetails.find(d => d.field === editingField)?.label}
+                  </Text>
 
-                <View style={styles.optionsContainer}>
-                  {ACTIVITY_LEVELS.map((level) => (
-                    <Pressable
-                      key={level.id}
-                      onPress={() => setEditValue(level.id)}
-                      style={({ pressed }) => [
-                        styles.optionButtonWithDescription,
-                        editValue === level.id && styles.selectedOption,
-                        { opacity: pressed ? 0.9 : 1 }
-                      ]}
-                    >
-                      <Text style={[
-                        styles.optionText,
-                        editValue === level.id && styles.selectedOptionText
-                      ]}>
-                        {level.title}
-                      </Text>
-                      <Text style={[
-                        styles.optionDescription,
-                        editValue === level.id && styles.selectedOptionText
-                      ]}>
-                        {level.description}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
+                  <View style={styles.optionsContainer}>
+                    {ACTIVITY_LEVELS.map((level) => (
+                      <Pressable
+                        key={level.id}
+                        onPress={() => setEditValue(level.id)}
+                        style={({ pressed }) => [
+                          styles.optionButtonWithDescription,
+                          editValue === level.id && styles.selectedOption,
+                          { opacity: pressed ? 0.9 : 1 }
+                        ]}
+                      >
+                        <Text style={[
+                          styles.optionText,
+                          editValue === level.id && styles.selectedOptionText
+                        ]}>
+                          {level.title}
+                        </Text>
+                        <Text style={[
+                          styles.optionDescription,
+                          editValue === level.id && styles.selectedOptionText
+                        ]}>
+                          {level.description}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
 
-                <View style={styles.modalButtons}>
-                  <Button
-                    title="Cancel"
-                    onPress={() => setEditingField(null)}
-                    buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
-                  />
-                  <Button
-                    title="Save"
-                    onPress={() => {
-                      if (editValue) {
-                        updateUserField('activityLevel', editValue);
-                      }
-                    }}
-                    buttonStyle={{ backgroundColor: '#99E86C', flex: 1 }}
-                    disabled={!editValue}
-                  />
+                  <View style={styles.modalButtons}>
+                    <Button
+                      title="Cancel"
+                      onPress={() => setEditingField(null)}
+                      buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
+                      textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
+                    />
+                    <Button
+                      title="Save"
+                      onPress={() => {
+                        if (editingField) {
+                          updateUserField(editingField, editValue);
+                        }
+                      }}
+                      buttonStyle={{ backgroundColor: '#4064F6', flex: 1 }}
+                      textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
+                      disabled={isLoading}
+                    />
+                  </View>
                 </View>
               </View>
-            </View>
+            </ScrollView>
           </KeyboardAvoidingView>
         </Modal>
       );
     }
 
     if (editingField === 'injuryHistory') {
-      const CHARACTER_LIMIT = 100;
+      const CHARACTER_LIMIT = 300;
 
       return (
         <Modal
@@ -710,48 +661,183 @@ export default function ProfileScreen() {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={{ flex: 1 }}
           >
-            <View style={styles.modalContainer}>
-              <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>
-                  Do you have any injury history?
-                </Text>
+            <ScrollView 
+              contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.modalContainer}>
+                <View style={styles.modalContent}>
+                  <Text style={styles.modalTitle}>
+                    Edit {profileDetails.find(d => d.field === editingField)?.label}
+                  </Text>
 
-                <TextInput
-                  value={editValue}
-                  onChangeText={(text) => {
-                    if (text.length <= CHARACTER_LIMIT) {
-                      setEditValue(text);
-                    }
-                  }}
-                  style={[styles.modalInput, styles.textArea]}
-                  multiline
-                  placeholder="Describe any past injuries..."
-                  maxLength={CHARACTER_LIMIT}
-                />
-
-                <Text style={styles.characterCount}>
-                  {editValue.length}/{CHARACTER_LIMIT}
-                </Text>
-
-                <View style={styles.modalButtons}>
-                  <Button
-                    title="Cancel"
-                    onPress={() => setEditingField(null)}
-                    buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
-                  />
-                  <Button
-                    title="Save"
-                    onPress={() => {
-                      if (editValue.trim()) {
-                        updateUserField('injuryHistory', editValue.trim());
+                  <TextInput
+                    value={editValue}
+                    onChangeText={(text) => {
+                      if (text.length <= CHARACTER_LIMIT) {
+                        setEditValue(text);
                       }
                     }}
-                    buttonStyle={{ backgroundColor: '#99E86C', flex: 1 }}
-                    disabled={!editValue.trim()}
+                    style={[styles.modalInput, styles.textArea]}
+                    multiline
+                    placeholder="Describe any past injuries..."
+                    maxLength={CHARACTER_LIMIT}
                   />
+
+                  <Text style={styles.characterCount}>
+                    {editValue.length}/{CHARACTER_LIMIT}
+                  </Text>
+
+                  <View style={styles.modalButtons}>
+                    <Button
+                      title="Cancel"
+                      onPress={() => setEditingField(null)}
+                      buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
+                      textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
+                    />
+                    <Button
+                      title="Save"
+                      onPress={() => {
+                        if (editingField) {
+                          updateUserField(editingField, editValue.trim());
+                        }
+                      }}
+                      buttonStyle={{ backgroundColor: '#4064F6', flex: 1 }}
+                      textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
+                      disabled={isLoading}
+                    />
+                  </View>
                 </View>
               </View>
-            </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </Modal>
+      );
+    }
+
+    if (editingField === 'height') {
+      return (
+        <Modal
+          visible={editingField === 'height'}
+          transparent
+          animationType="slide"
+        >
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{ flex: 1 }}
+          >
+            <ScrollView 
+              contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.modalContainer}>
+                <View style={styles.modalContent}>
+                  <Text style={styles.modalTitle}>
+                    Edit {profileDetails.find(d => d.field === editingField)?.label}
+                  </Text>
+                  
+                  <View style={styles.pickerContainer}>
+                    <Picker
+                      selectedValue={editValue}
+                      onValueChange={(itemValue) => setEditValue(itemValue)}
+                      style={styles.picker}
+                    >
+                      {Array.from({ length: 93 }, (_, i) => i + 120).map((num) => (
+                        <Picker.Item
+                          key={num}
+                          label={`${num} cm`}
+                          value={num.toString()}
+                        />
+                      ))}
+                    </Picker>
+                  </View>
+
+                  <View style={styles.modalButtons}>
+                    <Button
+                      title="Cancel"
+                      onPress={() => setEditingField(null)}
+                      buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
+                      textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
+                    />
+                    <Button
+                      title="Save"
+                      onPress={() => {
+                        if (editingField) {
+                          updateUserField(editingField, editValue);
+                        }
+                      }}
+                      buttonStyle={{ backgroundColor: '#4064F6', flex: 1 }}
+                      textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
+                      disabled={isLoading}
+                    />
+                  </View>
+                </View>
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </Modal>
+      );
+    }
+
+    if (editingField === 'weight') {
+      return (
+        <Modal
+          visible={editingField === 'weight'}
+          transparent
+          animationType="slide"
+        >
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{ flex: 1 }}
+          >
+            <ScrollView 
+              contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.modalContainer}>
+                <View style={styles.modalContent}>
+                  <Text style={styles.modalTitle}>
+                    Edit {profileDetails.find(d => d.field === editingField)?.label}
+                  </Text>
+                  
+                  <View style={styles.pickerContainer}>
+                    <Picker
+                      selectedValue={editValue}
+                      onValueChange={(itemValue) => setEditValue(itemValue)}
+                      style={styles.picker}
+                    >
+                      {Array.from({ length: 81 }, (_, i) => i + 40).map((num) => (
+                        <Picker.Item
+                          key={num}
+                          label={`${num} kg`}
+                          value={num.toString()}
+                        />
+                      ))}
+                    </Picker>
+                  </View>
+
+                  <View style={styles.modalButtons}>
+                    <Button
+                      title="Cancel"
+                      onPress={() => setEditingField(null)}
+                      buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
+                      textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
+                    />
+                    <Button
+                      title="Save"
+                      onPress={() => {
+                        if (editingField) {
+                          updateUserField(editingField, editValue);
+                        }
+                      }}
+                      buttonStyle={{ backgroundColor: '#4064F6', flex: 1 }}
+                      textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
+                      disabled={isLoading}
+                    />
+                  </View>
+                </View>
+              </View>
+            </ScrollView>
           </KeyboardAvoidingView>
         </Modal>
       );
@@ -797,6 +883,7 @@ export default function ProfileScreen() {
                     title="Cancel"
                     onPress={() => setEditingField(null)}
                     buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
+                    textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
                   />
                   <Button
                     title="Save"
@@ -805,7 +892,8 @@ export default function ProfileScreen() {
                         updateUserField(editingField, editValue);
                       }
                     }}
-                    buttonStyle={{ backgroundColor: '#99E86C', flex: 1 }}
+                    buttonStyle={{ backgroundColor: '#4064F6', flex: 1 }}
+                    textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
                     disabled={isLoading}
                   />
                 </View>
@@ -839,16 +927,17 @@ export default function ProfileScreen() {
           />
 
           <View style={styles.modalButtons}>
-            <CustomButton
+            <Button
               title="Cancel"
               onPress={() => {
                 setShowReauthModal(false);
                 setPassword('');
               }}
-              buttonStyle={styles.cancelButton}
+              buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
+              textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
               disabled={!password.trim()}
             />
-            <CustomButton
+            <Button
               title="Confirm"
               onPress={async () => {
                 const success = await reauthenticateUser(password);
@@ -858,7 +947,8 @@ export default function ProfileScreen() {
                   handleDeleteConfirmation();
                 }
               }}
-              buttonStyle={styles.deleteButton}
+              buttonStyle={{ backgroundColor: '#FF3B30', flex: 1 }}
+              textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
               disabled={!password.trim()}
             />
           </View>
@@ -918,30 +1008,38 @@ export default function ProfileScreen() {
           )}
 
           <View style={styles.modalFooter}>
-            <CustomButton
+            <Button
               title="Send Feedback"
               onPress={sendFeedbackEmail}
-              buttonStyle={styles.feedbackButton}
-              icon={<Ionicons name="mail-outline" size={24} color="#FFFFFF" style={{ marginRight: 8 }} />}
+              buttonStyle={{ 
+                backgroundColor: '#4064F6',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+              }}
+              textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
             />
             
             <View style={styles.actionButtons}>
-              <CustomButton
+              <Button
                 title="Go Back"
                 onPress={() => {
                   setShowDeleteModal(false);
                   setDeleteReason('');
                   setOtherReason('');
                 }}
-                buttonStyle={styles.cancelButton}
+                buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
+                textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
               />
-              <CustomButton
+              <Button
                 title="Delete"
                 onPress={() => {
                   setShowDeleteModal(false);
                   setShowReauthModal(true);
                 }}
-                buttonStyle={styles.deleteButton}
+                buttonStyle={{ backgroundColor: '#FF3B30', flex: 1 }}
+                textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
               />
             </View>
           </View>
@@ -1236,15 +1334,17 @@ export default function ProfileScreen() {
           
           {/* Button Container - Now inside the ScrollView after privacy section */}
           <View style={styles.buttonContainer}>
-            <CustomButton
+            <Button
               title="Log Out"
               onPress={handleLogout}
-              buttonStyle={styles.logoutButton}
+              buttonStyle={{ backgroundColor: '#4064F6' }}
+              textStyle={{ color: '#FFFFFF' }}
             />
-            <CustomButton
+            <Button
               title="Delete Account"
               onPress={handleDeleteAccount}
-              buttonStyle={styles.deleteButton}
+              buttonStyle={{ backgroundColor: '#FF3B30' }}
+              textStyle={{ color: '#FFFFFF' }}
             />
           </View>
         </ScrollView>
@@ -1425,7 +1525,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 36,
     gap: 8,
   },
   actionButtons: {
@@ -1635,17 +1734,5 @@ const styles = StyleSheet.create({
   },
   reasonsCancelButton: {
     backgroundColor: '#8E8E93',
-  },
-  button: {
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
   },
 }); 

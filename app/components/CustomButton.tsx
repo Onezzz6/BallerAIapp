@@ -1,6 +1,6 @@
 import { Text, Pressable, View, ViewStyle, TextStyle } from 'react-native';
 
-type ButtonProps = {
+type CustomButtonProps = {
   title: string;
   onPress: () => void;
   containerStyle?: ViewStyle;
@@ -9,14 +9,14 @@ type ButtonProps = {
   disabled?: boolean;
 };
 
-export default function Button({ 
+export default function CustomButton({ 
   title, 
   onPress, 
   containerStyle,
   buttonStyle,
   textStyle,
   disabled = false 
-}: ButtonProps) {
+}: CustomButtonProps) {
   return (
     <View style={containerStyle}>
       <Pressable
@@ -25,7 +25,7 @@ export default function Button({
         style={({ pressed }) => ({
           backgroundColor: '#4064F6',
           padding: 16,
-          borderRadius: 100,
+          borderRadius: 12,
           opacity: disabled ? 0.5 : pressed ? 0.8 : 1,
           ...(buttonStyle as object),
         })}
