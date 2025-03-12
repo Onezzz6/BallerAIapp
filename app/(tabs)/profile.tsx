@@ -1057,20 +1057,20 @@ export default function ProfileScreen() {
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={{
-        paddingBottom: 90, // Add extra padding at the bottom to prevent content from being hidden behind the navigation bar
-    }}>
-    <KeyboardAvoidingView
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={{
-            paddingBottom: 90, // Add extra padding at the bottom
+            paddingBottom: 90,
           }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          bounces={true}
         >
           {/* Header - Scrolls with content */}
           <View style={{
@@ -1352,7 +1352,7 @@ export default function ProfileScreen() {
 
       {renderEditModal()}
       {renderReauthModal()}
-    </ScrollView>
+    </SafeAreaView>
   );
 }
 
