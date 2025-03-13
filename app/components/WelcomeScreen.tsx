@@ -25,7 +25,7 @@ export default function WelcomeScreen() {
 
   const handleSignIn = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please enter your email and password');
+      Alert.alert('Error', 'Please enter your email and password.');
       return;
     }
 
@@ -53,8 +53,11 @@ export default function WelcomeScreen() {
             }
           ]
         );
-      } else if (error.code === 'auth/wrong-password') {
-        Alert.alert('Error', 'Invalid password. Please try again.');
+      } else if (
+        error.code === 'auth/wrong-password' ||
+        error.code === 'auth/invalid-email' ||
+        error.code === 'auth/invalid-credential') {
+        Alert.alert('Error', 'Invalid email or password. Please try again.');
       } else {
         Alert.alert(
           'Error',
