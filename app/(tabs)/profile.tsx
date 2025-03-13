@@ -915,7 +915,7 @@ export default function ProfileScreen() {
         <View style={styles.modalContent}>
           <Text style={styles.modalTitle}>Confirm Your Password</Text>
           <Text style={styles.modalSubtitle}>
-            For security reasons, please enter your password to continue.
+            For security reasons, please enter your password to delete your account.
           </Text>
           
           <TextInput
@@ -967,7 +967,7 @@ export default function ProfileScreen() {
         <View style={styles.modalContent}>
           <Text style={styles.modalTitle}>We're sorry to see you go</Text>
           <Text style={styles.modalSubtitle}>
-            Please let us know why you're leaeving so we can improve our service
+            Please, let us know why you're leaving, so we can improve our service
           </Text>
 
           <ScrollView style={styles.reasonsContainer}>
@@ -1503,6 +1503,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#000000',
+    justifyContent: 'center',
   },
   modalInput: {
     borderWidth: 1,

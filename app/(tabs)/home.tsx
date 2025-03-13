@@ -1,4 +1,4 @@
-import { View, Text, Image, ScrollView, Pressable, StyleSheet, Modal, TouchableWithoutFeedback, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
+import { View, Text, Image, ScrollView, Pressable, StyleSheet, Modal, TouchableWithoutFeedback, KeyboardAvoidingView, Platform, Keyboard, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
@@ -46,7 +46,31 @@ export default function HomeScreen() {
     lastUpdated: new Date().toISOString(),
     isLoading: true
   });
-  
+
+  const showInfoAlertReadiness = () => {
+    Alert.alert(
+      "Readiness Score",
+      "Your readiness score indicates how prepared your body is for training today.\n\nThis score is calculated based on the physical load your body has endured recently and represents your approximate recovery level for the day. The readiness score helps you visualize your body's current state and can guide you in taking preventive measures to manage your training load if needed.\n\nListen to your body - a lower score might suggest you need more recovery time before intense training.",
+      [{ text: "OK" }]
+    );
+  };  
+
+  const showInfoAlertNutrition = () => {
+    Alert.alert(
+      "Nutrition Score",
+      "Your nutrition score is a percentage that shows how closely you've followed your macro goals in the last week.\n\nThis score is meant to give you an idea of how consistent you've been with your nutrition recently, helping you identify patterns and make adjustments if needed.\n\nThe score is calculated from your past 7 days of nutrition data (excluding today). Higher scores indicate better adherence to your macro goals.",
+      [{ text: "OK" }]
+    );
+  };  
+
+  const showInfoAlertRecovery = () => {
+    Alert.alert(
+      "Recovery Score",
+      "Your recovery score shows how consistently and well you're performing recovery habits like quality sleep, good nutrition, and completing your recovery plans.\n\nThis score helps you visualize your overall consistency with recovery practices and identify areas where you might have room to improve.\n\nImportant: This score doesn't represent your training readiness, as it doesn't take into account your training load. It simply reflects how good your recovery habits have been over the past 7 days.",
+      [{ text: "OK" }]
+    );
+  };  
+
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   const updateCaloriesWithDebounce = (newCaloriesData: any) => {
@@ -1453,7 +1477,7 @@ export default function HomeScreen() {
                   </Text>
                 </View>
                 <Pressable
-                  onPress={() => setShowReadinessInfo(true)}
+                  onPress={showInfoAlertReadiness}
                   style={({ pressed }) => ({
                     opacity: pressed ? 0.7 : 1,
                   })}
@@ -1577,7 +1601,7 @@ export default function HomeScreen() {
                   </Text>
                 </View>
                 <Pressable
-                  onPress={() => setShowNutritionInfo(true)}
+                  onPress={showInfoAlertNutrition}
                   style={({ pressed }) => ({
                     opacity: pressed ? 0.7 : 1,
                   })}
@@ -1677,7 +1701,7 @@ export default function HomeScreen() {
                   </Text>
                 </View>
                 <Pressable
-                  onPress={() => setShowRecoveryInfo(true)}
+                  onPress={showInfoAlertRecovery}
                   style={({ pressed }) => ({
                     opacity: pressed ? 0.7 : 1,
                   })}
