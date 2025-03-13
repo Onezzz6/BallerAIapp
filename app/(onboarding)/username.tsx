@@ -73,7 +73,12 @@ export default function UsernameScreen() {
                 router.push('/gender');
               }
             }}
-          />
+            buttonStyle={{
+              backgroundColor: '#4064F6',
+              opacity: !username.trim() ? 0.5 : 1,
+            }}
+            disabled={!username.trim()}
+      />
         </View>
       </Animated.View>
     </TouchableWithoutFeedback>

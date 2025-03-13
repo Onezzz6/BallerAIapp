@@ -30,7 +30,7 @@ export default {
     },
     ios: {
       bundleIdentifier: "com.ballerbizoy.ballerai",
-      buildNumber: "1",
+      buildNumber: "6",
       supportsTablet: true,
       infoPlist: {
         NSCameraUsageDescription: "This app uses the camera to analyze your meals for nutritional information.",

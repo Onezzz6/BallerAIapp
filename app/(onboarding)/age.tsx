@@ -76,6 +76,11 @@ export default function AgeScreen() {
               router.push('/measurements');
             }
           }}
+          buttonStyle={{
+            backgroundColor: '#4064F6',
+            opacity: !age ? 0.5 : 1,
+          }}
+          disabled={!age}
         />
       </View>
     </Animated.View>

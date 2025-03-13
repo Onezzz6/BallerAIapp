@@ -84,6 +84,11 @@ export default function DominantFootScreen() {
               router.push('/injury-history');
             }
           }}
+          buttonStyle={{
+            backgroundColor: '#4064F6',
+            opacity: !selected ? 0.5 : 1,
+          }}
+          disabled={!selected}
         />
       </View>
     </Animated.View>
