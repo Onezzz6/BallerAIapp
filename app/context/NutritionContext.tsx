@@ -62,6 +62,30 @@ export function NutritionProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user]);
 
+  // Set up real-time listener for user data changes
+  useEffect(() => {
+    if (!user) return;
+
+    const userRef = doc(db, 'users', user.uid);
+    const unsubscribe = onSnapshot(userRef, (doc) => {
+      if (doc.exists()) {
+        const userData = doc.data();
+        if (userData.calorieGoal && userData.macroGoals) {
+          // Update macros with new goals while preserving current values
+          setMacros(prev => ({
+            ...prev,
+            calories: { ...prev.calories, goal: userData.calorieGoal },
+            protein: { ...prev.protein, goal: userData.macroGoals.protein },
+            carbs: { ...prev.carbs, goal: userData.macroGoals.carbs },
+            fats: { ...prev.fats, goal: userData.macroGoals.fat }
+          }));
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
   // Automatically load today's nutrition data when the app starts
   useEffect(() => {
     if (!user) return;
@@ -90,16 +114,33 @@ export function NutritionProvider({ children }: { children: React.ReactNode }) {
           gender: string;
           activityLevel: ActivityLevel;
           footballGoal: string;
+          calorieGoal?: number;
+          macroGoals?: {
+            protein: number;
+            fat: number;
+            carbs: number;
+          };
         };
         
-        const dailyCalories = calculateDailyCalories(
-          parseFloat(userData.weight),
-          parseFloat(userData.height),
-          parseInt(userData.age),
-          userData.gender.toLowerCase(),
-          userData.activityLevel
-        );
-        const goals = calculateMacroGoals(dailyCalories, userData.footballGoal);
+        // Use stored goals if available, otherwise calculate new ones
+        let goals;
+        if (userData.calorieGoal && userData.macroGoals) {
+          goals = {
+            calories: userData.calorieGoal,
+            protein: userData.macroGoals.protein,
+            carbs: userData.macroGoals.carbs,
+            fats: userData.macroGoals.fat
+          };
+        } else {
+          const dailyCalories = calculateDailyCalories(
+            parseFloat(userData.weight),
+            parseFloat(userData.height),
+            parseInt(userData.age),
+            userData.gender.toLowerCase(),
+            userData.activityLevel
+          );
+          goals = calculateMacroGoals(dailyCalories, userData.footballGoal);
+        }
 
         // Get today's meals
         const startOfDay = getLocalStartOfDay(today);

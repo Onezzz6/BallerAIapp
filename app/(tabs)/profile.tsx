@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { useOnboarding } from '../context/OnboardingContext';
-import { doc, getDoc, updateDoc, deleteDoc, collection, getDocs, writeBatch, query, where } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, deleteDoc, collection, getDocs, writeBatch, query, where, onSnapshot } from 'firebase/firestore';
 import { deleteUser, signOut, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
 import { db, auth } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
@@ -55,6 +55,26 @@ export default function ProfileScreen() {
   const [showReauthModal, setShowReauthModal] = useState(false);
   const [password, setPassword] = useState('');
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const renderModalButtons = (onSave: () => void) => (
+    <View style={styles.modalButtons}>
+      <Button
+        title="Cancel"
+        onPress={() => setEditingField(null)}
+        buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
+        textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
+        disabled={isSaving}
+      />
+      <Button
+        title={isSaving ? "Saving..." : "Save"}
+        onPress={onSave}
+        buttonStyle={{ backgroundColor: '#4064F6', flex: 1 }}
+        textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
+        disabled={isSaving}
+      />
+    </View>
+  );
 
   const uploadImageToFirebase = async (uri: string) => {
     if (!user?.uid) {
@@ -131,48 +151,148 @@ export default function ProfileScreen() {
     }
   };
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      if (user) {
-        try {
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-          if (userDoc.exists()) {
-            const userData = userDoc.data() as UserData;
-            setUserData(userData);
-            
-            // If user has a profile picture URL, set it
-            if (userData.profilePicture) {
-              setProfileImage(userData.profilePicture);
-            }
-          }
-        } catch (error) {
-          console.error('Error fetching user data:', error);
-        }
-      }
-    };
-    fetchUserData();
-  }, [user]);
-
-  const updateUserField = async (field: string, value: string) => {
+  const calculateAndUpdateGoals = async (userData: UserData) => {
     if (!user) return;
     
     try {
-      setIsLoading(true);
+      console.log('🔄 Calculating new goals based on:', userData);
       const userRef = doc(db, 'users', user.uid);
+      
+      // Calculate new calorie and macro goals based on updated information
+      let bmr = 0;
+      let tdee = 0;
+      
+      // Calculate BMR using Mifflin-St Jeor Equation
+      if (userData.gender === 'male') {
+        bmr = (10 * parseFloat(userData.weight || '0')) + 
+              (6.25 * parseFloat(userData.height || '0')) - 
+              (5 * parseFloat(userData.age || '0')) + 5;
+      } else {
+        bmr = (10 * parseFloat(userData.weight || '0')) + 
+              (6.25 * parseFloat(userData.height || '0')) - 
+              (5 * parseFloat(userData.age || '0')) - 161;
+      }
+
+      // Calculate TDEE based on activity level
+      const activityMultipliers = {
+        sedentary: 1.2,
+        light: 1.375,
+        moderate: 1.55,
+        very: 1.725,
+        extra: 1.9
+      };
+      
+      tdee = bmr * (activityMultipliers[userData.activityLevel as keyof typeof activityMultipliers] || 1.2);
+
+      // Calculate macros (assuming 30% protein, 30% fat, 40% carbs)
+      const proteinCalories = tdee * 0.3;
+      const fatCalories = tdee * 0.3;
+      const carbCalories = tdee * 0.4;
+
+      const proteinGrams = Math.round(proteinCalories / 4);
+      const fatGrams = Math.round(fatCalories / 9);
+      const carbGrams = Math.round(carbCalories / 4);
+
+      console.log('📊 New calculated goals:', {
+        calorieGoal: Math.round(tdee),
+        macroGoals: {
+          protein: proteinGrams,
+          fat: fatGrams,
+          carbs: carbGrams
+        }
+      });
+
+      // Update the goals in Firestore
+      await updateDoc(userRef, {
+        calorieGoal: Math.round(tdee),
+        macroGoals: {
+          protein: proteinGrams,
+          fat: fatGrams,
+          carbs: carbGrams
+        }
+      });
+      console.log('✅ Successfully updated goals in Firestore');
+    } catch (error) {
+      console.error('❌ Error calculating goals:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (!user) return;
+
+    // Set up real-time listener for user data
+    const userRef = doc(db, 'users', user.uid);
+    const unsubscribe = onSnapshot(userRef, (doc) => {
+      if (doc.exists()) {
+        const newUserData = doc.data() as UserData;
+        
+        // Only update if there are actual changes
+        if (JSON.stringify(newUserData) !== JSON.stringify(userData)) {
+          console.log('🔄 Detected changes in user data:', newUserData);
+          setUserData(newUserData);
+          
+          // If user has a profile picture URL, set it
+          if (newUserData.profilePicture) {
+            setProfileImage(newUserData.profilePicture);
+          }
+
+          // Check if any of the fields that affect goals have changed
+          const fieldsAffectingGoals = ['weight', 'height', 'activityLevel', 'gender', 'age'];
+          const hasRelevantChanges = fieldsAffectingGoals.some(field => {
+            const hasChanged = newUserData[field as keyof UserData] !== userData?.[field as keyof UserData];
+            if (hasChanged) {
+              console.log(`📝 Field ${field} has changed from ${userData?.[field as keyof UserData]} to ${newUserData[field as keyof UserData]}`);
+            }
+            return hasChanged;
+          });
+
+          if (hasRelevantChanges) {
+            console.log('🔄 Recalculating goals due to relevant field changes');
+            calculateAndUpdateGoals(newUserData);
+          }
+        }
+      }
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, [user, userData]);
+
+  const updateUserField = async (field: string, value: string) => {
+    if (!user) {
+      console.log('❌ No user found, cannot update field');
+      return;
+    }
+    
+    try {
+      console.log('🔄 Starting update process for field:', field, 'with value:', value);
+      setIsSaving(true);
+      const userRef = doc(db, 'users', user.uid);
+      
+      console.log('📝 Attempting to update Firebase document...');
+      // Update the specific field in Firebase immediately
       await updateDoc(userRef, { [field]: value });
+      console.log('✅ Successfully updated Firebase document');
       
+      console.log('🔄 Updating local state...');
       // Update local state
-      setUserData((prev: UserData | null) => prev ? {
-        ...prev,
-        [field]: value
-      } : { [field]: value });
+      setUserData((prev: UserData | null) => {
+        const newData = prev ? {
+          ...prev,
+          [field]: value
+        } : { [field]: value };
+        console.log('📊 New local state:', newData);
+        return newData;
+      });
       
+      console.log('✅ Update process completed successfully');
       setEditingField(null);
     } catch (error) {
-      console.error('Error updating field:', error);
+      console.error('❌ Error updating field:', error);
       alert('Failed to update. Please try again.');
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
+      console.log('🏁 Update process finished');
     }
   };
 
@@ -333,25 +453,11 @@ export default function ProfileScreen() {
                     </Picker>
                   </View>
 
-                  <View style={styles.modalButtons}>
-                    <Button
-                      title="Cancel"
-                      onPress={() => setEditingField(null)}
-                      buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
-                      textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
-                    />
-                    <Button
-                      title="Save"
-                      onPress={() => {
-                        if (editingField) {
-                          updateUserField(editingField, editValue);
-                        }
-                      }}
-                      buttonStyle={{ backgroundColor: '#4064F6', flex: 1 }}
-                      textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
-                      disabled={isLoading}
-                    />
-                  </View>
+                  {renderModalButtons(() => {
+                    if (editingField) {
+                      updateUserField(editingField, editValue);
+                    }
+                  })}
                 </View>
               </View>
             </ScrollView>
@@ -397,25 +503,11 @@ export default function ProfileScreen() {
                     </Picker>
                   </View>
 
-                  <View style={styles.modalButtons}>
-                    <Button
-                      title="Cancel"
-                      onPress={() => setEditingField(null)}
-                      buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
-                      textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
-                    />
-                    <Button
-                      title="Save"
-                      onPress={() => {
-                        if (editingField) {
-                          updateUserField(editingField, editValue);
-                        }
-                      }}
-                      buttonStyle={{ backgroundColor: '#4064F6', flex: 1 }}
-                      textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
-                      disabled={isLoading}
-                    />
-                  </View>
+                  {renderModalButtons(() => {
+                    if (editingField) {
+                      updateUserField(editingField, editValue);
+                    }
+                  })}
                 </View>
               </View>
             </ScrollView>
@@ -457,25 +549,11 @@ export default function ProfileScreen() {
                     </Picker>
                   </View>
 
-                  <View style={styles.modalButtons}>
-                    <Button
-                      title="Cancel"
-                      onPress={() => setEditingField(null)}
-                      buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
-                      textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
-                    />
-                    <Button
-                      title="Save"
-                      onPress={() => {
-                        if (editingField) {
-                          updateUserField(editingField, editValue);
-                        }
-                      }}
-                      buttonStyle={{ backgroundColor: '#4064F6', flex: 1 }}
-                      textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
-                      disabled={isLoading}
-                    />
-                  </View>
+                  {renderModalButtons(() => {
+                    if (editingField) {
+                      updateUserField(editingField, editValue);
+                    }
+                  })}
                 </View>
               </View>
             </ScrollView>
@@ -518,25 +596,11 @@ export default function ProfileScreen() {
                     </Picker>
                   </View>
 
-                  <View style={styles.modalButtons}>
-                    <Button
-                      title="Cancel"
-                      onPress={() => setEditingField(null)}
-                      buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
-                      textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
-                    />
-                    <Button
-                      title="Save"
-                      onPress={() => {
-                        if (editingField) {
-                          updateUserField(editingField, editValue);
-                        }
-                      }}
-                      buttonStyle={{ backgroundColor: '#4064F6', flex: 1 }}
-                      textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
-                      disabled={isLoading}
-                    />
-                  </View>
+                  {renderModalButtons(() => {
+                    if (editingField) {
+                      updateUserField(editingField, editValue);
+                    }
+                  })}
                 </View>
               </View>
             </ScrollView>
@@ -621,25 +685,11 @@ export default function ProfileScreen() {
                     ))}
                   </View>
 
-                  <View style={styles.modalButtons}>
-                    <Button
-                      title="Cancel"
-                      onPress={() => setEditingField(null)}
-                      buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
-                      textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
-                    />
-                    <Button
-                      title="Save"
-                      onPress={() => {
-                        if (editingField) {
-                          updateUserField(editingField, editValue);
-                        }
-                      }}
-                      buttonStyle={{ backgroundColor: '#4064F6', flex: 1 }}
-                      textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
-                      disabled={isLoading}
-                    />
-                  </View>
+                  {renderModalButtons(() => {
+                    if (editingField) {
+                      updateUserField(editingField, editValue);
+                    }
+                  })}
                 </View>
               </View>
             </ScrollView>
@@ -688,25 +738,11 @@ export default function ProfileScreen() {
                     {editValue.length}/{CHARACTER_LIMIT}
                   </Text>
 
-                  <View style={styles.modalButtons}>
-                    <Button
-                      title="Cancel"
-                      onPress={() => setEditingField(null)}
-                      buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
-                      textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
-                    />
-                    <Button
-                      title="Save"
-                      onPress={() => {
-                        if (editingField) {
-                          updateUserField(editingField, editValue.trim());
-                        }
-                      }}
-                      buttonStyle={{ backgroundColor: '#4064F6', flex: 1 }}
-                      textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
-                      disabled={isLoading}
-                    />
-                  </View>
+                  {renderModalButtons(() => {
+                    if (editingField) {
+                      updateUserField(editingField, editValue.trim());
+                    }
+                  })}
                 </View>
               </View>
             </ScrollView>
@@ -752,25 +788,11 @@ export default function ProfileScreen() {
                     </Picker>
                   </View>
 
-                  <View style={styles.modalButtons}>
-                    <Button
-                      title="Cancel"
-                      onPress={() => setEditingField(null)}
-                      buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
-                      textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
-                    />
-                    <Button
-                      title="Save"
-                      onPress={() => {
-                        if (editingField) {
-                          updateUserField(editingField, editValue);
-                        }
-                      }}
-                      buttonStyle={{ backgroundColor: '#4064F6', flex: 1 }}
-                      textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
-                      disabled={isLoading}
-                    />
-                  </View>
+                  {renderModalButtons(() => {
+                    if (editingField) {
+                      updateUserField(editingField, editValue);
+                    }
+                  })}
                 </View>
               </View>
             </ScrollView>
@@ -816,25 +838,11 @@ export default function ProfileScreen() {
                     </Picker>
                   </View>
 
-                  <View style={styles.modalButtons}>
-                    <Button
-                      title="Cancel"
-                      onPress={() => setEditingField(null)}
-                      buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
-                      textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
-                    />
-                    <Button
-                      title="Save"
-                      onPress={() => {
-                        if (editingField) {
-                          updateUserField(editingField, editValue);
-                        }
-                      }}
-                      buttonStyle={{ backgroundColor: '#4064F6', flex: 1 }}
-                      textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
-                      disabled={isLoading}
-                    />
-                  </View>
+                  {renderModalButtons(() => {
+                    if (editingField) {
+                      updateUserField(editingField, editValue);
+                    }
+                  })}
                 </View>
               </View>
             </ScrollView>
@@ -878,25 +886,11 @@ export default function ProfileScreen() {
                   keyboardType={editingField === 'age' || editingField === 'height' || editingField === 'weight' ? 'numeric' : 'default'}
                 />
 
-                <View style={styles.modalButtons}>
-                  <Button
-                    title="Cancel"
-                    onPress={() => setEditingField(null)}
-                    buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
-                    textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
-                  />
-                  <Button
-                    title="Save"
-                    onPress={() => {
-                      if (editingField) {
-                        updateUserField(editingField, editValue);
-                      }
-                    }}
-                    buttonStyle={{ backgroundColor: '#4064F6', flex: 1 }}
-                    textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
-                    disabled={isLoading}
-                  />
-                </View>
+                {renderModalButtons(() => {
+                  if (editingField) {
+                    updateUserField(editingField, editValue);
+                  }
+                })}
               </View>
             </View>
           </ScrollView>
