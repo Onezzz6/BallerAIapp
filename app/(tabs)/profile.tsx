@@ -417,9 +417,7 @@ export default function ProfileScreen() {
   };
 
   const sendFeedbackEmail = async () => {
-    const reason = deleteReason === 'Other' ? otherReason : deleteReason;
-    const emailBody = `User Feedback for Account Deletion:\n\nReason: ${reason}`;
-    const emailUrl = `mailto:ballerai.official@gmail.com?subject=Account Deletion Feedback&body=${encodeURIComponent(emailBody)}`;
+    const emailUrl = `mailto:ballerai.official@gmail.com?subject=Account Deletion Feedback`;
     
     try {
       const canOpen = await Linking.canOpenURL(emailUrl);
@@ -1014,18 +1012,18 @@ export default function ProfileScreen() {
           )}
 
           <View style={styles.modalFooter}>
-            <Button
-              title="Send Feedback"
+            <Pressable
               onPress={sendFeedbackEmail}
-              buttonStyle={{ 
-                backgroundColor: '#4064F6',
+              style={({ pressed }) => ({
+                opacity: pressed ? 0.7 : 1,
                 flexDirection: 'row',
                 alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-              }}
-              textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
-            />
+                gap: 4,
+              })}
+            >
+              <Ionicons name="mail-outline" size={24} color="#4064F6" />
+              <Text style={{ color: '#4064F6', fontSize: 16 }}>Send Feedback</Text>
+            </Pressable>
             
             <View style={styles.actionButtons}>
               <Button
