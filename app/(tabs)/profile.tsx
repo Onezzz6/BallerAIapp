@@ -384,8 +384,20 @@ export default function ProfileScreen() {
         await deleteUser(user);
         await signOut(auth);
 
-        // 5. Navigate to welcome screen
-        router.replace('/');
+        // Show success alert
+        Alert.alert(
+          'Account Deleted',
+          'Your account has been successfully deleted. Thank you for using BallerAI!',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // 5. Navigate to welcome screen
+                router.replace('/');
+              }
+            }
+          ]
+        );
       } catch (error: any) {
         if (error.code === 'auth/requires-recent-login') {
           setShowReauthModal(true);
