@@ -1,4 +1,4 @@
-import { View, Text, TextInput, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { View, Text, TextInput, TouchableWithoutFeedback, Keyboard, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Button from '../components/Button';
@@ -10,6 +10,7 @@ export default function MotivationReasonScreen() {
   const router = useRouter();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [motivation, setMotivation] = useState(onboardingData.motivation || '');
+  const CHARACTER_LIMIT = 100;
 
   // Update local state when onboardingData changes
   useEffect(() => {
@@ -37,62 +38,85 @@ export default function MotivationReasonScreen() {
           totalSteps={20}
         />
         
-        <View style={{
-          flex: 1,
-          paddingHorizontal: 24,
-          paddingTop: 80,
-          paddingBottom: 24,
-          justifyContent: 'top',
-          alignItems: 'left',
-          gap: 48,
-        }}>
-          <Text style={{
-            fontSize: 28,
-            color: '#000000',
-            fontWeight: '600',
-            textAlign: 'left',
-          }} allowFontScaling={false}>
-            Lastly, the most important part of becoming a pro!
-          </Text>
-
-          <Text style={{
-            fontSize: 18,
-            color: '#000000',
-            fontWeight: '500',
-            textAlign: 'left',
+        <ScrollView 
+          contentContainerStyle={{
+            flexGrow: 1,
+          }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={{
+            flex: 1,
+            paddingHorizontal: 24,
+            paddingTop: 80,
+            paddingBottom: 24,
+            justifyContent: 'flex-start',
+            alignItems: 'flex-start',
+            gap: 48,
           }}>
-            Tell me briefly, what drives you on this journey?
-          </Text>
+            <Text style={{
+              fontSize: 28,
+              color: '#000000',
+              fontWeight: '600',
+              textAlign: 'left',
+            }} allowFontScaling={false}>
+              The most important part of going a pro!
+            </Text>
 
-          <TextInput
-            value={motivation}
-            onChangeText={setMotivation}
-            placeholder="Type your answer here..."
-            multiline
-            numberOfLines={4}
-            style={{
-              width: '100%',
-              minHeight: 120,
-              backgroundColor: '#FFFFFF',
-              borderRadius: 12,
-              borderWidth: 2,
-              borderColor: '#E5E5E5',
-              padding: 16,
-              fontSize: 16,
-              textAlignVertical: 'top',
-            }}
-          />
+            <Text style={{
+              fontSize: 18,
+              color: '#000000',
+              fontWeight: '500',
+              textAlign: 'left',
+            }}>
+              Tell me briefly, what drives you on this journey?
+            </Text>
 
-          <Button 
-            title="Continue" 
-            onPress={handleContinue}
-            buttonStyle={{
-              backgroundColor: '#4064F6',
-              opacity: !motivation.trim() ? 0.5 : 1,
-            }}
-            disabled={!motivation.trim()}
-          />
-        </View>
+            <View style={{ width: '100%' }}>
+              <TextInput
+                value={motivation}
+                onChangeText={(text) => {
+                  if (text.length <= CHARACTER_LIMIT) {
+                    setMotivation(text);
+                  }
+                }}
+                placeholder="Type your answer here..."
+                multiline
+                style={{
+                  width: '100%',
+                  height: 120,
+                  borderWidth: 1,
+                  borderColor: '#E5E5E5',
+                  borderRadius: 12,
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  fontSize: 16,
+                  backgroundColor: '#F8F8F8',
+                  textAlignVertical: 'top',
+                }}
+              />
+              <Text style={{
+                fontSize: 14,
+                color: '#666666',
+                textAlign: 'right',
+                marginTop: 8,
+              }}>
+                {motivation.length}/{CHARACTER_LIMIT}
+              </Text>
+            </View>
+
+            <View style={{ width: '100%' }}>
+              <Button 
+                title="Continue" 
+                onPress={handleContinue}
+                buttonStyle={{
+                  backgroundColor: '#4064F6',
+                  opacity: !motivation.trim() ? 0.5 : 1,
+                }}
+                disabled={!motivation.trim()}
+              />
+            </View>
+          </View>
+        </ScrollView>
       </Animated.View>
     </TouchableWithoutFeedback>
   );
