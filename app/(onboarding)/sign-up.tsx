@@ -1,11 +1,11 @@
-import { View, Text, TextInput, Alert, StyleSheet, Pressable, Platform } from 'react-native';
+import { View, Text, TextInput, Alert, StyleSheet, Pressable, Platform, Image } from 'react-native';
 import { useRouter } from 'expo-router';
-import Button from '../components/Button';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import authService from '../services/auth';
 import { useOnboarding } from '../context/OnboardingContext';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import CustomButton from '../components/CustomButton';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -100,20 +100,34 @@ export default function SignUpScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.header}>
+        <View style={styles.logoContainer}>
+          <Image 
+            source={require('../../assets/images/BallerAILogo.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
+          <Text style={styles.logoText}>BallerAI</Text>
+        </View>
+      </View>
+
       <Text style={styles.title}>Create Your Account</Text>
       
       <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          editable={!isLoading}
-        />
+        <View style={styles.inputWrapper}>
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            editable={!isLoading}
+            placeholderTextColor="#666666"
+          />
+        </View>
         
-        <View style={styles.passwordContainer}>
+        <View style={styles.passwordWrapper}>
           <TextInput
             style={styles.passwordInput}
             placeholder="Password"
@@ -121,6 +135,7 @@ export default function SignUpScreen() {
             onChangeText={setPassword}
             secureTextEntry={!showPassword}
             editable={!isLoading}
+            placeholderTextColor="#666666"
           />
           <Pressable
             onPress={() => setShowPassword(!showPassword)}
@@ -136,13 +151,19 @@ export default function SignUpScreen() {
         </View>
       </View>
 
-      <Button
+      <CustomButton
         title={isLoading ? "Creating Account..." : "Continue"}
         onPress={handleSubmit}
         disabled={isLoading}
         buttonStyle={{
           backgroundColor: '#4064F6',
           opacity: isLoading ? 0.5 : 1,
+          borderRadius: 36,
+        }}
+        textStyle={{
+          color: '#FFFFFF',
+          fontSize: 18,
+          fontWeight: '600',
         }}
       />
 
@@ -158,7 +179,7 @@ export default function SignUpScreen() {
         <AppleAuthentication.AppleAuthenticationButton
           buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP}
           buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-          cornerRadius={8}
+          cornerRadius={36}
           style={styles.appleButton}
           onPress={handleAppleSignIn}
         />
@@ -173,39 +194,63 @@ const styles = StyleSheet.create({
     padding: 24,
     backgroundColor: '#FFFFFF',
   },
+  header: {
+    paddingTop: 48,
+    marginBottom: 32,
+  },
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  logoImage: {
+    width: 32,
+    height: 32,
+  },
+  logoText: {
+    fontSize: 28,
+    fontWeight: '300',
+    color: '#000000',
+  },
   title: {
     fontSize: 32,
     fontWeight: '700',
     color: '#000000',
     marginBottom: 32,
-    textAlign: 'center',
   },
   inputContainer: {
     gap: 16,
     marginBottom: 32,
   },
-  input: {
+  inputWrapper: {
     borderWidth: 1,
     borderColor: '#E5E5E5',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
+    borderRadius: 36,
+    overflow: 'hidden',
   },
-  passwordContainer: {
+  input: {
+    padding: 16,
+    fontSize: 16,
+    color: '#000000',
+  },
+  passwordWrapper: {
     position: 'relative',
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    borderRadius: 36,
+    overflow: 'hidden',
   },
   passwordInput: {
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
-    borderRadius: 8,
-    padding: 12,
+    padding: 16,
     fontSize: 16,
     paddingRight: 50,
+    color: '#000000',
   },
   eyeIcon: {
     position: 'absolute',
-    right: 12,
-    top: 12,
+    right: 16,
+    top: '50%',
+    transform: [{ translateY: -12 }],
   },
   dividerContainer: {
     flexDirection: 'row',

@@ -931,17 +931,17 @@ export default function ProfileScreen() {
           />
 
           <View style={styles.modalButtons}>
-            <Button
+            <CustomButton
               title="Cancel"
               onPress={() => {
                 setShowReauthModal(false);
                 setPassword('');
               }}
-              buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
+              buttonStyle={{ backgroundColor: '#666666', flex: 1, borderRadius: 36 }}
               textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
               disabled={!password.trim()}
             />
-            <Button
+            <CustomButton
               title="Confirm"
               onPress={async () => {
                 const success = await reauthenticateUser(password);
@@ -951,7 +951,7 @@ export default function ProfileScreen() {
                   handleDeleteConfirmation();
                 }
               }}
-              buttonStyle={{ backgroundColor: '#FF3B30', flex: 1 }}
+              buttonStyle={{ backgroundColor: '#FF3B30', flex: 1, borderRadius: 36 }}
               textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
               disabled={!password.trim()}
             />
@@ -1026,23 +1026,23 @@ export default function ProfileScreen() {
             </Pressable>
             
             <View style={styles.actionButtons}>
-              <Button
+              <CustomButton
                 title="Go Back"
                 onPress={() => {
                   setShowDeleteModal(false);
                   setDeleteReason('');
                   setOtherReason('');
                 }}
-                buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
+                buttonStyle={{ backgroundColor: '#666666', flex: 1, borderRadius: 36 }}
                 textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
               />
-              <Button
+              <CustomButton
                 title="Delete"
                 onPress={() => {
                   setShowDeleteModal(false);
                   setShowReauthModal(true);
                 }}
-                buttonStyle={{ backgroundColor: '#FF3B30', flex: 1 }}
+                buttonStyle={{ backgroundColor: '#FF3B30', flex: 1, borderRadius: 36 }}
                 textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
               />
             </View>
@@ -1333,17 +1333,17 @@ export default function ProfileScreen() {
           
           {/* Button Container */}
           <View style={styles.buttonContainer}>
-            <Button
+            <CustomButton
               title="Log Out"
               onPress={handleLogout}
-              buttonStyle={{ backgroundColor: '#4064F6' }}
-              textStyle={{ color: '#FFFFFF' }}
+              buttonStyle={{ backgroundColor: '#4064F6', borderRadius: 36 }}
+              textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
             />
-            <Button
+            <CustomButton
               title="Delete Account"
               onPress={handleDeleteAccount}
-              buttonStyle={{ backgroundColor: '#FF3B30' }}
-              textStyle={{ color: '#FFFFFF' }}
+              buttonStyle={{ backgroundColor: '#FF3B30', borderRadius: 36 }}
+              textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
             />
           </View>
         </ScrollView>
