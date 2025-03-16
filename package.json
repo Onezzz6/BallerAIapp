@@ -5,8 +5,8 @@
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
     "test": "jest --watchAll",
     "lint": "expo lint"
@@ -15,6 +15,7 @@
     "preset": "jest-expo"
   },
   "dependencies": {
+    "@expo/config-plugins": "~9.0.0",
     "@expo/vector-icons": "^14.0.4",
     "@google-cloud/storage": "^7.15.2",
     "@react-native-async-storage/async-storage": "^1.23.1",
@@ -26,6 +27,7 @@
     "axios": "^1.6.0",
     "date-fns": "^4.1.0",
     "expo": "~52.0.36",
+    "expo-apple-authentication": "~7.1.3",
     "expo-blur": "~14.0.3",
     "expo-build-properties": "~0.13.2",
     "expo-camera": "~16.0.17",
@@ -34,6 +36,7 @@
     "expo-font": "~13.0.4",
     "expo-haptics": "~14.0.1",
     "expo-image-picker": "~16.0.6",
+    "expo-in-app-purchases": "^14.5.0",
     "expo-linear-gradient": "~14.0.2",
     "expo-linking": "~7.0.5",
     "expo-notifications": "~0.29.13",
@@ -44,6 +47,7 @@
     "expo-system-ui": "~4.0.8",
     "expo-web-browser": "~14.0.2",
     "firebase": "^11.3.1",
+    "jest-expo": "52.0.5",
     "openai": "^4.85.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -56,10 +60,7 @@
     "react-native-screens": "~4.4.0",
     "react-native-svg": "^15.8.0",
     "react-native-web": "^0.19.13",
-    "react-native-webview": "^13.12.5",
-    "jest-expo": "52.0.5",
-    "@expo/config-plugins": "~9.0.0",
-    "expo-apple-authentication": "~7.1.3"
+    "react-native-webview": "^13.12.5"
   },
   "devDependencies": {
     "@babel/core": "^7.26.9",

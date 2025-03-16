@@ -42,7 +42,7 @@ export default function SignUpScreen() {
       // First try to create new account
       const user = await authService.signUpWithEmail(email, password, onboardingData);
       if (user) {
-        router.replace('/(tabs)/home');
+        router.replace('/paywall');
       }
     } catch (error: any) {
       // If email exists, prompt for sign in
@@ -58,7 +58,7 @@ export default function SignUpScreen() {
                 try {
                   const user = await authService.signInWithEmail(email, password);
                   if (user) {
-                    router.replace('/(tabs)/home');
+                    router.replace('/paywall');
                   }
                 } catch (signInError: any) {
                   Alert.alert('Error', 'Invalid password. Please try again.');
