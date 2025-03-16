@@ -1241,93 +1241,80 @@ export default function ProfileScreen() {
               {isPrivacyExpanded && (
                 <View style={styles.privacyContent}>
                   <Text style={styles.privacyText}>
-                    BallerAI Privacy Policy{'\n'}
-                    Effective Date [19.2.2025]{'\n\n'}
+                    Privacy Policy for BallerAI{'\n'}
+                    Effective Date: March 13, 2025{'\n\n'}
 
                     1. Introduction{'\n'}
-                    BallerAI ("we," "our," or "us") is committed to protecting the privacy of our users ("you"). This Privacy Policy explains how we collect, use, disclose, and safeguard your personal data when you use our BallerAI app, which provides personalized training plans, recovery plans, nutrition goals, calorie calculations, and team performance tracking. By accessing or using the app, you agree to the practices described in this policy.{'\n\n'}
+                    BallerAI ("we," "us," or "our") is committed to protecting your privacy. This Privacy Policy explains how BallerAI collects, uses, discloses, and safeguards your information when you use our mobile application (the "App"), as well as your rights regarding your data. By using the App, you agree to the collection and use of information in accordance with this Privacy Policy.{'\n\n'}
 
                     2. Information We Collect{'\n'}
-                    A. Personal Information You Provide{'\n'}
-                    When you register or use our app, we may collect information that can identify you, including but not limited to:{'\n\n'}
+                    a. Personal Information:{'\n'}
+                    When you onboard and use the App, we may collect personal information that you voluntarily provide, including:{'\n'}
+                    • Basic details such as your name, age, gender, height, and weight{'\n'}
+                    • Football-specific data including your playing level, position, training schedule, and injury history{'\n'}
+                    • Lifestyle and health data (e.g., sleep habits, nutritional intake, and training environment){'\n'}
+                    • Photographs of meals (if you opt for our meal analysis feature) for nutritional analysis{'\n\n'}
 
-                    • Account Information: Your name, email address, password, and profile picture.{'\n'}
-                    • Personal Attributes: Gender, age, height, weight, dominant foot, and injury history.{'\n'}
-                    • Health and Fitness Data: Training details, recovery plan inputs, nutrition goals, calorie intake, physical activity levels, sleep patterns, and dietary preferences.{'\n'}
-                    • Team Information: If you use team management features, data related to team names, player profiles, and recovery/performance metrics.{'\n'}
-                    • Payment Information: Billing details and payment history if you subscribe to premium features.{'\n\n'}
+                    b. Usage Information:{'\n'}
+                    We may collect data about your interaction with the App, including training logs, session feedback, and activity metrics, to enhance and personalize your training experience.{'\n\n'}
 
-                    B. Data Collected Automatically{'\n'}
-                    When you use our app, we may also collect:{'\n\n'}
-
-                    • Usage Data: IP address, device information, operating system, app usage logs, and performance data.{'\n'}
-                    • Cookies and Similar Technologies: To enhance user experience and analyze trends.{'\n\n'}
+                    c. Device and Log Information:{'\n'}
+                    We may automatically collect device-specific information (e.g., device type, operating system, and unique device identifiers) and log data (e.g., IP address, access times, and usage patterns) for security, analytics, and performance improvements.{'\n\n'}
 
                     3. How We Use Your Information{'\n'}
-                    We use the data we collect for various purposes, including:{'\n\n'}
+                    We use the collected information for various purposes, including:{'\n'}
+                    • Personalization: To create tailored training programs and adaptive load management based on your profile, training history, and performance data.{'\n'}
+                    • Injury Prevention and Recovery: To provide guidelines, feedback, and personalized recommendations to minimize injury risks.{'\n'}
+                    • Nutrition Analysis: To offer personalized nutritional guidance by analyzing meal photos and logged dietary information.{'\n'}
+                    • Improvement of Services: To analyze usage trends, perform internal research, and improve the overall functionality and user experience of the App.{'\n'}
+                    • Communication: To contact you with important updates, support messages, or relevant information about the App, subject to your communication preferences.{'\n\n'}
 
-                    • Providing and Personalizing Services: To create and customize your training, recovery, and nutrition plans based on your inputs.{'\n'}
-                    • Improving the App: To analyze usage patterns, conduct research, and improve our app features and user experience.{'\n'}
-                    • Communication: To send you notifications, updates, customer support communications, and marketing messages.{'\n'}
-                    • Team Management: To enable features for teams, allowing coaches or administrators to track players' performance and recovery.{'\n'}
-                  • Providing and Personalizing Services: To create and customize your training, recovery, and nutrition plans based on your inputs.{'\n'}
-                  • Improving the App: To analyze usage patterns, conduct research, and improve our app features and user experience.{'\n'}
-                  • Communication: To send you notifications, updates, customer support communications, and marketing messages.{'\n'}
-                  • Team Management: To enable features for teams, allowing coaches or administrators to track players' performance and recovery.{'\n'}
-                  • Compliance and Legal Obligations: To comply with applicable laws, regulations, and legal processes.{'\n\n'}
+                    4. Sharing and Disclosure of Information{'\n'}
+                    a. With Third Parties:{'\n'}
+                    We do not sell your personal information. We may share your information with trusted third-party service providers who perform services on our behalf (e.g., cloud hosting, data analytics, image processing). These providers are contractually obligated to protect your data and use it only for the purposes specified by us.{'\n\n'}
 
-                  4. Legal Basis for Processing (For Users in the EU){'\n'}
-                  Under the General Data Protection Regulation (GDPR), we process your personal data based on the following legal grounds:{'\n\n'}
+                    b. Legal Requirements:{'\n'}
+                    We may disclose your information if required to do so by law or in response to valid requests by public authorities (e.g., a court or government agency).{'\n\n'}
 
-                  • Consent: When you explicitly consent to the collection and use of your data.{'\n'}
-                  • Contractual Necessity: To provide the services you request.{'\n'}
-                  • Legitimate Interest: To improve our app, perform analytics, and develop new features.{'\n'}
-                  • Compliance with Legal Obligations: To meet legal requirements and regulatory obligations.{'\n\n'}
+                    c. Business Transfers:{'\n'}
+                    In the event of a merger, acquisition, or sale of assets, your information may be transferred as part of the transaction. In such cases, we will notify you via email and/or a prominent notice on our App of any change in ownership or use of your personal information.{'\n\n'}
 
-                  5. Data Sharing and Disclosure{'\n'}
-                  We may share your information with:{'\n\n'}
+                    5. Data Security{'\n'}
+                    We implement commercially reasonable security measures to protect your information from unauthorized access, disclosure, alteration, or destruction. However, please note that no method of transmission over the Internet or method of electronic storage is 100% secure, and we cannot guarantee absolute security.{'\n\n'}
 
-                  • Service Providers: Third-party vendors who perform services on our behalf.{'\n'}
-                  • Team Administrators: If you use team features, your information may be accessible to designated team coaches or administrators.{'\n'}
-                  • Legal and Regulatory Authorities: When required by law or to protect our rights.{'\n'}
-                  • Business Transfers: In the event of a merger, acquisition, or sale of assets.{'\n\n'}
+                    6. Data Retention{'\n'}
+                    We retain your personal information for as long as is necessary to fulfill the purposes outlined in this Privacy Policy unless a longer retention period is required or permitted by law. When your information is no longer needed, we will take reasonable steps to securely delete or anonymize it.{'\n\n'}
 
-                  6. Data Retention{'\n'}
-                  We will retain your personal data for as long as necessary to:{'\n\n'}
+                    7. Your Rights and Choices{'\n'}
+                    a. Access and Correction:{'\n'}
+                    You may request access to or correction of your personal information by contacting us through the contact details provided below.{'\n\n'}
 
-                  • Provide the services you have requested.{'\n'}
-                  • Comply with legal obligations.{'\n'}
-                  • Resolve disputes and enforce our agreements.{'\n\n'}
+                    b. Deletion:{'\n'}
+                    Subject to applicable laws and regulations, you may request the deletion of your personal information. Please note that we may need to retain certain information for recordkeeping and legal purposes.{'\n\n'}
 
-                  7. Data Security{'\n'}
-                  We implement industry-standard security measures to protect your data from unauthorized access, alteration, disclosure, or destruction.{'\n\n'}
+                    c. Opt-Out:{'\n'}
+                    You can opt out of receiving marketing communications by following the instructions in those communications or by contacting us. Even if you opt out, we may still send you non-promotional messages, such as those about your account or our ongoing business relations.{'\n\n'}
 
-                  8. International Data Transfers{'\n'}
-                  Your information may be processed in countries outside your country of residence, including the United States and European Economic Area (EEA) countries.{'\n\n'}
+                    8. International Data Transfers{'\n'}
+                    Your information may be transferred to—and maintained on—computers located outside of your state, province, country, or other governmental jurisdiction where the data protection laws may differ from those in your jurisdiction. We take appropriate steps to ensure that your data is treated securely and in accordance with this Privacy Policy when transferred.{'\n\n'}
 
-                  9. Your Rights{'\n'}
-                  Depending on your jurisdiction, you may have the following rights:{'\n\n'}
+                    9. Children's Privacy{'\n'}
+                    Our App is not intended for children under 13. We do not knowingly collect personal information from children under 13. If we become aware that we have collected personal information from a child under 13 without parental consent, we will take steps to remove that information.{'\n\n'}
 
-                  • Access: The right to request copies of your data.{'\n'}
-                  • Correction: The right to have inaccurate data corrected.{'\n'}
-                  • Deletion: The right to request deletion of your data.{'\n'}
-                  • Restriction: The right to request restrictions on processing.{'\n'}
-                  • Objection: The right to object to the processing of your data.{'\n'}
-                  • Data Portability: The right to request data transfer.{'\n\n'}
+                    10. Changes to This Privacy Policy{'\n'}
+                    We may update this Privacy Policy from time to time. When we do, we will revise the "Effective Date" at the top of this Privacy Policy. We encourage you to review this Privacy Policy periodically to stay informed about our information practices.{'\n\n'}
 
-                  10. Children's Privacy{'\n'}
-                  Our app is intended for users who are 18 years or older. We do not knowingly collect personal data from individuals under 18.{'\n\n'}
+                    11. Contact Us{'\n'}
+                    If you have any questions or concerns about this Privacy Policy or our data practices, please contact us at:{'\n\n'}
 
-                  11. Updates to This Privacy Policy{'\n'}
-                  We may update this Privacy Policy from time to time to reflect changes in our practices or legal requirements.{'\n\n'}
+                    BallerAI Support{'\n'}
+                    Email: ballerai.official@gmail.com{'\n'}
+                    Mail: Limingantie 37, 00560 Helsinki, Finland{'\n\n'}
 
-                  12. Contact Us{'\n'}
-                  If you have questions or concerns, please contact us at:{'\n\n'}
+                    12. Governing Law{'\n'}
+                    This Privacy Policy shall be governed by and construed in accordance with the laws of the jurisdiction in which BallerAI operates, without regard to its conflict of law provisions.{'\n\n'}
 
-                  BallerAI Privacy Team{'\n'}
-                  Email: ballerai.official@gmail.com{'\n\n'}
-
-                  Last Updated: [18.2.2025]
+                    Last Updated: March 13, 2025
                   </Text>
                 </View>
               )}
