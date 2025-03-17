@@ -322,6 +322,8 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal }: LogMealM
   const handleManualSubmit = async () => {
     try {
       setIsLogging(true);
+      // Close the modal immediately when logging begins
+      onClose();
       const meal = {
         name: manualEntry.name,
         macros: {
@@ -334,7 +336,7 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal }: LogMealM
       await onLogMeal([meal]);
       setManualEntry({ name: '', calories: '', protein: '', carbs: '', fats: '' });
       setIsLogging(false);
-      onClose();
+      // Modal is already closed, so no need to call onClose() here
     } catch (error) {
       console.error('Error logging meal:', error);
       Alert.alert('Error', 'Failed to log meal');
@@ -354,6 +356,8 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal }: LogMealM
         exif: false,   // Don't need extra metadata
       });
       if (!result.canceled) {
+        // Close the modal before starting analysis
+        onClose();
         onPhotoAnalysis(result.assets[0].uri);
       }
     } catch (error) {
@@ -380,6 +384,8 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal }: LogMealM
         exif: false,   // Don't need extra metadata
       });
       if (!result.canceled) {
+        // Close the modal before starting analysis
+        onClose();
         onPhotoAnalysis(result.assets[0].uri);
       }
     } catch (error) {
@@ -1876,6 +1882,8 @@ export default function NutritionScreen() {
     try {
       setIsLoading(true);
       setIsAnalyzing(true);
+      // Close the modal immediately when analysis/logging begins
+      setIsLogMealModalVisible(false);
       console.log('Starting photo analysis process for URI:', imageUri);
       
       const result = await analyzeImage(imageUri);
@@ -1888,7 +1896,7 @@ export default function NutritionScreen() {
       
       console.log('Successfully analyzed image, logging meal');
       await logMealToFirestore(result);
-      setIsLogMealModalVisible(false);
+      // Modal is already closed, no need to call setIsLogMealModalVisible(false) here
       
       // Refresh the data
       await loadSelectedDayData();
