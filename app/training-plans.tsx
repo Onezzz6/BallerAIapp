@@ -6,32 +6,8 @@ import { useTraining } from './context/TrainingContext';
 
 export default function TrainingPlansScreen() {
   const router = useRouter();
-  const { plans, loading, deletePlan } = useTraining();
+  const { plans, loading } = useTraining();
   const { fromTraining } = useLocalSearchParams<{ fromTraining: string }>();
-
-  const handleDeletePlan = (planId: string) => {
-    Alert.alert(
-      'Delete Plan',
-      'Are you sure you want to delete this training plan?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deletePlan(planId);
-            } catch (error) {
-              Alert.alert('Error', 'Failed to delete plan. Please try again.');
-            }
-          },
-        },
-      ]
-    );
-  };
 
   const handleBack = () => {
     if (fromTraining === 'true') {
@@ -98,19 +74,26 @@ export default function TrainingPlansScreen() {
                 <Text style={styles.planDate}>
                   {plan.createdAt.toLocaleDateString()}
                 </Text>
-                <Pressable
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    handleDeletePlan(plan.id);
-                  }}
-                  style={styles.deleteButton}
-                >
-                  <Ionicons name="trash-outline" size={20} color="#FF3B30" />
-                </Pressable>
               </View>
             </View>
           </Pressable>
         ))}
+        
+        <View style={styles.infoContainer}>
+          <View style={styles.infoHeader}>
+            <Ionicons name="information-circle-outline" size={20} color="#4064F6" />
+            <Text style={styles.infoTitle}>About Training Plans</Text>
+          </View>
+          <Text style={styles.infoText}>
+            • You can generate one plan per week (refreshes on Sunday)
+          </Text>
+          <Text style={styles.infoText}>
+            • Plans are automatically archived after 2 weeks
+          </Text>
+          <Text style={styles.infoText}>
+            • Plans cannot be manually deleted
+          </Text>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -178,12 +161,8 @@ const styles = StyleSheet.create({
     color: '#666666',
   },
   planActions: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-  },
-  deleteButton: {
-    padding: 4,
+    justifyContent: 'center',
   },
   planContent: {
     padding: 16,
@@ -193,5 +172,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: '#333333',
+  },
+  infoContainer: {
+    backgroundColor: '#F0F4FF',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 16,
+    marginBottom: 32,
+  },
+  infoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  infoTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4064F6',
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#333333',
+    marginBottom: 8,
+    lineHeight: 20,
   },
 }); 

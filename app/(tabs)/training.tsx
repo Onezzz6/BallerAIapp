@@ -3,12 +3,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 import { useTraining } from '../context/TrainingContext';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import Constants from 'expo-constants';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { startOfWeek, endOfWeek, differenceInMilliseconds, format } from 'date-fns';
+import { startOfWeek, endOfWeek, differenceInMilliseconds, format, isSunday, subWeeks, isAfter, parseISO, addDays } from 'date-fns';
 
 type FocusArea = 'technique' | 'strength' | 'endurance' | 'speed' | 'overall';
 type GymAccess = 'yes' | 'no';
@@ -300,12 +300,26 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 24,
   },
+  timerContainer: {
+    backgroundColor: '#F8F8F8',
+    borderRadius: 12,
+    padding: 12,
+    marginVertical: 12,
+    alignItems: 'center',
+  },
+  countdownText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4064F6',
+    marginTop: 4,
+    textAlign: 'center',
+  },
 });
 
 export default function TrainingScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const { addPlan, plans, clearPlans } = useTraining();
+  const { addPlan, plans, clearPlans, removePlanById } = useTraining();
   const [selectedFocus, setSelectedFocus] = useState<FocusArea | null>(null);
   const [gymAccess, setGymAccess] = useState<GymAccess | null>(null);
   const [schedule, setSchedule] = useState<Schedule>({
@@ -319,11 +333,47 @@ export default function TrainingScreen() {
   });
   const [loading, setLoading] = useState(false);
   const [scheduleConfirmed, setScheduleConfirmed] = useState(false);
+  const [canGeneratePlan, setCanGeneratePlan] = useState(true);
+  const [lastGeneratedDate, setLastGeneratedDate] = useState<Date | null>(null);
+  const [timeUntilNextSunday, setTimeUntilNextSunday] = useState<{ days: number; hours: number; minutes: number }>({ days: 0, hours: 0, minutes: 0 });
   
   // Reference to the main ScrollView
   const scrollViewRef = useRef<ScrollView>(null);
   // Get the fromTraining param to check if returning from training plans
   const { fromTraining } = useLocalSearchParams<{ fromTraining: string }>();
+
+  // Function to calculate time until next Sunday
+  const calculateTimeUntilNextSunday = () => {
+    const now = new Date();
+    
+    // If today is Sunday and they've already generated a plan, they need to wait until next Sunday
+    const daysUntilSunday = now.getDay() === 0 ? 7 : 7 - now.getDay();
+    const nextSunday = new Date(now);
+    nextSunday.setDate(now.getDate() + daysUntilSunday);
+    nextSunday.setHours(0, 0, 0, 0);
+    
+    const timeDiff = nextSunday.getTime() - now.getTime();
+    const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    return { days, hours, minutes };
+  };
+
+  // Update the countdown timer
+  useEffect(() => {
+    if (!canGeneratePlan && lastGeneratedDate) {
+      // Initial calculation
+      setTimeUntilNextSunday(calculateTimeUntilNextSunday());
+      
+      // Set up timer to update every minute
+      const timer = setInterval(() => {
+        setTimeUntilNextSunday(calculateTimeUntilNextSunday());
+      }, 60000); // Update every minute
+      
+      return () => clearInterval(timer);
+    }
+  }, [canGeneratePlan, lastGeneratedDate]);
 
   // Scroll to bottom when returning from training plans
   useEffect(() => {
@@ -335,6 +385,89 @@ export default function TrainingScreen() {
     }
   }, [fromTraining]);
 
+  // Check if user can generate a new plan
+  useEffect(() => {
+    const checkPlanGenerationStatus = async () => {
+      if (!user) return;
+
+      try {
+        // Get the user document to check when they last generated a plan
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        const userData = userDoc.data();
+
+        if (userData?.lastPlanGenerated) {
+          const lastGenDate = userData.lastPlanGenerated.toDate ? 
+            userData.lastPlanGenerated.toDate() : 
+            new Date(userData.lastPlanGenerated);
+          
+          setLastGeneratedDate(lastGenDate);
+          
+          const today = new Date();
+          
+          // Allow generation if today is Sunday
+          if (isSunday(today)) {
+            setCanGeneratePlan(true);
+            return;
+          }
+
+          // Check if the last generated date is from the current week
+          const thisWeekStart = startOfWeek(today, { weekStartsOn: 1 }); // Start of week (Monday)
+          const lastGenWeekStart = startOfWeek(lastGenDate, { weekStartsOn: 1 });
+          
+          // If last generation was this week, user cannot generate again
+          const isFromCurrentWeek = thisWeekStart.getTime() === lastGenWeekStart.getTime();
+          setCanGeneratePlan(!isFromCurrentWeek);
+          
+          // If can't generate, calculate time until next Sunday
+          if (isFromCurrentWeek) {
+            setTimeUntilNextSunday(calculateTimeUntilNextSunday());
+          }
+        } else {
+          // No previous plans, allow generation
+          setCanGeneratePlan(true);
+        }
+      } catch (error) {
+        console.error('Error checking plan generation status:', error);
+        // Default to allowing generation on error
+        setCanGeneratePlan(true);
+      }
+    };
+
+    checkPlanGenerationStatus();
+  }, [user]);
+
+  // Clean up old plans
+  useEffect(() => {
+    const cleanUpOldPlans = async () => {
+      if (!user) return;
+
+      try {
+        // Calculate the date 2 weeks ago
+        const twoWeeksAgo = subWeeks(new Date(), 2);
+        
+        // Check for plans older than 2 weeks and remove them
+        const oldPlans = plans.filter(plan => {
+          const planDate = plan.createdAt instanceof Date ? 
+            plan.createdAt : 
+            (typeof plan.createdAt === 'string' ? parseISO(plan.createdAt) : new Date(plan.createdAt));
+          
+          return isAfter(twoWeeksAgo, planDate);
+        });
+
+        // Remove old plans
+        for (const plan of oldPlans) {
+          if (plan.id) {
+            await removePlanById(plan.id);
+          }
+        }
+      } catch (error) {
+        console.error('Error cleaning up old plans:', error);
+      }
+    };
+
+    cleanUpOldPlans();
+  }, [user, plans, removePlanById]);
+
   const focusOptions: FocusArea[] = ['technique', 'strength', 'endurance', 'speed', 'overall'];
   const gymOptions: GymAccess[] = ['yes', 'no'];
 
@@ -344,6 +477,20 @@ export default function TrainingScreen() {
         'Please select a focus area, answer the gym access question, and confirm your team training schedule.');
       return;
     }
+
+    if (!canGeneratePlan) {
+      const nextSunday = new Date();
+      while (!isSunday(nextSunday)) {
+        nextSunday.setDate(nextSunday.getDate() + 1);
+      }
+      
+      Alert.alert(
+        'Plan generation limit reached', 
+        `You can only generate one plan per week. You can generate a new plan on Sunday (${format(nextSunday, 'MMMM d')}).`
+      );
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -476,15 +623,22 @@ Focus on recovery today`;
       console.log('DEBUG - Final Daily Plans:', dailyPlans);
 
       const planNumber = plans.length + 1;
+      const now = new Date();
+      
       await addPlan({
-        name: `Plan ${planNumber}`,
-        createdAt: new Date(),
+        name: `Plan ${planNumber} - ${format(now, 'MMM d')}`,
+        createdAt: now,
         schedule: dailyPlans,
       });
 
+      // Update lastPlanGenerated in user document
       await setDoc(doc(db, 'users', user.uid), {
-        lastPlanGenerated: new Date(),
+        lastPlanGenerated: now,
       }, { merge: true });
+
+      // Update local state
+      setCanGeneratePlan(false);
+      setLastGeneratedDate(now);
 
       router.push('/training-plans');
     } catch (error) {
@@ -762,16 +916,36 @@ Focus on recovery today`;
               <Pressable
                 style={[
                   styles.generateButton,
-                  (loading || !scheduleConfirmed || !selectedFocus || !gymAccess) && styles.generateButtonDisabled
+                  (loading || !scheduleConfirmed || !selectedFocus || !gymAccess || !canGeneratePlan) && styles.generateButtonDisabled
                 ]}
                 onPress={handleGeneratePlan}
-                disabled={loading || !scheduleConfirmed || !selectedFocus || !gymAccess}
+                disabled={loading || !scheduleConfirmed || !selectedFocus || !gymAccess || !canGeneratePlan}
               >
                 <Text style={styles.generateButtonText}>
-                  {loading ? 'Generating Plan...' : 'Generate Training Plan'}
+                  {loading 
+                    ? 'Generating Plan...' 
+                    : !canGeneratePlan 
+                      ? 'Weekly Plan Already Generated' 
+                      : 'Generate Training Plan'}
                 </Text>
                 <Ionicons name="football" size={20} color="#FFFFFF" />
               </Pressable>
+
+              {/* Add the countdown timer */}
+              {!canGeneratePlan && lastGeneratedDate && (
+                <View style={styles.timerContainer}>
+                  <Text style={styles.timerText}>
+                    New plan available on Sunday
+                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                    <Ionicons name="time-outline" size={18} color="#4064F6" />
+                    <Text style={styles.countdownText}>
+                      {timeUntilNextSunday.days > 0 && `${timeUntilNextSunday.days} day${timeUntilNextSunday.days !== 1 ? 's' : ''}, `}
+                      {timeUntilNextSunday.hours} hour{timeUntilNextSunday.hours !== 1 ? 's' : ''}, {timeUntilNextSunday.minutes} min
+                    </Text>
+                  </View>
+                </View>
+              )}
 
               <Pressable
                 style={[

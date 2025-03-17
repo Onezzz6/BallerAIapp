@@ -17,6 +17,7 @@ type TrainingContextType = {
   setPlans: (plans: TrainingPlan[]) => void;
   addPlan: (plan: Omit<TrainingPlan, 'id'>) => Promise<void>;
   deletePlan: (planId: string) => Promise<void>;
+  removePlanById: (planId: string) => Promise<void>;
   clearPlans: () => void;
   loading: boolean;
 };
@@ -26,6 +27,7 @@ const TrainingContext = createContext<TrainingContextType>({
   setPlans: () => {},
   addPlan: async () => {},
   deletePlan: async () => {},
+  removePlanById: async () => {},
   clearPlans: () => {},
   loading: false,
 });
@@ -97,12 +99,22 @@ function TrainingProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const removePlanById = deletePlan;
+
   const clearPlans = () => {
     setPlans([]);
   };
 
   return (
-    <TrainingContext.Provider value={{ plans, setPlans, addPlan, deletePlan, clearPlans, loading }}>
+    <TrainingContext.Provider value={{ 
+      plans, 
+      setPlans, 
+      addPlan, 
+      deletePlan, 
+      removePlanById,
+      clearPlans, 
+      loading 
+    }}>
       {children}
     </TrainingContext.Provider>
   );
