@@ -1,3 +1,4 @@
+import React from 'react';
 import { View, Text, Pressable, StyleSheet, Image, ScrollView, Modal, TextInput, Button, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +17,7 @@ import { deleteUser } from 'firebase/auth';
 import { useRouter } from 'expo-router';
 import WeeklyOverview from '../components/WeeklyOverview';
 import { useNutritionDate } from './_layout';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 
 type MacroGoals = {
   calories: { current: number; goal: number };
@@ -300,6 +302,7 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal }: LogMealM
     carbs: '',
     fats: ''
   });
+  const [isLogging, setIsLogging] = useState(false);
 
   // Reset method when modal becomes visible
   useEffect(() => {
@@ -312,11 +315,13 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal }: LogMealM
         carbs: '',
         fats: ''
       });
+      setIsLogging(false);
     }
   }, [visible]);
 
   const handleManualSubmit = async () => {
     try {
+      setIsLogging(true);
       const meal = {
         name: manualEntry.name,
         macros: {
@@ -328,10 +333,12 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal }: LogMealM
       };
       await onLogMeal([meal]);
       setManualEntry({ name: '', calories: '', protein: '', carbs: '', fats: '' });
+      setIsLogging(false);
       onClose();
     } catch (error) {
       console.error('Error logging meal:', error);
       Alert.alert('Error', 'Failed to log meal');
+      setIsLogging(false);
     }
   };
 
@@ -1101,14 +1108,43 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 1000,
+    paddingHorizontal: 24,
+    elevation: 10, // Higher elevation for Android
+  },
+  loadingContent: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
+    width: '100%',
+    maxWidth: 320,
+  },
+  loadingMascot: {
+    width: 100,
+    height: 100,
+    marginBottom: 24,
+  },
+  loadingTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#000000',
+    marginBottom: 12,
+    textAlign: 'center',
   },
   loadingText: {
-    color: '#FFFFFF',
-    marginTop: 12,
     fontSize: 16,
+    color: '#666666',
+    textAlign: 'center',
+    marginBottom: 24,
   },
   weekContainer: {
     backgroundColor: '#FFFFFF',
@@ -1288,6 +1324,8 @@ export default function NutritionScreen() {
   const { macros, updateMacros } = useNutrition();
   const [loggedMeals, setLoggedMeals] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isLoggingMeal, setIsLoggingMeal] = useState(false);
   const { user } = useAuth();
   const [isLogMealModalVisible, setIsLogMealModalVisible] = useState(false);
   const [selectedLoggingMethod, setSelectedLoggingMethod] = useState<'manual' | 'photo' | null>(null);
@@ -1492,6 +1530,7 @@ export default function NutritionScreen() {
     }
 
     try {
+      setIsLoggingMeal(true);
       console.log('Logging meal to Firestore:', JSON.stringify(items));
       
       // Handle both the new format with multiple items and the old format
@@ -1581,7 +1620,10 @@ export default function NutritionScreen() {
       await loadSelectedDayData();
     } catch (error) {
       console.error('Error logging meal:', error);
-      throw error;
+      Alert.alert('Error', 'Failed to log meal. Please try again.');
+    } finally {
+      setIsLoading(false);
+      setIsLoggingMeal(false);
     }
   };
 
@@ -1783,7 +1825,7 @@ export default function NutritionScreen() {
         }
 
         // Calculate total macros for all food items
-        const totalMacros = result.items.reduce((total, item) => {
+        const totalMacros = result.items.reduce((total: MacroData, item: any) => {
           return {
             calories: total.calories + item.macros.calories,
             protein: total.protein + item.macros.protein,
@@ -1795,7 +1837,7 @@ export default function NutritionScreen() {
         console.log(`Found ${result.items.length} food items with total macros:`, JSON.stringify(totalMacros));
 
         // Return all detected items along with the combined name
-        const combinedName = result.items.map(item => item.name).join(", ");
+        const combinedName = result.items.map((item: any) => item.name).join(", ");
 
         // Return the full result with all items
         return {
@@ -1833,12 +1875,14 @@ export default function NutritionScreen() {
   const handlePhotoAnalysis = async (imageUri: string) => {
     try {
       setIsLoading(true);
+      setIsAnalyzing(true);
       console.log('Starting photo analysis process for URI:', imageUri);
       
       const result = await analyzeImage(imageUri);
       
       if (!result) {
         console.error('Analysis result is undefined or null');
+        setIsAnalyzing(false);
         return; // Exit silently if analysis failed
       }
       
@@ -1849,23 +1893,11 @@ export default function NutritionScreen() {
       // Refresh the data
       await loadSelectedDayData();
     } catch (error) {
-      // Enhanced error logging
-      if (error instanceof Error) {
-        console.error(`Error handling photo (${error.name}): ${error.message}`);
-        console.error('Error stack:', error.stack);
-        
-        // Only show general error if it's not already handled in analyzeImage
-        if (!error.message.includes('Analysis failed') && 
-            !error.message.includes('Failed to encode image') &&
-            !error.message.includes('invalid_image')) {
-          Alert.alert('Error', 'An unexpected error occurred while analyzing the image. Please try again with a different photo.');
-        }
-      } else {
-        console.error('Unknown error handling photo:', error);
-        Alert.alert('Error', 'An unexpected error occurred. Please try again.');
-      }
+      console.error('Photo analysis error:', error);
+      // Error messaging handled in analyzeImage
     } finally {
       setIsLoading(false);
+      setIsAnalyzing(false);
     }
   };
 
@@ -1915,161 +1947,209 @@ export default function NutritionScreen() {
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={{
-        flexGrow: 1,
-        paddingBottom: 120,
-      }}
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={true}
-      bounces={true}
-      overScrollMode="never"
-    >
-      {/* Header - Fixed at top when scrolling */}
-      <View style={{
-        paddingTop: 48,
-        paddingHorizontal: 24,
-        backgroundColor: '#ffffff',
-      }}>
-        {/* Header with Logo */}
+    <>
+      <ScrollView 
+        style={styles.container}
+        contentContainerStyle={{
+          flexGrow: 1,
+          paddingBottom: 120,
+        }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={true}
+        bounces={true}
+        overScrollMode="never"
+      >
+        {/* Header - Fixed at top when scrolling */}
         <View style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          height: 92,
+          paddingTop: 48,
+          paddingHorizontal: 24,
+          backgroundColor: '#ffffff',
         }}>
-          {/* Title */}
-          <Text style={{
-            fontSize: 28,
-            fontWeight: '900',
-            color: '#000000',
-          }} 
-          allowFontScaling={false}
-          maxFontSizeMultiplier={1.2}>
-            Nutrition
-          </Text>
-
+          {/* Header with Logo */}
           <View style={{
             flexDirection: 'row',
             alignItems: 'center',
-            gap: 6,
+            justifyContent: 'space-between',
+            height: 92,
           }}>
-            <Image 
-              source={require('../../assets/images/BallerAILogo.png')}
-              style={{
-                width: 32,
-                height: 32,
-              }}
-              resizeMode="contain"
-            />
+            {/* Title */}
             <Text style={{
               fontSize: 28,
-              fontWeight: '300',
+              fontWeight: '900',
               color: '#000000',
             }} 
             allowFontScaling={false}
             maxFontSizeMultiplier={1.2}>
-              BallerAI
+              Nutrition
             </Text>
+
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6,
+            }}>
+              <Image 
+                source={require('../../assets/images/BallerAILogo.png')}
+                style={{
+                  width: 32,
+                  height: 32,
+                }}
+                resizeMode="contain"
+              />
+              <Text style={{
+                fontSize: 28,
+                fontWeight: '300',
+                color: '#000000',
+              }} 
+              allowFontScaling={false}
+              maxFontSizeMultiplier={1.2}>
+                BallerAI
+              </Text>
+            </View>
           </View>
         </View>
-      </View>
 
-      {/* Weekly Overview */}
-      <WeeklyOverview 
-        selectedDate={selectedDate}
-        onDateSelect={setSelectedDate}
-      />
+        {/* Weekly Overview */}
+        <WeeklyOverview 
+          selectedDate={selectedDate}
+          onDateSelect={setSelectedDate}
+        />
 
-      <CalorieProgress 
-        eaten={macros.calories.current}
-        burned={0}
-        goal={macros.calories.goal}
-      />
+        <CalorieProgress 
+          eaten={macros.calories.current}
+          burned={0}
+          goal={macros.calories.goal}
+        />
 
-      <View style={styles.macrosCard}>
-        <MacroProgress
-          type="Protein"
-          current={macros.protein.current}
-          goal={macros.protein.goal}
-          color="#FF6B6B"
-        />
-        <MacroProgress
-          type="Carbs"
-          current={macros.carbs.current}
-          goal={macros.carbs.goal}
-          color="#4ECDC4"
-        />
-        <MacroProgress
-          type="Fats"
-          current={macros.fats.current}
-          goal={macros.fats.goal}
-          color="#FFD93D"
-        />
-        
-        <View style={styles.adherenceContainer}>
-          <Text style={styles.adherenceTitle}>Nutrition Adherence</Text>
-          <Text style={styles.adherenceSubtitle}>Today's Progress</Text>
-          <Text style={styles.adherencePercentage}>{calculateTodayAdherence()}%</Text>
+        <View style={styles.macrosCard}>
+          <MacroProgress
+            type="Protein"
+            current={macros.protein.current}
+            goal={macros.protein.goal}
+            color="#FF6B6B"
+          />
+          <MacroProgress
+            type="Carbs"
+            current={macros.carbs.current}
+            goal={macros.carbs.goal}
+            color="#4ECDC4"
+          />
+          <MacroProgress
+            type="Fats"
+            current={macros.fats.current}
+            goal={macros.fats.goal}
+            color="#FFD93D"
+          />
+          
+          <View style={styles.adherenceContainer}>
+            <Text style={styles.adherenceTitle}>Nutrition Adherence</Text>
+            <Text style={styles.adherenceSubtitle}>Today's Progress</Text>
+            <Text style={styles.adherencePercentage}>{calculateTodayAdherence()}%</Text>
+          </View>
         </View>
-      </View>
 
-      <View style={styles.mealsSection}>
-        <Pressable
-          style={styles.logMealButton}
-          onPress={() => setIsLogMealModalVisible(true)}
+        <View style={styles.mealsSection}>
+          <Pressable
+            style={styles.logMealButton}
+            onPress={() => setIsLogMealModalVisible(true)}
+          >
+            <Text style={styles.logMealText}>Log Meal</Text>
+            <Ionicons name="add" size={20} color="#FFFFFF" />
+          </Pressable>
+        </View>
+
+        <LoggedMeals 
+          meals={loggedMeals} 
+          onDelete={async (mealId: string) => {
+            try {
+              setIsLoading(true);
+              await deleteMeal(mealId);
+              // Show success message
+              Alert.alert('Success', 'Meal deleted successfully');
+              // Refresh weekly data to update the overview
+              await loadSelectedDayData();
+            } catch (error) {
+              console.error('Error deleting meal:', error);
+              Alert.alert('Error', 'Failed to delete meal');
+            } finally {
+              setIsLoading(false);
+            }
+          }} 
+        />
+
+        <LogMealModal
+          visible={isLogMealModalVisible}
+          onClose={() => setIsLogMealModalVisible(false)}
+          onPhotoAnalysis={async (imageUri) => {
+            try {
+              await handlePhotoAnalysis(imageUri);
+            } catch (error) {
+              console.error('Error in photo analysis:', error);
+              Alert.alert('Error', 'Failed to analyze image. Please try again.');
+            } finally {
+              setIsLoading(false);
+            }
+          }}
+          onLogMeal={async (items) => {
+            try {
+              await logMealToFirestore(items);
+            } catch (error) {
+              console.error('Error logging meal:', error);
+              Alert.alert('Error', 'Failed to log meal. Please try again.');
+            } finally {
+              setIsLoading(false);
+            }
+          }}
+        />
+      </ScrollView>
+      
+      {/* Image Analysis Loading Overlay - Now outside ScrollView */}
+      {isAnalyzing && (
+        <Animated.View 
+          style={styles.loadingOverlay}
+          entering={FadeIn.duration(300)}
         >
-          <Text style={styles.logMealText}>Log Meal</Text>
-          <Ionicons name="add" size={20} color="#FFFFFF" />
-        </Pressable>
-      </View>
-
-      <LoggedMeals 
-        meals={loggedMeals} 
-        onDelete={async (mealId: string) => {
-          try {
-            setIsLoading(true);
-            await deleteMeal(mealId);
-            // Show success message
-            Alert.alert('Success', 'Meal deleted successfully');
-            // Refresh weekly data to update the overview
-            await loadSelectedDayData();
-          } catch (error) {
-            console.error('Error deleting meal:', error);
-            Alert.alert('Error', 'Failed to delete meal');
-          } finally {
-            setIsLoading(false);
-          }
-        }} 
-      />
-
-      <LogMealModal
-        visible={isLogMealModalVisible}
-        onClose={() => setIsLogMealModalVisible(false)}
-        onPhotoAnalysis={handlePhotoAnalysis}
-        onLogMeal={async (items) => {
-          try {
-            setIsLoading(true);
-            await logMealToFirestore(items);
-            setIsLogMealModalVisible(false);
-            // Refresh the data
-            await loadSelectedDayData();
-          } catch (error) {
-            console.error('Error logging meal:', error);
-            Alert.alert('Error', 'Failed to log meal. Please try again.');
-          } finally {
-            setIsLoading(false);
-          }
-        }}
-      />
-
-      {isLoading && selectedLoggingMethod === 'photo' && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#4A72B2" />
-          <Text style={styles.loadingText}>Analyzing meal...</Text>
-        </View>
+          <Animated.View 
+            style={styles.loadingContent}
+            entering={FadeInDown.duration(400).springify()}
+          >
+            <Image 
+              source={require('../../assets/images/mascot.png')}
+              style={styles.loadingMascot}
+              resizeMode="contain"
+            />
+            <Text style={styles.loadingTitle}>Analyzing Image</Text>
+            <Text style={styles.loadingText}>
+              Please don't close the app while I analyze your meal
+            </Text>
+            <ActivityIndicator size="large" color="#4064F6" />
+          </Animated.View>
+        </Animated.View>
       )}
-    </ScrollView>
+
+      {/* Manual Meal Logging Overlay - Now outside ScrollView */}
+      {isLoggingMeal && (
+        <Animated.View 
+          style={styles.loadingOverlay}
+          entering={FadeIn.duration(300)}
+        >
+          <Animated.View 
+            style={styles.loadingContent}
+            entering={FadeInDown.duration(400).springify()}
+          >
+            <Image 
+              source={require('../../assets/images/mascot.png')}
+              style={styles.loadingMascot}
+              resizeMode="contain"
+            />
+            <Text style={styles.loadingTitle}>Logging Meal</Text>
+            <Text style={styles.loadingText}>
+              Please don't close the app while I log your meal
+            </Text>
+            <ActivityIndicator size="large" color="#4064F6" />
+          </Animated.View>
+        </Animated.View>
+      )}
+    </>
   );
 } 
