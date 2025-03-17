@@ -1,22 +1,17 @@
-import { View, Text, StyleSheet, ScrollView, Pressable, Image, Alert, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Image } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import CustomButton from '../components/CustomButton';
-import * as InAppPurchases from 'expo-in-app-purchases';
-import { SUBSCRIPTION_SKUS, initializeIAP, purchaseSubscription, cleanupIAP } from '../config/iap';
 
 type SubscriptionPlan = {
   id: string;
-  productId: string;
   duration: string;
   price: string;
   period: string;
   totalPrice: string;
   period2: string;
-  isPopular?: boolean;
   isBestValue?: boolean;
-  product?: InAppPurchases.IAPItemDetails;
 };
 
 type Review = {
@@ -26,19 +21,13 @@ type Review = {
   comment: string;
 };
 
-const SUBSCRIPTION_IDS = {
-  monthly: 'BallerAISubscriptionOneMonth',
-  yearly: 'BallerAISubscriptionOneYear'
-};
-
 const PaywallScreen = () => {
   const router = useRouter();
   const [selectedPlan, setSelectedPlan] = useState<string>('12months');
-  const [isLoading, setIsLoading] = useState(false);
-  const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlan[]>([
+  
+  const subscriptionPlans: SubscriptionPlan[] = [
     {
       id: '1month',
-      productId: SUBSCRIPTION_SKUS.monthly,
       duration: '1',
       price: '9.99',
       period: 'per month',
@@ -47,7 +36,6 @@ const PaywallScreen = () => {
     },
     {
       id: '12months',
-      productId: SUBSCRIPTION_SKUS.yearly,
       duration: '12',
       price: '4.99',
       period: 'per month',
@@ -55,44 +43,7 @@ const PaywallScreen = () => {
       period2: 'yearly',
       isBestValue: true,
     }
-  ]);
-
-  useEffect(() => {
-    const setupIAP = async () => {
-      try {
-        console.log('[Paywall] Setting up IAP...');
-        const products = await initializeIAP();
-        console.log('[Paywall] Products received:', products);
-        if (products && products.length > 0) {
-          const updatedPlans = subscriptionPlans.map(plan => {
-            const product = products.find(p => p.productId === plan.productId);
-            if (product) {
-              console.log('[Paywall] Found matching product for plan:', plan.id);
-              return {
-                ...plan,
-                price: product.price,
-                product
-              };
-            }
-            console.log('[Paywall] No matching product found for plan:', plan.id);
-            return plan;
-          });
-          console.log('[Paywall] Updated subscription plans:', updatedPlans);
-          setSubscriptionPlans(updatedPlans);
-        } else {
-          console.log('[Paywall] No products received from IAP');
-        }
-      } catch (error) {
-        console.error('[Paywall] Error setting up IAP:', error);
-      }
-    };
-
-    setupIAP();
-    return () => {
-      console.log('[Paywall] Cleaning up IAP...');
-      cleanupIAP();
-    };
-  }, []);
+  ];
 
   const reviews: Review[] = [
     {
@@ -109,44 +60,8 @@ const PaywallScreen = () => {
     },
   ];
 
-  const handleSubscription = async () => {
-    try {
-      console.log('[Paywall] Starting subscription process...');
-      setIsLoading(true);
-      
-      // Find the selected plan
-      const plan = subscriptionPlans.find(p => p.id === selectedPlan);
-      console.log('[Paywall] Selected plan:', plan);
-      
-      if (!plan?.productId) {
-        console.error('[Paywall] No product ID found for selected plan');
-        throw new Error('Selected plan not available');
-      }
-
-      // Request the purchase
-      console.log('[Paywall] Requesting purchase for product:', plan.productId);
-      const result = await purchaseSubscription(plan.productId);
-      console.log('[Paywall] Purchase result:', result);
-      
-      if (result) {
-        console.log('[Paywall] Purchase successful, navigating to home...');
-        router.replace('/(tabs)/home');
-      } else {
-        console.error('[Paywall] Purchase failed with null result');
-        throw new Error('Subscription purchase failed');
-      }
-    } catch (error: any) {
-      console.error('[Paywall] Subscription error:', error);
-      if (!error.message?.includes('user canceled')) {
-        Alert.alert(
-          'Subscription Error',
-          error.message || 'Failed to process subscription. Please try again.'
-        );
-      }
-    } finally {
-      console.log('[Paywall] Subscription process complete');
-      setIsLoading(false);
-    }
+  const handleContinue = () => {
+    router.replace('/(tabs)/home');
   };
 
   const renderStars = (rating: number) => {
@@ -172,7 +87,7 @@ const PaywallScreen = () => {
               ]}
               onPress={() => setSelectedPlan(plan.id)}
             >
-              {(plan.isBestValue) && (
+              {plan.isBestValue && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>
                     BEST VALUE
@@ -207,7 +122,7 @@ const PaywallScreen = () => {
           <Text style={styles.testimonialTitle}>Trusted by Professionals</Text>
           <View style={styles.testimonialContent}>
             <Image 
-              source={require('../../assets/images/BallerAILogo.png')}
+              source={require('../../assets/images/2027.png')}
               style={styles.testimonialImage}
               resizeMode="cover"
             />
@@ -219,21 +134,11 @@ const PaywallScreen = () => {
 
         {/* Continue Button */}
         <CustomButton
-          title={isLoading ? "Processing..." : "Continue"}
-          onPress={handleSubscription}
-          disabled={isLoading}
-          buttonStyle={[
-            styles.continueButton,
-            isLoading ? { opacity: 0.7 } : {}
-          ] as any}
+          title="Continue"
+          onPress={handleContinue}
+          buttonStyle={styles.continueButton}
           textStyle={styles.continueButtonText}
         />
-
-        {isLoading && (
-          <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color="#4064F6" />
-          </View>
-        )}
       </View>
     </ScrollView>
   );
@@ -251,7 +156,7 @@ const styles = StyleSheet.create({
     paddingTop: 48,
   },
   title: {
-    fontSize: 32,
+    fontSize: 34,
     fontWeight: '700',
     color: '#000000',
     marginBottom: 32,
@@ -259,38 +164,34 @@ const styles = StyleSheet.create({
   },
   plansContainer: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 16,
-    marginBottom: 40,
-    paddingHorizontal: 8,
+    justifyContent: 'space-between',
+    marginBottom: 32,
+    gap: 12,
   },
   planCard: {
-    width: '48%',
+    flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 24,
     padding: 16,
     borderWidth: 1,
     borderColor: '#E5E5E5',
-    alignItems: 'center',
-    position: 'relative',
-    opacity: 0.8,
   },
   selectedPlan: {
+    backgroundColor: '#F0F4FF',
     borderColor: '#4064F6',
     borderWidth: 2,
-    opacity: 1,
-    backgroundColor: '#F5F5FF',
   },
   bestValuePlan: {
-    // Empty for future styling if needed
+    backgroundColor: '#F0F4FF',
   },
   badge: {
     position: 'absolute',
     top: -12,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
+    alignSelf: 'center',
     backgroundColor: '#4064F6',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
   },
   badgeText: {
     color: '#FFFFFF',
@@ -300,90 +201,86 @@ const styles = StyleSheet.create({
   planHeader: {
     alignItems: 'center',
     marginBottom: 8,
+    marginTop: 8,
   },
   planDuration: {
-    fontSize: 32,
-    fontWeight: '700',
+    fontSize: 40,
+    fontWeight: '600',
     color: '#4064F6',
   },
   planPeriod: {
     fontSize: 16,
     color: '#4064F6',
   },
+  selectedIndicator: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+  },
   planPricing: {
     alignItems: 'center',
-    marginBottom: 8,
+    marginTop: 12,
   },
   planPrice: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '600',
     color: '#000000',
   },
   planPriceDetail: {
     fontSize: 14,
     color: '#666666',
+    marginTop: 4,
   },
   planTotal: {
     fontSize: 16,
     color: '#666666',
+    textAlign: 'center',
+    marginTop: 8,
   },
   planTotalPeriod: {
     fontSize: 14,
     color: '#666666',
-  },
-  selectedIndicator: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
+    textAlign: 'center',
   },
   testimonialSection: {
     marginBottom: 32,
-    padding: 24,
     backgroundColor: '#F8F8F8',
     borderRadius: 24,
+    padding: 24,
   },
   testimonialTitle: {
     fontSize: 24,
     fontWeight: '700',
     color: '#000000',
     marginBottom: 24,
-    textAlign: 'center',
   },
   testimonialContent: {
+    flexDirection: 'column',
     alignItems: 'center',
-    gap: 24,
+    gap: 16,
   },
   testimonialImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#FFFFFF',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
   },
   testimonialText: {
     fontSize: 16,
+    color: '#666666',
     lineHeight: 24,
-    color: '#000000',
     textAlign: 'center',
     fontStyle: 'italic',
   },
   continueButton: {
     backgroundColor: '#4064F6',
-    borderRadius: 36,
+    borderRadius: 16,
     paddingVertical: 16,
+    marginTop: 8,
   },
   continueButtonText: {
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '600',
+    textAlign: 'center',
   },
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  }
 }); 
