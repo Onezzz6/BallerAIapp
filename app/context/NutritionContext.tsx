@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
-import { doc, onSnapshot, collection, query, where, orderBy, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, where, orderBy, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { calculateNutritionGoals, type ActivityLevel } from '../utils/nutritionCalculations';
@@ -92,18 +92,21 @@ export function NutritionProvider({ children }: { children: React.ReactNode }) {
     
     // Set loading state
     setIsLoading(true);
+    console.log('DEBUG - NutritionContext: Setting loading state to true');
     
     const loadTodayData = async () => {
       try {
-        console.log('Loading today nutrition data automatically on app start');
+        console.log('DEBUG - Loading today nutrition data automatically on app start');
         const today = new Date();
         const dateString = formatDateId(today);
         
         // Get user goals first
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
         if (!userDoc.exists()) {
-          console.error('User document not found');
+          console.error('DEBUG - User document not found');
           setIsLoading(false);
+          console.log('DEBUG - NutritionContext: Setting loading state to false - user not found');
           return;
         }
 
@@ -111,6 +114,8 @@ export function NutritionProvider({ children }: { children: React.ReactNode }) {
         
         // Use stored goals if available, otherwise calculate new ones
         let goals;
+        let goalsNeedSaving = false;
+        
         if (userData.calorieGoal && userData.macroGoals) {
           goals = {
             calories: userData.calorieGoal,
@@ -118,70 +123,119 @@ export function NutritionProvider({ children }: { children: React.ReactNode }) {
             carbs: userData.macroGoals.carbs,
             fats: userData.macroGoals.fat || userData.macroGoals.fats
           };
-          console.log('DEBUG - Using goals from user document:', goals);
+          console.log('DEBUG - Using existing goals from user document:', goals);
         } else {
           // Use the centralized calculation utility
-          const { calorieGoal, macroGoals } = calculateNutritionGoals(userData);
+          console.log('DEBUG - No goals found, calculating new goals from user data');
+          const calculatedGoals = calculateNutritionGoals(userData);
+          
           goals = {
-            calories: calorieGoal,
-            protein: macroGoals.protein,
-            carbs: macroGoals.carbs,
-            fats: macroGoals.fat
+            calories: calculatedGoals.calorieGoal,
+            protein: calculatedGoals.macroGoals.protein,
+            carbs: calculatedGoals.macroGoals.carbs,
+            fats: calculatedGoals.macroGoals.fat
           };
+          
+          // Mark that these goals need to be saved
+          goalsNeedSaving = true;
           console.log('DEBUG - Calculated new goals:', goals);
+          
+          // Save the calculated goals to the user document to ensure persistence
+          if (goalsNeedSaving && goals.calories > 0) {
+            try {
+              console.log('DEBUG - Saving calculated goals to user document from NutritionContext');
+              await updateDoc(userDocRef, {
+                calorieGoal: goals.calories,
+                macroGoals: {
+                  protein: goals.protein,
+                  carbs: goals.carbs,
+                  fat: goals.fats
+                }
+              });
+              console.log('DEBUG - Goals saved successfully from NutritionContext');
+            } catch (error) {
+              console.error('ERROR - Failed to save calculated goals:', error);
+            }
+          }
         }
+
+        // Update macros state with the goals right away, before meals are loaded
+        // This ensures the UI shows the goals even if there are no meals yet
+        setMacros(prev => ({
+          ...prev,
+          calories: { ...prev.calories, goal: goals.calories },
+          protein: { ...prev.protein, goal: goals.protein },
+          carbs: { ...prev.carbs, goal: goals.carbs },
+          fats: { ...prev.fats, goal: goals.fats }
+        }));
+        
+        // Keep the loading state true until we've checked for meals
+        // But if we have goals, we can at least set that part of the state
+        console.log('DEBUG - NutritionContext: Goals loaded, checking for meals...');
 
         // Get today's meals
         const startOfDay = getLocalStartOfDay(today);
         const endOfDay = getLocalEndOfDay(today);
         
-        const mealsQuery = query(
-          collection(db, 'meals'),
-          where('userId', '==', user.uid),
-          where('timestamp', '>=', startOfDay.toISOString()),
-          where('timestamp', '<=', endOfDay.toISOString()),
-          orderBy('timestamp', 'desc')
-        );
-        
-        // Set up real-time listener for today's meals
-        const unsubscribe = onSnapshot(mealsQuery, 
-          (snapshot) => {
-            const meals = snapshot.docs.map(doc => ({
-              id: doc.id,
-              ...doc.data()
-            }));
-            
-            setTodaysMeals(meals);
-            
-            // Calculate current macros from meals
-            const computedTotals = meals.reduce((acc, meal: any) => ({
-              calories: acc.calories + (meal.totalMacros?.calories || 0),
-              protein: acc.protein + (meal.totalMacros?.protein || 0),
-              carbs: acc.carbs + (meal.totalMacros?.carbs || 0),
-              fats: acc.fats + (meal.totalMacros?.fats || 0)
-            }), { calories: 0, protein: 0, carbs: 0, fats: 0 });
-            
-            // Update macros with both current values and goals
-            setMacros({
-              calories: { current: computedTotals.calories, goal: goals.calories },
-              protein: { current: computedTotals.protein, goal: goals.protein },
-              carbs: { current: computedTotals.carbs, goal: goals.carbs },
-              fats: { current: computedTotals.fats, goal: goals.fats }
-            });
-            
-            setIsLoading(false);
-          },
-          (error) => {
-            console.error('Error loading nutrition data:', error);
-            setIsLoading(false);
-          }
-        );
-        
-        // Clean up listener on unmount
-        return () => unsubscribe();
+        try {
+          const mealsQuery = query(
+            collection(db, 'meals'),
+            where('userId', '==', user.uid),
+            where('timestamp', '>=', startOfDay.toISOString()),
+            where('timestamp', '<=', endOfDay.toISOString()),
+            orderBy('timestamp', 'desc')
+          );
+          
+          // Set up real-time listener for today's meals
+          const unsubscribe = onSnapshot(mealsQuery, 
+            (snapshot) => {
+              const meals = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+              }));
+              
+              setTodaysMeals(meals);
+              
+              // Calculate current macros from meals
+              const computedTotals = meals.reduce((acc, meal: any) => ({
+                calories: acc.calories + (meal.totalMacros?.calories || 0),
+                protein: acc.protein + (meal.totalMacros?.protein || 0),
+                carbs: acc.carbs + (meal.totalMacros?.carbs || 0),
+                fats: acc.fats + (meal.totalMacros?.fats || 0)
+              }), { calories: 0, protein: 0, carbs: 0, fats: 0 });
+              
+              // Update macros with both current values and goals
+              setMacros({
+                calories: { current: computedTotals.calories, goal: goals.calories },
+                protein: { current: computedTotals.protein, goal: goals.protein },
+                carbs: { current: computedTotals.carbs, goal: goals.carbs },
+                fats: { current: computedTotals.fats, goal: goals.fats }
+              });
+              
+              // Finally set loading to false AFTER we've loaded everything
+              setIsLoading(false);
+              console.log('DEBUG - NutritionContext: Setting loading state to false - all data loaded');
+            },
+            (error) => {
+              console.error('Error loading nutrition data:', error);
+              // Still set loading to false even if there's an error, but keep any goals we've calculated
+              setIsLoading(false);
+              console.log('DEBUG - NutritionContext: Setting loading state to false - error loading data');
+            }
+          );
+          
+          // Clean up listener on unmount
+          return () => unsubscribe();
+        } catch (error) {
+          console.error('Error setting up meals listener:', error);
+          // If we couldn't set up the listener, at least set loading to false
+          setIsLoading(false);
+          console.log('DEBUG - NutritionContext: Setting loading state to false - error setting up listener');
+        }
       } catch (error) {
         console.error('Error in initial nutrition data load:', error);
         setIsLoading(false);
+        console.log('DEBUG - NutritionContext: Setting loading state to false - general error');
       }
     };
     

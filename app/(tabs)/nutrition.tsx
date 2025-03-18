@@ -17,8 +17,6 @@ import { useNutrition } from '../context/NutritionContext';
 import { useNutritionDate } from './_layout';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
-import MealList from '../components/MealList';
-import CircleButton from '../components/CircleButton';
 import CustomButton from '../components/CustomButton';
 import { calculateNutritionGoals } from '../utils/nutritionCalculations';
 import * as imageAnalysis from '../services/imageAnalysis';
@@ -1427,48 +1425,13 @@ export default function NutritionScreen() {
           fats: userData.macroGoals.fat || userData.macroGoals.fats // Handle different property names
         };
       } else {
-        // Calculate using BMR formula and macronutrient ratios if not available
-        const weight = parseFloat(userData.weight);
-        const height = parseFloat(userData.height);
-        const age = parseInt(userData.age);
-        const gender = userData.gender.toLowerCase();
-        const activityLevel = userData.activityLevel || 'moderate';
-        
-        // Calculate BMR
-        let bmr = 0;
-        if (gender === 'male') {
-          bmr = 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age);
-        } else {
-          bmr = 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age);
-        }
-        
-        // Activity Multipliers
-        const activityMultipliers: {[key: string]: number} = {
-          sedentary: 1.2,
-          light: 1.375,
-          moderate: 1.55,
-          very: 1.725,
-          extra: 1.9
-        };
-        
-        const dailyCalories = Math.round(bmr * (activityMultipliers[activityLevel] || 1.55));
-        
-        // Different macro ratios based on goals
-        const goal = userData.footballGoal || 'maintain';
-        const macroRatios: {[key: string]: {protein: number, fats: number, carbs: number}} = {
-          'maintain': { protein: 0.25, fats: 0.25, carbs: 0.50 },
-          'lose': { protein: 0.30, fats: 0.25, carbs: 0.45 },
-          'gain': { protein: 0.25, fats: 0.20, carbs: 0.55 },
-          'pro': { protein: 0.30, fats: 0.25, carbs: 0.45 }
-        };
-        
-        const ratios = macroRatios[goal.toLowerCase()] || macroRatios.maintain;
-        
+        // Use the centralized utility function to calculate nutrition goals
+        const { calorieGoal, macroGoals } = calculateNutritionGoals(userData);
         goals = {
-          calories: dailyCalories,
-          protein: Math.round((dailyCalories * ratios.protein) / 4),
-          carbs: Math.round((dailyCalories * ratios.carbs) / 4),
-          fats: Math.round((dailyCalories * ratios.fats) / 9)
+          calories: calorieGoal,
+          protein: macroGoals.protein,
+          carbs: macroGoals.carbs,
+          fats: macroGoals.fat
         };
       }
 

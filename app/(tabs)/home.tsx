@@ -1,24 +1,32 @@
-import { View, Text, Image, ScrollView, Pressable, StyleSheet, Modal, TouchableWithoutFeedback, KeyboardAvoidingView, Platform, Keyboard, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import Svg, { Circle } from 'react-native-svg';
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { TextInput, ActivityIndicator } from 'react-native';
-import { format, startOfWeek, addDays, subDays } from 'date-fns';
-import { doc, getDoc, onSnapshot, setDoc, updateDoc, addDoc, increment, serverTimestamp } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Animated, useColorScheme, Dimensions, RefreshControl, Platform } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { AntDesign, Feather, Ionicons } from '@expo/vector-icons';
+import { getDoc, doc, onSnapshot, setDoc, updateDoc, addDoc, increment, serverTimestamp, collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
+import { db } from '../config/firebase';
+import { shadowProps } from '../constants/Styles';
 import { useNutrition } from '../context/NutritionContext';
-import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
+import { useIsFocused } from '@react-navigation/native';
 import CalorieProgress from '../components/CalorieProgress';
+import WorkoutCard from '../components/WorkoutCard';
+import StepProgress from '../components/StepProgress';
+import ExerciseCard from '../components/ExerciseCard';
+import WaterIntakeProgress from '../components/WaterIntakeProgress';
+import { useWorkouts } from '../context/WorkoutContext';
+import Carousel from 'react-native-reanimated-carousel';
+import { router } from 'expo-router';
+import { BlurView } from 'expo-blur';
+import { useUserSettings } from '../context/UserSettingsContext';
+import { calculateNutritionGoals } from '../utils/nutritionCalculations';
+import { format, startOfWeek, addDays, subDays } from 'date-fns';
+import { TextInput, ActivityIndicator, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard, Pressable, Modal, Alert } from 'react-native';
 import { askOpenAI } from '../utils/openai';
+import Svg, { Circle } from 'react-native-svg';
 
 export default function HomeScreen() {
   const { user } = useAuth();
   const { macros } = useNutrition();
-  const calorieGoal = 1600;
-  const currentCalories = 800;
-  const progressPercentage = (currentCalories / calorieGoal) * 100;
   const [showQuestion, setShowQuestion] = useState(false);
   const [question, setQuestion] = useState('');
   const [aiResponse, setAiResponse] = useState('');
@@ -118,27 +126,101 @@ export default function HomeScreen() {
     const fetchUserData = async () => {
       if (user) {
         try {
-          // Fetch user profile data
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-          if (userDoc.exists() && userDoc.data().profilePicture) {
-            setProfilePicture(userDoc.data().profilePicture);
-          }
+          // Set loading state at the beginning
+          setTodayCalories(prev => ({
+            ...prev,
+            isLoading: true
+          }));
           
-          // IMPORTANT: Immediately try to get the user's calorie goal
-          // This avoids showing the default 2000 value while context loads
-          const userMacrosDoc = await getDoc(doc(db, 'users', user.uid, 'macros', 'goals'));
-          if (userMacrosDoc.exists()) {
-            const macrosData = userMacrosDoc.data();
-            if (macrosData.calories && macrosData.calories > 0) {
-              console.log(`DEBUG - Immediately loaded goal from Firebase: ${macrosData.calories} calories`);
+          console.log('DEBUG - Starting to fetch user data for calorie goal calculation');
+          
+          // Fetch user profile data
+          const userDocRef = doc(db, 'users', user.uid);
+          const userDoc = await getDoc(userDocRef);
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            
+            // Set profile picture if available
+            if (userData.profilePicture) {
+              setProfilePicture(userData.profilePicture);
+            }
+            
+            // Set user profile data for use in other calculations
+            setUserProfile(userData);
+            
+            // IMPORTANT: Calculate nutrition goals based on user data immediately
+            // This ensures we don't show default values while waiting for nutrition tab to load
+            let calculatedGoals;
+            let goalsUpdated = false;
+            
+            // First check if goals already exist in the user document
+            if (userData.calorieGoal && userData.macroGoals) {
+              console.log('DEBUG - Using existing calorie goal from user document:', userData.calorieGoal);
+              calculatedGoals = {
+                calorieGoal: userData.calorieGoal,
+                macroGoals: userData.macroGoals
+              };
+            } else {
+              // Calculate using the utility function if no goals exist
+              console.log('DEBUG - Calculating nutrition goals from user data');
+              calculatedGoals = calculateNutritionGoals(userData);
+              console.log('DEBUG - Calculated goals:', calculatedGoals);
+              
+              // IMPORTANT: Save the calculated goals to the user document
+              // This will trigger the NutritionContext listener to update
+              if (calculatedGoals && calculatedGoals.calorieGoal > 0) {
+                try {
+                  console.log('DEBUG - Saving calculated goals to user document');
+                  await updateDoc(userDocRef, {
+                    calorieGoal: calculatedGoals.calorieGoal,
+                    macroGoals: calculatedGoals.macroGoals
+                  });
+                  goalsUpdated = true;
+                  console.log('DEBUG - Goals saved successfully');
+                } catch (error) {
+                  console.error('Error saving calculated goals:', error);
+                }
+              }
+            }
+            
+            // Update today's calories state with the calculated goal
+            if (calculatedGoals && calculatedGoals.calorieGoal > 0) {
+              setTodayCalories({
+                current: 0, // Assume 0 calories consumed for new accounts
+                goal: calculatedGoals.calorieGoal,
+                lastUpdated: new Date().toISOString(),
+                isLoading: !goalsUpdated // Keep loading if goals were just updated (context needs time to sync)
+              });
+            } else {
+              // If we couldn't calculate the goal, set isLoading to false but keep goal as 0
               setTodayCalories(prev => ({
                 ...prev,
-                goal: macrosData.calories
+                isLoading: false
               }));
             }
+          } else {
+            // Fall back to default values if user document doesn't exist
+            console.log('DEBUG - User document not found, using default goals');
+            const defaultGoals = { 
+              calorieGoal: 2000, 
+              macroGoals: { protein: 150, carbs: 200, fat: 55 } 
+            };
+            
+            setTodayCalories({
+              current: 0,
+              goal: defaultGoals.calorieGoal,
+              lastUpdated: new Date().toISOString(),
+              isLoading: false
+            });
           }
         } catch (error) {
           console.error('Error fetching user data:', error);
+          setTodayCalories({
+            current: 0,
+            goal: 2000, // Default fallback
+            lastUpdated: new Date().toISOString(),
+            isLoading: false
+          });
         }
       }
     };

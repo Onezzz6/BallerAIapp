@@ -2,6 +2,7 @@ import { View, Text, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
 import { useNutrition } from '../context/NutritionContext';
+import { useEffect } from 'react';
 
 export default function CalorieProgress() {
   // Get data directly from the nutrition context
@@ -10,6 +11,11 @@ export default function CalorieProgress() {
   const goal = macros.calories.goal;
   const remaining = Math.max(goal - eaten, 0);
   const progress = Math.min(Math.max(eaten / goal, 0), 1);
+
+  // Add debug logging to help diagnose issues
+  useEffect(() => {
+    console.log(`DEBUG - CalorieProgress: isLoading=${isLoading}, goal=${goal}, eaten=${eaten}`);
+  }, [isLoading, goal, eaten]);
 
   const showInfoAlert = () => {
     Alert.alert(
@@ -21,13 +27,14 @@ export default function CalorieProgress() {
 
   // Show loading indicator while data is being fetched
   if (isLoading) {
+    console.log('DEBUG - CalorieProgress: Showing loading state');
     return (
       <View style={{
         flex: 1,
         padding: 16,
         gap: 24,
         borderRadius: 16,
-        backgroundColor: '#99E86C',
+        backgroundColor: '#E2E8FE', // Use the same color as the calorie card for consistency
         alignItems: 'center',
         shadowColor: '#000000',
         shadowOffset: { width: 0, height: 2 },
@@ -40,25 +47,48 @@ export default function CalorieProgress() {
         width: '100%',
       }}>
         <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          width: '100%',
+        }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Ionicons name="flame-outline" size={24} color="#000000" />
+            <Text style={{
+              fontSize: 18,
+              fontWeight: '600',
+              color: '#000000',
+            }} allowFontScaling={false}>
+              Calories
+            </Text>
+          </View>
+          <Pressable onPress={showInfoAlert}>
+            <Ionicons name="information-circle-outline" size={24} color="#000000" />
+          </Pressable>
+        </View>
+        
+        <View style={{
           flex: 1,
           justifyContent: 'center',
           alignItems: 'center',
           width: '100%',
         }}>
-          <ActivityIndicator size="large" color="#4A72B2" />
+          <ActivityIndicator size="large" color="#4064F6" />
           <Text style={{
             marginTop: 16,
             fontSize: 14,
             color: '#666666',
             textAlign: 'center',
-          }}>Loading your nutrition data...</Text>
+          }}>Calculating your nutrition goals...</Text>
         </View>
       </View>
     );
   }
 
-  // Show empty state if no goal is set
-  if (goal === 0) {
+  // Only show empty state if goal is explicitly 0 and we're not loading
+  // This prevents showing "Tap to learn how to start tracking" when goals are being calculated
+  if (goal === 0 && !isLoading) {
+    console.log('DEBUG - CalorieProgress: Showing empty state (goal is 0 and not loading)');
     return (
       <View style={{
         flex: 1,
@@ -116,6 +146,8 @@ export default function CalorieProgress() {
     );
   }
 
+  // Normal view with goal and progress
+  console.log(`DEBUG - CalorieProgress: Showing normal state with goal=${goal}, eaten=${eaten}`);
   return (
     <View style={{
       flex: 1,
