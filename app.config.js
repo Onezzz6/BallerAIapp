@@ -30,7 +30,7 @@ export default {
     },
     ios: {
       bundleIdentifier: "com.ballerbizoy.ballerai",
-      buildNumber: "6",
+      buildNumber: "8",
       supportsTablet: true,
       infoPlist: {
         NSCameraUsageDescription: "This app uses the camera to analyze your meals for nutritional information.",
@@ -38,6 +38,21 @@ export default {
         NSUserTrackingUsageDescription: "This app uses tracking to improve your experience and provide personalized content.",
         UIBackgroundModes: ["fetch"],
         ITSAppUsesNonExemptEncryption: false
+      },
+      config: {
+        usesIAP: true,
+        storeKit: {
+          inAppPurchases: [
+            {
+              productId: "BallerAISubscriptionOneMonth",
+              type: "subscription"
+            },
+            {
+              productId: "BallerAISubscriptionOneYear",
+              type: "subscription"
+            }
+          ]
+        }
       }
     },
     jsEngine: "hermes",
@@ -55,6 +70,12 @@ export default {
           ios: {
             useFrameworks: 'static'
           }
+        }
+      ],
+      [
+        "react-native-iap",
+        {
+          "appleTeamId": "78T3B983VP"
         }
       ]
     ],

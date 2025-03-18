@@ -2,8 +2,6 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
-  GoogleAuthProvider,
-  signInWithPopup,
   fetchSignInMethodsForEmail,
   OAuthProvider,
   signInWithCredential
@@ -11,6 +9,10 @@ import {
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import * as WebBrowser from 'expo-web-browser';
+
+// Ensure WebBrowser is initialized for OAuth
+WebBrowser.maybeCompleteAuthSession();
 
 type UserOnboardingData = {
   hasSmartwatch: boolean | null;
@@ -101,16 +103,6 @@ const authService = {
       if (error.code === 'auth/requires-recent-login') {
         throw new Error('Please sign in again to delete your account');
       }
-      throw error;
-    }
-  },
-
-  async signInWithGoogle() {
-    try {
-      const provider = new GoogleAuthProvider();
-      const userCredential = await signInWithPopup(auth, provider);
-      return userCredential.user;
-    } catch (error) {
       throw error;
     }
   },

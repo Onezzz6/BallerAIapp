@@ -148,7 +148,7 @@ export default function WelcomeScreen() {
   const showNoAccountAlert = () => {
     Alert.alert(
       'Account Not Found',
-      'No account found with this Apple ID. Would you like to create one?',
+      'No account found with this login method. Would you like to create one?',
       [
         { text: 'Cancel', style: 'cancel' },
         { 

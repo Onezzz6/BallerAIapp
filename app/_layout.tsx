@@ -1,7 +1,7 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Slot } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
+import * as ExpoSplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import 'react-native-reanimated';
@@ -12,9 +12,11 @@ import { OnboardingProvider } from './context/OnboardingContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NutritionProvider } from './context/NutritionContext';
 import { TrainingProvider } from './context/TrainingContext';
+import subscriptionService from './services/subscription';
+import SubscriptionGate from './components/SubscriptionGate';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
+ExpoSplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -28,7 +30,7 @@ export default function RootLayout() {
     if (error) throw error;
 
     if (loaded) {
-      SplashScreen.hideAsync();
+      ExpoSplashScreen.hideAsync();
     }
 
     // Show loading screen for 2 seconds
@@ -38,6 +40,28 @@ export default function RootLayout() {
 
     return () => clearTimeout(timer);
   }, [loaded, error]);
+
+  // Initialize subscription service
+  useEffect(() => {
+    const initSubscriptions = async () => {
+      try {
+        console.log('Initializing subscription service in app layout...');
+        await subscriptionService.initialize();
+        
+        // Set up purchase listeners
+        const removeListeners = subscriptionService.setupPurchaseListeners();
+        
+        // Clean up listeners when component unmounts
+        return () => {
+          removeListeners();
+        };
+      } catch (error) {
+        console.error('Failed to initialize subscription service:', error);
+      }
+    };
+    
+    initSubscriptions();
+  }, []);
 
   if (!loaded) {
     return null;
@@ -54,7 +78,9 @@ export default function RootLayout() {
           <OnboardingProvider>
             <TrainingProvider>
               <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-                <Slot />
+                <SubscriptionGate>
+                  <Slot />
+                </SubscriptionGate>
                 <StatusBar style="auto" />
               </ThemeProvider>
             </TrainingProvider>
