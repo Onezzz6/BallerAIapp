@@ -79,32 +79,45 @@ export default function SignUpScreen() {
   };
 
   const handleAppleSignIn = async () => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
+      console.log("Starting Apple Sign-In process...");
       
-      // Check if a user with Apple ID exists first
-      const { user, isNewUser } = await authService.signUpWithApple(onboardingData);
+      // Just authenticate with Apple first - don't create a document yet
+      const { user, hasDocument, isValidDocument, appleInfo } = await authService.authenticateWithApple();
       
-      if (user) {
-        if (isNewUser) {
-          // This is a new user - route to paywall like email sign-up
-          router.replace('/paywall');
-        } else {
-          // User already exists - route to home
-          Alert.alert(
-            'Existing Account',
-            'You already have an account. We\'ve signed you in!',
-            [{ text: 'OK', onPress: () => router.replace('/(tabs)/home') }]
-          );
-        }
-      } else {
-        // No user returned but no error thrown (unusual case)
-        Alert.alert(
-          'Error',
-          'Something went wrong with Apple sign up. Please try again.'
-        );
+      if (!user) {
+        console.log("No user returned from Apple authentication");
+        return; // User likely canceled, just return
+      }
+
+      console.log(`User authenticated. Has document: ${hasDocument}, Is valid: ${isValidDocument}`);
+      
+      // If user has a valid document, they're a returning user - send them to home
+      if (hasDocument && isValidDocument) {
+        console.log("User has valid document, navigating to home");
+        router.replace('/(tabs)/home');
+      } 
+      // Otherwise, they need to go through the paywall first
+      else {
+        console.log("User needs to go through paywall");
+        
+        // Log the onboarding data for debugging
+        console.log("OnboardingData for user:", onboardingData);
+        
+        // Navigate to the paywall with user id parameter
+        // We don't need to pass onboardingData in params since it's available in context
+        router.push({
+          pathname: '/paywall',
+          params: { 
+            uid: user.uid,
+            hasAppleInfo: 'true'
+          }
+        });
       }
     } catch (error: any) {
+      console.error("Apple Sign-In error:", error);
+      
       if (error.code !== 'ERR_CANCELED') { // Don't show error if user cancels
         Alert.alert(
           'Error',
@@ -195,7 +208,7 @@ export default function SignUpScreen() {
       {/* Apple Sign In */}
       {isAppleAvailable && (
         <AppleAuthentication.AppleAuthenticationButton
-          buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP}
+          buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
           buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
           cornerRadius={36}
           style={styles.appleButton}

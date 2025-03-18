@@ -180,6 +180,4 @@ const analyzeImage = async (imageUri: string) => {
   }
 };
 
-export default {
-  analyzeImage
-};
+export { analyzeImage };

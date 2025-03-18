@@ -179,6 +179,8 @@ const authService = {
 
   async signUpWithApple(onboardingData: UserOnboardingData) {
     try {
+      console.log("Starting Apple authentication process...");
+      
       // For iOS native Apple Sign In using expo-apple-authentication
       const credential = await AppleAuthentication.signInAsync({
         requestedScopes: [
@@ -187,32 +189,39 @@ const authService = {
         ],
       });
       
+      console.log("Apple credential obtained successfully");
+      
       // Sign in with Firebase using the Apple credential
       const { identityToken } = credential;
       
       if (!identityToken) {
+        console.error("No identity token provided from Apple");
         throw new Error('No identity token provided from Apple');
       }
       
       // Create a Firebase credential from the Apple ID token
+      console.log("Creating Firebase credential with Apple token");
       const provider = new OAuthProvider('apple.com');
       const authCredential = provider.credential({
         idToken: identityToken,
-        // Nonce is not available in expo-apple-authentication, but Firebase doesn't require it
       });
       
-      // Sign in/up to Firebase with the Apple credential
+      // First check if user exists in Firebase by signing in
+      console.log("Attempting to sign in with Firebase");
       const userCredential = await signInWithCredential(auth, authCredential);
       const user = userCredential.user;
+      console.log("Firebase sign-in successful, user:", user.uid);
       
       // Check if user profile already exists in Firestore
+      console.log("Checking if user document exists in Firestore");
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       
       // Determine if this is a new or existing user
       let isNewUser = false;
       
-      // If user doesn't exist in Firestore, create a profile with onboarding data
+      // If user exists in Firebase Auth but not in Firestore, it's a new user
       if (!userDoc.exists()) {
+        console.log("No user document found, creating new document with onboarding data");
         isNewUser = true;
         
         // Get name from Apple credential if available
@@ -220,28 +229,43 @@ const authService = {
           ? `${credential.fullName.givenName || ''} ${credential.fullName.familyName || ''}`.trim()
           : user.displayName || '';
           
-        await setDoc(doc(db, 'users', user.uid), {
+        // Create a new user document with onboarding data
+        const userData = {
           email: credential.email || user.email,
           name: displayName,
           createdAt: new Date(),
-          // Include onboarding data from the sign up flow
+          // Include complete onboarding data
           ...onboardingData
-        });
+        };
+        
+        console.log("Setting user document with data:", userData);
+        
+        // Create the user document in Firestore
+        await setDoc(doc(db, 'users', user.uid), userData);
+        console.log("User document created successfully");
+      } else {
+        console.log("User document already exists in Firestore");
       }
       
       return { user, isNewUser };
     } catch (error: any) {
+      // Log the error for debugging
+      console.error("Error in signUpWithApple:", error);
+      
       // Don't throw error if user canceled
       if (error.code === 'ERR_CANCELED') {
+        console.log("User canceled Apple Sign In");
         return { user: null, isNewUser: false };
       }
       throw error;
     }
   },
 
-  async checkAppleSignIn() {
+  // Authenticate with Apple without creating a Firestore document
+  async authenticateWithApple() {
     try {
-      // Step 1: Get Apple credentials without creating a Firebase user yet
+      console.log("Starting Apple authentication process...");
+      
       const credential = await AppleAuthentication.signInAsync({
         requestedScopes: [
           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
@@ -249,66 +273,126 @@ const authService = {
         ],
       });
       
-      // If user canceled or no token, return early
-      if (!credential.identityToken) {
+      console.log("Apple credential obtained successfully");
+      
+      const { identityToken } = credential;
+      
+      if (!identityToken) {
+        console.error("No identity token provided from Apple");
         throw new Error('No identity token provided from Apple');
       }
       
-      // Step 2: Create a Firebase credential
+      console.log("Creating Firebase credential with Apple token");
       const provider = new OAuthProvider('apple.com');
       const authCredential = provider.credential({
-        idToken: credential.identityToken,
+        idToken: identityToken,
       });
       
-      // Step 3: Sign in to Firebase Auth to get the user
+      console.log("Attempting to sign in with Firebase");
       const userCredential = await signInWithCredential(auth, authCredential);
       const user = userCredential.user;
+      console.log("Firebase sign-in successful, user:", user.uid);
       
-      if (!user || !user.uid) {
-        // No valid Firebase user was created/found
-        await signOut(auth);
-        return { exists: false, user: null };
-      }
-      
-      // Step 4: Check if this user has a proper document in Firestore
+      // Check if user profile already exists in Firestore
+      console.log("Checking if user document exists in Firestore");
       const userDoc = await getDoc(doc(db, 'users', user.uid));
-      const userData = userDoc.exists() ? userDoc.data() : null;
       
-      // Step 5: If the user doesn't have a proper Firestore document, sign them out
-      if (!userDoc.exists() || !this.isValidUserDocument(userData)) {
-        // Sign out the user since they don't have a proper account
-        await signOut(auth);
-        return { exists: false, user: null };
-      }
+      // Save the relevant user data to be passed back to the caller
+      const appleInfo = {
+        email: credential.email || user.email,
+        fullName: credential.fullName
+      };
       
-      // User exists and has a proper account
-      return { exists: true, user };
+      // Return user with information about whether the document exists and is valid
+      return { 
+        user, 
+        hasDocument: userDoc.exists(), 
+        isValidDocument: userDoc.exists() && this.isValidUserDocument(userDoc.data()),
+        appleInfo
+      };
     } catch (error: any) {
-      // If there was any error in the process, ensure we're signed out
-      try {
-        await signOut(auth);
-      } catch (signOutError) {
-        // Ignore sign out errors
-      }
+      console.error("Error in authenticateWithApple:", error);
       
-      // Don't throw error if user canceled
       if (error.code === 'ERR_CANCELED') {
-        return { exists: false, user: null };
+        console.log("User canceled Apple Sign In");
+        return { user: null, hasDocument: false, isValidDocument: false, appleInfo: null };
       }
       throw error;
     }
   },
   
+  // Create a Firestore document for a user who authenticated with Apple
+  async createAppleUserDocument(uid: string, onboardingData: UserOnboardingData, appleInfo: any = null) {
+    try {
+      console.log("Creating document for Apple user:", uid);
+      
+      // Get user from Firebase Auth to ensure we have the latest data
+      const currentUser = auth.currentUser;
+      
+      if (!currentUser || currentUser.uid !== uid) {
+        console.error("Current user does not match provided UID");
+        throw new Error('User authentication mismatch');
+      }
+      
+      let displayName = '';
+      
+      // Try to get fullName from appleInfo first, then from the user object
+      if (appleInfo && appleInfo.fullName) {
+        displayName = `${appleInfo.fullName.givenName || ''} ${appleInfo.fullName.familyName || ''}`.trim();
+      } else if (currentUser.displayName) {
+        displayName = currentUser.displayName;
+      }
+      
+      // Create document data
+      const userData = {
+        email: appleInfo?.email || currentUser.email,
+        name: displayName,
+        createdAt: new Date(),
+        ...onboardingData
+      };
+      
+      console.log("Setting user document with data:", userData);
+      
+      // Create the Firestore document
+      await setDoc(doc(db, 'users', uid), userData);
+      console.log("User document created successfully");
+      
+      return true;
+    } catch (error) {
+      console.error("Error creating Apple user document:", error);
+      throw error;
+    }
+  },
+
   // Helper to check if a user document has the required onboarding fields
   isValidUserDocument(userData: any) {
+    // First ensure the document exists
+    if (!userData) {
+      console.log("User document is null or undefined");
+      return false;
+    }
+    
+    // Check if we're in the process of onboarding (document exists but fields are null)
+    const isInOnboarding = 
+      userData.hasOwnProperty('createdAt') && 
+      userData.hasOwnProperty('email');
+    
+    // If we have just the basic fields, this user is in the onboarding process
+    if (isInOnboarding) {
+      console.log("User document exists but is incomplete (in onboarding process)");
+      return false;
+    }
+    
     // A valid user should have completed onboarding with these fields
-    return userData && 
+    const hasRequiredFields = 
       userData.footballGoal !== null && 
       userData.hasGymAccess !== null &&
       userData.hasSmartwatch !== null &&
       userData.improvementFocus !== null &&
       userData.trainingFrequency !== null &&
       userData.motivation !== null;
+    
+    return hasRequiredFields;
   },
 
   // Get a user's document from Firestore
@@ -320,6 +404,7 @@ const authService = {
       if (docSnap.exists()) {
         return docSnap.data();
       } else {
+        console.log(`No document found for user ID: ${uid}`);
         return null;
       }
     } catch (error) {
@@ -331,20 +416,40 @@ const authService = {
   // Verify a user has completed full onboarding and has a valid account
   async verifyCompleteUserAccount(userId: string) {
     try {
-      if (!userId) return false;
-      
-      const userDoc = await this.getUserDocument(userId);
-      
-      // User must have a document and all required onboarding fields
-      if (!userDoc || !this.isValidUserDocument(userDoc)) {
-        console.log(`Invalid user account for ID ${userId}: missing required fields`);
-        
-        // Force sign out for safety
-        await signOut(auth);
+      if (!userId) {
+        console.log("No user ID provided for verification");
         return false;
       }
       
-      return true;
+      // Add retry mechanism with delay for Apple Sign-In cases
+      let attempts = 0;
+      const maxAttempts = 3;
+      
+      while (attempts < maxAttempts) {
+        const userDoc = await this.getUserDocument(userId);
+        
+        // User must have a document and all required onboarding fields
+        if (userDoc && this.isValidUserDocument(userDoc)) {
+          return true;
+        }
+        
+        // If document exists but is incomplete, it might be in the process of creation
+        if (userDoc) {
+          console.log(`User document exists for ID ${userId} but is incomplete. Attempt ${attempts + 1}/${maxAttempts}`);
+        } else {
+          console.log(`User document not found for ID ${userId}. Attempt ${attempts + 1}/${maxAttempts}`);
+        }
+        
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        attempts++;
+      }
+      
+      console.log(`Failed to verify user account after ${maxAttempts} attempts`);
+      
+      // After all attempts, if we still can't verify, sign out for safety
+      await signOut(auth);
+      return false;
     } catch (error) {
       console.error('Error verifying user account:', error);
       
@@ -356,6 +461,24 @@ const authService = {
       }
       
       return false;
+    }
+  },
+
+  // Add the checkAppleSignIn method to the authService object
+  async checkAppleSignIn() {
+    try {
+      // Use the existing authenticateWithApple method but don't create a new account
+      const { user, hasDocument } = await this.authenticateWithApple();
+      
+      // Return if the user exists and has a valid document
+      return {
+        exists: !!user && hasDocument,
+        user: user
+      };
+    } catch (error) {
+      console.error("Error in checkAppleSignIn:", error);
+      // Return false for exists to indicate no valid user was found
+      return { exists: false, user: null };
     }
   }
 };

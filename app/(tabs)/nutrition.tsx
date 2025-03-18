@@ -1,23 +1,28 @@
-import React from 'react';
-import { View, Text, Pressable, StyleSheet, Image, ScrollView, Modal, TextInput, Button, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, Alert, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Modal, Alert, ActivityIndicator, Pressable, useWindowDimensions, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { useState, useEffect, useCallback } from 'react';
-import { format, addDays, startOfWeek, isSameDay } from 'date-fns';
-import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Path, Circle, G } from 'react-native-svg';
+import { Stack, Link } from 'expo-router';
+import Svg, { Circle, Path, Text as SvgText } from 'react-native-svg';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { format, subDays, addDays, subMonths, getDay, parseISO, startOfDay, endOfDay, isSameDay } from 'date-fns';
+import { Calendar } from 'react-native-calendars';
 import * as ImagePicker from 'expo-image-picker';
-import { useAuth } from '../context/AuthContext';
-import { doc, setDoc, getDoc, collection, addDoc, deleteDoc, query, orderBy, onSnapshot, where, limit, getDocs, writeBatch } from 'firebase/firestore';
+import { Camera } from 'expo-camera';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { collection, doc, getDoc, getDocs, addDoc, deleteDoc, query, where, orderBy, setDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { useAuth } from '../context/AuthContext';
 import { useNutrition } from '../context/NutritionContext';
-import imageAnalysis from '../services/imageAnalysis';
-import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject, listAll } from 'firebase/storage';
-import { deleteUser } from 'firebase/auth';
-import { useRouter } from 'expo-router';
-import WeeklyOverview from '../components/WeeklyOverview';
 import { useNutritionDate } from './_layout';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import { BlurView } from 'expo-blur';
+import MealList from '../components/MealList';
+import CircleButton from '../components/CircleButton';
+import CustomButton from '../components/CustomButton';
+import { calculateNutritionGoals } from '../utils/nutritionCalculations';
+import * as imageAnalysis from '../services/imageAnalysis';
+import WeeklyOverview from '../components/WeeklyOverview';
 
 type MacroGoals = {
   calories: { current: number; goal: number };
@@ -412,99 +417,102 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal }: LogMealM
     >
       <KeyboardAvoidingView 
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
+        style={styles.modalKeyboardAvoidingView}
       >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>
-                  {method === 'manual' ? 'Manual Entry' : 'Log Meal'}
-                </Text>
-                <Pressable onPress={() => {
-                  if (method === 'manual') {
-                    setMethod(null);
-                  } else {
-                    onClose();
-                  }
-                }}>
-                  <Ionicons name={method === 'manual' ? "arrow-back" : "close"} size={24} color="#000000" />
+        <View style={styles.modalContainer}>
+          <TouchableOpacity 
+            style={styles.modalBackdrop}
+            activeOpacity={1} 
+            onPress={onClose}
+          />
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {method === 'manual' ? 'Manual Entry' : 'Log Meal'}
+              </Text>
+              <Pressable onPress={() => {
+                if (method === 'manual') {
+                  setMethod(null);
+                } else {
+                  onClose();
+                }
+              }}>
+                <Ionicons name={method === 'manual' ? "arrow-back" : "close"} size={24} color="#000000" />
+              </Pressable>
+            </View>
+
+            {method === 'manual' ? (
+              <ScrollView style={{ padding: 16 }}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Meal Name"
+                  value={manualEntry.name}
+                  onChangeText={(text) => setManualEntry(prev => ({ ...prev, name: text }))}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="kcal"
+                  keyboardType="numeric"
+                  value={manualEntry.calories}
+                  onChangeText={(text) => setManualEntry(prev => ({ ...prev, calories: text }))}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Protein (g)"
+                  keyboardType="numeric"
+                  value={manualEntry.protein}
+                  onChangeText={(text) => setManualEntry(prev => ({ ...prev, protein: text }))}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Carbs (g)"
+                  keyboardType="numeric"
+                  value={manualEntry.carbs}
+                  onChangeText={(text) => setManualEntry(prev => ({ ...prev, carbs: text }))}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Fats (g)"
+                  keyboardType="numeric"
+                  value={manualEntry.fats}
+                  onChangeText={(text) => setManualEntry(prev => ({ ...prev, fats: text }))}
+                />
+                <Pressable
+                  style={[styles.logMealButton, { marginTop: 16 }]}
+                  onPress={handleManualSubmit}
+                >
+                  <Text style={styles.logMealText}>Log Meal</Text>
+                </Pressable>
+              </ScrollView>
+            ) : (
+              <View style={styles.methodSelection}>
+                <Pressable
+                  style={styles.methodButton}
+                  onPress={() => setMethod('manual')}
+                >
+                  <Ionicons name="create-outline" size={32} color="#000000" />
+                  <Text style={styles.methodButtonText}>Log{'\n'}Manually</Text>
+                </Pressable>
+
+                <Pressable
+                  style={styles.methodButton}
+                  onPress={() => handleGallerySelect()}
+                >
+                  <Ionicons name="images-outline" size={32} color="#000000" />
+                  <Text style={styles.methodButtonText}>Pick from{'\n'}Gallery</Text>
+                </Pressable>
+
+                <Pressable
+                  style={styles.methodButton}
+                  onPress={() => handleCameraCapture()}
+                >
+                  <Ionicons name="camera-outline" size={32} color="#000000" />
+                  <Text style={styles.methodButtonText}>Take{'\n'}Photo</Text>
                 </Pressable>
               </View>
-
-              {method === 'manual' ? (
-                <ScrollView style={{ padding: 16 }}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Meal Name"
-                    value={manualEntry.name}
-                    onChangeText={(text) => setManualEntry(prev => ({ ...prev, name: text }))}
-                  />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="kcal"
-                    keyboardType="numeric"
-                    value={manualEntry.calories}
-                    onChangeText={(text) => setManualEntry(prev => ({ ...prev, calories: text }))}
-                  />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Protein (g)"
-                    keyboardType="numeric"
-                    value={manualEntry.protein}
-                    onChangeText={(text) => setManualEntry(prev => ({ ...prev, protein: text }))}
-                  />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Carbs (g)"
-                    keyboardType="numeric"
-                    value={manualEntry.carbs}
-                    onChangeText={(text) => setManualEntry(prev => ({ ...prev, carbs: text }))}
-                  />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Fats (g)"
-                    keyboardType="numeric"
-                    value={manualEntry.fats}
-                    onChangeText={(text) => setManualEntry(prev => ({ ...prev, fats: text }))}
-                  />
-                  <Pressable
-                    style={[styles.logMealButton, { marginTop: 16 }]}
-                    onPress={handleManualSubmit}
-                  >
-                    <Text style={styles.logMealText}>Log Meal</Text>
-                  </Pressable>
-                </ScrollView>
-              ) : (
-                <View style={styles.methodSelection}>
-                  <Pressable
-                    style={styles.methodButton}
-                    onPress={() => setMethod('manual')}
-                  >
-                    <Ionicons name="create-outline" size={32} color="#000000" />
-                    <Text style={styles.methodButtonText}>Log{'\n'}Manually</Text>
-                  </Pressable>
-
-                  <Pressable
-                    style={styles.methodButton}
-                    onPress={() => handleGallerySelect()}
-                  >
-                    <Ionicons name="images-outline" size={32} color="#000000" />
-                    <Text style={styles.methodButtonText}>Pick from{'\n'}Gallery</Text>
-                  </Pressable>
-
-                  <Pressable
-                    style={styles.methodButton}
-                    onPress={() => handleCameraCapture()}
-                  >
-                    <Ionicons name="camera-outline" size={32} color="#000000" />
-                    <Text style={styles.methodButtonText}>Take{'\n'}Photo</Text>
-                  </Pressable>
-                </View>
-              )}
-            </View>
+            )}
           </View>
-        </TouchableWithoutFeedback>
+        </View>
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -568,19 +576,17 @@ type LabelAnnotation = {
 };
 
 function getLocalStartOfDay(date: Date = new Date()) {
-  const local = new Date(date);
-  local.setHours(0, 0, 0, 0);
-  return local;
+  const result = startOfDay(date);
+  return result;
 }
 
 function getLocalEndOfDay(date: Date = new Date()) {
-  const local = new Date(date);
-  local.setHours(23, 59, 59, 999);
-  return local;
+  const result = endOfDay(date);
+  return result;
 }
 
 function formatDateId(date: Date) {
-  return date.toISOString().split('T')[0];
+  return format(date, 'yyyy-MM-dd');
 }
 
 type DailyMacros = {
@@ -1016,7 +1022,6 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
   modalContent: {
@@ -1324,6 +1329,13 @@ const styles = StyleSheet.create({
     color: '#000000',
     textAlign: 'center',
   },
+  modalKeyboardAvoidingView: {
+    flex: 1,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
 });
 
 export default function NutritionScreen() {
@@ -1403,23 +1415,62 @@ export default function NutritionScreen() {
         return;
       }
 
-      const userData = userDoc.data() as {
-        weight: string;
-        height: string;
-        age: string;
-        gender: string;
-        activityLevel: ActivityLevel;
-        footballGoal: string;
-      };
+      const userData = userDoc.data();
       
-      const dailyCalories = calculateDailyCalories(
-        parseFloat(userData.weight),
-        parseFloat(userData.height),
-        parseInt(userData.age),
-        userData.gender.toLowerCase(),
-        userData.activityLevel
-      );
-      const goals = calculateMacroGoals(dailyCalories, userData.footballGoal);
+      // Get goals from user document if they exist
+      let goals;
+      if (userData.calorieGoal && userData.macroGoals) {
+        goals = {
+          calories: userData.calorieGoal,
+          protein: userData.macroGoals.protein,
+          carbs: userData.macroGoals.carbs,
+          fats: userData.macroGoals.fat || userData.macroGoals.fats // Handle different property names
+        };
+      } else {
+        // Calculate using BMR formula and macronutrient ratios if not available
+        const weight = parseFloat(userData.weight);
+        const height = parseFloat(userData.height);
+        const age = parseInt(userData.age);
+        const gender = userData.gender.toLowerCase();
+        const activityLevel = userData.activityLevel || 'moderate';
+        
+        // Calculate BMR
+        let bmr = 0;
+        if (gender === 'male') {
+          bmr = 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age);
+        } else {
+          bmr = 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age);
+        }
+        
+        // Activity Multipliers
+        const activityMultipliers: {[key: string]: number} = {
+          sedentary: 1.2,
+          light: 1.375,
+          moderate: 1.55,
+          very: 1.725,
+          extra: 1.9
+        };
+        
+        const dailyCalories = Math.round(bmr * (activityMultipliers[activityLevel] || 1.55));
+        
+        // Different macro ratios based on goals
+        const goal = userData.footballGoal || 'maintain';
+        const macroRatios: {[key: string]: {protein: number, fats: number, carbs: number}} = {
+          'maintain': { protein: 0.25, fats: 0.25, carbs: 0.50 },
+          'lose': { protein: 0.30, fats: 0.25, carbs: 0.45 },
+          'gain': { protein: 0.25, fats: 0.20, carbs: 0.55 },
+          'pro': { protein: 0.30, fats: 0.25, carbs: 0.45 }
+        };
+        
+        const ratios = macroRatios[goal.toLowerCase()] || macroRatios.maintain;
+        
+        goals = {
+          calories: dailyCalories,
+          protein: Math.round((dailyCalories * ratios.protein) / 4),
+          carbs: Math.round((dailyCalories * ratios.carbs) / 4),
+          fats: Math.round((dailyCalories * ratios.fats) / 9)
+        };
+      }
 
       // Load meals for selected date
       const startOfDay = getLocalStartOfDay(selectedDate);

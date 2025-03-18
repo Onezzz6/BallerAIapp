@@ -15,6 +15,7 @@ import authService from '../services/auth';
 import { Picker } from '@react-native-picker/picker';
 import CustomButton from '../components/CustomButton';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import { calculateNutritionGoals } from '../utils/nutritionCalculations';
 
 type UserData = {
   username?: string;
@@ -162,58 +163,18 @@ export default function ProfileScreen() {
       console.log('🔄 Calculating new goals based on:', userData);
       const userRef = doc(db, 'users', user.uid);
       
-      // Calculate new calorie and macro goals based on updated information
-      let bmr = 0;
-      let tdee = 0;
+      // Use the unified calculation utility
+      const { calorieGoal, macroGoals } = calculateNutritionGoals(userData);
       
-      // Calculate BMR using Mifflin-St Jeor Equation
-      if (userData.gender === 'male') {
-        bmr = (10 * parseFloat(userData.weight || '0')) + 
-              (6.25 * parseFloat(userData.height || '0')) - 
-              (5 * parseFloat(userData.age || '0')) + 5;
-      } else {
-        bmr = (10 * parseFloat(userData.weight || '0')) + 
-              (6.25 * parseFloat(userData.height || '0')) - 
-              (5 * parseFloat(userData.age || '0')) - 161;
-      }
-
-      // Calculate TDEE based on activity level
-      const activityMultipliers = {
-        sedentary: 1.2,
-        light: 1.375,
-        moderate: 1.55,
-        very: 1.725,
-        extra: 1.9
-      };
-      
-      tdee = bmr * (activityMultipliers[userData.activityLevel as keyof typeof activityMultipliers] || 1.2);
-
-      // Calculate macros (assuming 30% protein, 30% fat, 40% carbs)
-      const proteinCalories = tdee * 0.3;
-      const fatCalories = tdee * 0.3;
-      const carbCalories = tdee * 0.4;
-
-      const proteinGrams = Math.round(proteinCalories / 4);
-      const fatGrams = Math.round(fatCalories / 9);
-      const carbGrams = Math.round(carbCalories / 4);
-
       console.log('📊 New calculated goals:', {
-        calorieGoal: Math.round(tdee),
-        macroGoals: {
-          protein: proteinGrams,
-          fat: fatGrams,
-          carbs: carbGrams
-        }
+        calorieGoal,
+        macroGoals
       });
 
       // Update the goals in Firestore
       await updateDoc(userRef, {
-        calorieGoal: Math.round(tdee),
-        macroGoals: {
-          protein: proteinGrams,
-          fat: fatGrams,
-          carbs: carbGrams
-        }
+        calorieGoal,
+        macroGoals
       });
       console.log('✅ Successfully updated goals in Firestore');
     } catch (error) {
@@ -1040,9 +1001,9 @@ export default function ProfileScreen() {
           {isAppleAuthAvailable && (
             <View style={styles.appleAuthContainer}>
               <Text style={styles.orSeparator}>OR</Text>
-              <Text style={styles.authMessage}>Sign in with Apple to confirm</Text>
+              <Text style={styles.authMessage}>Continue with Apple to confirm</Text>
               <AppleAuthentication.AppleAuthenticationButton
-                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
                 buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
                 cornerRadius={36}
                 style={styles.appleButton}

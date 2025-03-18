@@ -1,8 +1,69 @@
 import { View, Text, StyleSheet, ScrollView, Pressable, Image } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import CustomButton from '../components/CustomButton';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { db } from '../config/firebase';
+import nutritionService from '../services/nutrition';
+import recoveryService from '../services/recovery';
+import trainingService from '../services/training';
+import { useOnboarding } from '../context/OnboardingContext';
+
+// Initialize data listeners function defined locally to avoid circular imports
+const initializeAllDataListeners = async (userId: string) => {
+  console.log("Initializing all data listeners for user:", userId);
+  try {
+    // Initialize nutrition data listeners
+    nutritionService.initializeDataListeners(userId);
+    
+    // Initialize recovery data listeners
+    recoveryService.initializeDataListeners(userId);
+    
+    // Initialize training data listeners
+    trainingService.initializeDataListeners(userId);
+    
+    console.log("All data listeners initialized successfully");
+    return true;
+  } catch (error) {
+    console.error("Error initializing data listeners:", error);
+    return false;
+  }
+};
+
+// Function to create user document
+const createUserDocument = async (userId: string, userData: any) => {
+  try {
+    const userDocRef = doc(db, "users", userId);
+    await setDoc(userDocRef, userData);
+    console.log("User document created successfully");
+    return true;
+  } catch (error) {
+    console.error("Error creating user document:", error);
+    throw error;
+  }
+};
+
+// Function to verify the user document exists and contains all required data
+const verifyUserDocument = async (userId: string) => {
+  try {
+    console.log("Verifying user document...");
+    const userDocRef = doc(db, "users", userId);
+    const userDoc = await getDoc(userDocRef);
+    
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      console.log("User document verified:", userData);
+      return true;
+    }
+    
+    console.log("User document does not exist or is incomplete");
+    return false;
+  } catch (error) {
+    console.error("Error verifying user document:", error);
+    return false;
+  }
+};
 
 type SubscriptionPlan = {
   id: string;
@@ -23,7 +84,10 @@ type Review = {
 
 const PaywallScreen = () => {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const [selectedPlan, setSelectedPlan] = useState<string>('12months');
+  const [isLoading, setIsLoading] = useState(false);
+  const { onboardingData } = useOnboarding(); // Get the real onboarding data
   
   const subscriptionPlans: SubscriptionPlan[] = [
     {
@@ -60,8 +124,59 @@ const PaywallScreen = () => {
     },
   ];
 
-  const handleContinue = () => {
-    router.replace('/(tabs)/home');
+  const handleContinue = async () => {
+    try {
+      setIsLoading(true);
+      const { uid, hasAppleInfo } = params;
+      
+      // If this is an Apple user who needs a document created
+      if (uid && hasAppleInfo === 'true') {
+        const userIdString = Array.isArray(uid) ? uid[0] : uid;
+        console.log('Creating user document for Apple user with uid:', userIdString);
+        console.log('Using onboarding data:', onboardingData);
+        
+        // Create the user document with the actual onboarding data
+        await createUserDocument(userIdString, {
+          ...onboardingData, // Use all the onboarding data
+          createdAt: new Date().toISOString(),
+          hasCompletedOnboarding: true,
+        });
+        
+        // Initialize all data listeners before navigating
+        console.log('Initializing data listeners for newly created user');
+        await initializeAllDataListeners(userIdString);
+        
+        // Add a delay to ensure Firebase has time to process the data
+        console.log('Waiting for data to be processed...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Verify that user document exists and contains all required data
+        let verified = false;
+        let attempts = 0;
+        const maxAttempts = 3;
+        
+        while (!verified && attempts < maxAttempts) {
+          verified = await verifyUserDocument(userIdString);
+          if (!verified) {
+            console.log(`Verification attempt ${attempts + 1} failed. Waiting...`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            attempts++;
+          }
+        }
+        
+        if (!verified) {
+          console.warn("Could not verify user document after multiple attempts, but proceeding anyway");
+        }
+      }
+      
+      // Navigate specifically to the home tab
+      console.log('Navigating to home screen after paywall');
+      router.replace('/(tabs)/home');
+    } catch (error) {
+      console.error('Error in handleContinue:', error);
+      // Show an error toast or message here
+      setIsLoading(false);
+    }
   };
 
   const renderStars = (rating: number) => {
@@ -134,10 +249,11 @@ const PaywallScreen = () => {
 
         {/* Continue Button */}
         <CustomButton
-          title="Continue"
+          title={isLoading ? "Processing..." : "Continue"}
           onPress={handleContinue}
           buttonStyle={styles.continueButton}
           textStyle={styles.continueButtonText}
+          disabled={isLoading}
         />
       </View>
     </ScrollView>

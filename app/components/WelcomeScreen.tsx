@@ -299,26 +299,17 @@ export default function WelcomeScreen() {
               />
 
               {isAppleAvailable && (
-                <View style={{ width: '100%', marginBottom: 16 }}>
-                  <Text style={{
-                    fontSize: 14,
-                    color: '#666666',
-                    textAlign: 'center',
-                    marginBottom: 8,
-                  }}>
-                    OR
-                  </Text>
-                  <AppleAuthentication.AppleAuthenticationButton
-                    buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-                    buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-                    cornerRadius={12}
-                    style={{
-                      width: '100%',
-                      height: 50,
-                    }}
-                    onPress={handleAppleSignIn}
-                  />
-                </View>
+                <AppleAuthentication.AppleAuthenticationButton
+                  buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+                  buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                  cornerRadius={12}
+                  style={{
+                    width: '100%',
+                    height: 50,
+                    marginBottom: 16,
+                  }}
+                  onPress={handleAppleSignIn}
+                />
               )}
 
               <Pressable
@@ -332,7 +323,7 @@ export default function WelcomeScreen() {
                   fontSize: 14,
                   color: '#666666',
                 }}>
-                  Back to sign up
+                  Back
                 </Text>
               </Pressable>
             </View>

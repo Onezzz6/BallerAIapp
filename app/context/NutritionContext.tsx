@@ -3,7 +3,7 @@ import { useAuth } from './AuthContext';
 import { doc, onSnapshot, collection, query, where, orderBy, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { format, startOfDay, endOfDay } from 'date-fns';
-import { calculateDailyCalories, calculateMacroGoals, type ActivityLevel } from '../utils/nutritionCalculations';
+import { calculateNutritionGoals, type ActivityLevel } from '../utils/nutritionCalculations';
 
 // Helper functions
 const getLocalStartOfDay = (date: Date) => {
@@ -107,20 +107,7 @@ export function NutritionProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        const userData = userDoc.data() as {
-          weight: string;
-          height: string;
-          age: string;
-          gender: string;
-          activityLevel: ActivityLevel;
-          footballGoal: string;
-          calorieGoal?: number;
-          macroGoals?: {
-            protein: number;
-            fat: number;
-            carbs: number;
-          };
-        };
+        const userData = userDoc.data();
         
         // Use stored goals if available, otherwise calculate new ones
         let goals;
@@ -129,17 +116,19 @@ export function NutritionProvider({ children }: { children: React.ReactNode }) {
             calories: userData.calorieGoal,
             protein: userData.macroGoals.protein,
             carbs: userData.macroGoals.carbs,
-            fats: userData.macroGoals.fat
+            fats: userData.macroGoals.fat || userData.macroGoals.fats
           };
+          console.log('DEBUG - Using goals from user document:', goals);
         } else {
-          const dailyCalories = calculateDailyCalories(
-            parseFloat(userData.weight),
-            parseFloat(userData.height),
-            parseInt(userData.age),
-            userData.gender.toLowerCase(),
-            userData.activityLevel
-          );
-          goals = calculateMacroGoals(dailyCalories, userData.footballGoal);
+          // Use the centralized calculation utility
+          const { calorieGoal, macroGoals } = calculateNutritionGoals(userData);
+          goals = {
+            calories: calorieGoal,
+            protein: macroGoals.protein,
+            carbs: macroGoals.carbs,
+            fats: macroGoals.fat
+          };
+          console.log('DEBUG - Calculated new goals:', goals);
         }
 
         // Get today's meals
