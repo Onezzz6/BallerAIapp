@@ -237,6 +237,126 @@ const authService = {
       }
       throw error;
     }
+  },
+
+  async checkAppleSignIn() {
+    try {
+      // Step 1: Get Apple credentials without creating a Firebase user yet
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+      
+      // If user canceled or no token, return early
+      if (!credential.identityToken) {
+        throw new Error('No identity token provided from Apple');
+      }
+      
+      // Step 2: Create a Firebase credential
+      const provider = new OAuthProvider('apple.com');
+      const authCredential = provider.credential({
+        idToken: credential.identityToken,
+      });
+      
+      // Step 3: Sign in to Firebase Auth to get the user
+      const userCredential = await signInWithCredential(auth, authCredential);
+      const user = userCredential.user;
+      
+      if (!user || !user.uid) {
+        // No valid Firebase user was created/found
+        await signOut(auth);
+        return { exists: false, user: null };
+      }
+      
+      // Step 4: Check if this user has a proper document in Firestore
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const userData = userDoc.exists() ? userDoc.data() : null;
+      
+      // Step 5: If the user doesn't have a proper Firestore document, sign them out
+      if (!userDoc.exists() || !this.isValidUserDocument(userData)) {
+        // Sign out the user since they don't have a proper account
+        await signOut(auth);
+        return { exists: false, user: null };
+      }
+      
+      // User exists and has a proper account
+      return { exists: true, user };
+    } catch (error: any) {
+      // If there was any error in the process, ensure we're signed out
+      try {
+        await signOut(auth);
+      } catch (signOutError) {
+        // Ignore sign out errors
+      }
+      
+      // Don't throw error if user canceled
+      if (error.code === 'ERR_CANCELED') {
+        return { exists: false, user: null };
+      }
+      throw error;
+    }
+  },
+  
+  // Helper to check if a user document has the required onboarding fields
+  isValidUserDocument(userData: any) {
+    // A valid user should have completed onboarding with these fields
+    return userData && 
+      userData.footballGoal !== null && 
+      userData.hasGymAccess !== null &&
+      userData.hasSmartwatch !== null &&
+      userData.improvementFocus !== null &&
+      userData.trainingFrequency !== null &&
+      userData.motivation !== null;
+  },
+
+  // Get a user's document from Firestore
+  async getUserDocument(uid: string) {
+    try {
+      const docRef = doc(db, 'users', uid);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        return docSnap.data();
+      } else {
+        return null;
+      }
+    } catch (error) {
+      console.error('Error fetching user document:', error);
+      return null;
+    }
+  },
+
+  // Verify a user has completed full onboarding and has a valid account
+  async verifyCompleteUserAccount(userId: string) {
+    try {
+      if (!userId) return false;
+      
+      const userDoc = await this.getUserDocument(userId);
+      
+      // User must have a document and all required onboarding fields
+      if (!userDoc || !this.isValidUserDocument(userDoc)) {
+        console.log(`Invalid user account for ID ${userId}: missing required fields`);
+        
+        // Force sign out for safety
+        await signOut(auth);
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error verifying user account:', error);
+      
+      // Force sign out on any error
+      try {
+        await signOut(auth);
+      } catch (e) {
+        // Ignore sign-out errors
+      }
+      
+      return false;
+    }
   }
 };
 

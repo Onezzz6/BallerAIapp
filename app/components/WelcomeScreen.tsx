@@ -2,10 +2,21 @@ import { View, Text, Image, Pressable, TextInput, Alert, Keyboard, TouchableWith
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Button from './Button';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import React from 'react';
 import authService from '../services/auth';
 import { Ionicons } from '@expo/vector-icons';
+import * as AppleAuthentication from 'expo-apple-authentication';
+
+// Default empty onboarding data
+const defaultOnboardingData = {
+  hasSmartwatch: null,
+  footballGoal: null,
+  improvementFocus: null,
+  trainingFrequency: null,
+  hasGymAccess: null,
+  motivation: null,
+};
 
 export default function WelcomeScreen() {
   const router = useRouter();
@@ -14,6 +25,22 @@ export default function WelcomeScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAppleAvailable, setIsAppleAvailable] = useState(false);
+
+  // Check if Apple authentication is available on this device
+  useEffect(() => {
+    const checkAppleAuthAvailability = async () => {
+      try {
+        const isAvailable = await AppleAuthentication.isAvailableAsync();
+        setIsAppleAvailable(isAvailable);
+      } catch (error) {
+        console.error('Error checking Apple Authentication availability:', error);
+        setIsAppleAvailable(false);
+      }
+    };
+    
+    checkAppleAuthAvailability();
+  }, []);
 
   const handleGetStarted = () => {
     router.push('/intro');
@@ -69,6 +96,74 @@ export default function WelcomeScreen() {
     }
   };
 
+  const handleAppleSignIn = async () => {
+    try {
+      setIsLoading(true);
+      console.log("Starting Apple Sign-In process...");
+      
+      // Check if a user with this Apple ID exists without creating one
+      const { exists, user } = await authService.checkAppleSignIn();
+      console.log(`Apple Sign-In check result: exists=${exists}, user=${user ? 'present' : 'null'}`);
+      
+      // Add explicit check to make sure we have both exists=true AND a valid user object
+      if (exists && user && user.uid) {
+        console.log(`Valid user found with UID: ${user.uid}`);
+        
+        // Use the verification method that includes auto sign-out for invalid users
+        const isValidUser = await authService.verifyCompleteUserAccount(user.uid);
+        console.log(`User verification result: ${isValidUser ? 'VALID' : 'INVALID'}`);
+        
+        if (isValidUser) {
+          console.log("User has valid document with complete onboarding data - navigating to home");
+          // Only navigate if we have a confirmed valid user
+          router.replace('/(tabs)/home');
+          return;
+        } else {
+          console.log("User validation failed - showing no account alert");
+          showNoAccountAlert();
+          return;
+        }
+      } else {
+        console.log("No valid user found with Apple ID");
+        // No user exists or user doesn't have proper account
+        showNoAccountAlert();
+      }
+    } catch (error: any) {
+      // Don't show error if user cancels
+      if (error.code !== 'ERR_CANCELED') {
+        console.error('Apple sign in error:', error);
+        Alert.alert(
+          'Error',
+          error.message || 'Failed to sign in with Apple. Please try again.'
+        );
+      } else {
+        console.log("User canceled Apple Sign-In");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Helper function to show account not found alert
+  const showNoAccountAlert = () => {
+    Alert.alert(
+      'Account Not Found',
+      'No account found with this Apple ID. Would you like to create one?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Get Started', 
+          onPress: () => {
+            // Reset form and stay on welcome screen (match email behavior)
+            setEmail('');
+            setPassword('');
+            setShowSignIn(false);
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <TouchableWithoutFeedback onPress={dismissKeyboard}>
       <Animated.View 
@@ -113,11 +208,11 @@ export default function WelcomeScreen() {
                 onPress={handleGetStarted}
                 buttonStyle={{
                   backgroundColor: '#4064F6',
-                  marginBottom: 32,
+                  marginBottom: 16,
                 }}
               />
 
-              <View style={{alignItems: 'center', gap: 12, marginTop: 48 }}>
+              <View style={{alignItems: 'center', gap: 12, marginTop: 32 }}>
                 <Text style={{
                   fontSize: 14,
                   color: '#666666',
@@ -202,6 +297,29 @@ export default function WelcomeScreen() {
                   opacity: isLoading ? 0.5 : 1,
                 }}
               />
+
+              {isAppleAvailable && (
+                <View style={{ width: '100%', marginBottom: 16 }}>
+                  <Text style={{
+                    fontSize: 14,
+                    color: '#666666',
+                    textAlign: 'center',
+                    marginBottom: 8,
+                  }}>
+                    OR
+                  </Text>
+                  <AppleAuthentication.AppleAuthenticationButton
+                    buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                    buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                    cornerRadius={12}
+                    style={{
+                      width: '100%',
+                      height: 50,
+                    }}
+                    onPress={handleAppleSignIn}
+                  />
+                </View>
+              )}
 
               <Pressable
                 onPress={() => setShowSignIn(false)}

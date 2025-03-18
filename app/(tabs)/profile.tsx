@@ -341,7 +341,7 @@ export default function ProfileScreen() {
         const isAvailable = await AppleAuthentication.isAvailableAsync();
         setIsAppleAuthAvailable(isAvailable);
       } catch (error) {
-        console.error('Error checking Apple Auth availability:', error);
+        console.error('Error checking Apple Authentication availability:', error);
         setIsAppleAuthAvailable(false);
       }
     };
@@ -360,12 +360,11 @@ export default function ProfileScreen() {
     }
   }, [user]);
 
-  const reauthenticateUser = async (password: string) => {
+  const reauthenticateUser = async (password: string, method: 'password' | 'apple' = 'password') => {
     if (!user) return false;
     
     try {
-      // If user is signed in with Apple
-      if (isAppleUser) {
+      if (method === 'apple') {
         try {
           // For iOS, we need to use the native Apple authentication
           const credential = await AppleAuthentication.signInAsync({
@@ -399,7 +398,7 @@ export default function ProfileScreen() {
           return false;
         }
       } else {
-        // Original email/password authentication
+        // Email/password authentication
         if (!user.email) return false;
         
         const credential = EmailAuthProvider.credential(user.email, password);
@@ -991,82 +990,71 @@ export default function ProfileScreen() {
             For security reasons, please verify your identity to delete your account.
           </Text>
           
-          {isAppleUser && isAppleAuthAvailable ? (
-            // Apple authentication option
+          {/* Always show password authentication option */}
+          <TextInput
+            style={styles.modalInput}
+            placeholder="Enter your password"
+            secureTextEntry={!showPassword}
+            value={password}
+            onChangeText={setPassword}
+          />
+          
+          <Pressable
+            onPress={() => setShowPassword(!showPassword)}
+            style={styles.eyeIcon}
+          >
+            <Ionicons
+              name={showPassword ? 'eye-off' : 'eye'}
+              size={24}
+              color="#666666"
+            />
+          </Pressable>
+          
+          <View style={styles.modalButtons}>
+            <CustomButton
+              title="Cancel"
+              onPress={() => {
+                setShowReauthModal(false);
+                setPassword('');
+              }}
+              buttonStyle={{ backgroundColor: '#666666', flex: 1, borderRadius: 36 }}
+              textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
+            />
+            <CustomButton
+              title="Confirm"
+              onPress={async () => {
+                const success = await reauthenticateUser(password);
+                if (success) {
+                  setShowReauthModal(false);
+                  setPassword('');
+                  handleDeleteConfirmation();
+                }
+              }}
+              buttonStyle={{ backgroundColor: '#FF3B30', flex: 1, borderRadius: 36 }}
+              textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
+              disabled={!password.trim()}
+            />
+          </View>
+          
+          {/* Show Apple Authentication option if available */}
+          {isAppleAuthAvailable && (
             <View style={styles.appleAuthContainer}>
-              <Text style={styles.authMessage}>Please sign in with Apple to continue</Text>
+              <Text style={styles.orSeparator}>OR</Text>
+              <Text style={styles.authMessage}>Sign in with Apple to confirm</Text>
               <AppleAuthentication.AppleAuthenticationButton
                 buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
                 buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
                 cornerRadius={36}
                 style={styles.appleButton}
                 onPress={async () => {
-                  const success = await reauthenticateUser('');
+                  const success = await reauthenticateUser('', 'apple');
                   if (success) {
                     setShowReauthModal(false);
                     handleDeleteConfirmation();
                   }
                 }}
               />
-              <CustomButton
-                title="Cancel"
-                onPress={() => {
-                  setShowReauthModal(false);
-                  setPassword('');
-                }}
-                buttonStyle={{ backgroundColor: '#666666', borderRadius: 36, marginTop: 16 }}
-                textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
-              />
             </View>
-          ) : (
-            // Email/password authentication option
-            <>
-              <TextInput
-                style={styles.modalInput}
-                placeholder="Enter your password"
-                secureTextEntry={!showPassword}
-                value={password}
-                onChangeText={setPassword}
-              />
-              
-              <Pressable
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.eyeIcon}
-              >
-                <Ionicons
-                  name={showPassword ? 'eye-off' : 'eye'}
-                  size={24}
-                  color="#666666"
-                />
-              </Pressable>
-
-              <View style={styles.modalButtons}>
-                <CustomButton
-                  title="Cancel"
-                  onPress={() => {
-                    setShowReauthModal(false);
-                    setPassword('');
-                  }}
-                  buttonStyle={{ backgroundColor: '#666666', flex: 1, borderRadius: 36 }}
-                  textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
-                  disabled={!password.trim()}
-                />
-                <CustomButton
-                  title="Confirm"
-                  onPress={async () => {
-                    const success = await reauthenticateUser(password);
-                    if (success) {
-                      setShowReauthModal(false);
-                      setPassword('');
-                      handleDeleteConfirmation();
-                    }
-                  }}
-                  buttonStyle={{ backgroundColor: '#FF3B30', flex: 1, borderRadius: 36 }}
-                  textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
-                  disabled={!password.trim()}
-                />
-              </View>
-            </>
           )}
         </View>
       </View>
@@ -1852,17 +1840,23 @@ const styles = StyleSheet.create({
   appleAuthContainer: {
     width: '100%',
     alignItems: 'center',
-    marginVertical: 16,
-  },
-  authMessage: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 16,
-    color: '#333333',
+    marginTop: 16,
   },
   appleButton: {
     width: '100%',
     height: 50,
+    marginTop: 10,
+  },
+  orSeparator: {
+    color: '#666666',
+    fontWeight: '600',
+    fontSize: 16,
+    marginVertical: 10,
+  },
+  authMessage: {
+    fontSize: 16,
+    color: '#333333',
+    marginBottom: 8,
   },
   eyeIcon: {
     position: 'absolute',
