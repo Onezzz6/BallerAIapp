@@ -5,10 +5,12 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   fetchSignInMethodsForEmail,
-  OAuthProvider
+  OAuthProvider,
+  signInWithCredential
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
+import * as AppleAuthentication from 'expo-apple-authentication';
 
 type UserOnboardingData = {
   hasSmartwatch: boolean | null;
@@ -115,11 +117,30 @@ const authService = {
 
   async signInWithApple() {
     try {
-      const provider = new OAuthProvider('apple.com');
-      provider.addScope('email');
-      provider.addScope('name');
+      // For iOS native Apple Sign In using expo-apple-authentication
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
       
-      const userCredential = await signInWithPopup(auth, provider);
+      // Sign in with Firebase using the Apple credential
+      const { identityToken } = credential;
+      
+      if (!identityToken) {
+        throw new Error('No identity token provided from Apple');
+      }
+      
+      // Create a Firebase credential from the Apple ID token
+      const provider = new OAuthProvider('apple.com');
+      const authCredential = provider.credential({
+        idToken: identityToken,
+        // Nonce is not available in expo-apple-authentication, but Firebase doesn't require it
+      });
+      
+      // Sign in to Firebase with the Apple credential
+      const userCredential = await signInWithCredential(auth, authCredential);
       const user = userCredential.user;
       
       // Check if user profile already exists in Firestore
@@ -127,8 +148,14 @@ const authService = {
       
       // If user doesn't exist in Firestore, create a profile
       if (!userDoc.exists()) {
+        // Get name from Apple credential if available
+        const displayName = credential.fullName 
+          ? `${credential.fullName.givenName || ''} ${credential.fullName.familyName || ''}`.trim()
+          : user.displayName || '';
+          
         await setDoc(doc(db, 'users', user.uid), {
-          email: user.email,
+          email: credential.email || user.email,
+          name: displayName,
           createdAt: new Date(),
           // Default onboarding data
           hasSmartwatch: null,
@@ -141,7 +168,73 @@ const authService = {
       }
       
       return user;
-    } catch (error) {
+    } catch (error: any) {
+      // Don't throw error if user canceled
+      if (error.code === 'ERR_CANCELED') {
+        return null;
+      }
+      throw error;
+    }
+  },
+
+  async signUpWithApple(onboardingData: UserOnboardingData) {
+    try {
+      // For iOS native Apple Sign In using expo-apple-authentication
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+      
+      // Sign in with Firebase using the Apple credential
+      const { identityToken } = credential;
+      
+      if (!identityToken) {
+        throw new Error('No identity token provided from Apple');
+      }
+      
+      // Create a Firebase credential from the Apple ID token
+      const provider = new OAuthProvider('apple.com');
+      const authCredential = provider.credential({
+        idToken: identityToken,
+        // Nonce is not available in expo-apple-authentication, but Firebase doesn't require it
+      });
+      
+      // Sign in/up to Firebase with the Apple credential
+      const userCredential = await signInWithCredential(auth, authCredential);
+      const user = userCredential.user;
+      
+      // Check if user profile already exists in Firestore
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      
+      // Determine if this is a new or existing user
+      let isNewUser = false;
+      
+      // If user doesn't exist in Firestore, create a profile with onboarding data
+      if (!userDoc.exists()) {
+        isNewUser = true;
+        
+        // Get name from Apple credential if available
+        const displayName = credential.fullName 
+          ? `${credential.fullName.givenName || ''} ${credential.fullName.familyName || ''}`.trim()
+          : user.displayName || '';
+          
+        await setDoc(doc(db, 'users', user.uid), {
+          email: credential.email || user.email,
+          name: displayName,
+          createdAt: new Date(),
+          // Include onboarding data from the sign up flow
+          ...onboardingData
+        });
+      }
+      
+      return { user, isNewUser };
+    } catch (error: any) {
+      // Don't throw error if user canceled
+      if (error.code === 'ERR_CANCELED') {
+        return { user: null, isNewUser: false };
+      }
       throw error;
     }
   }

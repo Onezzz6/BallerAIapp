@@ -48,6 +48,7 @@ export default {
       'expo-image-picker',
       'expo-file-system',
       'expo-notifications',
+      'expo-apple-authentication',
       [
         'expo-build-properties',
         {

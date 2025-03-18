@@ -82,15 +82,33 @@ export default function SignUpScreen() {
     try {
       setIsLoading(true);
       
-      const user = await authService.signInWithApple();
+      // Check if a user with Apple ID exists first
+      const { user, isNewUser } = await authService.signUpWithApple(onboardingData);
+      
       if (user) {
-        router.replace('/(tabs)/home');
+        if (isNewUser) {
+          // This is a new user - route to paywall like email sign-up
+          router.replace('/paywall');
+        } else {
+          // User already exists - route to home
+          Alert.alert(
+            'Existing Account',
+            'You already have an account. We\'ve signed you in!',
+            [{ text: 'OK', onPress: () => router.replace('/(tabs)/home') }]
+          );
+        }
+      } else {
+        // No user returned but no error thrown (unusual case)
+        Alert.alert(
+          'Error',
+          'Something went wrong with Apple sign up. Please try again.'
+        );
       }
     } catch (error: any) {
       if (error.code !== 'ERR_CANCELED') { // Don't show error if user cancels
         Alert.alert(
           'Error',
-          'Failed to sign in with Apple. Please try again.'
+          error.message || 'Failed to sign up with Apple. Please try again.'
         );
       }
     } finally {
