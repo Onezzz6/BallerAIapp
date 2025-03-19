@@ -972,17 +972,20 @@ export default function ProfileScreen() {
           </Pressable>
           
           <View style={styles.modalButtons}>
-            <CustomButton
-              title="Cancel"
+            <Pressable
               onPress={() => {
                 setShowReauthModal(false);
                 setPassword('');
               }}
-              buttonStyle={{ backgroundColor: '#666666', flex: 1, borderRadius: 36 }}
-              textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
-            />
-            <CustomButton
-              title="Confirm"
+              style={({ pressed }) => [
+                styles.customButton,
+                styles.customCancelButton,
+                { opacity: pressed ? 0.8 : 1 }
+              ]}
+            >
+              <Text style={styles.customButtonText}>Cancel</Text>
+            </Pressable>
+            <Pressable
               onPress={async () => {
                 const success = await reauthenticateUser(password);
                 if (success) {
@@ -991,10 +994,18 @@ export default function ProfileScreen() {
                   handleDeleteConfirmation();
                 }
               }}
-              buttonStyle={{ backgroundColor: '#FF3B30', flex: 1, borderRadius: 36 }}
-              textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
+              style={({ pressed }) => [
+                styles.customButton,
+                styles.customDeleteButton,
+                { opacity: pressed ? 0.8 : 1 }
+              ]}
               disabled={!password.trim()}
-            />
+            >
+              <Text style={[
+                styles.customButtonText,
+                !password.trim() && { opacity: 0.5 }
+              ]}>Confirm</Text>
+            </Pressable>
           </View>
           
           {/* Show Apple Authentication option if available */}
@@ -1087,25 +1098,33 @@ export default function ProfileScreen() {
             </Pressable>
             
             <View style={styles.actionButtons}>
-              <CustomButton
-                title="Go Back"
+              <Pressable
                 onPress={() => {
                   setShowDeleteModal(false);
                   setDeleteReason('');
                   setOtherReason('');
                 }}
-                buttonStyle={{ backgroundColor: '#666666', flex: 1, borderRadius: 36 }}
-                textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
-              />
-              <CustomButton
-                title="Delete"
+                style={({ pressed }) => [
+                  styles.customButton,
+                  styles.customCancelButton,
+                  { opacity: pressed ? 0.8 : 1 }
+                ]}
+              >
+                <Text style={styles.customButtonText}>Go Back</Text>
+              </Pressable>
+              <Pressable
                 onPress={() => {
                   setShowDeleteModal(false);
                   setShowReauthModal(true);
                 }}
-                buttonStyle={{ backgroundColor: '#FF3B30', flex: 1, borderRadius: 36 }}
-                textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
-              />
+                style={({ pressed }) => [
+                  styles.customButton,
+                  styles.customDeleteButton,
+                  { opacity: pressed ? 0.8 : 1 }
+                ]}
+              >
+                <Text style={styles.customButtonText}>Delete</Text>
+              </Pressable>
             </View>
           </View>
         </View>
@@ -1823,5 +1842,23 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 40,
     top: '52%',
+  },
+  customButton: {
+    flex: 1,
+    height: 50,
+    borderRadius: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  customCancelButton: {
+    backgroundColor: '#666666',
+  },
+  customDeleteButton: {
+    backgroundColor: '#FF3B30',
+  },
+  customButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
   },
 }); 
