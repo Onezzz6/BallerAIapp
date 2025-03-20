@@ -71,9 +71,6 @@ export default function TrainingPlansScreen() {
             <View style={styles.planHeader}>
               <Text style={styles.planTitle}>{plan.name}</Text>
               <View style={styles.planActions}>
-                <Text style={styles.planDate}>
-                  {plan.createdAt.toLocaleDateString()}
-                </Text>
               </View>
             </View>
           </Pressable>
@@ -85,13 +82,10 @@ export default function TrainingPlansScreen() {
             <Text style={styles.infoTitle}>About Training Plans</Text>
           </View>
           <Text style={styles.infoText}>
-            • You can generate one plan per week (refreshes on Sunday)
+            The personalized plan is above, click it to open it.
           </Text>
           <Text style={styles.infoText}>
-            • Plans are automatically archived after 2 weeks
-          </Text>
-          <Text style={styles.infoText}>
-            • Plans cannot be manually deleted
+            You can generate one plan per week and old ones get deleted after 2 weeks.
           </Text>
         </View>
       </ScrollView>

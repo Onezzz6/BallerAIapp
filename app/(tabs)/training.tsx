@@ -522,6 +522,10 @@ ${Object.entries(schedule)
   .map(([day, data]) => ` ${day} ${data.type === 'off' ? '0' : data.type === 'game' ? 'GAME' : data.duration} mins`)
   .join('\n')}
 
+IMPORTANT: If the user is 14 years old or younger, do not suggest any weight training exercises. Only use bodyweight exercises for strength training.
+
+IMPORTANT SCHEDULE INTERPRETATION: Only consider a day as a game day if explicitly marked as "GAME" in the schedule. If a day is marked as "0" or has no game specified, assume there is no game on that day. Do not assume or hallucinate any games that aren't explicitly marked in the schedule.
+
 Perfect training plan example for BallerAI based on this user's info.
 monday: technique based training. start with a 15 minute warm up, 10 mins jogging then 5 minutes of active stretching. Then start to do wall passes for 15 minutes with different variables switching after 5 mins each.Then he will set up 8 cones and start to dribble through and between them using both feet for 15 mins. After that, finishing inside the box for 15 mins. if with a friend do passes before finishing and one time finishing if alone do game like situations where you get ur foot open and finish with precision. then a light 5 min jog to get the fluids mowing and ur done.
 don't copy that, just take the detail and style of the training as a guideline for creating similar training sessions adapting to each user's specific info. When the users awnsers are different make sure you adjust accordingly the most important questions are age, current level and goal as a footballer. This example is just to get an idea of a good plan would be for this specific user, do not copy it just take the style and detail as guidance. The plan should be adjusted if the user has a game for example saturday. 2 days before a game has to frop the load a bit not a lot but noticably. 1 day before game has to be really light so only technical things and recovery based trainings.
@@ -614,7 +618,16 @@ Focus on recovery today`;
         });
         
         if (match && match[1]) {
-          dailyPlans[day] = match[1].trim();
+          // Clean up the training text by removing age-related explanatory notes
+          let cleanedText = match[1].trim()
+            .replace(/\(no weights,?\s+as\s+user\s+is\s+under\s+14\)/gi, '')
+            .replace(/no weights? training as user is under \d+/gi, '')
+            .replace(/bodyweight only as user is under \d+/gi, '')
+            .replace(/\(bodyweight exercises? only\)/gi, '')
+            .replace(/\s{2,}/g, ' ') // Remove extra spaces
+            .trim();
+          
+          dailyPlans[day] = cleanedText;
         } else {
           dailyPlans[day] = `No specific training for ${day}.`;
         }
@@ -622,11 +635,10 @@ Focus on recovery today`;
 
       console.log('DEBUG - Final Daily Plans:', dailyPlans);
 
-      const planNumber = plans.length + 1;
       const now = new Date();
       
       await addPlan({
-        name: `Plan ${planNumber} - ${format(now, 'MMM d')}`,
+        name: `Your personalized plan - ${format(now, 'M.d.yy')}`,
         createdAt: now,
         schedule: dailyPlans,
       });
