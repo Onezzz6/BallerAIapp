@@ -18,6 +18,7 @@ export default {
     android: {
       package: "com.ballerai.app",
       versionCode: 1,
+      googleServicesFile: "./google-services.json",
       adaptiveIcon: {
         foregroundImage: "./assets/images/adaptive-icon.png",
         backgroundColor: "#ffffff"
@@ -31,6 +32,7 @@ export default {
     ios: {
       bundleIdentifier: "com.ballerbizoy.ballerai",
       buildNumber: "6",
+      googleServicesFile: "./GoogleService-Info.plist",
       supportsTablet: true,
       infoPlist: {
         NSCameraUsageDescription: "This app uses the camera to analyze your meals for nutritional information.",
@@ -43,20 +45,21 @@ export default {
     jsEngine: "hermes",
     newArchEnabled: true,
     plugins: [
+      "@react-native-firebase/app",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ],
       'expo-font',
       'expo-camera',
       'expo-image-picker',
       'expo-file-system',
       'expo-notifications',
-      'expo-apple-authentication',
-      [
-        'expo-build-properties',
-        {
-          ios: {
-            useFrameworks: 'static'
-          }
-        }
-      ]
+      'expo-apple-authentication'
     ],
     web: {
       favicon: "./assets/favicon.png"
@@ -84,5 +87,5 @@ export default {
       }
     },
     description: "BallerAI is a personalized AI coach for athletes to optimize recovery, nutrition, and performance."
-  },
+  }
 }; 
