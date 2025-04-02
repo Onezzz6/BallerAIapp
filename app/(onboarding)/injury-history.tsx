@@ -14,6 +14,7 @@ import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
+import analytics from '@react-native-firebase/analytics';
 
 export default function InjuryHistoryScreen() {
   const router = useRouter();
@@ -100,6 +101,7 @@ export default function InjuryHistoryScreen() {
                 title="Continue" 
                 onPress={async () => {
                   if (injuryHistory.trim()) {
+                    await analytics().logEvent('onboarding_injury_history_continue');
                     await updateOnboardingData({ injuryHistory: injuryHistory.trim() });
                     router.push('/skill-level');
                   }

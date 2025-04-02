@@ -2,6 +2,7 @@ import { View, Text, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Button from './Button';
+import analytics from '@react-native-firebase/analytics';
 
 export default function AnalysisCompleteScreen() {
   const router = useRouter();
@@ -53,7 +54,8 @@ export default function AnalysisCompleteScreen() {
 
         <Button 
           title="Let's Continue" 
-          onPress={() => {
+          onPress={async () => {
+            await analytics().logEvent('onboarding_analysis_complete_continue');
             router.push('/fitness-level');
           }}
         />

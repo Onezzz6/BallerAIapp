@@ -9,6 +9,7 @@ import nutritionService from '../services/nutrition';
 import recoveryService from '../services/recovery';
 import trainingService from '../services/training';
 import { useOnboarding } from '../context/OnboardingContext';
+import analytics from '@react-native-firebase/analytics';
 
 // Initialize data listeners function defined locally to avoid circular imports
 const initializeAllDataListeners = async (userId: string) => {
@@ -137,7 +138,7 @@ const PaywallScreen = () => {
         
         // Create the user document with the actual onboarding data
         await createUserDocument(userIdString, {
-          ...onboardingData, // Use all the onboarding data
+          ...onboardingData,
           createdAt: new Date().toISOString(),
           hasCompletedOnboarding: true,
         });
@@ -169,12 +170,14 @@ const PaywallScreen = () => {
         }
       }
       
+      // Log the paywall completion event
+      await analytics().logEvent('onboarding_paywall_complete');
+      
       // Navigate specifically to the home tab
       console.log('Navigating to home screen after paywall');
       router.replace('/(tabs)/home');
     } catch (error) {
       console.error('Error in handleContinue:', error);
-      // Show an error toast or message here
       setIsLoading(false);
     }
   };

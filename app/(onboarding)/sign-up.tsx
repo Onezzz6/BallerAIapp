@@ -6,6 +6,7 @@ import authService from '../services/auth';
 import { useOnboarding } from '../context/OnboardingContext';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import CustomButton from '../components/CustomButton';
+import analytics from '@react-native-firebase/analytics';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -42,6 +43,7 @@ export default function SignUpScreen() {
       // First try to create new account
       const user = await authService.signUpWithEmail(email, password, onboardingData);
       if (user) {
+        await analytics().logEvent('onboarding_signup_complete');
         router.replace('/paywall');
       }
     } catch (error: any) {
@@ -58,6 +60,7 @@ export default function SignUpScreen() {
                 try {
                   const user = await authService.signInWithEmail(email, password);
                   if (user) {
+                    await analytics().logEvent('onboarding_signin_complete');
                     router.replace('/paywall');
                   }
                 } catch (signInError: any) {
@@ -83,30 +86,22 @@ export default function SignUpScreen() {
     try {
       console.log("Starting Apple Sign-In process...");
       
-      // Just authenticate with Apple first - don't create a document yet
       const { user, hasDocument, isValidDocument, appleInfo } = await authService.authenticateWithApple();
       
       if (!user) {
         console.log("No user returned from Apple authentication");
-        return; // User likely canceled, just return
+        return;
       }
 
       console.log(`User authenticated. Has document: ${hasDocument}, Is valid: ${isValidDocument}`);
       
-      // If user has a valid document, they're a returning user - send them to home
       if (hasDocument && isValidDocument) {
         console.log("User has valid document, navigating to home");
+        await analytics().logEvent('onboarding_apple_signin_complete');
         router.replace('/(tabs)/home');
-      } 
-      // Otherwise, they need to go through the paywall first
-      else {
+      } else {
         console.log("User needs to go through paywall");
-        
-        // Log the onboarding data for debugging
-        console.log("OnboardingData for user:", onboardingData);
-        
-        // Navigate to the paywall with user id parameter
-        // We don't need to pass onboardingData in params since it's available in context
+        await analytics().logEvent('onboarding_apple_signup_complete');
         router.push({
           pathname: '/paywall',
           params: { 
@@ -118,7 +113,7 @@ export default function SignUpScreen() {
     } catch (error: any) {
       console.error("Apple Sign-In error:", error);
       
-      if (error.code !== 'ERR_CANCELED') { // Don't show error if user cancels
+      if (error.code !== 'ERR_CANCELED') {
         Alert.alert(
           'Error',
           error.message || 'Failed to sign up with Apple. Please try again.'

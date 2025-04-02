@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Button from '../components/Button';
 import BackButton from '../components/BackButton';
+import analytics from '@react-native-firebase/analytics';
 
 export default function AmbitionTransitionScreen() {
   const router = useRouter();
@@ -54,7 +55,8 @@ export default function AmbitionTransitionScreen() {
 
         <Button 
           title="Continue" 
-          onPress={() => {
+          onPress={async () => {
+            await analytics().logEvent('onboarding_ambition_transition_continue');
             router.push('/training-frequency');
           }}
           buttonStyle={{
