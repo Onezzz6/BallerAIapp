@@ -1,6 +1,6 @@
-import { View, Text, StyleSheet, ScrollView, Pressable, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Image, Alert, AppState } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import CustomButton from '../components/CustomButton';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
@@ -9,7 +9,10 @@ import nutritionService from '../services/nutrition';
 import recoveryService from '../services/recovery';
 import trainingService from '../services/training';
 import { useOnboarding } from '../context/OnboardingContext';
-import analytics from '@react-native-firebase/analytics';
+import { getAnalytics, logEvent } from '@react-native-firebase/analytics';
+import * as InAppPurchases from 'expo-in-app-purchases';
+import { Platform, NativeEventEmitter, NativeModules } from 'react-native';
+import Constants from 'expo-constants';
 
 // Initialize data listeners function defined locally to avoid circular imports
 const initializeAllDataListeners = async (userId: string) => {
@@ -87,9 +90,340 @@ const PaywallScreen = () => {
   const router = useRouter();
   const params = useLocalSearchParams();
   const [selectedPlan, setSelectedPlan] = useState<string>('12months');
-  const [isLoading, setIsLoading] = useState(false);
-  const { onboardingData } = useOnboarding(); // Get the real onboarding data
-  
+  const [products, setProducts] = useState<InAppPurchases.IAPItemDetails[]>([]);
+  const { onboardingData } = useOnboarding();
+  const isIAPInitialized = useRef(false);
+  const purchaseListenerSet = useRef(false);
+  const expoPurchaseListenerSet = useRef(false);
+  const purchaseEmitter = useRef<NativeEventEmitter | null>(null);
+  const appState = useRef(AppState.currentState);
+
+  // Product IDs for your subscription plans
+  const PRODUCT_IDS = {
+    '1month': 'BallerAISubscriptionOneMonth',
+    '12months': 'BallerAISubscriptionOneYear'
+  };
+
+  const handleSuccessfulPurchase = async (purchase: any) => {
+    try {
+      const { uid, hasAppleInfo } = params;
+      console.log('Processing successful purchase:', purchase);
+      
+      // If this is an Apple user who needs a document created
+      if (uid && hasAppleInfo === 'true') {
+        const userIdString = Array.isArray(uid) ? uid[0] : uid;
+        
+        // Calculate expiration date based on product ID
+        const isYearlySubscription = purchase.productId === PRODUCT_IDS['12months'];
+        const expirationDate = new Date();
+        expirationDate.setMonth(expirationDate.getMonth() + (isYearlySubscription ? 12 : 1));
+        
+        // Create the user document with subscription info
+        await createUserDocument(userIdString, {
+          ...onboardingData,
+          createdAt: new Date().toISOString(),
+          hasCompletedOnboarding: true,
+          subscription: {
+            productId: purchase.productId,
+            purchaseTime: new Date().toISOString(),
+            expiresDate: expirationDate.toISOString(),
+            isActive: true,
+            transactionId: purchase.transactionId || null
+          }
+        });
+        
+        // Initialize data listeners
+        await initializeAllDataListeners(userIdString);
+      }
+      
+      // Log the purchase event using the new modular API
+      const analytics = getAnalytics();
+      await logEvent(analytics, 'subscription_purchased', {
+        productId: purchase.productId,
+        transactionId: purchase.transactionId
+      });
+      
+    } catch (error) {
+      console.error('Error handling purchase:', error);
+      throw error; // Re-throw to be caught by the caller
+    }
+  };
+
+  const navigateToApp = () => {
+    console.log('Navigating to home screen');
+    router.replace('/(tabs)/home');
+  };
+
+  // Global purchase listener reference
+  const purchaseListener = async ({ responseCode, results }: InAppPurchases.IAPQueryResponse<InAppPurchases.InAppPurchase>) => {
+    console.log('Purchase listener triggered:', { responseCode, results });
+    
+    if (responseCode === InAppPurchases.IAPResponseCode.OK) {
+      if (results && results.length > 0) {
+        try {
+          const purchase = results[0];
+          console.log('Processing purchase:', purchase);
+          
+          // Acknowledge the purchase first
+          await InAppPurchases.finishTransactionAsync(purchase, true);
+          
+          // Handle the successful purchase
+          await handleSuccessfulPurchase(purchase);
+          
+          // Navigate to home immediately after successful purchase
+          console.log('Purchase successful, navigating to home');
+          router.replace('/(tabs)/home');
+          
+        } catch (error) {
+          console.error('Error processing purchase:', error);
+          Alert.alert('Error', 'Failed to process purchase. Please try again.');
+        }
+      }
+    } else if (responseCode === InAppPurchases.IAPResponseCode.USER_CANCELED) {
+      // Do nothing on cancel - user just stays on paywall
+      console.log('Purchase cancelled by user');
+    } else if (responseCode === InAppPurchases.IAPResponseCode.DEFERRED) {
+      Alert.alert('Purchase Pending', 'The purchase needs to be approved by a parent or guardian.');
+    } else {
+      console.error('Purchase failed:', { responseCode });
+      Alert.alert('Purchase Failed', 'There was an error processing your purchase. Please try again.');
+    }
+  };
+
+  // Expo purchase listener
+  const expoPurchaseListener = (event: any) => {
+    console.log('Expo purchase listener triggered:', event);
+    if (event && event.purchases && event.purchases.length > 0) {
+      const purchase = event.purchases[0];
+      console.log('Processing Expo purchase:', purchase);
+      
+      // Handle the successful purchase
+      handleSuccessfulPurchase(purchase)
+        .then(() => {
+          console.log('Expo purchase successful, navigating to home');
+          router.replace('/(tabs)/home');
+        })
+        .catch(error => {
+          console.error('Error processing Expo purchase:', error);
+          Alert.alert('Error', 'Failed to process purchase. Please try again.');
+        });
+    }
+  };
+
+  const loadProducts = async () => {
+    try {
+      const productIds = Object.values(PRODUCT_IDS);
+      console.log('Loading products:', productIds);
+      
+      const { responseCode, results } = await InAppPurchases.getProductsAsync(productIds);
+      
+      console.log('Products response code:', responseCode);
+      console.log('Raw products response:', results);
+      
+      if (responseCode === InAppPurchases.IAPResponseCode.OK) {
+        if (!results || results.length === 0) {
+          console.error('No products found. Product IDs:', productIds);
+          Alert.alert(
+            'Configuration Error',
+            'Unable to load subscription options. Please try again later.'
+          );
+        } else {
+          console.log('Products loaded successfully:', results);
+          setProducts(results);
+        }
+      } else {
+        throw new Error(`Failed to load products. Response code: ${responseCode}`);
+      }
+    } catch (error) {
+      console.error('Error loading products:', error);
+      Alert.alert(
+        'Error',
+        'Failed to load subscription options. Please check your internet connection and try again.'
+      );
+    }
+  };
+
+  // Function to check for existing subscriptions
+  const checkExistingSubscriptions = async () => {
+    try {
+      console.log('Checking for existing subscriptions...');
+      const history = await InAppPurchases.getPurchaseHistoryAsync();
+      console.log('Purchase history:', history);
+      
+      if (history && history.results && history.results.length > 0) {
+        // Find active subscriptions
+        const activeSubscriptions = history.results.filter(purchase => {
+          const productId = purchase.productId;
+          return (
+            productId === PRODUCT_IDS['1month'] ||
+            productId === PRODUCT_IDS['12months']
+          );
+        });
+        
+        if (activeSubscriptions.length > 0) {
+          console.log('Found active subscriptions:', activeSubscriptions);
+          return activeSubscriptions[0]; // Return the most recent subscription
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error checking subscription status:', error);
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+    
+    const initializeIAP = async () => {
+      try {
+        if (!isIAPInitialized.current && isMounted) {
+          console.log('Initializing IAP...');
+          await InAppPurchases.connectAsync();
+          console.log('IAP connected');
+          
+          if (isMounted && !purchaseListenerSet.current) {
+            console.log('Setting up purchase listener...');
+            InAppPurchases.setPurchaseListener(purchaseListener);
+            purchaseListenerSet.current = true;
+            console.log('Purchase listener setup complete');
+          }
+          
+          isIAPInitialized.current = true;
+          if (isMounted) {
+            await loadProducts();
+            // Check for existing subscriptions after initialization
+            const existingSubscription = await checkExistingSubscriptions();
+            if (existingSubscription && isMounted) {
+              console.log('Processing existing subscription:', existingSubscription);
+              await handleSuccessfulPurchase(existingSubscription);
+              router.replace('/(tabs)/home');
+            }
+          }
+        }
+      } catch (error: any) {
+        if (error.code === 'ERR_IN_APP_PURCHASES_CONNECTION' && isMounted) {
+          console.log('IAP already connected, setting up listener and loading products...');
+          if (!purchaseListenerSet.current) {
+            InAppPurchases.setPurchaseListener(purchaseListener);
+            purchaseListenerSet.current = true;
+          }
+          await loadProducts();
+          // Check for existing subscriptions after initialization
+          const existingSubscription = await checkExistingSubscriptions();
+          if (existingSubscription && isMounted) {
+            console.log('Processing existing subscription:', existingSubscription);
+            await handleSuccessfulPurchase(existingSubscription);
+            router.replace('/(tabs)/home');
+          }
+        } else {
+          console.error('Error initializing IAP:', error);
+          if (isMounted) {
+            Alert.alert('Error', 'Failed to initialize in-app purchases. Please try again.');
+          }
+        }
+      }
+    };
+
+    // Set up Expo purchase listener
+    if (!expoPurchaseListenerSet.current) {
+      console.log('Setting up Expo purchase listener...');
+      try {
+        // Try to get the ExpoPurchases module
+        const ExpoPurchases = NativeModules.ExpoPurchases;
+        if (ExpoPurchases) {
+          purchaseEmitter.current = new NativeEventEmitter(ExpoPurchases);
+          purchaseEmitter.current.addListener('purchasesUpdated', expoPurchaseListener);
+          expoPurchaseListenerSet.current = true;
+          console.log('Expo purchase listener setup complete');
+        } else {
+          console.log('ExpoPurchases module not found, skipping listener setup');
+        }
+      } catch (error) {
+        console.error('Error setting up Expo purchase listener:', error);
+      }
+    }
+
+    initializeIAP();
+
+    return () => {
+      isMounted = false;
+      console.log('Cleaning up IAP...');
+      if (purchaseListenerSet.current) {
+        InAppPurchases.setPurchaseListener(() => {});
+        purchaseListenerSet.current = false;
+      }
+      if (expoPurchaseListenerSet.current && purchaseEmitter.current) {
+        purchaseEmitter.current.removeAllListeners('purchasesUpdated');
+        expoPurchaseListenerSet.current = false;
+        purchaseEmitter.current = null;
+      }
+      InAppPurchases.disconnectAsync().catch(console.error);
+      isIAPInitialized.current = false;
+    };
+  }, []);
+
+  // Handle app state changes
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', async (nextAppState) => {
+      if (
+        appState.current.match(/inactive|background/) &&
+        nextAppState === 'active'
+      ) {
+        console.log('App has come to the foreground!');
+        // Check for existing subscriptions when app becomes active
+        if (isIAPInitialized.current) {
+          const existingSubscription = await checkExistingSubscriptions();
+          if (existingSubscription) {
+            console.log('Processing existing subscription on app active:', existingSubscription);
+            await handleSuccessfulPurchase(existingSubscription);
+            router.replace('/(tabs)/home');
+          }
+        }
+      }
+      appState.current = nextAppState;
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
+  const handleContinue = async () => {
+    try {
+      // Check for existing subscription first
+      const existingSubscription = await checkExistingSubscriptions();
+      
+      if (existingSubscription) {
+        // Process existing subscription and navigate directly
+        await handleSuccessfulPurchase(existingSubscription);
+        router.replace('/(tabs)/home');
+        return;
+      }
+      
+      // No existing subscription, proceed with new purchase
+      const productId = PRODUCT_IDS[selectedPlan as keyof typeof PRODUCT_IDS];
+      
+      // Start the purchase immediately
+      await InAppPurchases.purchaseItemAsync(productId);
+      
+    } catch (error: any) {
+      console.error('Error in handleContinue:', error);
+      if (error.code === 'ERR_IN_APP_PURCHASES_CONNECTION') {
+        Alert.alert(
+          'Connection Error',
+          'Unable to connect to the App Store. Please make sure you are signed in to your Apple ID and have a valid payment method.'
+        );
+      } else {
+        Alert.alert(
+          'Purchase Error',
+          error.message || 'Unable to start purchase. Please try again.'
+        );
+      }
+    }
+  };
+
   const subscriptionPlans: SubscriptionPlan[] = [
     {
       id: '1month',
@@ -124,63 +458,6 @@ const PaywallScreen = () => {
       comment: 'Buying this app has really made a difference in my lifestyle. It\'s the best app for fitness. Surprised by the quality!',
     },
   ];
-
-  const handleContinue = async () => {
-    try {
-      setIsLoading(true);
-      const { uid, hasAppleInfo } = params;
-      
-      // If this is an Apple user who needs a document created
-      if (uid && hasAppleInfo === 'true') {
-        const userIdString = Array.isArray(uid) ? uid[0] : uid;
-        console.log('Creating user document for Apple user with uid:', userIdString);
-        console.log('Using onboarding data:', onboardingData);
-        
-        // Create the user document with the actual onboarding data
-        await createUserDocument(userIdString, {
-          ...onboardingData,
-          createdAt: new Date().toISOString(),
-          hasCompletedOnboarding: true,
-        });
-        
-        // Initialize all data listeners before navigating
-        console.log('Initializing data listeners for newly created user');
-        await initializeAllDataListeners(userIdString);
-        
-        // Add a delay to ensure Firebase has time to process the data
-        console.log('Waiting for data to be processed...');
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // Verify that user document exists and contains all required data
-        let verified = false;
-        let attempts = 0;
-        const maxAttempts = 3;
-        
-        while (!verified && attempts < maxAttempts) {
-          verified = await verifyUserDocument(userIdString);
-          if (!verified) {
-            console.log(`Verification attempt ${attempts + 1} failed. Waiting...`);
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            attempts++;
-          }
-        }
-        
-        if (!verified) {
-          console.warn("Could not verify user document after multiple attempts, but proceeding anyway");
-        }
-      }
-      
-      // Log the paywall completion event
-      await analytics().logEvent('onboarding_paywall_complete');
-      
-      // Navigate specifically to the home tab
-      console.log('Navigating to home screen after paywall');
-      router.replace('/(tabs)/home');
-    } catch (error) {
-      console.error('Error in handleContinue:', error);
-      setIsLoading(false);
-    }
-  };
 
   const renderStars = (rating: number) => {
     return Array(rating).fill(0).map((_, index) => (
@@ -252,11 +529,10 @@ const PaywallScreen = () => {
 
         {/* Continue Button */}
         <CustomButton
-          title={isLoading ? "Processing..." : "Continue"}
+          title="Continue"
           onPress={handleContinue}
           buttonStyle={styles.continueButton}
           textStyle={styles.continueButtonText}
-          disabled={isLoading}
         />
       </View>
     </ScrollView>
