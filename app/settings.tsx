@@ -413,54 +413,6 @@ export default function SettingsScreen() {
     </Modal>
   );
 
-  const settingsSections = [
-    {
-      title: 'Account',
-      items: [
-        {
-          title: 'Profile',
-          icon: 'person' as const,
-          onPress: () => router.push('/(tabs)/profile'),
-        },
-        {
-          title: 'Subscription',
-          icon: 'card' as const,
-          onPress: () => router.push('/settings/subscription'),
-        },
-      ],
-    },
-    {
-      title: 'Preferences',
-      items: [
-        {
-          title: 'Notifications',
-          icon: 'notifications' as const,
-          onPress: () => {/* TODO: Implement notifications settings */},
-        },
-        {
-          title: 'Privacy',
-          icon: 'lock-closed' as const,
-          onPress: () => {/* TODO: Implement privacy settings */},
-        },
-      ],
-    },
-    {
-      title: 'Support',
-      items: [
-        {
-          title: 'Help Center',
-          icon: 'help-circle' as const,
-          onPress: () => {/* TODO: Implement help center */},
-        },
-        {
-          title: 'Contact Us',
-          icon: 'mail' as const,
-          onPress: () => {/* TODO: Implement contact us */},
-        },
-      ],
-    },
-  ];
-
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.headerContainer}>
@@ -477,30 +429,20 @@ export default function SettingsScreen() {
       </SafeAreaView>
 
       <ScrollView style={styles.content}>
-        {/* Settings Sections */}
-        {settingsSections.map((section, sectionIndex) => (
-          <View key={section.title} style={styles.section}>
-            <Text style={styles.sectionTitle}>{section.title}</Text>
-            <View style={styles.sectionContent}>
-              {section.items.map((item, itemIndex) => (
-                <Pressable
-                  key={item.title}
-                  onPress={item.onPress}
-                  style={({ pressed }) => [
-                    styles.settingItem,
-                    pressed && styles.pressedItem,
-                  ]}
-                >
-                  <View style={styles.settingItemContent}>
-                    <Ionicons name={item.icon} size={24} color="#000000" />
-                    <Text style={styles.settingItemTitle}>{item.title}</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={24} color="#666666" />
-                </Pressable>
-              ))}
+        {/* Subscription Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Subscription</Text>
+          <Pressable
+            style={styles.settingItem}
+            onPress={() => router.push('/settings/subscription')}
+          >
+            <View style={styles.settingItemLeft}>
+              <Ionicons name="card-outline" size={24} color="#000000" />
+              <Text style={styles.settingItemText}>Manage Subscription</Text>
             </View>
-          </View>
-        ))}
+            <Ionicons name="chevron-forward" size={24} color="#000000" />
+          </Pressable>
+        </View>
 
         {/* Privacy Policy and Contact Us */}
         <View style={styles.section}>
@@ -591,35 +533,16 @@ const styles = StyleSheet.create({
     color: '#000000',
     marginBottom: 16,
   },
-  sectionContent: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
-    overflow: 'hidden',
-  },
   settingItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
-  },
-  pressedItem: {
-    backgroundColor: '#F5F5F5',
-  },
-  settingItemContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  settingItemTitle: {
-    fontSize: 16,
-    color: '#000000',
-  },
-  buttonContainer: {
-    gap: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    marginBottom: 12,
   },
   settingItemLeft: {
     flexDirection: 'row',
@@ -629,6 +552,9 @@ const styles = StyleSheet.create({
   settingItemText: {
     fontSize: 16,
     color: '#000000',
+  },
+  buttonContainer: {
+    gap: 16,
   },
   modalContainer: {
     flex: 1,
