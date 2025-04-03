@@ -8,6 +8,7 @@ import { db } from './config/firebase';
 import nutritionService from './services/nutrition';
 import recoveryService from './services/recovery';
 import trainingService from './services/training';
+import subscriptionService from './services/subscription';
 
 // Function to initialize all data listeners
 const initializeAllDataListeners = async (userId: string) => {
@@ -58,7 +59,19 @@ export default function App() {
           const userDoc = await getDoc(userDocRef);
           
           if (userDoc.exists()) {
-            console.log("User document exists, initializing data listeners");
+            console.log("User document exists, checking subscription status");
+            
+            // Check subscription status
+            const isSubscriptionActive = await subscriptionService.isSubscriptionActive(user.uid);
+            
+            if (!isSubscriptionActive) {
+              console.log("No active subscription found, redirecting to paywall");
+              router.replace("/(onboarding)/paywall");
+              setIsLoading(false);
+              return;
+            }
+            
+            console.log("Active subscription found, initializing data listeners");
             setIsInitializingData(true);
             
             try {
@@ -88,24 +101,20 @@ export default function App() {
           setIsLoading(false);
         }
       } catch (error) {
-        console.error("Error in auth state change handler:", error);
-        setError("There was an error loading your account. Please try again.");
+        console.error("Error in auth state change:", error);
+        setError("An error occurred while checking authentication status");
         setIsLoading(false);
       }
     });
-
+    
     return () => unsubscribe();
   }, []);
-
+  
   if (isLoading || isInitializingData) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#0000ff" />
-        {isInitializingData && (
-          <Text style={{ marginTop: 20, textAlign: 'center' }}>
-            Initializing your data...{'\n'}This may take a moment.
-          </Text>
-        )}
+        <ActivityIndicator size="large" color="#4064F6" />
+        <Text style={{ marginTop: 10 }}>Loading...</Text>
       </View>
     );
   }
@@ -113,16 +122,13 @@ export default function App() {
   if (error) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-        <Text style={{ color: 'red', marginBottom: 20, textAlign: 'center' }}>{error}</Text>
-        <Text 
-          style={{ color: 'blue', textDecorationLine: 'underline' }}
-          onPress={() => setError(null)}
-        >
-          Try Again
+        <Text style={{ color: 'red', textAlign: 'center' }}>{error}</Text>
+        <Text style={{ marginTop: 10, textAlign: 'center' }}>
+          Please try restarting the app or contact support if the problem persists.
         </Text>
       </View>
     );
   }
-
+  
   return <WelcomeScreen />;
 } 

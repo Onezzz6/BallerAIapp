@@ -50,17 +50,8 @@ export default function ProfileScreen() {
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isPrivacyExpanded, setIsPrivacyExpanded] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deleteReason, setDeleteReason] = useState('');
-  const [otherReason, setOtherReason] = useState('');
-  const [showReauthModal, setShowReauthModal] = useState(false);
-  const [password, setPassword] = useState('');
-  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [isAppleUser, setIsAppleUser] = useState(false);
-  const [isAppleAuthAvailable, setIsAppleAuthAvailable] = useState(false);
 
   const renderModalButtons = (onSave: () => void) => (
     <View style={styles.modalButtons}>
@@ -271,192 +262,6 @@ export default function ProfileScreen() {
     { field: 'injuryHistory', label: 'Injury History', value: userData?.injuryHistory, icon: 'bandage' },
     { field: 'activityLevel', label: 'Activity Level', value: userData?.activityLevel, icon: 'fitness-outline' },
   ];
-
-  const handleLogout = () => {
-    Alert.alert(
-      'Log Out',
-      'Are you sure you want to log out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Log Out', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await authService.signOut();
-              router.replace('/');
-            } catch (error) {
-              console.error('Error signing out:', error);
-              Alert.alert('Error', 'Failed to sign out. Please try again.');
-            }
-          }
-        }
-      ]
-    );
-  };
-
-  // Check if Apple authentication is available
-  useEffect(() => {
-    const checkAppleAuthAvailability = async () => {
-      try {
-        const isAvailable = await AppleAuthentication.isAvailableAsync();
-        setIsAppleAuthAvailable(isAvailable);
-      } catch (error) {
-        console.error('Error checking Apple Authentication availability:', error);
-        setIsAppleAuthAvailable(false);
-      }
-    };
-    
-    checkAppleAuthAvailability();
-  }, []);
-
-  // Check if the user signed in with Apple
-  useEffect(() => {
-    if (user) {
-      // Check if the user has Apple provider data
-      const hasAppleProvider = user.providerData?.some(provider => 
-        provider.providerId === 'apple.com'
-      );
-      setIsAppleUser(hasAppleProvider || false);
-    }
-  }, [user]);
-
-  const reauthenticateUser = async (password: string, method: 'password' | 'apple' = 'password') => {
-    if (!user) return false;
-    
-    try {
-      if (method === 'apple') {
-        try {
-          // For iOS, we need to use the native Apple authentication
-          const credential = await AppleAuthentication.signInAsync({
-            requestedScopes: [
-              AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-              AppleAuthentication.AppleAuthenticationScope.EMAIL,
-            ],
-          });
-          
-          if (!credential.identityToken) {
-            throw new Error('No identity token provided from Apple');
-          }
-          
-          // Create Firebase credential
-          const provider = new OAuthProvider('apple.com');
-          const authCredential = provider.credential({
-            idToken: credential.identityToken,
-          });
-          
-          // Reauthenticate with Firebase
-          await reauthenticateWithCredential(user, authCredential);
-          return true;
-        } catch (error: any) {
-          console.error('Apple reauthentication error:', error);
-          if (error.code !== 'ERR_CANCELED') {
-            Alert.alert(
-              'Error',
-              'Apple authentication failed. Please try again.'
-            );
-          }
-          return false;
-        }
-      } else {
-        // Email/password authentication
-        if (!user.email) return false;
-        
-        const credential = EmailAuthProvider.credential(user.email, password);
-        await reauthenticateWithCredential(user, credential);
-        return true;
-      }
-    } catch (error) {
-      console.error('Reauthentication error:', error);
-      Alert.alert(
-        'Error',
-        'Authentication failed. Please try again.'
-      );
-      return false;
-    }
-  };
-
-  const handleDeleteAccount = () => {
-    setShowDeleteModal(true);
-  };
-
-  const handleDeleteConfirmation = async () => {
-    if (!user) return;
-    
-    try {
-      setIsLoading(true);
-      // Try to delete account first
-      try {
-        // 1. Delete all user's meals
-        const mealsQuery = query(
-          collection(db, 'meals'),
-          where('userId', '==', user.uid)
-        );
-        const mealsSnapshot = await getDocs(mealsQuery);
-        const mealDeletions = mealsSnapshot.docs.map(doc => 
-          deleteDoc(doc.ref)
-        );
-        await Promise.all(mealDeletions);
-
-        // 2. Delete all user's dailyMacros
-        const dailyMacrosRef = collection(db, `users/${user.uid}/dailyMacros`);
-        const dailyMacrosSnapshot = await getDocs(dailyMacrosRef);
-        const macroDeletions = dailyMacrosSnapshot.docs.map(doc => 
-          deleteDoc(doc.ref)
-        );
-        await Promise.all(macroDeletions);
-
-        // 3. Delete user document and all its subcollections
-        await deleteDoc(doc(db, 'users', user.uid));
-
-        // 4. Delete Firebase Auth user and sign out
-        await deleteUser(user);
-        await signOut(auth);
-
-        // Show success alert
-        Alert.alert(
-          'Account Deleted',
-          'Your account has been successfully deleted. Thank you for using BallerAI!',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                // 5. Navigate to welcome screen
-                router.replace('/');
-              }
-            }
-          ]
-        );
-      } catch (error: any) {
-        if (error.code === 'auth/requires-recent-login') {
-          setShowReauthModal(true);
-          return;
-        }
-        throw error;
-      }
-    } catch (error) {
-      console.error('Error during account deletion:', error);
-      Alert.alert(
-        'Error',
-        'Failed to delete account. Please try again or contact support.'
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const sendFeedbackEmail = async () => {
-    const emailUrl = `mailto:ballerai.official@gmail.com?subject=Account Deletion Feedback`;
-    
-    try {
-      const canOpen = await Linking.canOpenURL(emailUrl);
-      if (canOpen) {
-        await Linking.openURL(emailUrl);
-      }
-    } catch (error) {
-      console.error('Error opening email:', error);
-    }
-  };
 
   const renderEditModal = () => {
     if (editingField === 'gender') {
@@ -938,210 +743,26 @@ export default function ProfileScreen() {
     );
   };
 
-  const renderReauthModal = () => (
-    <Modal
-      visible={showReauthModal}
-      transparent
-      animationType="slide"
-    >
-      <View style={styles.modalContainer}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Confirm Your Identity</Text>
-          <Text style={styles.modalSubtitle}>
-            For security reasons, please verify your identity to delete your account.
-          </Text>
-          
-          {/* Always show password authentication option */}
-          <TextInput
-            style={styles.modalInput}
-            placeholder="Enter your password"
-            secureTextEntry={!showPassword}
-            value={password}
-            onChangeText={setPassword}
-          />
-          
-          <Pressable
-            onPress={() => setShowPassword(!showPassword)}
-            style={styles.eyeIcon}
-          >
-            <Ionicons
-              name={showPassword ? 'eye-off' : 'eye'}
-              size={24}
-              color="#666666"
-            />
-          </Pressable>
-          
-          <View style={styles.modalButtons}>
-            <Pressable
-              onPress={() => {
-                setShowReauthModal(false);
-                setPassword('');
-              }}
-              style={({ pressed }) => [
-                styles.customButton,
-                styles.customCancelButton,
-                { opacity: pressed ? 0.8 : 1 }
-              ]}
-            >
-              <Text style={styles.customButtonText}>Cancel</Text>
-            </Pressable>
-            <Pressable
-              onPress={async () => {
-                const success = await reauthenticateUser(password);
-                if (success) {
-                  setShowReauthModal(false);
-                  setPassword('');
-                  handleDeleteConfirmation();
-                }
-              }}
-              style={({ pressed }) => [
-                styles.customButton,
-                styles.customDeleteButton,
-                { opacity: pressed ? 0.8 : 1 }
-              ]}
-              disabled={!password.trim()}
-            >
-              <Text style={[
-                styles.customButtonText,
-                !password.trim() && { opacity: 0.5 }
-              ]}>Confirm</Text>
-            </Pressable>
-          </View>
-          
-          {/* Show Apple Authentication option if available */}
-          {isAppleAuthAvailable && (
-            <View style={styles.appleAuthContainer}>
-              <Text style={styles.orSeparator}>OR</Text>
-              <Text style={styles.authMessage}>Continue with Apple to confirm</Text>
-              <AppleAuthentication.AppleAuthenticationButton
-                buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
-                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-                cornerRadius={36}
-                style={styles.appleButton}
-                onPress={async () => {
-                  const success = await reauthenticateUser('', 'apple');
-                  if (success) {
-                    setShowReauthModal(false);
-                    handleDeleteConfirmation();
-                  }
-                }}
-              />
-            </View>
-          )}
-        </View>
-      </View>
-    </Modal>
-  );
-
-  const renderDeleteModal = () => (
-    <Modal
-      visible={showDeleteModal}
-      transparent
-      animationType="slide"
-    >
-      <View style={styles.modalContainer}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>We're sorry to see you go</Text>
-          <Text style={styles.modalSubtitle}>
-            Please, let us know why you're leaving, so we can improve our service
-          </Text>
-
-          <ScrollView style={styles.reasonsContainer}>
-            {[
-              'Not finding it useful',
-              'Technical issues',
-              'Found a better alternative',
-              'Privacy concerns',
-              'Too expensive',
-              'Other'
-            ].map((reason) => (
-              <Pressable
-                key={reason}
-                style={[
-                  styles.reasonButton,
-                  deleteReason === reason && styles.selectedReason
-                ]}
-                onPress={() => setDeleteReason(reason)}
-              >
-                <Text style={[
-                  styles.reasonText,
-                  deleteReason === reason && styles.selectedReasonText
-                ]}>
-                  {reason}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-
-          {deleteReason === 'Other' && (
-            <TextInput
-              style={styles.otherInput}
-              placeholder="Please tell us more..."
-              multiline
-              value={otherReason}
-              onChangeText={setOtherReason}
-            />
-          )}
-
-          <View style={styles.modalFooter}>
-            <Pressable
-              onPress={sendFeedbackEmail}
-              style={({ pressed }) => ({
-                opacity: pressed ? 0.7 : 1,
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 4,
-              })}
-            >
-              <Ionicons name="mail-outline" size={24} color="#4064F6" />
-              <Text style={{ color: '#4064F6', fontSize: 16 }}>Send Feedback</Text>
-            </Pressable>
-            
-            <View style={styles.actionButtons}>
-              <Pressable
-                onPress={() => {
-                  setShowDeleteModal(false);
-                  setDeleteReason('');
-                  setOtherReason('');
-                }}
-                style={({ pressed }) => [
-                  styles.customButton,
-                  styles.customCancelButton,
-                  { opacity: pressed ? 0.8 : 1 }
-                ]}
-              >
-                <Text style={styles.customButtonText}>Go Back</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  setShowDeleteModal(false);
-                  setShowReauthModal(true);
-                }}
-                style={({ pressed }) => [
-                  styles.customButton,
-                  styles.customDeleteButton,
-                  { opacity: pressed ? 0.8 : 1 }
-                ]}
-              >
-                <Text style={styles.customButtonText}>Delete</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
-
-  if (showDeleteModal) {
-    return (
-      <View style={styles.container}>
-        {renderDeleteModal()}
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
+      <SafeAreaView style={styles.headerContainer}>
+        <View style={styles.header}>
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('../../assets/images/BallerAILogo.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text style={styles.logoText}>BallerAI</Text>
+          </View>
+          <Pressable
+            style={styles.gearIcon}
+            onPress={() => router.push('/settings')}
+          >
+            <Ionicons name="settings-outline" size={24} color="#000000" />
+          </Pressable>
+        </View>
+      </SafeAreaView>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
@@ -1313,123 +934,15 @@ export default function ProfileScreen() {
                 </Pressable>
               ))}
             </View>
-
-            {/* Privacy Policy Accordion */}
-            <View style={styles.privacySection}>
-              <Pressable 
-                style={styles.privacyHeader}
-                onPress={() => setIsPrivacyExpanded(!isPrivacyExpanded)}
-              >
-                <Text style={styles.privacyTitle}>Privacy Policy</Text>
-                <Ionicons 
-                  name={isPrivacyExpanded ? 'chevron-up' : 'chevron-down'} 
-                  size={24} 
-                  color="#666666" 
-                />
-              </Pressable>
-              
-              {isPrivacyExpanded && (
-                <View style={styles.privacyContent}>
-                  <Text style={styles.privacyText}>
-                    Privacy Policy for BallerAI{'\n'}
-                    Effective Date: March 13, 2025{'\n\n'}
-
-                    1. Introduction{'\n'}
-                    BallerAI ("we," "us," or "our") is committed to protecting your privacy. This Privacy Policy explains how BallerAI collects, uses, discloses, and safeguards your information when you use our mobile application (the "App"), as well as your rights regarding your data. By using the App, you agree to the collection and use of information in accordance with this Privacy Policy.{'\n\n'}
-
-                    2. Information We Collect{'\n'}
-                    a. Personal Information:{'\n'}
-                    When you onboard and use the App, we may collect personal information that you voluntarily provide, including:{'\n'}
-                    • Basic details such as your name, age, gender, height, and weight{'\n'}
-                    • Football-specific data including your playing level, position, training schedule, and injury history{'\n'}
-                    • Lifestyle and health data (e.g., sleep habits, nutritional intake, and training environment){'\n'}
-                    • Photographs of meals (if you opt for our meal analysis feature) for nutritional analysis{'\n\n'}
-
-                    b. Usage Information:{'\n'}
-                    We may collect data about your interaction with the App, including training logs, session feedback, and activity metrics, to enhance and personalize your training experience.{'\n\n'}
-
-                    c. Device and Log Information:{'\n'}
-                    We may automatically collect device-specific information (e.g., device type, operating system, and unique device identifiers) and log data (e.g., IP address, access times, and usage patterns) for security, analytics, and performance improvements.{'\n\n'}
-
-                    3. How We Use Your Information{'\n'}
-                    We use the collected information for various purposes, including:{'\n'}
-                    • Personalization: To create tailored training programs and adaptive load management based on your profile, training history, and performance data.{'\n'}
-                    • Injury Prevention and Recovery: To provide guidelines, feedback, and personalized recommendations to minimize injury risks.{'\n'}
-                    • Nutrition Analysis: To offer personalized nutritional guidance by analyzing meal photos and logged dietary information.{'\n'}
-                    • Improvement of Services: To analyze usage trends, perform internal research, and improve the overall functionality and user experience of the App.{'\n'}
-                    • Communication: To contact you with important updates, support messages, or relevant information about the App, subject to your communication preferences.{'\n\n'}
-
-                    4. Sharing and Disclosure of Information{'\n'}
-                    a. With Third Parties:{'\n'}
-                    We do not sell your personal information. We may share your information with trusted third-party service providers who perform services on our behalf (e.g., cloud hosting, data analytics, image processing). These providers are contractually obligated to protect your data and use it only for the purposes specified by us.{'\n\n'}
-
-                    b. Legal Requirements:{'\n'}
-                    We may disclose your information if required to do so by law or in response to valid requests by public authorities (e.g., a court or government agency).{'\n\n'}
-
-                    c. Business Transfers:{'\n'}
-                    In the event of a merger, acquisition, or sale of assets, your information may be transferred as part of the transaction. In such cases, we will notify you via email and/or a prominent notice on our App of any change in ownership or use of your personal information.{'\n\n'}
-
-                    5. Data Security{'\n'}
-                    We implement commercially reasonable security measures to protect your information from unauthorized access, disclosure, alteration, or destruction. However, please note that no method of transmission over the Internet or method of electronic storage is 100% secure, and we cannot guarantee absolute security.{'\n\n'}
-
-                    6. Data Retention{'\n'}
-                    We retain your personal information for as long as is necessary to fulfill the purposes outlined in this Privacy Policy unless a longer retention period is required or permitted by law. When your information is no longer needed, we will take reasonable steps to securely delete or anonymize it.{'\n\n'}
-
-                    7. Your Rights and Choices{'\n'}
-                    a. Access and Correction:{'\n'}
-                    You may request access to or correction of your personal information by contacting us through the contact details provided below.{'\n\n'}
-
-                    b. Deletion:{'\n'}
-                    Subject to applicable laws and regulations, you may request the deletion of your personal information. Please note that we may need to retain certain information for recordkeeping and legal purposes.{'\n\n'}
-
-                    c. Opt-Out:{'\n'}
-                    You can opt out of receiving marketing communications by following the instructions in those communications or by contacting us. Even if you opt out, we may still send you non-promotional messages, such as those about your account or our ongoing business relations.{'\n\n'}
-
-                    8. International Data Transfers{'\n'}
-                    Your information may be transferred to—and maintained on—computers located outside of your state, province, country, or other governmental jurisdiction where the data protection laws may differ from those in your jurisdiction. We take appropriate steps to ensure that your data is treated securely and in accordance with this Privacy Policy when transferred.{'\n\n'}
-
-                    9. Children's Privacy{'\n'}
-                    Our App is not intended for children under 13. We do not knowingly collect personal information from children under 13. If we become aware that we have collected personal information from a child under 13 without parental consent, we will take steps to remove that information.{'\n\n'}
-
-                    10. Changes to This Privacy Policy{'\n'}
-                    We may update this Privacy Policy from time to time. When we do, we will revise the "Effective Date" at the top of this Privacy Policy. We encourage you to review this Privacy Policy periodically to stay informed about our information practices.{'\n\n'}
-
-                    11. Contact Us{'\n'}
-                    If you have any questions or concerns about this Privacy Policy or our data practices, please contact us at:{'\n\n'}
-
-                    BallerAI Support{'\n'}
-                    Email: ballerai.official@gmail.com{'\n'}
-                    Mail: Limingantie 37, 00560 Helsinki, Finland{'\n\n'}
-
-                    12. Governing Law{'\n'}
-                    This Privacy Policy shall be governed by and construed in accordance with the laws of the jurisdiction in which BallerAI operates, without regard to its conflict of law provisions.{'\n\n'}
-
-                    Last Updated: March 13, 2025
-                  </Text>
-                </View>
-              )}
-            </View>
           </View>
           
           {/* Button Container */}
           <View style={styles.buttonContainer}>
-            <CustomButton
-              title="Log Out"
-              onPress={handleLogout}
-              buttonStyle={{ backgroundColor: '#4064F6', borderRadius: 36 }}
-              textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
-            />
-            <CustomButton
-              title="Delete Account"
-              onPress={handleDeleteAccount}
-              buttonStyle={{ backgroundColor: '#FF3B30', borderRadius: 36 }}
-              textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
-            />
+            {/* Logout and Delete Account buttons removed as they're now in settings */}
           </View>
         </ScrollView>
 
         {renderEditModal()}
-        {renderReauthModal()}
       </KeyboardAvoidingView>
     </View>
   );
@@ -1461,28 +974,6 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     backgroundColor: '#FFFFFF',
   },
-  logoContainer: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    gap: 8,
-    marginBottom: 16,
-  },
-  logoImage: {
-    width: 32,
-    height: 32,
-  },
-  logoText: { 
-    fontSize: 24, 
-    fontWeight: '600', 
-    color: '#000000' 
-  },
-  headerTitle: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#000000',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1492,10 +983,20 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5E5',
   },
-  title: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#000000',
+  logoContainer: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 8,
+    marginBottom: 16,
+  },
+  logo: {
+    width: 32,
+    height: 32,
+  },
+  logoText: { 
+    fontSize: 24, 
+    fontWeight: '600', 
+    color: '#000000' 
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -1531,30 +1032,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#000000',
     fontWeight: '500',
-  },
-  privacySection: {
-    padding: 24,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E5E5',
-  },
-  privacyHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  privacyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000000',
-  },
-  privacyContent: {
-    paddingTop: 16,
-  },
-  privacyText: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#666666',
   },
   buttonContainer: {
     padding: 24,
@@ -1860,5 +1337,8 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '600',
+  },
+  gearIcon: {
+    padding: 8,
   },
 }); 

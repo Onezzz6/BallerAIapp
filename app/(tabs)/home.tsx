@@ -23,6 +23,7 @@ import { format, startOfWeek, addDays, subDays } from 'date-fns';
 import { TextInput, ActivityIndicator, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard, Pressable, Modal, Alert } from 'react-native';
 import { askOpenAI } from '../utils/openai';
 import Svg, { Circle } from 'react-native-svg';
+import SubscriptionStatus from '../components/SubscriptionStatus';
 
 export default function HomeScreen() {
   const { user } = useAuth();
@@ -1495,6 +1496,9 @@ export default function HomeScreen() {
         </View>
 
         <View style={{ padding: 16, gap: 24 }}>
+          {/* Subscription Status Component */}
+          <SubscriptionStatus showExpirationAlert={true} />
+
           {/* Overview Section */}
           <View style={{ 
             alignItems: 'center',

@@ -13,6 +13,8 @@ import { getAnalytics, logEvent } from '@react-native-firebase/analytics';
 import * as InAppPurchases from 'expo-in-app-purchases';
 import { Platform, NativeEventEmitter, NativeModules } from 'react-native';
 import Constants from 'expo-constants';
+import subscriptionService, { PRODUCT_IDS, SubscriptionData } from '../services/subscription';
+import { useAuth } from '../context/AuthContext';
 
 // Initialize data listeners function defined locally to avoid circular imports
 const initializeAllDataListeners = async (userId: string) => {
@@ -92,11 +94,15 @@ const PaywallScreen = () => {
   const [selectedPlan, setSelectedPlan] = useState<string>('12months');
   const [products, setProducts] = useState<InAppPurchases.IAPItemDetails[]>([]);
   const { onboardingData } = useOnboarding();
+  const { user } = useAuth();
   const isIAPInitialized = useRef(false);
   const purchaseListenerSet = useRef(false);
   const expoPurchaseListenerSet = useRef(false);
   const purchaseEmitter = useRef<NativeEventEmitter | null>(null);
   const appState = useRef(AppState.currentState);
+  const [subscriptionData, setSubscriptionData] = useState<SubscriptionData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
 
   // Product IDs for your subscription plans
   const PRODUCT_IDS = {
@@ -128,12 +134,17 @@ const PaywallScreen = () => {
             purchaseTime: new Date().toISOString(),
             expiresDate: expirationDate.toISOString(),
             isActive: true,
-            transactionId: purchase.transactionId || null
+            transactionId: purchase.transactionId || null,
+            status: 'active',
+            autoRenewing: true
           }
         });
         
         // Initialize data listeners
         await initializeAllDataListeners(userIdString);
+      } else if (user) {
+        // For logged-in users, use the subscription service
+        await subscriptionService.processSuccessfulPurchase(user.uid, purchase);
       }
       
       // Log the purchase event using the new modular API
@@ -247,6 +258,29 @@ const PaywallScreen = () => {
   const checkExistingSubscriptions = async () => {
     try {
       console.log('Checking for existing subscriptions...');
+      
+      // First check Firebase if user is logged in
+      if (user) {
+        const firebaseSubscription = await subscriptionService.getSubscriptionData(user.uid);
+        
+        if (firebaseSubscription) {
+          console.log('Found subscription in Firebase:', firebaseSubscription);
+          
+          // Check if subscription is still active
+          const isActive = await subscriptionService.isSubscriptionActive(user.uid);
+          
+          if (isActive) {
+            // Update local state
+            setSubscriptionData(firebaseSubscription);
+            setDaysRemaining(subscriptionService.getDaysRemaining(firebaseSubscription));
+            return { source: 'firebase', data: firebaseSubscription };
+          } else {
+            console.log('Firebase subscription is not active');
+          }
+        }
+      }
+      
+      // If no active subscription in Firebase, check IAP
       const history = await InAppPurchases.getPurchaseHistoryAsync();
       console.log('Purchase history:', history);
       
@@ -261,8 +295,14 @@ const PaywallScreen = () => {
         });
         
         if (activeSubscriptions.length > 0) {
-          console.log('Found active subscriptions:', activeSubscriptions);
-          return activeSubscriptions[0]; // Return the most recent subscription
+          console.log('Found active subscriptions in IAP:', activeSubscriptions);
+          
+          // If user is logged in, save this to Firebase
+          if (user) {
+            await subscriptionService.processSuccessfulPurchase(user.uid, activeSubscriptions[0]);
+          }
+          
+          return { source: 'iap', data: activeSubscriptions[0] };
         }
       }
       
@@ -272,6 +312,57 @@ const PaywallScreen = () => {
       return null;
     }
   };
+
+  // Check subscription status when component mounts
+  useEffect(() => {
+    const checkSubscription = async () => {
+      try {
+        setIsLoading(true);
+        
+        // If user is logged in, check Firebase first
+        if (user) {
+          const firebaseSubscription = await subscriptionService.getSubscriptionData(user.uid);
+          
+          if (firebaseSubscription) {
+            setSubscriptionData(firebaseSubscription);
+            setDaysRemaining(subscriptionService.getDaysRemaining(firebaseSubscription));
+            
+            // If subscription is active, navigate to home
+            if (firebaseSubscription.isActive) {
+              const expirationDate = new Date(firebaseSubscription.expiresDate);
+              const now = new Date();
+              
+              if (expirationDate > now) {
+                console.log('Active subscription found in Firebase, navigating to home');
+                router.replace('/(tabs)/home');
+                return;
+              } else {
+                console.log('Firebase subscription has expired');
+                // Update status to expired
+                await subscriptionService.updateSubscriptionStatus(user.uid, 'expired');
+              }
+            }
+          }
+        }
+        
+        // Check IAP for existing subscriptions
+        const existingSubscription = await checkExistingSubscriptions();
+        
+        if (existingSubscription) {
+          console.log('Processing existing subscription:', existingSubscription);
+          await handleSuccessfulPurchase(existingSubscription.data);
+          router.replace('/(tabs)/home');
+        }
+        
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error checking subscription:', error);
+        setIsLoading(false);
+      }
+    };
+    
+    checkSubscription();
+  }, [user]);
 
   useEffect(() => {
     let isMounted = true;
@@ -297,7 +388,7 @@ const PaywallScreen = () => {
             const existingSubscription = await checkExistingSubscriptions();
             if (existingSubscription && isMounted) {
               console.log('Processing existing subscription:', existingSubscription);
-              await handleSuccessfulPurchase(existingSubscription);
+              await handleSuccessfulPurchase(existingSubscription.data);
               router.replace('/(tabs)/home');
             }
           }
@@ -314,7 +405,7 @@ const PaywallScreen = () => {
           const existingSubscription = await checkExistingSubscriptions();
           if (existingSubscription && isMounted) {
             console.log('Processing existing subscription:', existingSubscription);
-            await handleSuccessfulPurchase(existingSubscription);
+            await handleSuccessfulPurchase(existingSubscription.data);
             router.replace('/(tabs)/home');
           }
         } else {
@@ -377,7 +468,7 @@ const PaywallScreen = () => {
           const existingSubscription = await checkExistingSubscriptions();
           if (existingSubscription) {
             console.log('Processing existing subscription on app active:', existingSubscription);
-            await handleSuccessfulPurchase(existingSubscription);
+            await handleSuccessfulPurchase(existingSubscription.data);
             router.replace('/(tabs)/home');
           }
         }
@@ -397,7 +488,7 @@ const PaywallScreen = () => {
       
       if (existingSubscription) {
         // Process existing subscription and navigate directly
-        await handleSuccessfulPurchase(existingSubscription);
+        await handleSuccessfulPurchase(existingSubscription.data);
         router.replace('/(tabs)/home');
         return;
       }
@@ -465,10 +556,55 @@ const PaywallScreen = () => {
     ));
   };
 
+  // Render subscription status if available
+  const renderSubscriptionStatus = () => {
+    if (!subscriptionData) return null;
+    
+    const status = subscriptionData.status;
+    const daysLeft = daysRemaining;
+    
+    if (status === 'active' && daysLeft !== null && daysLeft > 0) {
+      return (
+        <View style={styles.subscriptionStatusContainer}>
+          <Text style={styles.subscriptionStatusText}>
+            You have an active subscription with {daysLeft} days remaining
+          </Text>
+          <CustomButton
+            title="Continue to App"
+            onPress={() => router.replace('/(tabs)/home')}
+            buttonStyle={styles.continueButton}
+            textStyle={styles.continueButtonText}
+          />
+        </View>
+      );
+    } else if (status === 'expired') {
+      return (
+        <View style={styles.subscriptionStatusContainer}>
+          <Text style={styles.subscriptionStatusText}>
+            Your subscription has expired. Please renew to continue using the app.
+          </Text>
+        </View>
+      );
+    } else if (status === 'cancelled') {
+      return (
+        <View style={styles.subscriptionStatusContainer}>
+          <Text style={styles.subscriptionStatusText}>
+            Your subscription has been cancelled. Please subscribe again to continue using the app.
+          </Text>
+        </View>
+      );
+    }
+    
+    return null;
+  };
+
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.content}>
         <Text style={styles.title}>Better training.{'\n'}Better results!</Text>
+
+        {/* Subscription Status */}
+        {renderSubscriptionStatus()}
 
         {/* Subscription Plans */}
         <View style={styles.plansContainer}>
@@ -677,5 +813,18 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  subscriptionStatusContainer: {
+    backgroundColor: '#F0F4FF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+    alignItems: 'center',
+  },
+  subscriptionStatusText: {
+    fontSize: 16,
+    color: '#4064F6',
+    textAlign: 'center',
+    marginBottom: 12,
   },
 }); 
