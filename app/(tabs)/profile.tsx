@@ -745,24 +745,6 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.container}>
-      <SafeAreaView style={styles.headerContainer}>
-        <View style={styles.header}>
-          <View style={styles.logoContainer}>
-            <Image
-              source={require('../../assets/images/BallerAILogo.png')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-            <Text style={styles.logoText}>BallerAI</Text>
-          </View>
-          <Pressable
-            style={styles.gearIcon}
-            onPress={() => router.push('/settings')}
-          >
-            <Ionicons name="settings-outline" size={24} color="#000000" />
-          </Pressable>
-        </View>
-      </SafeAreaView>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
@@ -781,16 +763,45 @@ export default function ProfileScreen() {
         >
           {/* Header - Scrolls with content */}
           <View style={{
-            paddingTop: 48,
+            paddingTop: 44,
             paddingHorizontal: 24,
             backgroundColor: '#ffffff',
           }}>
+            {/* Settings Button - Above the header */}
+            <View style={{
+              flexDirection: 'row',
+              justifyContent: 'flex-end',
+              marginBottom: 0,
+              marginTop: -10,
+              height: 24,
+            }}>
+              <Pressable
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  borderRadius: 16,
+                  width: 28,
+                  height: 28,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 1,
+                  elevation: 1,
+                }}
+                onPress={() => router.push('/settings')}
+              >
+                <Ionicons name="settings-outline" size={18} color="#000000" />
+              </Pressable>
+            </View>
+            
             {/* Header with Logo */}
             <View style={{
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'space-between',
-              height: 92,
+              height: 72,
+              marginTop: 0,
             }}>
               {/* Title */}
               <Text style={{
@@ -968,35 +979,8 @@ const styles = StyleSheet.create({
   section: {
     gap: 16,
   },
-  headerContainer: {
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
-  },
-  logoContainer: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    gap: 8,
-    marginBottom: 16,
-  },
-  logo: {
-    width: 32,
-    height: 32,
-  },
-  logoText: { 
-    fontSize: 24, 
-    fontWeight: '600', 
-    color: '#000000' 
+  gearIcon: {
+    padding: 8,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -1337,8 +1321,5 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '600',
-  },
-  gearIcon: {
-    padding: 8,
   },
 }); 

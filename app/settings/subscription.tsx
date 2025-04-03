@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Alert
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
-import subscriptionService, { SubscriptionData } from '../services/subscription';
+import subscriptionService, { SubscriptionData, PRODUCT_IDS } from '../services/subscription';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -155,13 +155,12 @@ export default function SubscriptionSettingsScreen() {
   };
 
   const getPlanName = (productId: string) => {
-    switch (productId) {
-      case '1month':
-        return 'Monthly Plan';
-      case '12months':
-        return 'Annual Plan';
-      default:
-        return 'Unknown Plan';
+    if (productId === PRODUCT_IDS['1month']) {
+      return 'Monthly Plan';
+    } else if (productId === PRODUCT_IDS['12months']) {
+      return 'Annual Plan';
+    } else {
+      return 'Monthly Plan'; // Default to Monthly Plan
     }
   };
 
@@ -239,7 +238,8 @@ export default function SubscriptionSettingsScreen() {
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Plan Type</Text>
                 <Text style={styles.detailValue}>
-                  {subscriptionData.productId === '1month' ? 'Monthly' : 'Annual'}
+                  {subscriptionData.productId === PRODUCT_IDS['1month'] ? 'Monthly' : 
+                   subscriptionData.productId === PRODUCT_IDS['12months'] ? 'Annual' : 'Monthly'}
                 </Text>
               </View>
 

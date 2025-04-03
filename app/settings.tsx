@@ -419,7 +419,7 @@ export default function SettingsScreen() {
         <View style={styles.header}>
           <Pressable 
             style={styles.backButton}
-            onPress={() => router.back()}
+            onPress={() => router.push('/(tabs)/profile')}
           >
             <Ionicons name="chevron-back" size={24} color="#000000" />
           </Pressable>
