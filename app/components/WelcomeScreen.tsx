@@ -102,7 +102,7 @@ export default function WelcomeScreen() {
       console.log("Starting Apple Sign-In process...");
       
       // Check if a user with this Apple ID exists without creating one
-      const { exists, user } = await authService.checkAppleSignIn();
+      const { exists, user, wasCanceled } = await authService.checkAppleSignIn();
       console.log(`Apple Sign-In check result: exists=${exists}, user=${user ? 'present' : 'null'}`);
       
       // Add explicit check to make sure we have both exists=true AND a valid user object
@@ -123,17 +123,17 @@ export default function WelcomeScreen() {
           showNoAccountAlert();
           return;
         }
-      } else {
+      } else if (!wasCanceled) {
         console.log("No valid user found with Apple ID");
         // No user exists or user doesn't have proper account
         showNoAccountAlert();
       }
     } catch (error: any) {
       // Don't show error if user cancels
-      if (error.code !== 'ERR_CANCELED') {
+      if (error.code !== 'ERR_REQUEST_CANCELED') {
         console.error('Apple sign in error:', error);
         Alert.alert(
-          'Error',
+          'Sign in with Apple Failed',
           error.message || 'Failed to sign in with Apple. Please try again.'
         );
       } else {
@@ -254,7 +254,7 @@ export default function WelcomeScreen() {
                 }}
               />
 
-              <View style={{ position: 'relative' }}>
+              <View style={{ width: '100%', gap: 16 }}>
                 <TextInput
                   value={password}
                   onChangeText={setPassword}
@@ -266,7 +266,7 @@ export default function WelcomeScreen() {
                     borderWidth: 1,
                     borderColor: '#E5E5E5',
                     borderRadius: 12,
-                    paddingHorizontal: 16,
+                    padding: 16,
                     paddingRight: 50,
                     fontSize: 16,
                   }}
@@ -302,10 +302,10 @@ export default function WelcomeScreen() {
                 <AppleAuthentication.AppleAuthenticationButton
                   buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
                   buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-                  cornerRadius={12}
+                  cornerRadius={36}
                   style={{
                     width: '100%',
-                    height: 50,
+                    height: 55,
                     marginBottom: 16,
                   }}
                   onPress={handleAppleSignIn}
@@ -320,7 +320,7 @@ export default function WelcomeScreen() {
                 })}
               >
                 <Text style={{
-                  fontSize: 14,
+                  fontSize: 16,
                   color: '#666666',
                 }}>
                   Back
@@ -333,3 +333,4 @@ export default function WelcomeScreen() {
     </TouchableWithoutFeedback>
   );
 } 
+

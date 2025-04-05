@@ -88,7 +88,6 @@ export default function GymAccessScreen() {
           onPress={handleContinue}
           buttonStyle={{
             backgroundColor: '#4064F6',
-            opacity: selected === null ? 0.5 : 1,
           }}
           disabled={selected === null}
         />

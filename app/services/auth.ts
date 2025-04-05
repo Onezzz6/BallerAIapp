@@ -170,7 +170,8 @@ const authService = {
       return user;
     } catch (error: any) {
       // Don't throw error if user canceled
-      if (error.code === 'ERR_CANCELED') {
+      if (error.code === 'ERR_REQUEST_CANCELED') {
+        console.log("User canceled Apple Sign In");
         return null;
       }
       throw error;
@@ -253,7 +254,7 @@ const authService = {
       console.error("Error in signUpWithApple:", error);
       
       // Don't throw error if user canceled
-      if (error.code === 'ERR_CANCELED') {
+      if (error.code === 'ERR_REQUEST_CANCELED') {
         console.log("User canceled Apple Sign In");
         return { user: null, isNewUser: false };
       }
@@ -308,15 +309,15 @@ const authService = {
         user, 
         hasDocument: userDoc.exists(), 
         isValidDocument: userDoc.exists() && this.isValidUserDocument(userDoc.data()),
-        appleInfo
+        appleInfo,
+        wasCanceled: false
       };
     } catch (error: any) {
-      console.error("Error in authenticateWithApple:", error);
-      
-      if (error.code === 'ERR_CANCELED') {
+      if (error.code === 'ERR_REQUEST_CANCELED') {
         console.log("User canceled Apple Sign In");
-        return { user: null, hasDocument: false, isValidDocument: false, appleInfo: null };
+        return { user: null, hasDocument: false, isValidDocument: false, appleInfo: null, wasCanceled: true };
       }
+      console.error("Error in authenticateWithApple:", error);
       throw error;
     }
   },
@@ -468,17 +469,19 @@ const authService = {
   async checkAppleSignIn() {
     try {
       // Use the existing authenticateWithApple method but don't create a new account
-      const { user, hasDocument } = await this.authenticateWithApple();
+      const { user, hasDocument, appleInfo, wasCanceled } = await this.authenticateWithApple();
       
       // Return if the user exists and has a valid document
       return {
         exists: !!user && hasDocument,
-        user: user
+        user: user,
+        appleInfo: appleInfo,
+        wasCanceled: wasCanceled
       };
     } catch (error) {
       console.error("Error in checkAppleSignIn:", error);
       // Return false for exists to indicate no valid user was found
-      return { exists: false, user: null };
+      return { exists: false, user: null, appleInfo: null, wasCanceled: false };
     }
   }
 };

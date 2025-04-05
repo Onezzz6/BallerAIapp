@@ -105,10 +105,10 @@ export default function SettingsScreen() {
           return true;
         } catch (error: any) {
           console.error('Apple reauthentication error:', error);
-          if (error.code !== 'ERR_CANCELED') {
+          if (error.code !== 'ERR_REQUEST_CANCELED') {
             Alert.alert(
-              'Error',
-              'Apple authentication failed. Please try again.'
+              'Sign in with Apple Failed',
+              error.message || 'Failed to sign in with Apple. Please try again.'
             );
           }
           return false;

@@ -86,7 +86,6 @@ export default function GenderScreen() {
           }}
           buttonStyle={{
             backgroundColor: '#4064F6',
-            opacity: !selectedGender ? 0.5 : 1,
           }}
           disabled={!selectedGender}
         />

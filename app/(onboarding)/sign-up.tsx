@@ -113,9 +113,9 @@ export default function SignUpScreen() {
     } catch (error: any) {
       console.error("Apple Sign-In error:", error);
       
-      if (error.code !== 'ERR_CANCELED') {
+      if (error.code !== 'ERR_REQUEST_CANCELED') {
         Alert.alert(
-          'Error',
+          'Sign in with Apple Failed',
           error.message || 'Failed to sign up with Apple. Please try again.'
         );
       }
@@ -126,19 +126,35 @@ export default function SignUpScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.logoContainer}>
-          <Image 
-            source={require('../../assets/images/BallerAILogo.png')}
-            style={styles.logoImage}
-            resizeMode="contain"
-          />
-          <Text style={styles.logoText}>BallerAI</Text>
-        </View>
+
+      <View style={{
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: 12,
+          paddingTop: 128,
+        }}>
+
+      <Image
+        source={require('../../assets/images/BallerAILogo.png')}
+        style={{
+          width: 120,
+          height: 120,
+          resizeMode: 'contain',
+          marginBottom: 0,
+        }}
+      />
+          
+      <Text style={{
+        fontSize: 32,
+        color: '#000000',
+        fontWeight: '600',
+        textAlign: 'center',
+        marginBottom: 0,
+      }}>
+        Create Your Account
+      </Text>
       </View>
 
-      <Text style={styles.title}>Create Your Account</Text>
-      
       <View style={styles.inputContainer}>
         <View style={styles.inputWrapper}>
           <TextInput
@@ -183,7 +199,6 @@ export default function SignUpScreen() {
         disabled={isLoading}
         buttonStyle={{
           backgroundColor: '#4064F6',
-          opacity: isLoading ? 0.5 : 1,
           borderRadius: 36,
         }}
         textStyle={{
@@ -240,18 +255,19 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#000000',
     marginBottom: 32,
   },
   inputContainer: {
     gap: 16,
-    marginBottom: 32,
+    marginTop: 32,
+    marginBottom: 24,
   },
   inputWrapper: {
     borderWidth: 1,
     borderColor: '#E5E5E5',
-    borderRadius: 36,
+    borderRadius: 12,
     overflow: 'hidden',
   },
   input: {
@@ -263,7 +279,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     borderWidth: 1,
     borderColor: '#E5E5E5',
-    borderRadius: 36,
+    borderRadius: 12,
     overflow: 'hidden',
   },
   passwordInput: {
@@ -294,7 +310,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   appleButton: {
-    height: 50,
+    height: 55,
     width: '100%',
   }
 }); 

@@ -75,7 +75,6 @@ export default function UsernameScreen() {
             }}
             buttonStyle={{
               backgroundColor: '#4064F6',
-              opacity: !username.trim() ? 0.5 : 1,
             }}
             disabled={!username.trim()}
       />

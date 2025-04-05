@@ -78,7 +78,6 @@ export default function AgeScreen() {
           }}
           buttonStyle={{
             backgroundColor: '#4064F6',
-            opacity: !age ? 0.5 : 1,
           }}
           disabled={!age}
         />

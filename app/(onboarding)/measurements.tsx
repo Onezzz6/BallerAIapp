@@ -123,7 +123,6 @@ export default function MeasurementsScreen() {
                 }}
                 buttonStyle={{
                   backgroundColor: '#4064F6',
-                  opacity: !height || !weight ? 0.5 : 1,
                 }}
                 disabled={!height || !weight}
               />
