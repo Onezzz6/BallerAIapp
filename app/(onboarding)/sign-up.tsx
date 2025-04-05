@@ -159,7 +159,7 @@ export default function SignUpScreen() {
         fontWeight: '600',
         textAlign: 'center',
         marginBottom: 0,
-      }}>
+      }} allowFontScaling={false}>
         Create Your Account
       </Text>
       </View>

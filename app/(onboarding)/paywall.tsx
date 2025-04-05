@@ -713,7 +713,7 @@ const PaywallScreen = () => {
 
   // Add navigation handler for back button
   const handleBack = () => {
-    router.replace('/(onboarding)/signup');
+    router.replace('/(onboarding)/sign-up');
   };
 
   return (
@@ -743,7 +743,7 @@ const PaywallScreen = () => {
             >
               {plan.isBestValue && (
                 <View style={styles.badge}>
-                  <Text style={styles.badgeText}>
+                  <Text style={styles.badgeText} allowFontScaling={false}>
                     BEST VALUE
                   </Text>
                 </View>
@@ -841,17 +841,17 @@ const styles = StyleSheet.create({
     paddingTop: 48,
   },
   title: {
-    fontSize: 34,
+    fontSize: 24,
     fontWeight: '700',
     color: '#000000',
-    marginBottom: 16,
+    marginTop: 24,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 24,
     fontWeight: '700',
     color: '#000000',
-    marginBottom: 16,
+    marginBottom: 24,
     textAlign: 'center',
   },
   plansContainer: {
@@ -985,7 +985,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: 'absolute',
-    top: 60,
+    top: 72,
     left: 20,
     zIndex: 1,
     padding: 8,
