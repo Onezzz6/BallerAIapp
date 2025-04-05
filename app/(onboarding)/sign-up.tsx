@@ -7,6 +7,7 @@ import { useOnboarding } from '../context/OnboardingContext';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import CustomButton from '../components/CustomButton';
 import analytics from '@react-native-firebase/analytics';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -125,6 +126,14 @@ export default function SignUpScreen() {
   };
 
   return (
+    <Animated.View 
+      entering={FadeIn.duration(500)}
+      style={{
+        flex: 1,
+        backgroundColor: '#ffffff',
+      }}
+    >
+
     <View style={styles.container}>
 
       <View style={{
@@ -226,6 +235,7 @@ export default function SignUpScreen() {
         />
       )}
     </View>
+    </Animated.View>
   );
 }
 

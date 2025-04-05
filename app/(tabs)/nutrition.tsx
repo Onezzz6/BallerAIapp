@@ -15,7 +15,7 @@ import { db } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
 import { useNutrition } from '../context/NutritionContext';
 import { useNutritionDate } from './_layout';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown, PinwheelIn } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import CustomButton from '../components/CustomButton';
 import { calculateNutritionGoals } from '../utils/nutritionCalculations';
@@ -2010,6 +2010,9 @@ export default function NutritionScreen() {
               alignItems: 'center',
               gap: 6,
             }}>
+              <Animated.View 
+                entering={PinwheelIn.duration(500)}
+              >
               <Image 
                 source={require('../../assets/images/BallerAILogo.png')}
                 style={{
@@ -2018,6 +2021,7 @@ export default function NutritionScreen() {
                 }}
                 resizeMode="contain"
               />
+              </Animated.View>
               <Text style={{
                 fontSize: 28,
                 fontWeight: '300',

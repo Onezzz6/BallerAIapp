@@ -6,7 +6,7 @@ import { useTraining } from '../context/TrainingContext';
 import { doc, getDoc, setDoc, collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import Constants from 'expo-constants';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown, PinwheelIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { startOfWeek, endOfWeek, differenceInMilliseconds, format, isSunday, subWeeks, isAfter, parseISO, addDays } from 'date-fns';
 
@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '600',
     color: '#000000',
     marginBottom: 8,
@@ -759,6 +759,9 @@ Focus on recovery today`;
                 alignItems: 'center',
                 gap: 6,
               }}>
+                <Animated.View 
+                  entering={PinwheelIn.duration(500)}
+                >
                 <Image 
                   source={require('../../assets/images/BallerAILogo.png')}
                   style={{
@@ -767,6 +770,7 @@ Focus on recovery today`;
                   }}
                   resizeMode="contain"
                 />
+                </Animated.View>
                 <Text style={{
                   fontSize: 28,
                   fontWeight: '300',

@@ -11,7 +11,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import WeeklyOverview from '../components/WeeklyOverview';
 import Constants from 'expo-constants';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown, PinwheelIn } from 'react-native-reanimated';
 
 // Add this line to get the API key from Constants.expoConfig.extra
 const OPENAI_API_KEY = Constants.expoConfig?.extra?.openaiApiKey;
@@ -601,6 +601,9 @@ IMPORTANT USAGE GUIDELINES:
                 alignItems: 'center',
                 gap: 6,
               }}>
+                <Animated.View 
+                  entering={PinwheelIn.duration(500)}
+                >
                 <Image 
                   source={require('../../assets/images/BallerAILogo.png')}
                   style={{
@@ -609,6 +612,7 @@ IMPORTANT USAGE GUIDELINES:
                   }}
                   resizeMode="contain"
                 />
+                </Animated.View>
                 <Text style={{
                   fontSize: 28,
                   fontWeight: '300',

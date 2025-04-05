@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Animated, useColorScheme, Dimensions, RefreshControl, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, useColorScheme, Dimensions, RefreshControl, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AntDesign, Feather, Ionicons } from '@expo/vector-icons';
 import { getDoc, doc, onSnapshot, setDoc, updateDoc, addDoc, increment, serverTimestamp, collection, query, where, orderBy, getDocs } from 'firebase/firestore';
@@ -24,6 +24,7 @@ import { TextInput, ActivityIndicator, KeyboardAvoidingView, TouchableWithoutFee
 import { askOpenAI } from '../utils/openai';
 import Svg, { Circle } from 'react-native-svg';
 import SubscriptionStatus from '../components/SubscriptionStatus';
+import Animated, { PinwheelIn } from 'react-native-reanimated';
 
 export default function HomeScreen() {
   const { user } = useAuth();
@@ -1474,6 +1475,9 @@ export default function HomeScreen() {
               alignItems: 'center',
               gap: 6,
             }}>
+              <Animated.View 
+                entering={PinwheelIn.duration(500)}
+              >
               <Image 
                 source={require('../../assets/images/BallerAILogo.png')}
                 style={{
@@ -1482,6 +1486,7 @@ export default function HomeScreen() {
                 }}
                 resizeMode="contain"
               />
+              </Animated.View>
               <Text style={{
                 fontSize: 28,
                 fontWeight: '300',
@@ -1502,6 +1507,7 @@ export default function HomeScreen() {
           {/* Overview Section */}
           <View style={{ 
             alignItems: 'center',
+            marginTop: -16,
             paddingVertical: 16,
             borderBottomWidth: 1,
             borderBottomColor: '#E5E5E5',

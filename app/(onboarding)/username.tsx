@@ -1,6 +1,6 @@
 import { View, Text, TextInput, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { useRouter } from 'expo-router';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
@@ -17,8 +17,7 @@ export default function UsernameScreen() {
 
   return (
     <TouchableWithoutFeedback onPress={dismissKeyboard}>
-      <Animated.View 
-        entering={FadeIn.duration(500)}
+      <View 
         style={{
           flex: 1,
           backgroundColor: '#ffffff',
@@ -28,7 +27,14 @@ export default function UsernameScreen() {
           currentStep={1}
           totalSteps={5}
         />
-        
+
+        <Animated.View 
+          entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}
+          style={{
+            flex: 1,
+          }}
+        >
+
         <View style={{
           flex: 1,
           paddingHorizontal: 24,
@@ -77,9 +83,10 @@ export default function UsernameScreen() {
               backgroundColor: '#4064F6',
             }}
             disabled={!username.trim()}
-      />
+          />
         </View>
-      </Animated.View>
+        </Animated.View>
+      </View>
     </TouchableWithoutFeedback>
   );
 } 

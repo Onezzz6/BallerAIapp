@@ -1,5 +1,6 @@
 import { Pressable, Image } from 'react-native';
 import { useRouter } from 'expo-router';
+import Animated, { FadeInRight } from 'react-native-reanimated';
 
 export default function BackButton() {
   const router = useRouter();
@@ -11,7 +12,10 @@ export default function BackButton() {
         opacity: pressed ? 0.7 : 1,
         alignSelf: 'center',
       })}
-    >
+>
+      <Animated.View 
+        entering={FadeInRight.duration(300)}
+      >
       <Image 
         source={require('../../assets/images/back-button.png')}
         style={{
@@ -20,6 +24,7 @@ export default function BackButton() {
         }}
         resizeMode="contain"
       />
+      </Animated.View>
     </Pressable>
   );
 } 

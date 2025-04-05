@@ -1,6 +1,6 @@
 import { View, Text, Image } from 'react-native';
 import { useRouter } from 'expo-router';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import Button from './components/Button';
 import BackButton from './components/BackButton';
 
@@ -10,6 +10,7 @@ export default function IntroScreen() {
   return (
     <Animated.View 
       entering={FadeIn.duration(500)}
+      exiting={FadeOut.duration(500)}
       style={{
         flex: 1,
         backgroundColor: '#ffffff',
@@ -19,7 +20,7 @@ export default function IntroScreen() {
       {/* Back Button */}
       <View style={{
         position: 'absolute',
-        top: 48,
+        top: 74,
         left: 24,
         zIndex: 10,
       }}>

@@ -1,6 +1,6 @@
 import { View, Text, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
@@ -31,18 +31,25 @@ export default function FitnessLevelScreen() {
   const [selected, setSelected] = useState<string | null>(onboardingData.fitnessLevel);
 
   return (
-    <Animated.View 
-      entering={FadeIn.duration(500)}
+    <View 
       style={{
         flex: 1,
         backgroundColor: '#ffffff',
       }}
     >
-      <OnboardingHeader 
-        currentStep={11}
-        totalSteps={20}
-      />
-      
+    <OnboardingHeader 
+      currentStep={11}
+      totalSteps={5}
+    />
+
+    <Animated.View 
+      entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}
+      style={{
+        flex: 1,
+        backgroundColor: '#ffffff',
+      }}
+    >
+
       <View style={{
         flex: 1,
         paddingHorizontal: 24,
@@ -107,5 +114,6 @@ export default function FitnessLevelScreen() {
         />
       </View>
     </Animated.View>
+    </View>
   );
 } 

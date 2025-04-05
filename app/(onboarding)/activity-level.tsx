@@ -1,6 +1,6 @@
 import { View, Text, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
@@ -40,18 +40,25 @@ export default function ActivityLevelScreen() {
   const [selected, setSelected] = useState<string | null>(onboardingData.activityLevel);
 
   return (
-    <Animated.View 
-      entering={FadeIn.duration(500)}
+    <View 
       style={{
         flex: 1,
         backgroundColor: '#ffffff',
       }}
     >
-      <OnboardingHeader 
-        currentStep={12}
-        totalSteps={20}
-      />
-      
+    <OnboardingHeader 
+      currentStep={12}
+      totalSteps={5}
+    />
+
+    <Animated.View 
+      entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}
+      style={{
+        flex: 1,
+        backgroundColor: '#ffffff',
+      }}
+    >
+
       <View style={{
         flex: 1,
         paddingHorizontal: 24,
@@ -59,7 +66,7 @@ export default function ActivityLevelScreen() {
         paddingBottom: 24,
         justifyContent: 'top',
         alignItems: 'left',
-        gap: 48,
+        gap: 24,
       }}>
         <Text style={{
           fontSize: 28,
@@ -121,5 +128,6 @@ export default function ActivityLevelScreen() {
         />
       </View>
     </Animated.View>
+    </View>
   );
 } 

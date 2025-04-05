@@ -1,6 +1,6 @@
 import { View, Text, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
@@ -12,26 +12,33 @@ export default function DominantFootScreen() {
   const [selected, setSelected] = useState<string | null>(onboardingData.dominantFoot);
 
   return (
-    <Animated.View 
-      entering={FadeIn.duration(500)}
-      style={{
-        flex: 1,
-        backgroundColor: '#ffffff',
-      }}
-    >
-      <OnboardingHeader 
-        currentStep={5}
-        totalSteps={20}
-      />
-      
+    <View 
+    style={{
+      flex: 1,
+      backgroundColor: '#ffffff',
+    }}
+  >
+    <OnboardingHeader 
+      currentStep={5}
+      totalSteps={5}
+    />
+
+      <Animated.View 
+        entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}
+        style={{
+          flex: 1,
+          backgroundColor: '#ffffff',
+        }}
+      >
+
       <View style={{
-              flex: 1,
-              paddingHorizontal: 24,
-              paddingTop: 80,
-              paddingBottom: 24,
-              justifyContent: 'top',
-              alignItems: 'left',
-              gap: 48,
+        flex: 1,
+        paddingHorizontal: 24,
+        paddingTop: 80,
+        paddingBottom: 24,
+        justifyContent: 'top',
+        alignItems: 'left',
+        gap: 48,
        }}>
         <Text style={{
           fontSize: 28,
@@ -91,5 +98,6 @@ export default function DominantFootScreen() {
         />
       </View>
     </Animated.View>
+    </View>
   );
 } 

@@ -1,6 +1,7 @@
 import { View, Text, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import BackButton from './BackButton';
+import Animated, { FadeIn, FadeOut, PinwheelIn } from 'react-native-reanimated';
 
 type Props = {
   currentStep: number;
@@ -34,6 +35,9 @@ export default function OnboardingHeader({ currentStep, totalSteps }: Props) {
           gap: 8,
           marginLeft: 'auto',
         }}>
+          <Animated.View 
+            entering={PinwheelIn.duration(500)}
+          >
           <Image 
             source={require('../../assets/images/BallerAILogo.png')}
             style={{
@@ -41,12 +45,14 @@ export default function OnboardingHeader({ currentStep, totalSteps }: Props) {
               height: 32,
             }}
             resizeMode="contain"
-          />
-          <Text style={{
-            fontSize: 28,
-            fontWeight: '300',
-            color: '#000000',
-          }} allowFontScaling={false}>
+            />
+          </Animated.View>
+          <Text 
+            style={{
+              fontSize: 28,
+              fontWeight: '300',
+              color: '#000000',
+            }} allowFontScaling={false}>
             BallerAI
           </Text>
         </View>
@@ -60,12 +66,17 @@ export default function OnboardingHeader({ currentStep, totalSteps }: Props) {
         borderRadius: 8,
         marginTop: 6,
       }}>
-        <View style={{
-          width: `${progress}%`,
-          height: '100%',
-          backgroundColor: '#4064F6',
-          borderRadius: 8,
-        }} />
+        <Animated.View 
+          entering={FadeIn.duration(500)}
+          exiting={FadeOut.duration(200)}
+        >
+          <View style={{
+            width: `${progress}%`,
+            height: '100%',
+            backgroundColor: '#4064F6',
+            borderRadius: 8,
+          }} />
+        </Animated.View>
       </View>
     </View>
   );

@@ -16,6 +16,7 @@ import { Picker } from '@react-native-picker/picker';
 import CustomButton from '../components/CustomButton';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { calculateNutritionGoals } from '../utils/nutritionCalculations';
+import Animated, { PinwheelIn } from 'react-native-reanimated';
 
 type UserData = {
   username?: string;
@@ -772,8 +773,8 @@ export default function ProfileScreen() {
               flexDirection: 'row',
               justifyContent: 'flex-end',
               marginBottom: 0,
-              marginTop: -10,
-              height: 24,
+              marginTop: 0,
+              height: 14,
             }}>
               <Pressable
                 style={{
@@ -819,6 +820,9 @@ export default function ProfileScreen() {
                 alignItems: 'center',
                 gap: 6,
               }}>
+                <Animated.View 
+                  entering={PinwheelIn.duration(500)}
+                >
                 <Image 
                   source={require('../../assets/images/BallerAILogo.png')}
                   style={{
@@ -827,6 +831,7 @@ export default function ProfileScreen() {
                   }}
                   resizeMode="contain"
                 />
+                </Animated.View>
                 <Text style={{
                   fontSize: 28,
                   fontWeight: '300',
@@ -972,7 +977,7 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   profileSection: {
-    paddingVertical: 24,
+    paddingVertical: 12,
     alignItems: 'center',
     gap: 16,
   },
@@ -986,6 +991,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginTop: 16,
     marginBottom: 16,
   },
   sectionTitle: {

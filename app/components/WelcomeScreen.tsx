@@ -1,6 +1,6 @@
 import { View, Text, Image, Pressable, TextInput, Alert, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { useRouter } from 'expo-router';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated, { FadeInLeft, FadeOutRight } from 'react-native-reanimated';
 import Button from './Button';
 import { useState, useEffect } from 'react';
 import React from 'react';
@@ -167,7 +167,8 @@ export default function WelcomeScreen() {
   return (
     <TouchableWithoutFeedback onPress={dismissKeyboard}>
       <Animated.View 
-        entering={FadeIn.duration(500)}
+        entering={FadeInLeft.duration(500)}
+        exiting={FadeOutRight.duration(500)}
         style={{
           flex: 1,
           backgroundColor: '#ffffff',
