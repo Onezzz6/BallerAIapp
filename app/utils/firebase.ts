@@ -18,4 +18,6 @@ export const initializeFirebase = async () => {
   } catch (error) {
     console.error('Error initializing Firebase:', error);
   }
-}; 
+};
+
+export default initializeFirebase; 

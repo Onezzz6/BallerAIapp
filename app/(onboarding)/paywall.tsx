@@ -224,158 +224,154 @@ const PaywallScreen = () => {
   const loadProducts = async () => {
     try {
       const productIds = Object.values(PRODUCT_IDS);
-      console.log('Loading products:', productIds);
+      console.log('IAP Debug Info:', {
+        environment: __DEV__ ? 'Development' : 'Production',
+        platform: Platform.OS,
+        bundleId: Constants.expoConfig?.ios?.bundleIdentifier,
+        productIds
+      });
       
-      const { responseCode, results } = await InAppPurchases.getProductsAsync(productIds);
+      // Add a delay to ensure store connection is ready
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      console.log('Products response code:', responseCode);
-      console.log('Raw products response:', results);
+      const { responseCode, results, errorCode } = await InAppPurchases.getProductsAsync(productIds);
+      
+      console.log('Store Response Details:', {
+        responseCode,
+        errorCode,
+        productsCount: results?.length || 0,
+        products: results?.map(p => ({
+          id: p.productId,
+          price: p.price,
+          currency: p.priceCurrencyCode,
+          description: p.description
+        }))
+      });
       
       if (responseCode === InAppPurchases.IAPResponseCode.OK) {
         if (!results || results.length === 0) {
-          console.error('No products found. Product IDs:', productIds);
+          console.error('No products returned from store. This might indicate:', [
+            '- Product IDs not matching App Store Connect',
+            '- Products not active in App Store Connect',
+            '- Sandbox tester not properly configured',
+            '- App Store Connect setup incomplete'
+          ].join('\n'));
+          
           Alert.alert(
-            'Configuration Error',
-            'Unable to load subscription options. Please try again later.'
+            'Store Configuration',
+            Platform.OS === 'ios' 
+              ? 'Unable to load subscription options. Please ensure you are signed in with a Sandbox test account and have an active internet connection.'
+              : 'Unable to load subscription options. Please ensure you are signed in with a test account and have an active internet connection.'
           );
         } else {
-          console.log('Products loaded successfully:', results);
+          console.log('Products loaded successfully:', results.map(p => ({
+            id: p.productId,
+            price: p.price,
+            currency: p.priceCurrencyCode
+          })));
           setProducts(results);
         }
       } else {
-        throw new Error(`Failed to load products. Response code: ${responseCode}`);
+        throw new Error(`Store error: ${responseCode}${errorCode ? `, Error code: ${errorCode}` : ''}`);
       }
-    } catch (error) {
-      console.error('Error loading products:', error);
+    } catch (error: any) {
+      console.error('Product loading error:', {
+        message: error.message,
+        code: error?.code,
+        name: error?.name,
+        stack: error?.stack
+      });
+      
       Alert.alert(
-        'Error',
-        'Failed to load subscription options. Please check your internet connection and try again.'
+        'Store Connection Error',
+        Platform.OS === 'ios'
+          ? 'Unable to connect to the App Store. Please ensure you are signed in with a Sandbox test account and have an active internet connection.'
+          : 'Unable to connect to the Play Store. Please ensure you are signed in and have an active internet connection.'
       );
     }
   };
 
-  // Function to check for existing subscriptions
-  const checkExistingSubscriptions = async () => {
+  const handlePurchase = async (productId: string) => {
     try {
-      console.log('Checking for existing subscriptions...');
+      console.log('Starting purchase flow for:', productId);
       
-      // First check Firebase if user is logged in
-      if (user) {
-        const firebaseSubscription = await subscriptionService.getSubscriptionData(user.uid);
-        
-        if (firebaseSubscription) {
-          console.log('Found subscription in Firebase:', firebaseSubscription);
-          
-          // Check if subscription is still active
-          const isActive = await subscriptionService.isSubscriptionActive(user.uid);
-          
-          if (isActive) {
-            // Update local state
-            setSubscriptionData(firebaseSubscription);
-            setDaysRemaining(subscriptionService.getDaysRemaining(firebaseSubscription));
-            return { source: 'firebase', data: firebaseSubscription };
-          } else {
-            console.log('Firebase subscription is not active');
-          }
-        }
+      // Ensure products are loaded
+      if (!products || products.length === 0) {
+        console.log('No products loaded, attempting to load products first');
+        await loadProducts();
       }
       
-      // If no active subscription in Firebase, check IAP
-      const history = await InAppPurchases.getPurchaseHistoryAsync();
-      console.log('Purchase history:', history);
-      
-      if (history && history.results && history.results.length > 0) {
-        // Find active subscriptions
-        const activeSubscriptions = history.results.filter(purchase => {
-          const productId = purchase.productId;
-          return (
-            productId === PRODUCT_IDS['1month'] ||
-            productId === PRODUCT_IDS['12months']
-          );
+      // Verify the product exists in our loaded products
+      const product = products.find(p => p.productId === productId);
+      if (!product) {
+        console.error('Product not found in available products:', {
+          requestedId: productId,
+          availableProducts: products.map(p => p.productId)
         });
-        
-        if (activeSubscriptions.length > 0) {
-          console.log('Found active subscriptions in IAP:', activeSubscriptions);
-          
-          // If user is logged in, save this to Firebase
-          if (user) {
-            await subscriptionService.processSuccessfulPurchase(user.uid, activeSubscriptions[0]);
-          }
-          
-          return { source: 'iap', data: activeSubscriptions[0] };
-        }
+        throw new Error('Selected subscription plan not available');
       }
+
+      console.log('Initiating purchase for product:', {
+        id: product.productId,
+        price: product.price,
+        currency: product.priceCurrencyCode
+      });
+
+      const { responseCode, results } = await InAppPurchases.purchaseItemAsync(productId);
+      console.log('Purchase response:', { responseCode, results });
+
+      if (responseCode === InAppPurchases.IAPResponseCode.OK) {
+        if (!results || results.length === 0) {
+          throw new Error('Purchase completed but no results returned');
+        }
+        await handleSuccessfulPurchase(results[0]);
+      } else if (responseCode === InAppPurchases.IAPResponseCode.USER_CANCELED) {
+        console.log('Purchase cancelled by user');
+      } else {
+        throw new Error(`Purchase failed with response code: ${responseCode}`);
+      }
+    } catch (error: any) {
+      console.error('Purchase error:', {
+        message: error.message,
+        code: error?.code,
+        name: error?.name,
+        stack: error?.stack
+      });
       
-      return null;
-    } catch (error) {
-      console.error('Error checking subscription status:', error);
-      return null;
+      Alert.alert(
+        'Purchase Error',
+        error.message === 'Selected subscription plan not available'
+          ? 'The selected subscription plan is not available. Please try again later.'
+          : 'Unable to complete the purchase. Please try again.'
+      );
     }
   };
 
-  // Check subscription status when component mounts
-  useEffect(() => {
-    const checkSubscription = async () => {
-      try {
-        setIsLoading(true);
-        
-        // If user is logged in, check Firebase first
-        if (user) {
-          const firebaseSubscription = await subscriptionService.getSubscriptionData(user.uid);
-          
-          if (firebaseSubscription) {
-            setSubscriptionData(firebaseSubscription);
-            setDaysRemaining(subscriptionService.getDaysRemaining(firebaseSubscription));
-            
-            // If subscription is active, navigate to home
-            if (firebaseSubscription.isActive) {
-              const expirationDate = new Date(firebaseSubscription.expiresDate);
-              const now = new Date();
-              
-              if (expirationDate > now) {
-                console.log('Active subscription found in Firebase, navigating to home');
-                router.replace('/(tabs)/home');
-                return;
-              } else {
-                console.log('Firebase subscription has expired');
-                // Update status to expired
-                await subscriptionService.updateSubscriptionStatus(user.uid, 'expired');
-              }
-            }
-          }
-        }
-        
-        // Check IAP for existing subscriptions
-        const existingSubscription = await checkExistingSubscriptions();
-        
-        if (existingSubscription) {
-          console.log('Processing existing subscription:', existingSubscription);
-          await handleSuccessfulPurchase(existingSubscription.data);
-          router.replace('/(tabs)/home');
-        }
-        
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Error checking subscription:', error);
-        setIsLoading(false);
-      }
-    };
-    
-    checkSubscription();
-  }, [user]);
+  // Add sandbox detection
+  const isSandboxEnvironment = () => {
+    try {
+      return !__DEV__ && Constants.expoConfig?.ios?.bundleIdentifier?.includes('.dev');
+    } catch (error) {
+      return false;
+    }
+  };
 
+  // Update initialization
   useEffect(() => {
     let isMounted = true;
     
-    const initializeIAP = async () => {
+    const initialize = async () => {
       try {
-        if (!isIAPInitialized.current && isMounted) {
-          console.log('Initializing IAP...');
+        if (!isIAPInitialized.current) {
+          console.log('Starting IAP initialization...');
+          console.log('Environment:', __DEV__ ? 'Development' : 'Production');
+          console.log('Platform:', Platform.OS);
+          console.log('Bundle ID:', Constants.expoConfig?.ios?.bundleIdentifier);
+          
           await InAppPurchases.connectAsync();
-          console.log('IAP connected');
+          console.log('IAP connected successfully');
           
           if (isMounted && !purchaseListenerSet.current) {
-            console.log('Setting up purchase listener...');
             InAppPurchases.setPurchaseListener(purchaseListener);
             purchaseListenerSet.current = true;
             console.log('Purchase listener setup complete');
@@ -384,60 +380,50 @@ const PaywallScreen = () => {
           isIAPInitialized.current = true;
           if (isMounted) {
             await loadProducts();
-            // Check for existing subscriptions after initialization
-            const existingSubscription = await checkExistingSubscriptions();
-            if (existingSubscription && isMounted) {
-              console.log('Processing existing subscription:', existingSubscription);
-              await handleSuccessfulPurchase(existingSubscription.data);
-              router.replace('/(tabs)/home');
-            }
           }
         }
       } catch (error: any) {
+        console.error('IAP Initialization Error:', {
+          message: error.message,
+          code: error?.code,
+          name: error?.name,
+          stack: error?.stack,
+          environment: __DEV__ ? 'Development' : 'Production'
+        });
+        
         if (error.code === 'ERR_IN_APP_PURCHASES_CONNECTION' && isMounted) {
-          console.log('IAP already connected, setting up listener and loading products...');
-          if (!purchaseListenerSet.current) {
-            InAppPurchases.setPurchaseListener(purchaseListener);
-            purchaseListenerSet.current = true;
-          }
-          await loadProducts();
-          // Check for existing subscriptions after initialization
-          const existingSubscription = await checkExistingSubscriptions();
-          if (existingSubscription && isMounted) {
-            console.log('Processing existing subscription:', existingSubscription);
-            await handleSuccessfulPurchase(existingSubscription.data);
-            router.replace('/(tabs)/home');
-          }
-        } else {
-          console.error('Error initializing IAP:', error);
-          if (isMounted) {
-            Alert.alert('Error', 'Failed to initialize in-app purchases. Please try again.');
+          // If we get a connection error, try to recover by reconnecting
+          try {
+            console.log('Attempting recovery after connection error...');
+            await InAppPurchases.connectAsync();
+            
+            if (!purchaseListenerSet.current) {
+              InAppPurchases.setPurchaseListener(purchaseListener);
+              purchaseListenerSet.current = true;
+            }
+            
+            if (isMounted) {
+              await loadProducts();
+            }
+          } catch (retryError) {
+            console.error('Recovery attempt failed:', retryError);
+            if (isMounted) {
+              Alert.alert(
+                'Store Connection Error',
+                Platform.OS === 'ios'
+                  ? 'Unable to connect to the App Store. Please ensure you are signed in with a Sandbox test account and have an active internet connection.'
+                  : 'Unable to connect to the Play Store. Please ensure you are signed in and have an active internet connection.'
+              );
+            }
           }
         }
       }
     };
 
-    // Set up Expo purchase listener
-    if (!expoPurchaseListenerSet.current) {
-      console.log('Setting up Expo purchase listener...');
-      try {
-        // Try to get the ExpoPurchases module
-        const ExpoPurchases = NativeModules.ExpoPurchases;
-        if (ExpoPurchases) {
-          purchaseEmitter.current = new NativeEventEmitter(ExpoPurchases);
-          purchaseEmitter.current.addListener('purchasesUpdated', expoPurchaseListener);
-          expoPurchaseListenerSet.current = true;
-          console.log('Expo purchase listener setup complete');
-        } else {
-          console.log('ExpoPurchases module not found, skipping listener setup');
-        }
-      } catch (error) {
-        console.error('Error setting up Expo purchase listener:', error);
-      }
-    }
+    // Start initialization
+    initialize();
 
-    initializeIAP();
-
+    // Cleanup function
     return () => {
       isMounted = false;
       console.log('Cleaning up IAP...');
@@ -497,7 +483,7 @@ const PaywallScreen = () => {
       const productId = PRODUCT_IDS[selectedPlan as keyof typeof PRODUCT_IDS];
       
       // Start the purchase immediately
-      await InAppPurchases.purchaseItemAsync(productId);
+      await handlePurchase(productId);
       
     } catch (error: any) {
       console.error('Error in handleContinue:', error);
@@ -515,21 +501,89 @@ const PaywallScreen = () => {
     }
   };
 
+  const handleRestorePurchases = async () => {
+    try {
+      setIsLoading(true);
+      console.log('Restoring purchases...');
+      
+      // Get all purchases
+      const purchaseHistory = await InAppPurchases.getPurchaseHistoryAsync();
+      
+      if (purchaseHistory && purchaseHistory.responseCode === InAppPurchases.IAPResponseCode.OK) {
+        if (purchaseHistory.results && purchaseHistory.results.length > 0) {
+          // Find the most recent active subscription
+          const activeSubscription = purchaseHistory.results
+            .filter(purchase => 
+              purchase.productId.includes('BallerAISubscription') && 
+              purchase.transactionReceipt && 
+              !purchase.transactionReceipt.includes('sandbox')
+            )
+            .sort((a, b) => {
+              const dateA = a.purchaseTime ? new Date(a.purchaseTime).getTime() : 0;
+              const dateB = b.purchaseTime ? new Date(b.purchaseTime).getTime() : 0;
+              return dateB - dateA;
+            })[0];
+
+          if (activeSubscription) {
+            await handleSuccessfulPurchase(activeSubscription);
+            Alert.alert('Success', 'Your purchases have been restored!');
+            router.replace('/(tabs)/home');
+            return;
+          }
+        }
+        Alert.alert('No Purchases Found', 'No previous purchases were found to restore.');
+      } else {
+        Alert.alert('Error', 'Failed to restore purchases. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error restoring purchases:', error);
+      Alert.alert('Error', 'Failed to restore purchases. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const subscriptionPlans: SubscriptionPlan[] = [
     {
       id: '1month',
       duration: '1',
-      price: '9.99',
+      price: products.find(p => p?.productId === PRODUCT_IDS['1month'])?.price || 'N/A',
       period: 'per month',
-      totalPrice: '9,99 €',
-      period2: 'monthly',
+      totalPrice: (() => {
+        const monthlyProduct = products.find(p => p?.productId === PRODUCT_IDS['1month']);
+        if (monthlyProduct) {
+          // Calculate yearly price from monthly price in micros
+          const yearlyPriceInMicros = monthlyProduct.priceAmountMicros * 12;
+          // Format the price using the same currency code
+          const formatter = new Intl.NumberFormat("en-US", {
+            style: 'currency',
+            currency: monthlyProduct.priceCurrencyCode
+          });
+          return formatter.format(yearlyPriceInMicros / 1_000_000);
+        }
+        return 'N/A';
+      })(),
+      period2: 'yearly',
     },
     {
       id: '12months',
       duration: '12',
-      price: '4.99',
+      price: (() => {
+        const yearlyProduct = products.find(p => p?.productId === PRODUCT_IDS['12months']);
+        if (yearlyProduct) {
+          // Calculate monthly price from yearly price in micros
+          const monthlyPriceInMicros = yearlyProduct.priceAmountMicros / 12;
+          // Format the price using the same currency code
+          const formatter = new Intl.NumberFormat("en-US", {
+            style: 'currency',
+            currency: yearlyProduct.priceCurrencyCode
+          });
+          return formatter.format(monthlyPriceInMicros / 1_000_000);
+        }
+        return 'N/A';
+      })(),
+      totalPrice: products.find(p => p?.productId === PRODUCT_IDS['12months'])?.price || 'N/A',
       period: 'per month',
-      totalPrice: '59,99 €',
       period2: 'yearly',
       isBestValue: true,
     }
@@ -598,10 +652,80 @@ const PaywallScreen = () => {
     return null;
   };
 
+  // Function to check for existing subscriptions
+  const checkExistingSubscriptions = async () => {
+    try {
+      console.log('Checking for existing subscriptions...');
+      
+      // First check Firebase if user is logged in
+      if (user) {
+        const firebaseSubscription = await subscriptionService.getSubscriptionData(user.uid);
+        
+        if (firebaseSubscription) {
+          console.log('Found subscription in Firebase:', firebaseSubscription);
+          
+          // Check if subscription is still active
+          const isActive = await subscriptionService.isSubscriptionActive(user.uid);
+          
+          if (isActive) {
+            // Update local state
+            setSubscriptionData(firebaseSubscription);
+            setDaysRemaining(subscriptionService.getDaysRemaining(firebaseSubscription));
+            return { source: 'firebase', data: firebaseSubscription };
+          } else {
+            console.log('Firebase subscription is not active');
+          }
+        }
+      }
+      
+      // If no active subscription in Firebase, check IAP
+      const history = await InAppPurchases.getPurchaseHistoryAsync();
+      console.log('Purchase history:', history);
+      
+      if (history && history.results && history.results.length > 0) {
+        // Find active subscriptions
+        const activeSubscriptions = history.results.filter(purchase => {
+          const productId = purchase.productId;
+          return (
+            productId === PRODUCT_IDS['1month'] ||
+            productId === PRODUCT_IDS['12months']
+          );
+        });
+        
+        if (activeSubscriptions.length > 0) {
+          console.log('Found active subscriptions in IAP:', activeSubscriptions);
+          
+          // If user is logged in, save this to Firebase
+          if (user) {
+            await subscriptionService.processSuccessfulPurchase(user.uid, activeSubscriptions[0]);
+          }
+          
+          return { source: 'iap', data: activeSubscriptions[0] };
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error checking subscription status:', error);
+      return null;
+    }
+  };
+
+  // Add navigation handler for back button
+  const handleBack = () => {
+    router.replace('/(onboarding)/signup');
+  };
+
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      {/* Add back button */}
+      <Pressable onPress={handleBack} style={styles.backButton}>
+        <Ionicons name="arrow-back" size={24} color="#000" />
+      </Pressable>
+      
       <View style={styles.content}>
-        <Text style={styles.title}>Better training.{'\n'}Better results!</Text>
+        <Text style={styles.title}>Better training.</Text>
+        <Text style={styles.subtitle}>Better results!</Text>
 
         {/* Subscription Status */}
         {renderSubscriptionStatus()}
@@ -614,7 +738,6 @@ const PaywallScreen = () => {
               style={[
                 styles.planCard,
                 selectedPlan === plan.id && styles.selectedPlan,
-                plan.isBestValue && styles.bestValuePlan,
               ]}
               onPress={() => setSelectedPlan(plan.id)}
             >
@@ -638,7 +761,7 @@ const PaywallScreen = () => {
               )}
               
               <View style={styles.planPricing}>
-                <Text style={styles.planPrice}>{plan.price} €</Text>
+                <Text style={styles.planPrice}>{plan.price}</Text>
                 <Text style={styles.planPriceDetail}>{plan.period}</Text>
               </View>
               
@@ -671,6 +794,17 @@ const PaywallScreen = () => {
           textStyle={styles.continueButtonText}
         />
       </View>
+      
+      {/* Add this before the closing ScrollView tag */}
+      <Pressable 
+        onPress={handleRestorePurchases}
+        style={styles.restoreButton}
+        disabled={isLoading}
+      >
+        <Text style={styles.restoreButtonText}>
+          Restore Purchases
+        </Text>
+      </Pressable>
     </ScrollView>
   );
 };
@@ -690,13 +824,20 @@ const styles = StyleSheet.create({
     fontSize: 34,
     fontWeight: '700',
     color: '#000000',
-    marginBottom: 32,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#000000',
+    marginBottom: 16,
     textAlign: 'center',
   },
   plansContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 32,
+    marginBottom: 16,
     gap: 12,
   },
   planCard: {
@@ -711,9 +852,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0F4FF',
     borderColor: '#4064F6',
     borderWidth: 2,
-  },
-  bestValuePlan: {
-    backgroundColor: '#F0F4FF',
   },
   badge: {
     position: 'absolute',
@@ -788,7 +926,6 @@ const styles = StyleSheet.create({
   testimonialContent: {
     flexDirection: 'column',
     alignItems: 'center',
-    gap: 16,
   },
   testimonialImage: {
     width: 80,
@@ -804,9 +941,8 @@ const styles = StyleSheet.create({
   },
   continueButton: {
     backgroundColor: '#4064F6',
-    borderRadius: 16,
+    borderRadius: 32,
     paddingVertical: 16,
-    marginTop: 8,
   },
   continueButtonText: {
     color: '#FFFFFF',
@@ -826,5 +962,22 @@ const styles = StyleSheet.create({
     color: '#4064F6',
     textAlign: 'center',
     marginBottom: 12,
+  },
+  backButton: {
+    position: 'absolute',
+    top: 60,
+    left: 20,
+    zIndex: 1,
+    padding: 8,
+  },
+  restoreButton: {
+    marginTop: 10,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  restoreButtonText: {
+    color: '#666',
+    fontSize: 14,
+    textDecorationLine: 'underline',
   },
 }); 

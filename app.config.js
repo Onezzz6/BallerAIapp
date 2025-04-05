@@ -3,7 +3,7 @@ export default {
     name: "BallerAI",
     slug: "ballerai",
     scheme: "ballerai",
-    version: "1.0.0",
+    version: "1.0.1",
     orientation: "portrait",
     // ... other config
     icon: "./assets/images/icon.png",
@@ -15,9 +15,19 @@ export default {
     experiments: {
       tsconfigPaths: true,
     },
+    developmentClient: {
+      silentLaunch: false
+    },
+    development: {
+      developmentClient: true,
+      distribution: "internal",
+      ios: {
+        resourceClass: "m1-medium"
+      }
+    },
     android: {
       package: "com.ballerai.app",
-      versionCode: 1,
+      versionCode: 11,
       googleServicesFile: "./google-services.json",
       adaptiveIcon: {
         foregroundImage: "./assets/images/adaptive-icon.png",
@@ -31,7 +41,7 @@ export default {
     },
     ios: {
       bundleIdentifier: "com.ballerbizoy.ballerai",
-      buildNumber: "8",
+      buildNumber: "11",
       googleServicesFile: "./GoogleService-Info.plist",
       supportsTablet: true,
       infoPlist: {
