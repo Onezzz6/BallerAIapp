@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, Pressable, Image, Alert, AppState } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Image, Alert, AppState, Linking } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useState, useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
@@ -805,6 +805,26 @@ const PaywallScreen = () => {
           Restore Purchases
         </Text>
       </Pressable>
+      
+      {/* Legal links */}
+      <View style={styles.legalLinksContainer}>
+        <Text style={styles.legalText}>
+          By continuing, you agree to our{' '}
+          <Text 
+            style={styles.legalLink}
+            onPress={() => Linking.openURL('https://ballerbizoy.com/privacy')}
+          >
+            Privacy Policy
+          </Text>
+          {' '}and{' '}
+          <Text 
+            style={styles.legalLink}
+            onPress={() => Linking.openURL('https://www.apple.com/legal/internet-services/itunes/dev/stdeula')}
+          >
+            Terms of Use
+          </Text>
+        </Text>
+      </View>
     </ScrollView>
   );
 };
@@ -978,6 +998,20 @@ const styles = StyleSheet.create({
   restoreButtonText: {
     color: '#666',
     fontSize: 14,
+    textDecorationLine: 'underline',
+  },
+  legalLinksContainer: {
+    paddingHorizontal: 24,
+    paddingBottom: 20,
+    alignItems: 'center',
+  },
+  legalText: {
+    fontSize: 12,
+    color: '#999999',
+    textAlign: 'center',
+  },
+  legalLink: {
+    color: '#999999',
     textDecorationLine: 'underline',
   },
 }); 
