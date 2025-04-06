@@ -17,6 +17,7 @@ import subscriptionService, { PRODUCT_IDS, SubscriptionData } from '../services/
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import { Buffer } from "buffer";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Initialize data listeners function defined locally to avoid circular imports
 const initializeAllDataListeners = async (userId: string) => {
