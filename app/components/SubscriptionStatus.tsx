@@ -39,15 +39,27 @@ const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
             const daysLeft = subscriptionService.getDaysRemaining(firebaseSubscription);
             setDaysRemaining(daysLeft);
             console.log('Found active subscription in Firebase:', firebaseSubscription);
+            console.log('Firebase subscription days left:', daysLeft);
 
             // Show alert if subscription is expiring soon (within 3 days)
-            if (showExpirationAlert && daysLeft !== null && daysLeft <= 3 && daysLeft > 0) {
-              setShowAlert(true);
+            if (showExpirationAlert && daysLeft !== null && daysLeft <= 3) {
+              if (daysLeft > 0) { 
+                //setShowAlert(true);
+                Alert.alert('Subscription Expiring Soon', `Your subscription will expire in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}. Renew now to continue enjoying all features.`);
+              } else {
+                console.log('Firebase subscription has become not active');
+
+                // Save subscription data to Firebase
+                await subscriptionService.updateSubscriptionStatus(user.uid, 'expired');
+                
+                // Subscription is not active, redirect to paywall
+                router.replace('/(onboarding)/paywall');
+              }
             }
           } else {
             console.log('Firebase subscription is not active');
-          // Subscription is not active, redirect to paywall
-          router.replace('/(onboarding)/paywall');
+            // Subscription is not active, redirect to paywall
+            router.replace('/(onboarding)/paywall');
           }
         }
       } catch (error) {

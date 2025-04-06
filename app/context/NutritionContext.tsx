@@ -92,11 +92,11 @@ export function NutritionProvider({ children }: { children: React.ReactNode }) {
     
     // Set loading state
     setIsLoading(true);
-    console.log('DEBUG - NutritionContext: Setting loading state to true');
+    //console.log('DEBUG - NutritionContext: Setting loading state to true');
     
     const loadTodayData = async () => {
       try {
-        console.log('DEBUG - Loading today nutrition data automatically on app start');
+        //console.log('DEBUG - Loading today nutrition data automatically on app start');
         const today = new Date();
         const dateString = formatDateId(today);
         
@@ -104,9 +104,9 @@ export function NutritionProvider({ children }: { children: React.ReactNode }) {
         const userDocRef = doc(db, 'users', user.uid);
         const userDoc = await getDoc(userDocRef);
         if (!userDoc.exists()) {
-          console.error('DEBUG - User document not found');
+          //console.error('DEBUG - User document not found');
           setIsLoading(false);
-          console.log('DEBUG - NutritionContext: Setting loading state to false - user not found');
+          //console.log('DEBUG - NutritionContext: Setting loading state to false - user not found');
           return;
         }
 
@@ -217,7 +217,7 @@ export function NutritionProvider({ children }: { children: React.ReactNode }) {
               console.log('DEBUG - NutritionContext: Setting loading state to false - all data loaded');
             },
             (error) => {
-              console.error('Error loading nutrition data:', error);
+              //console.error('Error loading nutrition data:', error);
               // Still set loading to false even if there's an error, but keep any goals we've calculated
               setIsLoading(false);
               console.log('DEBUG - NutritionContext: Setting loading state to false - error loading data');

@@ -20,7 +20,7 @@ export interface SubscriptionData {
   transactionId: string | null;
   status: SubscriptionStatus;
   autoRenewing: boolean;
-  cancellationDate?: string;
+  cancellationDate: string | null;
 }
 
 export const NO_SUBSCRIPTION_DATA: SubscriptionData = {
@@ -30,33 +30,30 @@ export const NO_SUBSCRIPTION_DATA: SubscriptionData = {
   isActive: false,
   transactionId: null,
   status: 'none',
-  autoRenewing: false
+  autoRenewing: false,
+  cancellationDate: null
 };
 
 const subscriptionService = {
   /**
    * Save subscription data to Firebase
    */
-  async saveSubscriptionData(userId: string, purchase: any): Promise<boolean> {
+  async saveSubscriptionData(userId: string, purchase: any, expirationDateFromValidReceipt: Date): Promise<boolean> {
     try {
       console.log('Saving subscription data for user:', userId);
-      
-      // Calculate expiration date based on product ID
-      const isYearlySubscription = purchase.productId === PRODUCT_IDS['12months'];
-      const expirationDate = new Date();
-      expirationDate.setMonth(expirationDate.getMonth() + (isYearlySubscription ? 12 : 1));
-      
-      // Create subscription data
+      console.log('Saving subscription, purchase:', purchase);
+      console.log('Saving subscription, expirationDateFromValidReceipt:', expirationDateFromValidReceipt);
+
       const subscriptionData: SubscriptionData = {
         productId: purchase.productId,
         purchaseTime: new Date().toISOString(),
-        expiresDate: expirationDate.toISOString(),
+        expiresDate: expirationDateFromValidReceipt.toISOString(),
         isActive: true,
         transactionId: purchase.transactionId || null,
         status: 'active',
         autoRenewing: true
       };
-      
+
       // Update user document with subscription data
       const userRef = doc(db, 'users', userId);
       await updateDoc(userRef, {
@@ -88,7 +85,7 @@ const subscriptionService = {
         const now = new Date();
         
         if (expirationDate < now) {
-          // Update subscription status to expired
+          console.log('Updating Firebase subscription status to expired for user:', userId);
           await this.updateSubscriptionStatus(userId, 'expired');
         }
 
@@ -118,13 +115,15 @@ const subscriptionService = {
       }
       
       const subscriptionData = userDoc.data().subscription as SubscriptionData;
+
+      const cancelDate = subscriptionData.cancellationDate || null;
       
       // Update subscription data
       const updatedSubscriptionData = {
         ...subscriptionData,
         status,
         isActive: status === 'active',
-        cancellationDate: status === 'cancelled' ? new Date().toISOString() : subscriptionData.cancellationDate
+        cancellationDate: status === 'cancelled' ? new Date().toISOString() : cancelDate
       };
       
       // Update user document
@@ -176,12 +175,12 @@ const subscriptionService = {
   /**
    * Process a successful purchase
    */
-  async processSuccessfulPurchase(userId: string, purchase: any): Promise<boolean> {
+  async processSuccessfulPurchase(userId: string, purchase: any, expirationDateFromValidReceipt: Date): Promise<boolean> {
     try {
       console.log('Processing successful purchase for user:', userId);
       
       // Save subscription data to Firebase
-      const success = await this.saveSubscriptionData(userId, purchase);
+      const success = await this.saveSubscriptionData(userId, purchase, expirationDateFromValidReceipt);
       
       if (!success) {
         console.error('Failed to save subscription data');

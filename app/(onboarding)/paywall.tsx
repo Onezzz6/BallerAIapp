@@ -112,11 +112,15 @@ const PaywallScreen = () => {
     '12months': 'BallerAISubscriptionOneYear'
   };
 
+  let expirationDateFromValidReceipt: Date | null = null;
+
   const handleSuccessfulPurchase = async (purchase: any) => {
     try {
       const { uid, hasAppleInfo } = params;
       console.log('Processing successful purchase:', purchase);
       
+      expirationDateFromValidReceipt = null;
+
       // Validate the receipt before processing the purchase
       const isValid = await validateReceipt(purchase);
       
@@ -133,6 +137,8 @@ const PaywallScreen = () => {
       if (uid && hasAppleInfo === 'true') {
         const userIdString = Array.isArray(uid) ? uid[0] : uid;
         
+        // TODO: Fix Apple sign in
+
         // Calculate expiration date based on product ID
         const isYearlySubscription = purchase.productId === PRODUCT_IDS['12months'];
         const expirationDate = new Date();
@@ -146,7 +152,7 @@ const PaywallScreen = () => {
           subscription: {
             productId: purchase.productId,
             purchaseTime: new Date().toISOString(),
-            expiresDate: expirationDate.toISOString(),
+            expiresDate: expirationDateFromValidReceipt.toISOString() || expirationDate.toISOString(),
             isActive: true,
             transactionId: purchase.transactionId || null,
             status: 'active',
@@ -158,7 +164,7 @@ const PaywallScreen = () => {
         await initializeAllDataListeners(userIdString);
       } else if (user) {
         // For logged-in users, use the subscription service
-        await subscriptionService.processSuccessfulPurchase(user.uid, purchase);
+        await subscriptionService.processSuccessfulPurchase(user.uid, purchase, expirationDateFromValidReceipt);
       }
       
       // Log the purchase event using the new modular API
@@ -340,7 +346,7 @@ const PaywallScreen = () => {
       // which we set up in the initialization code
       
     } catch (error: any) {
-      console.error('XXX Purchase error:', {
+      console.error('Purchase error:', {
         message: error.message,
         code: error?.code,
         name: error?.name,
@@ -697,7 +703,7 @@ const PaywallScreen = () => {
         // Validate receipts for active subscriptions
         const validatedSubscriptions = [];
         for (const subscription of activeSubscriptions) {
-          const isValid = await validateReceipt(subscription);
+          const isValid  = await validateReceipt(subscription);
           if (isValid) {
             validatedSubscriptions.push(subscription);
           } else {
@@ -710,7 +716,7 @@ const PaywallScreen = () => {
           
           // If user is logged in, save this to Firebase
           if (user) {
-            await subscriptionService.processSuccessfulPurchase(user.uid, validatedSubscriptions[0]);
+            await subscriptionService.processSuccessfulPurchase(user.uid, validatedSubscriptions[0], expirationDateFromValidReceipt);
           }
           
           return { source: 'iap', data: validatedSubscriptions[0] };
@@ -732,7 +738,7 @@ const PaywallScreen = () => {
 
   const validateReceipt = async (purchase: InAppPurchases.InAppPurchase): Promise<boolean> => {
     try {
-      console.log('Validating receipt on client side:', purchase);
+      //console.log('Validating receipt on client side:', purchase);
       
       // For iOS, we can use the InAppPurchases API
       if (Platform.OS === 'ios') {
@@ -764,17 +770,25 @@ const PaywallScreen = () => {
           console.log('Validate receipt: Falling back to sandbox server...');
           const sandboxRes = await axios.post(stagingURL, payload)
           //console.log('Validate receipt: Sandbox server response: ', sandboxRes.data);
-          const receipt = sandboxRes.data.latest_receipt_info[0]
-          //console.log('Validate receipt: Latest receipt: ', receipt);
 
-          // Check expiration
-          const expirationTime = new Date(parseInt(receipt.expires_date_ms));
-          const now = new Date();
-          console.log('Validate receipt: expiration: ', expirationTime);
-          console.log('Validate receipt: now: ', now);
-          const isValid = expirationTime > now;
-          console.log('Validate receipt: Is receipt valid:', isValid);
-          return isValid;
+          if (sandboxRes.data && sandboxRes.data.latest_receipt_info && sandboxRes.data.latest_receipt_info.length > 0) {
+            const receipt = sandboxRes.data.latest_receipt_info[0]
+            //console.log('Validate receipt: Latest receipt: ', receipt);
+
+            // Check expiration
+            const expirationTime = new Date(parseInt(receipt.expires_date_ms));
+            const now = new Date();
+            console.log('Validate receipt: expiration: ', expirationTime);
+            console.log('Validate receipt: now: ', now);
+            const isValid = expirationTime > now;
+            console.log('Validate receipt: Is receipt valid:', isValid);
+
+            if (isValid) {
+              expirationDateFromValidReceipt = expirationTime;
+            }
+
+            return isValid;
+          }
         }
 
         console.log('Validate receipt: Returning false');
