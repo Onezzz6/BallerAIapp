@@ -29,25 +29,25 @@ const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
       }
 
       try {
-        const data = await subscriptionService.getSubscriptionData(user.uid);
-        
-        if (data) {
-          setSubscriptionData(data);
+        const firebaseSubscription = await subscriptionService.getSubscriptionData(user.uid);
           
-          // Check if subscription is active
-          const isActive = await subscriptionService.isSubscriptionActive(user.uid);
+        if (firebaseSubscription) {
+          setSubscriptionData(firebaseSubscription);
           
-          if (isActive) {
-            const daysLeft = subscriptionService.getDaysRemaining(data);
+          if (firebaseSubscription.isActive) {
+            // Update local state
+            const daysLeft = subscriptionService.getDaysRemaining(firebaseSubscription);
             setDaysRemaining(daysLeft);
-            
+            console.log('Found active subscription in Firebase:', firebaseSubscription);
+
             // Show alert if subscription is expiring soon (within 3 days)
             if (showExpirationAlert && daysLeft !== null && daysLeft <= 3 && daysLeft > 0) {
               setShowAlert(true);
             }
           } else {
-            // Subscription is not active, redirect to paywall
-            router.replace('/(onboarding)/paywall');
+            console.log('Firebase subscription is not active');
+          // Subscription is not active, redirect to paywall
+          router.replace('/(onboarding)/paywall');
           }
         }
       } catch (error) {

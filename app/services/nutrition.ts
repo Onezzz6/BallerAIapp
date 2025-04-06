@@ -64,7 +64,7 @@ const nutritionService = {
   // Fetch today's nutrition data
   async fetchTodayNutritionData(userId: string, date: Date) {
     try {
-      console.log("Loading today nutrition data automatically on app start");
+      //console.log("Loading today nutrition data automatically on app start");
       
       // Format date
       const dateStr = formatDateId(date);
@@ -202,7 +202,7 @@ const nutritionService = {
           const data = docSnapshot.data();
           console.log(`DEBUG - Real-time update for date: ${dateStr}`, data);
         } else {
-          console.log(`DEBUG - No document exists for date: ${dateStr}`);
+          //console.log(`DEBUG - No document exists for date: ${dateStr}`);
         }
       });
       

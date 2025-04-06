@@ -95,7 +95,7 @@ export default function HomeScreen() {
   };
   
   // Debug effect for nutrition adherence
-  useEffect(() => {
+  /*useEffect(() => {
     console.log(`DEBUG - NUTRITION ADHERENCE UPDATED TO: ${nutritionAdherence}%`);
   }, [nutritionAdherence]);
   
@@ -117,7 +117,7 @@ export default function HomeScreen() {
         goal: macros.calories.goal
       }));
     }
-  }, [macros, todayCalories.goal]);
+  }, [macros, todayCalories.goal]);*/
   
   // IMPORTANT: Remove the context syncing effect that was causing issues
   // We no longer want to sync with the macros context for current calories
@@ -134,7 +134,7 @@ export default function HomeScreen() {
             isLoading: true
           }));
           
-          console.log('DEBUG - Starting to fetch user data for calorie goal calculation');
+          //console.log('DEBUG - Starting to fetch user data for calorie goal calculation');
           
           // Fetch user profile data
           const userDocRef = doc(db, 'users', user.uid);
@@ -157,7 +157,7 @@ export default function HomeScreen() {
             
             // First check if goals already exist in the user document
             if (userData.calorieGoal && userData.macroGoals) {
-              console.log('DEBUG - Using existing calorie goal from user document:', userData.calorieGoal);
+              //console.log('DEBUG - Using existing calorie goal from user document:', userData.calorieGoal);
               calculatedGoals = {
                 calorieGoal: userData.calorieGoal,
                 macroGoals: userData.macroGoals
@@ -172,13 +172,13 @@ export default function HomeScreen() {
               // This will trigger the NutritionContext listener to update
               if (calculatedGoals && calculatedGoals.calorieGoal > 0) {
                 try {
-                  console.log('DEBUG - Saving calculated goals to user document');
+                  //console.log('DEBUG - Saving calculated goals to user document');
                   await updateDoc(userDocRef, {
                     calorieGoal: calculatedGoals.calorieGoal,
                     macroGoals: calculatedGoals.macroGoals
                   });
                   goalsUpdated = true;
-                  console.log('DEBUG - Goals saved successfully');
+                  //console.log('DEBUG - Goals saved successfully');
                 } catch (error) {
                   console.error('Error saving calculated goals:', error);
                 }
@@ -202,7 +202,7 @@ export default function HomeScreen() {
             }
           } else {
             // Fall back to default values if user document doesn't exist
-            console.log('DEBUG - User document not found, using default goals');
+            //console.log('DEBUG - User document not found, using default goals');
             const defaultGoals = { 
               calorieGoal: 2000, 
               macroGoals: { protein: 150, carbs: 200, fat: 55 } 
@@ -216,7 +216,7 @@ export default function HomeScreen() {
             });
           }
         } catch (error) {
-          console.error('Error fetching user data:', error);
+          //console.error('Error fetching user data:', error);
           setTodayCalories({
             current: 0,
             goal: 2000, // Default fallback
@@ -235,7 +235,7 @@ export default function HomeScreen() {
     if (!user) return;
     
     try {
-      console.log(`DEBUG - Loading calories for date: ${format(date, 'yyyy-MM-dd')}`);
+      //console.log(`DEBUG - Loading calories for date: ${format(date, 'yyyy-MM-dd')}`);
       
       // Set loading state
       setTodayCalories(prev => ({
@@ -256,7 +256,7 @@ export default function HomeScreen() {
       // For today, prefer the macros context value as it's most up-to-date
       if (isToday && macros.calories.goal > 0) {
         calorieGoal = macros.calories.goal;
-        console.log(`DEBUG - Using today's calorie goal from context: ${calorieGoal}`);
+        //console.log(`DEBUG - Using today's calorie goal from context: ${calorieGoal}`);
       } else {
         try {
           // For other days or if context doesn't have the goal, fetch from Firebase
@@ -265,7 +265,7 @@ export default function HomeScreen() {
             const macrosData = userMacrosDoc.data();
             if (macrosData.calories && macrosData.calories > 0) {
               calorieGoal = macrosData.calories;
-              console.log(`DEBUG - Using calorie goal from Firebase: ${calorieGoal}`);
+              //console.log(`DEBUG - Using calorie goal from Firebase: ${calorieGoal}`);
             }
           }
         } catch (error) {
@@ -281,7 +281,7 @@ export default function HomeScreen() {
       
       if (docSnap.exists()) {
         const data = docSnap.data();
-        console.log(`DEBUG - Found data for ${dateStr}:`, JSON.stringify(data));
+        //console.log(`DEBUG - Found data for ${dateStr}:`, JSON.stringify(data));
         
         setTodayCalories({
           current: data.calories || 0,
@@ -291,7 +291,7 @@ export default function HomeScreen() {
         });
       } else {
         // No data found for the selected date
-        console.log(`DEBUG - No data found for ${dateStr}, using zero values`);
+        //console.log(`DEBUG - No data found for ${dateStr}, using zero values`);
         
         setTodayCalories({
           current: 0,
@@ -319,7 +319,7 @@ export default function HomeScreen() {
     const dateStr = format(dateToUse, 'yyyy-MM-dd');
     const isToday = format(new Date(), 'yyyy-MM-dd') === dateStr;
     
-    console.log(`DEBUG - Setting up real-time listener for date: ${dateStr} (isToday: ${isToday})`);
+    //console.log(`DEBUG - Setting up real-time listener for date: ${dateStr} (isToday: ${isToday})`);
     
     // Set loading state only if not already loading
     if (!todayCalories.isLoading) {
@@ -334,7 +334,7 @@ export default function HomeScreen() {
     
     // Set up the listener with error handling
     const unsubscribe = onSnapshot(docRef, (docSnap) => {
-      console.log(`DEBUG - Real-time update for date: ${dateStr}`);
+      //console.log(`DEBUG - Real-time update for date: ${dateStr}`);
       
       // Get goal from macros context for today, or use stored goal for other days
       let calorieGoal;
@@ -348,7 +348,7 @@ export default function HomeScreen() {
       
       if (docSnap.exists()) {
         const data = docSnap.data();
-        console.log(`DEBUG - Document data: ${JSON.stringify(data)}`);
+        //console.log(`DEBUG - Document data: ${JSON.stringify(data)}`);
         
         setTodayCalories({
           current: data.calories || 0,
@@ -357,7 +357,7 @@ export default function HomeScreen() {
           isLoading: false
         });
       } else {
-        console.log(`DEBUG - No document exists for date: ${dateStr}`);
+        //console.log(`DEBUG - No document exists for date: ${dateStr}`);
         
         setTodayCalories({
           current: 0,
@@ -379,19 +379,19 @@ export default function HomeScreen() {
     
     // Cleanup function
     return () => {
-      console.log(`DEBUG - Cleaning up listener for date: ${dateStr}`);
+      //console.log(`DEBUG - Cleaning up listener for date: ${dateStr}`);
       unsubscribe();
     };
   }, [user, selectedDate, macros.calories.goal, todayCalories.goal]);
 
   // Handle date selection from WeeklyOverview
   const onDateSelect = useCallback((date: Date, adherenceScore?: number | null) => {
-    console.log(`DEBUG - Date selected: ${format(date, 'yyyy-MM-dd')} with adherence: ${adherenceScore}`);
+    //console.log(`DEBUG - Date selected: ${format(date, 'yyyy-MM-dd')} with adherence: ${adherenceScore}`);
     
     // If the selected date is the same as the currently selected date,
     // deselect it and go back to today's data
     if (selectedDate && format(selectedDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')) {
-      console.log('DEBUG - Deselecting date and returning to today');
+      //console.log('DEBUG - Deselecting date and returning to today');
       setSelectedDate(null);
       setSelectedDayAdherence(0); // Clear selected day adherence when deselecting
       
@@ -567,8 +567,8 @@ export default function HomeScreen() {
     const eightDaysAgoStr = format(eightDaysAgo, 'yyyy-MM-dd');
     const todayStr = format(today, 'yyyy-MM-dd');
     
-    console.log(`DEBUG - Fetching historical nutrition data for adherence calculation`);
-    console.log(`DEBUG - Date range: ${eightDaysAgoStr} to ${yesterdayStr} (explicitly excluding today ${todayStr})`);
+    //console.log(`DEBUG - Fetching historical nutrition data for adherence calculation`);
+    //console.log(`DEBUG - Date range: ${eightDaysAgoStr} to ${yesterdayStr} (explicitly excluding today ${todayStr})`);
 
     // Get all documents once rather than using a real-time listener
     const fetchNutritionHistory = async () => {
@@ -598,7 +598,7 @@ export default function HomeScreen() {
           };
         }
         
-        console.log(`DEBUG - Default goals if needed:`, JSON.stringify(defaultGoals));
+        //console.log(`DEBUG - Default goals if needed:`, JSON.stringify(defaultGoals));
         
         // Include days in the date range, from 7 days before yesterday up to yesterday
         // EXPLICITLY exclude today
@@ -609,7 +609,7 @@ export default function HomeScreen() {
                  dateId !== todayStr; // Extra check to ensure today is excluded
         });
         
-        console.log(`DEBUG - Found ${validDocs.length} dailyMacros documents in date range: ${eightDaysAgoStr} to ${yesterdayStr}`);
+        //console.log(`DEBUG - Found ${validDocs.length} dailyMacros documents in date range: ${eightDaysAgoStr} to ${yesterdayStr}`);
         
         // Only process documents with actual nutrition data (at least one meal logged)
         // This ensures we only count days where the user has logged something
@@ -620,7 +620,7 @@ export default function HomeScreen() {
           return (data.calories > 0 || data.protein > 0 || data.carbs > 0 || data.fats > 0);
         });
         
-        console.log(`DEBUG - Found ${docsWithData.length} documents with actual nutrition data (at least one meal logged)`);
+        //console.log(`DEBUG - Found ${docsWithData.length} documents with actual nutrition data (at least one meal logged)`);
         
         // Array to hold valid adherence scores
         const validScores: number[] = [];
@@ -628,7 +628,7 @@ export default function HomeScreen() {
         // Process each day's nutrition data
         for (const doc of docsWithData) {
           const data = doc.data();
-          console.log(`DEBUG - Processing dailyMacros doc for ${doc.id}:`, JSON.stringify(data));
+          //console.log(`DEBUG - Processing dailyMacros doc for ${doc.id}:`, JSON.stringify(data));
           
           // If goals are not stored with this day's data, add the default goals
           if (!data.calorieGoal) {
@@ -640,7 +640,7 @@ export default function HomeScreen() {
           
           // Calculate this day's adherence score
           const dayScore = calculateDayScore(data);
-          console.log(`DEBUG - Day ${doc.id} adherence score: ${dayScore.toFixed(1)}%`);
+          //console.log(`DEBUG - Day ${doc.id} adherence score: ${dayScore.toFixed(1)}%`);
           
           // Only include non-zero scores
           if (dayScore > 0) {
@@ -653,13 +653,13 @@ export default function HomeScreen() {
           const averageAdherence = Math.round(
             validScores.reduce((sum, score) => sum + score, 0) / validScores.length
           );
-          console.log(`DEBUG - Final adherence from ${validScores.length} days: ${averageAdherence}%`);
+          //console.log(`DEBUG - Final adherence from ${validScores.length} days: ${averageAdherence}%`);
           
           // Cache the result to avoid excessive recalculations
           setNutritionAdherence(averageAdherence);
         } else {
           // No valid historical data found
-          console.log('DEBUG - No valid historical nutrition data found for adherence calculation');
+          //console.log('DEBUG - No valid historical nutrition data found for adherence calculation');
           setNutritionAdherence(0);
         }
       } catch (error) {
@@ -687,12 +687,12 @@ export default function HomeScreen() {
         console.log('DEBUG - Historical dailyMacros documents changed, recalculating adherence');
         fetchNutritionHistory();
       } else {
-        console.log('DEBUG - Changes detected but not to historical documents, skipping recalculation');
+        //console.log('DEBUG - Changes detected but not to historical documents, skipping recalculation');
       }
     });
     
     return () => {
-      console.log('DEBUG - Cleaning up nutrition adherence recalculation listener');
+      //console.log('DEBUG - Cleaning up nutrition adherence recalculation listener');
       unsubscribe();
     };
   }, [user, calculateDayScore]);
@@ -704,7 +704,7 @@ export default function HomeScreen() {
     const today = new Date();
     const todayStr = format(today, 'yyyy-MM-dd');
     
-    console.log(`DEBUG - Setting up dedicated listener for today's data: ${todayStr}`);
+    //console.log(`DEBUG - Setting up dedicated listener for today's data: ${todayStr}`);
     
     // Reference to today's dailyMacros document
     const docRef = doc(db, 'users', user.uid, 'dailyMacros', todayStr);
@@ -713,16 +713,16 @@ export default function HomeScreen() {
     const unsubscribe = onSnapshot(docRef, (docSnap) => {
       // Only process if we're on the today view (not viewing a past date)
       if (!selectedDate) {
-        console.log(`DEBUG - Real-time update for today's nutrition data`);
+        //console.log(`DEBUG - Real-time update for today's nutrition data`);
         
         if (docSnap.exists()) {
           const data = docSnap.data();
-          console.log(`DEBUG - Today's data updated: ${JSON.stringify(data)}`);
+          //console.log(`DEBUG - Today's data updated: ${JSON.stringify(data)}`);
           
           // If we have macros in the context but they don't match what's in Firebase
           // then update the calorie card (ensures sync with nutrition tab)
           if (data.calories !== macros.calories.current) {
-            console.log(`DEBUG - Syncing calories: Firebase=${data.calories}, Context=${macros.calories.current}`);
+            //console.log(`DEBUG - Syncing calories: Firebase=${data.calories}, Context=${macros.calories.current}`);
             
             setTodayCalories(prev => ({
               ...prev,
@@ -737,7 +737,7 @@ export default function HomeScreen() {
     });
     
     return () => {
-      console.log('DEBUG - Cleaning up today\'s nutrition data listener');
+      //console.log('DEBUG - Cleaning up today\'s nutrition data listener');
       unsubscribe();
     };
   }, [user, selectedDate, macros.calories.current]);
@@ -746,7 +746,7 @@ export default function HomeScreen() {
   useEffect(() => {
     // If we're viewing today and have fresh context data, update the calorie card
     if (!selectedDate && macros.calories.current >= 0) {
-      console.log(`DEBUG - Syncing from nutrition context: ${macros.calories.current} calories`);
+      //console.log(`DEBUG - Syncing from nutrition context: ${macros.calories.current} calories`);
       
       // Only update if different to avoid render loops
       if (todayCalories.current !== macros.calories.current) {
@@ -764,7 +764,7 @@ export default function HomeScreen() {
   useEffect(() => {
     if (!user) return;
     
-    console.log('DEBUG - Setting up main data listeners');
+    //console.log('DEBUG - Setting up main data listeners');
     
     // Keep track of active listeners
     const subscriptions: (() => void)[] = [];
@@ -775,7 +775,7 @@ export default function HomeScreen() {
     
     // Clean up ALL subscriptions when component unmounts
     return () => {
-      console.log(`DEBUG - Cleaning up ${subscriptions.length} global subscriptions`);
+      //console.log(`DEBUG - Cleaning up ${subscriptions.length} global subscriptions`);
       subscriptions.forEach(unsubscribe => unsubscribe());
     };
   }, [user]);
@@ -899,7 +899,7 @@ export default function HomeScreen() {
     if (!user) return;
     
     try {
-      console.log(`DEBUG - Loading today's calories specifically for the calorie card`);
+      //console.log(`DEBUG - Loading today's calories specifically for the calorie card`);
       
       // Set loading state
       setTodayCalories(prev => ({
@@ -919,7 +919,7 @@ export default function HomeScreen() {
       // Prefer the macros context value as it's most up-to-date
       if (macros.calories.goal > 0) {
         calorieGoal = macros.calories.goal;
-        console.log(`DEBUG - Using today's calorie goal from context: ${calorieGoal}`);
+        //console.log(`DEBUG - Using today's calorie goal from context: ${calorieGoal}`);
       } else {
         try {
           // If context doesn't have the goal, fetch from Firebase
@@ -928,7 +928,7 @@ export default function HomeScreen() {
             const macrosData = userMacrosDoc.data();
             if (macrosData.calories && macrosData.calories > 0) {
               calorieGoal = macrosData.calories;
-              console.log(`DEBUG - Using calorie goal from Firebase: ${calorieGoal}`);
+              //console.log(`DEBUG - Using calorie goal from Firebase: ${calorieGoal}`);
             }
           }
         } catch (error) {
@@ -939,12 +939,12 @@ export default function HomeScreen() {
       // Default goal if nothing found
       if (calorieGoal <= 0) {
         calorieGoal = 2000;
-        console.log(`DEBUG - Using default calorie goal: ${calorieGoal}`);
+        //console.log(`DEBUG - Using default calorie goal: ${calorieGoal}`);
       }
       
       if (docSnap.exists()) {
         const data = docSnap.data();
-        console.log(`DEBUG - Found today's data:`, JSON.stringify(data));
+        //console.log(`DEBUG - Found today's data:`, JSON.stringify(data));
         
         setTodayCalories({
           current: data.calories || 0,
@@ -954,7 +954,7 @@ export default function HomeScreen() {
         });
       } else {
         // No data found for today
-        console.log(`DEBUG - No data found for today, using zero values`);
+        //console.log(`DEBUG - No data found for today, using zero values`);
         
         setTodayCalories({
           current: 0,
@@ -982,21 +982,21 @@ export default function HomeScreen() {
     if (!user) return;
     
     const todayStr = format(new Date(), 'yyyy-MM-dd');
-    console.log(`DEBUG - Setting up real-time listener for today's calories: ${todayStr}`);
+    //console.log(`DEBUG - Setting up real-time listener for today's calories: ${todayStr}`);
     
     // Reference to today's dailyMacros document
     const docRef = doc(db, 'users', user.uid, 'dailyMacros', todayStr);
     
     // Set up the listener
     const unsubscribe = onSnapshot(docRef, (docSnap) => {
-      console.log(`DEBUG - Real-time update for today's calories`);
+      //console.log(`DEBUG - Real-time update for today's calories`);
       
       // Get goal from macros context
       let calorieGoal = macros.calories.goal > 0 ? macros.calories.goal : todayCalories.goal;
       
       if (docSnap.exists()) {
         const data = docSnap.data();
-        console.log(`DEBUG - Today's data updated: ${JSON.stringify(data)}`);
+        //console.log(`DEBUG - Today's data updated: ${JSON.stringify(data)}`);
         
         setTodayCalories({
           current: data.calories || 0,
@@ -1005,7 +1005,7 @@ export default function HomeScreen() {
           isLoading: false
         });
       } else {
-        console.log(`DEBUG - No document exists for today`);
+        //console.log(`DEBUG - No document exists for today`);
         
         setTodayCalories({
           current: 0,
@@ -1026,7 +1026,7 @@ export default function HomeScreen() {
     
     // Cleanup function
     return () => {
-      console.log(`DEBUG - Cleaning up listener for today's calories`);
+      //console.log(`DEBUG - Cleaning up listener for today's calories`);
       unsubscribe();
     };
   }, [user, macros.calories.goal, todayCalories.goal]);
@@ -1337,8 +1337,8 @@ export default function HomeScreen() {
       const eightDaysAgoStr = format(eightDaysAgo, 'yyyy-MM-dd');
       const todayStr = format(today, 'yyyy-MM-dd');
       
-      console.log(`DEBUG - Fetching historical recovery data for adherence calculation`);
-      console.log(`DEBUG - Date range: ${eightDaysAgoStr} to ${yesterdayStr} (explicitly excluding today ${todayStr})`);
+      //console.log(`DEBUG - Fetching historical recovery data for adherence calculation`);
+      //console.log(`DEBUG - Date range: ${eightDaysAgoStr} to ${yesterdayStr} (explicitly excluding today ${todayStr})`);
 
       // Array to hold valid recovery scores
       const validScores: number[] = [];
@@ -1371,7 +1371,7 @@ export default function HomeScreen() {
           // Only calculate score if sleep data exists
           if (sleepQuality > 0) {
             const dailyScore = calculateDailyRecoveryScore(sleepQuality, planCompleted);
-            console.log(`DEBUG - Day ${dateStr} recovery score: ${dailyScore}% (Sleep: ${sleepQuality}, Plan completed: ${planCompleted})`);
+            //console.log(`DEBUG - Day ${dateStr} recovery score: ${dailyScore}% (Sleep: ${sleepQuality}, Plan completed: ${planCompleted})`);
             validScores.push(dailyScore);
           }
         }
@@ -1382,12 +1382,12 @@ export default function HomeScreen() {
         const averageAdherence = Math.round(
           validScores.reduce((sum, score) => sum + score, 0) / validScores.length
         );
-        console.log(`DEBUG - Final recovery adherence from ${validScores.length} days: ${averageAdherence}%`);
+        //console.log(`DEBUG - Final recovery adherence from ${validScores.length} days: ${averageAdherence}%`);
         
         return averageAdherence;
       } else {
         // No valid historical data found
-        console.log('DEBUG - No valid historical recovery data found for adherence calculation');
+        //console.log('DEBUG - No valid historical recovery data found for adherence calculation');
         return 0;
       }
     } catch (error) {
@@ -1411,12 +1411,12 @@ export default function HomeScreen() {
       const plansCollectionRef = collection(db, 'users', user.uid, 'recoveryPlans');
       
       const unsubscribeRecovery = onSnapshot(recoveryCollectionRef, () => {
-        console.log('DEBUG - Recovery data changed, recalculating adherence');
+        //console.log('DEBUG - Recovery data changed, recalculating adherence');
         fetchRecoveryAdherence();
       });
       
       const unsubscribePlans = onSnapshot(plansCollectionRef, () => {
-        console.log('DEBUG - Recovery plans changed, recalculating adherence');
+        //console.log('DEBUG - Recovery plans changed, recalculating adherence');
         fetchRecoveryAdherence();
       });
       

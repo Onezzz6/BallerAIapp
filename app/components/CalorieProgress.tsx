@@ -13,9 +13,9 @@ export default function CalorieProgress() {
   const progress = Math.min(Math.max(eaten / goal, 0), 1);
 
   // Add debug logging to help diagnose issues
-  useEffect(() => {
+  /*useEffect(() => {
     console.log(`DEBUG - CalorieProgress: isLoading=${isLoading}, goal=${goal}, eaten=${eaten}`);
-  }, [isLoading, goal, eaten]);
+  }, [isLoading, goal, eaten]);*/
 
   const showInfoAlert = () => {
     Alert.alert(
@@ -27,7 +27,7 @@ export default function CalorieProgress() {
 
   // Show loading indicator while data is being fetched
   if (isLoading) {
-    console.log('DEBUG - CalorieProgress: Showing loading state');
+    //console.log('DEBUG - CalorieProgress: Showing loading state');
     return (
       <View style={{
         flex: 1,
@@ -88,7 +88,7 @@ export default function CalorieProgress() {
   // Only show empty state if goal is explicitly 0 and we're not loading
   // This prevents showing "Tap to learn how to start tracking" when goals are being calculated
   if (goal === 0 && !isLoading) {
-    console.log('DEBUG - CalorieProgress: Showing empty state (goal is 0 and not loading)');
+    //console.log('DEBUG - CalorieProgress: Showing empty state (goal is 0 and not loading)');
     return (
       <View style={{
         flex: 1,
@@ -147,7 +147,7 @@ export default function CalorieProgress() {
   }
 
   // Normal view with goal and progress
-  console.log(`DEBUG - CalorieProgress: Showing normal state with goal=${goal}, eaten=${eaten}`);
+  //console.log(`DEBUG - CalorieProgress: Showing normal state with goal=${goal}, eaten=${eaten}`);
   return (
     <View style={{
       flex: 1,

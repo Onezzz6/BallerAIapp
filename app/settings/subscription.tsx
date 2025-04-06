@@ -32,8 +32,7 @@ export default function SubscriptionSettingsScreen() {
           }
           
           // Check if subscription is active
-          const active = await subscriptionService.isSubscriptionActive(user.uid);
-          setIsActive(active);
+          setIsActive(data.isActive);
         } catch (error) {
           console.error('Error loading subscription data:', error);
         } finally {

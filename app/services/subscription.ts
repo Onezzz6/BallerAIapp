@@ -23,6 +23,16 @@ export interface SubscriptionData {
   cancellationDate?: string;
 }
 
+export const NO_SUBSCRIPTION_DATA: SubscriptionData = {
+  productId: '',
+  purchaseTime: '',
+  expiresDate: '',
+  isActive: false,
+  transactionId: null,
+  status: 'none',
+  autoRenewing: false
+};
+
 const subscriptionService = {
   /**
    * Save subscription data to Firebase
@@ -65,7 +75,7 @@ const subscriptionService = {
   /**
    * Get subscription data from Firebase
    */
-  async getSubscriptionData(userId: string): Promise<SubscriptionData | null> {
+  async getSubscriptionData(userId: string): Promise<SubscriptionData> {
     try {
       console.log('Getting subscription data for user:', userId);
       
@@ -73,46 +83,23 @@ const subscriptionService = {
       const userDoc = await getDoc(userRef);
       
       if (userDoc.exists() && userDoc.data().subscription) {
+        // Check if subscription has expired
+        const expirationDate = new Date(userDoc.data().expiresDate);
+        const now = new Date();
+        
+        if (expirationDate < now) {
+          // Update subscription status to expired
+          await this.updateSubscriptionStatus(userId, 'expired');
+        }
+
         return userDoc.data().subscription as SubscriptionData;
       }
       
-      return null;
+      console.log('User has no subscription:', userId);
+      return NO_SUBSCRIPTION_DATA;
     } catch (error) {
-      console.error('Error getting subscription data:', error);
-      return null;
-    }
-  },
-  
-  /**
-   * Check if a subscription is active
-   */
-  async isSubscriptionActive(userId: string): Promise<boolean> {
-    try {
-      const subscriptionData = await this.getSubscriptionData(userId);
-      
-      if (!subscriptionData) {
-        return false;
-      }
-      
-      // Check if subscription is marked as active
-      if (!subscriptionData.isActive) {
-        return false;
-      }
-      
-      // Check if subscription has expired
-      const expirationDate = new Date(subscriptionData.expiresDate);
-      const now = new Date();
-      
-      if (expirationDate < now) {
-        // Update subscription status to expired
-        await this.updateSubscriptionStatus(userId, 'expired');
-        return false;
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('Error checking subscription status:', error);
-      return false;
+      console.error('Error checking subscription:', error);
+      return NO_SUBSCRIPTION_DATA;
     }
   },
   
