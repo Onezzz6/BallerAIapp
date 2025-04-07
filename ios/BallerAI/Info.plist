@@ -65,12 +65,27 @@
           <key>NSIncludesSubdomains</key>
           <true/>
         </dict>
+        <key>192.168.86.225</key>
+        <dict>
+          <key>NSExceptionAllowsInsecureHTTPLoads</key>
+          <true/>
+          <key>NSIncludesSubdomains</key>
+          <true/>
+          <key>NSTemporaryExceptionAllowsInsecureHTTPLoads</key>
+          <true/>
+        </dict>
       </dict>
       <key>NSAllowsArbitraryLoads</key>
       <true/>
       <key>NSAllowsLocalNetworking</key>
       <true/>
     </dict>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>Allow $(PRODUCT_NAME) to connect to local network devices for development</string>
+    <key>NSBonjourServices</key>
+    <array>
+      <string>_http._tcp</string>
+    </array>
     <key>NSCameraUsageDescription</key>
     <string>This app uses the camera to analyze your meals for nutritional information.</string>
     <key>NSMicrophoneUsageDescription</key>

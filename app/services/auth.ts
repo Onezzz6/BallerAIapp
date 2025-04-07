@@ -6,7 +6,8 @@ import {
   signInWithPopup,
   fetchSignInMethodsForEmail,
   OAuthProvider,
-  signInWithCredential
+  signInWithCredential,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
@@ -482,6 +483,15 @@ const authService = {
       console.error("Error in checkAppleSignIn:", error);
       // Return false for exists to indicate no valid user was found
       return { exists: false, user: null, appleInfo: null, wasCanceled: false };
+    }
+  },
+
+  async resetPassword(email: string) {
+    try {
+      await sendPasswordResetEmail(auth, email);
+      return true;
+    } catch (error) {
+      throw error;
     }
   }
 };

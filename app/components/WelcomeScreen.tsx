@@ -1,4 +1,4 @@
-import { View, Text, Image, Pressable, TextInput, Alert, Keyboard, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, Image, Pressable, TextInput, Alert, Keyboard, TouchableWithoutFeedback, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInLeft, FadeOutRight } from 'react-native-reanimated';
 import Button from './Button';
@@ -26,6 +26,8 @@ export default function WelcomeScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAppleAvailable, setIsAppleAvailable] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [showResetModal, setShowResetModal] = useState(false);
 
   // Check if Apple authentication is available on this device
   useEffect(() => {
@@ -164,83 +166,264 @@ export default function WelcomeScreen() {
     );
   };
 
+  const handleForgotPassword = () => {
+    setResetEmail(email);
+    setShowResetModal(true);
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetEmail) {
+      Alert.alert('Error', 'Please enter your email address.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await authService.resetPassword(resetEmail);
+      setShowResetModal(false);
+      Alert.alert(
+        'Password Reset Email Sent',
+        'Check your email for instructions to reset your password.'
+      );
+    } catch (error: any) {
+      let errorMessage = 'Failed to send reset email. Please try again.';
+      if (error.code === 'auth/user-not-found') {
+        errorMessage = 'No account found with this email address.';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Please enter a valid email address.';
+      }
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <TouchableWithoutFeedback onPress={dismissKeyboard}>
-      <Animated.View 
-        entering={FadeInLeft.duration(500)}
-        exiting={FadeOutRight.duration(500)}
-        style={{
-          flex: 1,
-          backgroundColor: '#ffffff',
-          padding: 24,
-        }}
-      >
-        <View style={{
-          flex: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-          gap: 24,
-        }}>
-
-          <Image
-            source={require('../../assets/images/BallerAILogo.png')}
-            style={{
-              width: 120,
-              height: 120,
-              resizeMode: 'contain',
-              marginBottom: 0,
-            }}
-          />
-          
-          <Text style={{
-            fontSize: 32,
-            color: '#000000',
-            fontWeight: '600',
-            textAlign: 'center',
-            marginBottom: 0,
+    <>
+      <TouchableWithoutFeedback onPress={dismissKeyboard}>
+        <Animated.View 
+          entering={FadeInLeft.duration(500)}
+          exiting={FadeOutRight.duration(500)}
+          style={{
+            flex: 1,
+            backgroundColor: '#ffffff',
+            padding: 24,
+          }}
+        >
+          <View style={{
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: 24,
           }}>
-            Ready to go pro?
-          </Text>
 
-          {!showSignIn ? (
-            <>
-              <Button 
-                title="Get Started" 
-                onPress={handleGetStarted}
-                buttonStyle={{
-                  backgroundColor: '#4064F6',
-                  marginBottom: 16,
-                }}
-              />
+            <Image
+              source={require('../../assets/images/BallerAILogo.png')}
+              style={{
+                width: 120,
+                height: 120,
+                resizeMode: 'contain',
+                marginBottom: 0,
+              }}
+            />
+            
+            <Text style={{
+              fontSize: 32,
+              color: '#000000',
+              fontWeight: '600',
+              textAlign: 'center',
+              marginBottom: 0,
+            }}>
+              Ready to go pro?
+            </Text>
 
-              <View style={{alignItems: 'center', gap: 12, marginTop: 32 }}>
-                <Text style={{
-                  fontSize: 14,
-                  color: '#666666',
-                }}>
-                  Already have an account?
-                </Text>
+            {!showSignIn ? (
+              <>
+                <Button 
+                  title="Get Started" 
+                  onPress={handleGetStarted}
+                  buttonStyle={{
+                    backgroundColor: '#4064F6',
+                    marginBottom: 16,
+                  }}
+                />
+
+                <View style={{alignItems: 'center', gap: 12, marginTop: 32 }}>
+                  <Text style={{
+                    fontSize: 14,
+                    color: '#666666',
+                  }}>
+                    Already have an account?
+                  </Text>
+                  <Pressable
+                    onPress={() => setShowSignIn(true)}
+                    style={({ pressed }) => ({
+                      opacity: pressed ? 0.7 : 1,
+                    })}
+                  >
+                    <Text style={{
+                      fontSize: 16,
+                      color: '#4064F6',
+                      fontWeight: '600',
+                    }}>
+                      Sign In
+                    </Text>
+                  </Pressable>
+                </View>
+              </>
+            ) : (
+              <View style={{ width: '100%', gap: 16 }}>
+                <TextInput
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="Enter your email"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  style={{
+                    width: '100%',
+                    height: 50,
+                    borderWidth: 1,
+                    borderColor: '#E5E5E5',
+                    borderRadius: 12,
+                    paddingHorizontal: 16,
+                    fontSize: 16,
+                  }}
+                />
+
+                <View style={{ width: '100%', gap: 16 }}>
+                  <TextInput
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="Enter your password"
+                    secureTextEntry={!showPassword}
+                    style={{
+                      width: '100%',
+                      height: 50,
+                      borderWidth: 1,
+                      borderColor: '#E5E5E5',
+                      borderRadius: 12,
+                      padding: 16,
+                      paddingRight: 50,
+                      fontSize: 16,
+                    }}
+                  />
+                  <Pressable
+                    onPress={() => setShowPassword(!showPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: 12,
+                      top: 12,
+                    }}
+                  >
+                    <Ionicons
+                      name={showPassword ? 'eye-off' : 'eye'}
+                      size={24}
+                      color="#666666"
+                    />
+                  </Pressable>
+                </View>
+
                 <Pressable
-                  onPress={() => setShowSignIn(true)}
+                  onPress={handleForgotPassword}
                   style={({ pressed }) => ({
                     opacity: pressed ? 0.7 : 1,
+                    alignSelf: 'flex-end',
+                    marginTop: -8,
+                    marginBottom: 8,
+                  })}
+                >
+                  <Text style={{
+                    fontSize: 14,
+                    color: '#4064F6',
+                  }}>
+                    Forgot Password?
+                  </Text>
+                </Pressable>
+
+                <Button 
+                  title={isLoading ? "Signing In..." : "Sign In"}
+                  onPress={handleSignIn}
+                  disabled={isLoading}
+                  buttonStyle={{
+                    backgroundColor: '#4064F6',
+                    marginBottom: 16,
+                    opacity: isLoading ? 0.5 : 1,
+                  }}
+                />
+
+                {isAppleAvailable && (
+                  <AppleAuthentication.AppleAuthenticationButton
+                    buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+                    buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                    cornerRadius={36}
+                    style={{
+                      width: '100%',
+                      height: 55,
+                      marginBottom: 16,
+                    }}
+                    onPress={handleAppleSignIn}
+                  />
+                )}
+
+                <Pressable
+                  onPress={() => setShowSignIn(false)}
+                  style={({ pressed }) => ({
+                    opacity: pressed ? 0.7 : 1,
+                    alignItems: 'center',
                   })}
                 >
                   <Text style={{
                     fontSize: 16,
-                    color: '#4064F6',
-                    fontWeight: '600',
+                    color: '#666666',
                   }}>
-                    Sign In
+                    Back
                   </Text>
                 </Pressable>
               </View>
-            </>
-          ) : (
-            <View style={{ width: '100%', gap: 16 }}>
+            )}
+          </View>
+        </Animated.View>
+      </TouchableWithoutFeedback>
+      
+      {/* Password Reset Modal */}
+      <Modal
+        visible={showResetModal}
+        transparent
+        animationType="slide"
+      >
+        <TouchableWithoutFeedback onPress={dismissKeyboard}>
+          <View style={{
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: 'rgba(0,0,0,0.5)',
+          }}>
+            <View style={{
+              width: '85%',
+              backgroundColor: 'white',
+              borderRadius: 12,
+              padding: 24,
+              gap: 16,
+            }}>
+              <Text style={{
+                fontSize: 20,
+                fontWeight: '600',
+                marginBottom: 8,
+              }}>
+                Reset Password
+              </Text>
+              
+              <Text style={{
+                fontSize: 14,
+                color: '#666666',
+                marginBottom: 8,
+              }}>
+                Enter your email address and we'll send you instructions to reset your password.
+              </Text>
+              
               <TextInput
-                value={email}
-                onChangeText={setEmail}
+                value={resetEmail}
+                onChangeText={setResetEmail}
                 placeholder="Enter your email"
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -254,84 +437,45 @@ export default function WelcomeScreen() {
                   fontSize: 16,
                 }}
               />
-
-              <View style={{ width: '100%', gap: 16 }}>
-                <TextInput
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="Enter your password"
-                  secureTextEntry={!showPassword}
-                  style={{
-                    width: '100%',
-                    height: 50,
-                    borderWidth: 1,
-                    borderColor: '#E5E5E5',
-                    borderRadius: 12,
-                    padding: 16,
-                    paddingRight: 50,
-                    fontSize: 16,
-                  }}
-                />
+              
+              <View style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                marginTop: 8,
+              }}>
                 <Pressable
-                  onPress={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: 'absolute',
-                    right: 12,
-                    top: 12,
-                  }}
+                  onPress={() => setShowResetModal(false)}
+                  style={({ pressed }) => ({
+                    opacity: pressed ? 0.7 : 1,
+                    padding: 12,
+                  })}
                 >
-                  <Ionicons
-                    name={showPassword ? 'eye-off' : 'eye'}
-                    size={24}
-                    color="#666666"
-                  />
+                  <Text style={{
+                    fontSize: 16,
+                    color: '#666666',
+                  }}>
+                    Cancel
+                  </Text>
                 </Pressable>
-              </View>
-
-              <Button 
-                title={isLoading ? "Signing In..." : "Sign In"}
-                onPress={handleSignIn}
-                disabled={isLoading}
-                buttonStyle={{
-                  backgroundColor: '#4064F6',
-                  marginBottom: 16,
-                  opacity: isLoading ? 0.5 : 1,
-                }}
-              />
-
-              {isAppleAvailable && (
-                <AppleAuthentication.AppleAuthenticationButton
-                  buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
-                  buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-                  cornerRadius={36}
-                  style={{
-                    width: '100%',
-                    height: 55,
-                    marginBottom: 16,
+                
+                <Button 
+                  title={isLoading ? "Sending..." : "Send Reset Link"}
+                  onPress={handleResetPassword}
+                  disabled={isLoading}
+                  buttonStyle={{
+                    backgroundColor: '#4064F6',
+                    opacity: isLoading ? 0.5 : 1,
+                    paddingHorizontal: 16,
+                    paddingVertical: 10,
+                    height: 'auto',
                   }}
-                  onPress={handleAppleSignIn}
                 />
-              )}
-
-              <Pressable
-                onPress={() => setShowSignIn(false)}
-                style={({ pressed }) => ({
-                  opacity: pressed ? 0.7 : 1,
-                  alignItems: 'center',
-                })}
-              >
-                <Text style={{
-                  fontSize: 16,
-                  color: '#666666',
-                }}>
-                  Back
-                </Text>
-              </Pressable>
+              </View>
             </View>
-          )}
-        </View>
-      </Animated.View>
-    </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+    </>
   );
 } 
 

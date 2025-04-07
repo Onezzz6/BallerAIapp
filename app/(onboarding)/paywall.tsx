@@ -549,7 +549,7 @@ const PaywallScreen = () => {
       setIsLoading(false);
     }
   };
-
+  
   const subscriptionPlans: SubscriptionPlan[] = [
     {
       id: '1month',
