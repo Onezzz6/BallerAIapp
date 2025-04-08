@@ -38,48 +38,42 @@ export function calculateDailyCalories(
 }
 
 /**
- * Calculate macronutrient goals based on total daily calories and goal
+ * Calculate macronutrient goals based on total daily calories, goal, and body weight
  * @param dailyCalories Total daily calorie needs
  * @param goal Fitness/nutrition goal (maintain, lose, gain, pro, etc.)
+ * @param weight Body weight in kg for protein calculation
  * @returns Object containing calorie goal and macro goals in grams
  */
-export function calculateMacroGoals(dailyCalories: number, goal: string) {
-  // Standardized macro ratios based on goals
+export function calculateMacroGoals(dailyCalories: number, goal: string, weight: number = 70) {
+  // Standardized macro ratios based on goals (these will be used for carbs and fats)
   const macroRatios = {
     'maintain': {
-      protein: 0.25, // 25% of calories from protein
-      fats: 0.25,    // 25% of calories from fat
-      carbs: 0.50    // 50% of calories from carbs
+      fats: 0.20,    // 20% of calories from fat (decreased from 25%)
+      carbs: 0.55    // 55% of calories from carbs (increased from 50%)
     },
     'lose': {
-      protein: 0.30, // Higher protein for muscle preservation
-      fats: 0.25,
-      carbs: 0.45
+      fats: 0.20,    // 20% of calories from fat (decreased from 25%)
+      carbs: 0.50    // 50% of calories from carbs (increased from 45%)
     },
     'gain': {
-      protein: 0.25,
-      fats: 0.20,
-      carbs: 0.55    // Higher carbs for muscle gain
+      fats: 0.15,    // 15% of calories from fat (decreased from 20%)
+      carbs: 0.60    // 60% of calories from carbs (increased from 55%)
     },
     'build': {
-      protein: 0.30,
-      fats: 0.20,
-      carbs: 0.50
+      fats: 0.15,    // 15% of calories from fat (decreased from 20%)
+      carbs: 0.55    // 55% of calories from carbs (increased from 50%)
     },
     'pro': {         // Pro football-specific ratios
-      protein: 0.30,
-      fats: 0.25,
-      carbs: 0.45
+      fats: 0.20,    // 20% of calories from fat (decreased from 25%)
+      carbs: 0.50    // 50% of calories from carbs (increased from 45%)
     },
     'semi-pro': {    // Semi-pro football-specific ratios
-      protein: 0.25,
-      fats: 0.25,
-      carbs: 0.50
+      fats: 0.20,    // 20% of calories from fat (decreased from 25%)
+      carbs: 0.55    // 55% of calories from carbs (increased from 50%)
     },
     'amateur': {     // Amateur football-specific ratios
-      protein: 0.25,
-      fats: 0.30,
-      carbs: 0.45
+      fats: 0.25,    // 25% of calories from fat (decreased from 30%)
+      carbs: 0.50    // 50% of calories from carbs (increased from 45%)
     }
   };
 
@@ -87,13 +81,26 @@ export function calculateMacroGoals(dailyCalories: number, goal: string) {
   const normalizedGoal = goal.toLowerCase();
   const ratios = macroRatios[normalizedGoal as keyof typeof macroRatios] || macroRatios.maintain;
 
+  // Calculate protein based on weight (1.8g per kg of body weight for optimal football recovery)
+  const proteinGrams = Math.round(weight * 1.8);
+  
+  // Calculate calories from protein
+  const proteinCalories = proteinGrams * 4;
+  
+  // Calculate remaining calories for fats and carbs
+  const remainingCalories = dailyCalories - proteinCalories;
+  
+  // Calculate fats and carbs based on the remaining calories and ratios
+  const totalRatio = ratios.fats + ratios.carbs;
+  const fatRatio = ratios.fats / totalRatio;
+  const carbRatio = ratios.carbs / totalRatio;
+  
   // Calculate grams of each macronutrient
-  // Protein and carbs are 4 calories per gram, fat is 9 calories per gram
   return {
     calories: Math.round(dailyCalories),
-    protein: Math.round((dailyCalories * ratios.protein) / 4),
-    carbs: Math.round((dailyCalories * ratios.carbs) / 4),
-    fat: Math.round((dailyCalories * ratios.fats) / 9)
+    protein: proteinGrams,
+    carbs: Math.round((remainingCalories * carbRatio) / 4),
+    fat: Math.round((remainingCalories * fatRatio) / 9)
   };
 }
 
@@ -142,8 +149,8 @@ export function calculateNutritionGoals(userData: any) {
     activityLevel
   );
 
-  // Calculate macro goals
-  const macros = calculateMacroGoals(dailyCalories, goal);
+  // Calculate macro goals with weight-based protein calculation
+  const macros = calculateMacroGoals(dailyCalories, goal, weight);
   
   return {
     calorieGoal: macros.calories,
