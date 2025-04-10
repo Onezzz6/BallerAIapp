@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, ScrollView, Pressable, Image, Alert, AppState, Linking } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, Image, Alert, AppState, Linking, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useState, useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
@@ -278,6 +279,7 @@ const PaywallScreen = () => {
               ? 'Unable to load subscription options. Please ensure you are signed in with a Sandbox test account and have an active internet connection.'
               : 'Unable to load subscription options. Please ensure you are signed in with a test account and have an active internet connection.'
           );
+          setIsLoading(false); // Set loading to false even if there's an error
         } else {
           console.log('Products loaded successfully:', results.map(p => ({
             id: p.productId,
@@ -285,6 +287,7 @@ const PaywallScreen = () => {
             currency: p.priceCurrencyCode
           })));
           setProducts(results);
+          setIsLoading(false); // Set loading to false when products are loaded
         }
       } else {
         throw new Error(`Store error: ${responseCode}${errorCode ? `, Error code: ${errorCode}` : ''}`);
@@ -303,6 +306,7 @@ const PaywallScreen = () => {
           ? 'Unable to connect to the App Store. Please ensure you are signed in with a Sandbox test account and have an active internet connection.'
           : 'Unable to connect to the Play Store. Please ensure you are signed in and have an active internet connection.'
       );
+      setIsLoading(false); // Set loading to false when there's an error
     }
   };
 
@@ -475,6 +479,14 @@ const PaywallScreen = () => {
       subscription.remove();
     };
   }, []);
+
+  // Monitor products state
+  useEffect(() => {
+    if (products.length > 0) {
+      // When products are loaded, update the loading state
+      setIsLoading(false);
+    }
+  }, [products]);
 
   const handleContinue = async () => {
     try {
@@ -814,108 +826,120 @@ const PaywallScreen = () => {
         <Ionicons name="arrow-back" size={24} color="#000" />
       </Pressable>
       
-      <View style={styles.content}>
-        <Text style={styles.title}>Better training.</Text>
-        <Text style={styles.subtitle}>Better results!</Text>
-
-        {/* Subscription Status */}
-        {renderSubscriptionStatus()}
-
-        {/* Subscription Plans */}
-        <View style={styles.plansContainer}>
-          {subscriptionPlans.map((plan) => (
-            <Pressable
-              key={plan.id}
-              style={[
-                styles.planCard,
-                selectedPlan === plan.id && styles.selectedPlan,
-              ]}
-              onPress={() => setSelectedPlan(plan.id)}
-            >
-              {plan.isBestValue && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText} allowFontScaling={false}>
-                    BEST VALUE
-                  </Text>
-                </View>
-              )}
-              
-              <View style={styles.planHeader}>
-                <Text style={styles.planDuration}>{plan.duration}</Text>
-                <Text style={styles.planPeriod}>Month{plan.duration !== '1' ? 's' : ''}</Text>
-              </View>
-              
-              {selectedPlan === plan.id && (
-                <View style={styles.selectedIndicator}>
-                  <Ionicons name="checkmark-circle" size={24} color="#4064F6" />
-                </View>
-              )}
-              
-              <View style={styles.planPricing}>
-                <Text style={styles.planPrice}>{plan.price}</Text>
-                <Text style={styles.planPriceDetail}>{plan.period}</Text>
-              </View>
-              
-              <Text style={styles.planTotal}>{plan.totalPrice}</Text>
-              <Text style={styles.planTotalPeriod}>{plan.period2}</Text>
-            </Pressable>
-          ))}
-        </View>
-
-        {/* Pro Testimonial Section */}
-        <View style={styles.testimonialSection}>
-          <Text style={styles.testimonialTitle}>Trusted by Professionals</Text>
-          <View style={styles.testimonialContent}>
-            <Image 
-              source={require('../../assets/images/2027.png')}
-              style={styles.testimonialImage}
-              resizeMode="cover"
-            />
-            <Text style={styles.testimonialText}>
-              "BallerAI changed the way I approach training forever. The ease of use and the amount of value it has brought to my professional life is incredible. I have loved the recovery plans and macro calculation methods the most. I'm improving at the highest rate possible."
-            </Text>
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <View style={styles.loadingIndicator}>
+            {/* Activity indicator with color matching the app's theme */}
+            <Text style={styles.loadingText}>Loading subscription options...</Text>
+            <ActivityIndicator size="large" color="#4064F6" />
           </View>
         </View>
+      ) : (
+        <>
+          <View style={styles.content}>
+            <Text style={styles.title}>Better training.</Text>
+            <Text style={styles.subtitle}>Better results!</Text>
 
-        {/* Continue Button */}
-        <CustomButton
-          title="Continue"
-          onPress={handleContinue}
-          buttonStyle={styles.continueButton}
-          textStyle={styles.continueButtonText}
-        />
-      </View>
-      
-      {/* Add this before the closing ScrollView tag */}
-      <Pressable 
-        onPress={handleRestorePurchases}
-        style={styles.restoreButton}
-        disabled={isLoading}
-      >
-        <Text style={styles.restoreButtonText}>
-          Restore Purchases
-        </Text>
-      </Pressable>
-      
-      {/* Legal links */}
-      <View style={styles.legalLinksContainer}>
-        <Text style={styles.legalText}>
-          By continuing, you agree to our{' '}
-          <Text 
-            style={styles.legalLink}
-            onPress={() => Linking.openURL('https://ballerbizoy.com/privacy')}
+            {/* Subscription Status */}
+            {renderSubscriptionStatus()}
+
+            {/* Subscription Plans */}
+            <View style={styles.plansContainer}>
+              {subscriptionPlans.map((plan) => (
+                <Pressable
+                  key={plan.id}
+                  style={[
+                    styles.planCard,
+                    selectedPlan === plan.id && styles.selectedPlan,
+                  ]}
+                  onPress={() => setSelectedPlan(plan.id)}
+                >
+                  {plan.isBestValue && (
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText} allowFontScaling={false}>
+                        BEST VALUE
+                      </Text>
+                    </View>
+                  )}
+                  
+                  <View style={styles.planHeader}>
+                    <Text style={styles.planDuration}>{plan.duration}</Text>
+                    <Text style={styles.planPeriod}>Month{plan.duration !== '1' ? 's' : ''}</Text>
+                  </View>
+                  
+                  {selectedPlan === plan.id && (
+                    <View style={styles.selectedIndicator}>
+                      <Ionicons name="checkmark-circle" size={24} color="#4064F6" />
+                    </View>
+                  )}
+                  
+                  <View style={styles.planPricing}>
+                    <Text style={styles.planPrice}>{plan.price}</Text>
+                    <Text style={styles.planPriceDetail}>{plan.period}</Text>
+                  </View>
+                  
+                  <Text style={styles.planTotal}>{plan.totalPrice}</Text>
+                  <Text style={styles.planTotalPeriod}>{plan.period2}</Text>
+                </Pressable>
+              ))}
+            </View>
+
+            {/* Pro Testimonial Section */}
+            <View style={styles.testimonialSection}>
+              <Text style={styles.testimonialTitle}>Trusted by Professionals</Text>
+              <View style={styles.testimonialContent}>
+                <Image 
+                  source={require('../../assets/images/2027.png')}
+                  style={styles.testimonialImage}
+                  resizeMode="cover"
+                />
+                <Text style={styles.testimonialText}>
+                  "BallerAI changed the way I approach training forever. The ease of use and the amount of value it has brought to my professional life is incredible. I have loved the recovery plans and macro calculation methods the most. I'm improving at the highest rate possible."
+                </Text>
+              </View>
+            </View>
+
+            {/* Continue Button */}
+            <CustomButton
+              title="Continue"
+              onPress={handleContinue}
+              buttonStyle={styles.continueButton}
+              textStyle={styles.continueButtonText}
+            />
+          </View>
+          
+          {/* Add this before the closing ScrollView tag */}
+          <Pressable 
+            onPress={handleRestorePurchases}
+            style={styles.restoreButton}
+            disabled={isLoading}
           >
-            Privacy Policy
-          </Text>
-          {' '}and{' '}
-          <Text 
-            style={styles.legalLink}
-            onPress={() => Linking.openURL('https://www.apple.com/legal/internet-services/itunes/dev/stdeula')}
-          >
-            Terms of Use
-          </Text>
-        </Text>
-      </View>
+            <Text style={styles.restoreButtonText}>
+              Restore Purchases
+            </Text>
+          </Pressable>
+          
+          {/* Legal links */}
+          <View style={styles.legalLinksContainer}>
+            <Text style={styles.legalText}>
+              By continuing, you agree to our{' '}
+              <Text 
+                style={styles.legalLink}
+                onPress={() => Linking.openURL('https://ballerbizoy.com/privacy')}
+              >
+                Privacy Policy
+              </Text>
+              {' '}and{' '}
+              <Text 
+                style={styles.legalLink}
+                onPress={() => Linking.openURL('https://www.apple.com/legal/internet-services/itunes/dev/stdeula')}
+              >
+                Terms of Use
+              </Text>
+            </Text>
+          </View>
+        </>
+      )}
     </ScrollView>
   );
 };
@@ -1104,5 +1128,24 @@ const styles = StyleSheet.create({
   legalLink: {
     color: '#999999',
     textDecorationLine: 'underline',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: 600,
+    paddingTop: 120,
+  },
+  loadingIndicator: {
+    padding: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#4064F6',
+    marginBottom: 20,
   },
 }); 
