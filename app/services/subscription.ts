@@ -38,20 +38,22 @@ const subscriptionService = {
   /**
    * Save subscription data to Firebase
    */
-  async saveSubscriptionData(userId: string, purchase: any, expirationDateFromValidReceipt: Date): Promise<boolean> {
+  async saveSubscriptionData(userId: string, purchase: any, expirationDate: Date, isRenewing: boolean): Promise<boolean> {
     try {
       console.log('Saving subscription data for user:', userId);
       console.log('Saving subscription, purchase:', purchase);
-      console.log('Saving subscription, expirationDateFromValidReceipt:', expirationDateFromValidReceipt);
+      console.log('Saving subscription, expirationDate:', expirationDate);
+      console.log('Saving subscription, isRenewing:', isRenewing);
 
       const subscriptionData: SubscriptionData = {
         productId: purchase.productId,
         purchaseTime: new Date().toISOString(),
-        expiresDate: expirationDateFromValidReceipt.toISOString(),
+        expiresDate: expirationDate.toISOString(),
         isActive: true,
         transactionId: purchase.transactionId || null,
         status: 'active',
-        autoRenewing: true
+        autoRenewing: isRenewing,
+        cancellationDate: null
       };
 
       // Update user document with subscription data
@@ -136,64 +138,6 @@ const subscriptionService = {
       return true;
     } catch (error) {
       console.error('Error updating subscription status:', error);
-      return false;
-    }
-  },
-  
-  /**
-   * Check for existing subscriptions using Expo IAP
-   */
-  async checkExistingSubscriptions(): Promise<any> {
-    try {
-      console.log('Checking for existing subscriptions...');
-      const history = await InAppPurchases.getPurchaseHistoryAsync();
-      console.log('Purchase history:', history);
-      
-      if (history && history.results && history.results.length > 0) {
-        // Find active subscriptions
-        const activeSubscriptions = history.results.filter(purchase => {
-          const productId = purchase.productId;
-          return (
-            productId === PRODUCT_IDS['1month'] ||
-            productId === PRODUCT_IDS['12months']
-          );
-        });
-        
-        if (activeSubscriptions.length > 0) {
-          console.log('Found active subscriptions:', activeSubscriptions);
-          return activeSubscriptions[0]; // Return the most recent subscription
-        }
-      }
-      
-      return null;
-    } catch (error) {
-      console.error('Error checking subscription status:', error);
-      return null;
-    }
-  },
-  
-  /**
-   * Process a successful purchase
-   */
-  async processSuccessfulPurchase(userId: string, purchase: any, expirationDateFromValidReceipt: Date): Promise<boolean> {
-    try {
-      console.log('Processing successful purchase for user:', userId);
-      
-      // Save subscription data to Firebase
-      const success = await this.saveSubscriptionData(userId, purchase, expirationDateFromValidReceipt);
-      
-      if (!success) {
-        console.error('Failed to save subscription data');
-        return false;
-      }
-      
-      // Log the purchase event
-      // This would typically be done with Firebase Analytics
-      console.log('Purchase processed successfully');
-      
-      return true;
-    } catch (error) {
-      console.error('Error processing purchase:', error);
       return false;
     }
   },

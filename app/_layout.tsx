@@ -1,9 +1,9 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Slot } from 'expo-router';
+import { router, Slot } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import 'react-native-reanimated';
 import LoadingScreen from './components/LoadingScreen';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -12,6 +12,7 @@ import { OnboardingProvider } from './context/OnboardingContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NutritionProvider } from './context/NutritionContext';
 import { TrainingProvider } from './context/TrainingContext';
+import { AppState } from 'react-native';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -38,6 +39,34 @@ export default function RootLayout() {
 
     return () => clearTimeout(timer);
   }, [loaded, error]);
+
+  const appState = useRef(AppState.currentState);
+
+  // Handle app state changes
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', async (nextAppState) => {
+      if (
+        appState.current.match(/inactive|background/) &&
+        nextAppState === 'active'
+      ) {
+        console.log('App has come to the foreground!');
+        // Check for existing subscriptions when app becomes active
+        /*if (isIAPInitialized.current) {
+          const existingSubscription = await checkExistingSubscriptions();
+          if (existingSubscription) {
+            console.log('Processing existing subscription on app active:', existingSubscription);
+            await handleSuccessfulPurchase(existingSubscription.data);
+            router.replace('/(tabs)/home');
+          }
+        }*/
+      }
+      appState.current = nextAppState;
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   if (!loaded) {
     return null;

@@ -123,9 +123,9 @@ const PaywallScreen = () => {
       expirationDateFromValidReceipt = null;
 
       // Validate the receipt before processing the purchase
-      const isValid = await validateReceipt(purchase);
-      
-      if (!isValid) {
+      const validationResult = await validateReceipt(purchase);
+      const { expirationDate, isRenewing } = validationResult;
+      if (expirationDate === null) {
         console.error('Receipt validation failed');
         Alert.alert(
           'Purchase Verification Failed',
@@ -138,13 +138,6 @@ const PaywallScreen = () => {
       if (uid && hasAppleInfo === 'true') {
         const userIdString = Array.isArray(uid) ? uid[0] : uid;
         
-        // TODO: Fix Apple sign in
-
-        // Calculate expiration date based on product ID
-        const isYearlySubscription = purchase.productId === PRODUCT_IDS['12months'];
-        const expirationDate = new Date();
-        expirationDate.setMonth(expirationDate.getMonth() + (isYearlySubscription ? 12 : 1));
-        
         // Create the user document with subscription info
         await createUserDocument(userIdString, {
           ...onboardingData,
@@ -153,11 +146,11 @@ const PaywallScreen = () => {
           subscription: {
             productId: purchase.productId,
             purchaseTime: new Date().toISOString(),
-            expiresDate: expirationDateFromValidReceipt.toISOString() || expirationDate.toISOString(),
+            expiresDate: expirationDate.toISOString(),
             isActive: true,
             transactionId: purchase.transactionId || null,
             status: 'active',
-            autoRenewing: true
+            autoRenewing: isRenewing
           }
         });
         
@@ -165,7 +158,7 @@ const PaywallScreen = () => {
         await initializeAllDataListeners(userIdString);
       } else if (user) {
         // For logged-in users, use the subscription service
-        await subscriptionService.processSuccessfulPurchase(user.uid, purchase, expirationDateFromValidReceipt);
+        await subscriptionService.saveSubscriptionData(user.uid, purchase, expirationDate, isRenewing);
       }
       
       // Log the purchase event using the new modular API
@@ -375,8 +368,17 @@ const PaywallScreen = () => {
           console.log('Platform:', Platform.OS);
           console.log('Bundle ID:', Constants.expoConfig?.ios?.bundleIdentifier);
           
-          await InAppPurchases.connectAsync();
-          console.log('IAP connected successfully');
+          try {
+            await InAppPurchases.connectAsync();
+            console.log('IAP connected successfully');
+          } catch (error: any) {
+            // If already connected, that's fine - we can proceed
+            if (error.code === 'ERR_IN_APP_PURCHASES_CONNECTION' && error.message.includes('Already connected')) {
+              console.log('IAP already connected, proceeding...');
+            } else {
+              throw error; // Re-throw other errors
+            }
+          }
           
           if (isMounted && !purchaseListenerSet.current) {
             InAppPurchases.setPurchaseListener(purchaseListener);
@@ -686,7 +688,7 @@ const PaywallScreen = () => {
       // If no active subscription in Firebase, check IAP
       console.log('Checking for IAP subscription in purchase history...');
       const history = await InAppPurchases.getPurchaseHistoryAsync();
-      console.log('Purchase history:', history);
+      //console.log('Purchase history:', history);
       
       if (history && history.results && history.results.length > 0) {
         // Find active subscriptions
@@ -703,21 +705,23 @@ const PaywallScreen = () => {
 
         // Validate receipts for active subscriptions
         const validatedSubscriptions = [];
+        let validationResult: { expirationDate: Date | null, isRenewing: boolean } = { expirationDate: null, isRenewing: false };
         for (const subscription of activeSubscriptions) {
-          const isValid  = await validateReceipt(subscription);
-          if (isValid) {
+          validationResult = await validateReceipt(subscription);
+          if (validationResult.expirationDate) {
             validatedSubscriptions.push(subscription);
+            break;
           } else {
             console.log('Subscription validation failed:', subscription.productId);
           }
         }
 
-        if (validatedSubscriptions.length > 0) {
-          console.log('Found validated active subscriptions in IAP:', validatedSubscriptions);
+        if (validatedSubscriptions.length > 0 && validationResult.expirationDate) {
+          console.log('Found validated active subscription in IAP, expiration date:', validationResult.expirationDate);
           
           // If user is logged in, save this to Firebase
           if (user) {
-            await subscriptionService.processSuccessfulPurchase(user.uid, validatedSubscriptions[0], expirationDateFromValidReceipt);
+            await subscriptionService.saveSubscriptionData(user.uid, validatedSubscriptions[0], validationResult.expirationDate, validationResult.isRenewing);
           }
           
           return { source: 'iap', data: validatedSubscriptions[0] };
@@ -737,19 +741,16 @@ const PaywallScreen = () => {
     router.replace('/(onboarding)/sign-up');
   };
 
-  const validateReceipt = async (purchase: InAppPurchases.InAppPurchase): Promise<boolean> => {
+  const validateReceipt = async (purchase: InAppPurchases.InAppPurchase): Promise<{ expirationDate: Date | null, isRenewing: boolean }> => {
     try {
       //console.log('Validating receipt on client side:', purchase);
       
       // For iOS, we can use the InAppPurchases API
       if (Platform.OS === 'ios') {
-        // Since validateReceiptAsync is not available in the current version,
-        // we'll implement a basic validation based on the purchase data
-        
         // Check if the purchase has a valid receipt
         if (!purchase.transactionReceipt) {
           console.log('Validate receipt: No transaction receipt found');
-          return false;
+          return { expirationDate: null, isRenewing: false };
         }
 
         const prodURL = 'https://buy.itunes.apple.com/verifyReceipt'
@@ -763,12 +764,12 @@ const PaywallScreen = () => {
         }
 
         // First, try to validate against production
-        console.log('Validate receipt: Contacting production server...');
+        //console.log('Validate receipt: Contacting production server...');
         const prodRes = await axios.post(prodURL, payload)
         //console.log('Validate receipt: Production server response: ', prodRes.data);
         // If status is 21007, fall back to sandbox
         if (prodRes.data && prodRes.data.status === 21007) {
-          console.log('Validate receipt: Falling back to sandbox server...');
+          //console.log('Validate receipt: Falling back to sandbox server...');
           const sandboxRes = await axios.post(stagingURL, payload)
           //console.log('Validate receipt: Sandbox server response: ', sandboxRes.data);
 
@@ -777,53 +778,32 @@ const PaywallScreen = () => {
             //console.log('Validate receipt: Latest receipt: ', receipt);
 
             // Check expiration
+            const purchaseTime = new Date(purchase.purchaseTime);
             const expirationTime = new Date(parseInt(receipt.expires_date_ms));
             const now = new Date();
+            console.log('Validate receipt: purchase: ', purchaseTime);
             console.log('Validate receipt: expiration: ', expirationTime);
             console.log('Validate receipt: now: ', now);
             const isValid = expirationTime > now;
             console.log('Validate receipt: Is receipt valid:', isValid);
 
             if (isValid) {
-              expirationDateFromValidReceipt = expirationTime;
+              if (sandboxRes.data.pending_renewal_info.length > 0) {  
+                const renewalInfo = sandboxRes.data.pending_renewal_info[0]
+                //console.log('Validate receipt: renewalInfo: ', renewalInfo);
+                const isRenewingValue = renewalInfo.auto_renew_status === '1'
+                console.log('Validate receipt: isRenewing:', isRenewingValue);
+                return { expirationDate: expirationTime, isRenewing: isRenewingValue };
+              }
+              return { expirationDate: expirationTime, isRenewing: false };
             }
-
-            return isValid;
           }
         }
-
-        console.log('Validate receipt: Returning false');
-        return false;
       } 
-      // For Android, we need to implement our own validation logic
-      else if (Platform.OS === 'android') {
-        // Android doesn't have a direct client-side validation API
-        // We'll implement a basic check based on purchase time and product ID
-        
-        // Check if the purchase is recent (within the last 30 days)
-        const purchaseTime = new Date(purchase.purchaseTime);
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        
-        const isRecent = purchaseTime > thirtyDaysAgo;
-        
-        // Check if the product ID matches one of our subscription products
-        const isValidProduct = Object.values(PRODUCT_IDS).includes(purchase.productId);
-        
-        return isRecent && isValidProduct;
-      }
-      
-      return false;
+      return { expirationDate: null, isRenewing: false };
     } catch (error) {
       console.error('Error validating receipt:', error);
-      
-      // In development mode, we'll simulate a successful validation
-      if (__DEV__) {
-        console.log('Development mode: Simulating successful receipt validation');
-        return true;
-      }
-      
-      return false;
+      return { expirationDate: null, isRenewing: false };
     }
   };
 
