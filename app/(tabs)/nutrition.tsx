@@ -21,6 +21,7 @@ import CustomButton from '../components/CustomButton';
 import { calculateNutritionGoals } from '../utils/nutritionCalculations';
 import * as imageAnalysis from '../services/imageAnalysis';
 import WeeklyOverview from '../components/WeeklyOverview';
+import analytics from '@react-native-firebase/analytics';
 
 type MacroGoals = {
   calories: { current: number; goal: number };
@@ -1600,6 +1601,14 @@ export default function NutritionScreen() {
       };
 
       await addDoc(collection(db, 'meals'), mealData);
+      
+      // Log analytics event after successful logging
+      try {
+        await analytics().logEvent('log_meal');
+        console.log("Analytics event 'log_meal' logged.");
+      } catch (error) {
+        console.error("Error logging 'log_meal' event:", error);
+      }
 
       // Update daily macros for selected date
       const dateString = formatDateId(selectedDate);

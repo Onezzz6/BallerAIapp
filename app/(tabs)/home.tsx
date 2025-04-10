@@ -25,6 +25,7 @@ import { askOpenAI } from '../utils/openai';
 import Svg, { Circle } from 'react-native-svg';
 import SubscriptionStatus from '../components/SubscriptionStatus';
 import Animated, { PinwheelIn } from 'react-native-reanimated';
+import analytics from '@react-native-firebase/analytics'; // Add analytics import
 
 export default function HomeScreen() {
   const { user } = useAuth();

@@ -9,6 +9,7 @@ import Constants from 'expo-constants';
 import Animated, { FadeIn, FadeInDown, PinwheelIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { startOfWeek, endOfWeek, differenceInMilliseconds, format, isSunday, subWeeks, isAfter, parseISO, addDays } from 'date-fns';
+import analytics from '@react-native-firebase/analytics';
 
 type FocusArea = 'technique' | 'strength' | 'endurance' | 'speed' | 'overall';
 type GymAccess = 'yes' | 'no';
@@ -703,7 +704,15 @@ Focus on recovery today`;
     });
   };
 
-  const handleGoToPlans = () => {
+  const handleGoToPlans = async () => {
+    // Log analytics event before navigating
+    try {
+      await analytics().logEvent('view_training_plans');
+      console.log("Analytics event 'view_training_plans' logged.");
+    } catch (error) {
+      console.error("Error logging 'view_training_plans' event:", error);
+    }
+    
     // Navigate to training plans with only the fromTraining parameter
     router.push({
       pathname: '../training-plans',

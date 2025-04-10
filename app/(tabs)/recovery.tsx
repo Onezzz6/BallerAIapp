@@ -12,6 +12,7 @@ import React from 'react';
 import WeeklyOverview from '../components/WeeklyOverview';
 import Constants from 'expo-constants';
 import Animated, { FadeIn, FadeInDown, PinwheelIn } from 'react-native-reanimated';
+import analytics from '@react-native-firebase/analytics';
 
 // Add this line to get the API key from Constants.expoConfig.extra
 const OPENAI_API_KEY = Constants.expoConfig?.extra?.openaiApiKey;
@@ -403,6 +404,14 @@ IMPORTANT USAGE GUIDELINES:
         date: dateStr,
         completed: false
       });
+
+      // Log analytics event after successful saving
+      try {
+        await analytics().logEvent('generate_recovery_plan');
+        console.log("Analytics event 'generate_recovery_plan' logged.");
+      } catch (error) {
+        console.error("Error logging 'generate_recovery_plan' event:", error);
+      }
 
       setPlanExists(true);
       console.log(`Recovery plan saved to Firebase for ${dateStr}`);
