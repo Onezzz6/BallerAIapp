@@ -19,6 +19,7 @@ import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import { Buffer } from "buffer";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 
 // Initialize data listeners function defined locally to avoid circular imports
 const initializeAllDataListeners = async (userId: string) => {
@@ -106,7 +107,13 @@ const PaywallScreen = () => {
   const appState = useRef(AppState.currentState);
   const [subscriptionData, setSubscriptionData] = useState<SubscriptionData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPurchasing, setIsPurchasing] = useState(false);
   const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
+  // Add custom loading screen state and timing
+  const [showCustomLoading, setShowCustomLoading] = useState(true);
+  const loadingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Reference to store cached subscription check result
+  const cachedSubscriptionCheck = useRef<{ source: string; data: any } | null>(null);
 
   // Product IDs for your subscription plans
   const PRODUCT_IDS = {
@@ -185,6 +192,13 @@ const PaywallScreen = () => {
   const purchaseListener = async ({ responseCode, results }: InAppPurchases.IAPQueryResponse<InAppPurchases.InAppPurchase>) => {
     console.log('Purchase listener triggered:', { responseCode, results });
     
+    // Clear the purchase in progress flag regardless of the outcome
+    try {
+      await AsyncStorage.removeItem('purchase_in_progress');
+    } catch (error) {
+      console.error('Failed to clear purchase in progress flag:', error);
+    }
+    
     if (responseCode === InAppPurchases.IAPResponseCode.OK) {
       if (results && results.length > 0) {
         try {
@@ -204,16 +218,29 @@ const PaywallScreen = () => {
         } catch (error) {
           console.error('Error processing purchase:', error);
           Alert.alert('Error', 'Failed to process purchase. Please try again.');
+        } finally {
+          // Always reset purchasing state regardless of outcome
+          setIsPurchasing(false);
         }
       }
     } else if (responseCode === InAppPurchases.IAPResponseCode.USER_CANCELED) {
+      // Mark that the user just cancelled - for faster retry experience
+      try {
+        await AsyncStorage.setItem('purchase_just_cancelled', 'true');
+      } catch (error) {
+        console.error('Failed to set cancelled flag:', error);
+      }
+      
       // Do nothing on cancel - user just stays on paywall
       console.log('Purchase cancelled by user');
+      setIsPurchasing(false); // Reset purchasing state when user cancels
     } else if (responseCode === InAppPurchases.IAPResponseCode.DEFERRED) {
       Alert.alert('Purchase Pending', 'The purchase needs to be approved by a parent or guardian.');
+      setIsPurchasing(false); // Reset purchasing state when purchase is deferred
     } else {
       console.error('Purchase failed:', { responseCode });
       Alert.alert('Purchase Failed', 'There was an error processing your purchase. Please try again.');
+      setIsPurchasing(false); // Reset purchasing state on error
     }
   };
 
@@ -314,42 +341,32 @@ const PaywallScreen = () => {
     try {
       console.log('Starting purchase flow for:', productId);
       
-      // Ensure products are loaded
-      if (!products || products.length === 0) {
-        console.log('No products loaded, attempting to load products first');
-        await loadProducts();
-      }
-      
-      // Verify the product exists in our loaded products
+      // Immediately find the product without extra loading
       const product = products.find(p => p.productId === productId);
       if (!product) {
-        console.error('Product not found in available products:', {
-          requestedId: productId,
-          availableProducts: products.map(p => p.productId)
-        });
+        console.error('Product not found:', productId);
         throw new Error('Selected subscription plan not available');
       }
 
-      console.log('Initiating purchase for product:', {
-        id: product.productId,
-        price: product.price,
-        currency: product.priceCurrencyCode
-      });
+      // Set a flag to track that we're initiating a purchase
+      await AsyncStorage.setItem('purchase_in_progress', 'true');
 
-      // The purchaseItemAsync function doesn't return a response directly
-      // Instead, it triggers the purchase listener we set up earlier
-      await InAppPurchases.purchaseItemAsync(productId);
+      console.log('Initiating purchase for:', product.productId);
       
-      // The purchase result will be handled by the purchaseListener function
-      // which we set up in the initialization code
+      // Purchase will remain active until either:
+      // 1. User completes or cancels purchase and returns to app
+      // 2. Purchase API throws an error
+      await InAppPurchases.purchaseItemAsync(productId);
       
     } catch (error: any) {
       console.error('Purchase error:', {
         message: error.message,
         code: error?.code,
-        name: error?.name,
-        stack: error?.stack
+        name: error?.name
       });
+      
+      setIsPurchasing(false); // Reset purchasing state on error
+      await AsyncStorage.removeItem('purchase_in_progress');
       
       Alert.alert(
         'Purchase Error',
@@ -393,6 +410,31 @@ const PaywallScreen = () => {
           isIAPInitialized.current = true;
           if (isMounted) {
             await loadProducts();
+            
+            // Pre-check subscription status during loading phase
+            // This prevents checks during purchase flow
+            try {
+              console.log('Pre-checking subscription status...');
+              const existingSubscription = await checkExistingSubscriptions();
+              if (existingSubscription) {
+                cachedSubscriptionCheck.current = existingSubscription;
+                console.log('Found existing subscription during initialization:', existingSubscription.source);
+                
+                // Update UI state with subscription info
+                if (existingSubscription.source === 'firebase' && user) {
+                  const firebaseSubscription = await subscriptionService.getSubscriptionData(user.uid);
+                  if (firebaseSubscription && firebaseSubscription.isActive) {
+                    setSubscriptionData(firebaseSubscription);
+                    setDaysRemaining(subscriptionService.getDaysRemaining(firebaseSubscription));
+                  }
+                }
+              } else {
+                console.log('No active subscription found during initialization');
+              }
+            } catch (subError) {
+              console.error('Error pre-checking subscription:', subError);
+              // Fail silently - we'll just do the check during purchase if needed
+            }
           }
         }
       } catch (error: any) {
@@ -430,6 +472,11 @@ const PaywallScreen = () => {
             }
           }
         }
+      } finally {
+        // Ensure loading state is updated even if there are errors
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
@@ -462,6 +509,17 @@ const PaywallScreen = () => {
         nextAppState === 'active'
       ) {
         console.log('App has come to the foreground!');
+        
+        // Always immediately clear UI states to ensure paywall is functional
+        setIsPurchasing(false);
+        
+        // Clean up any purchase flags
+        try {
+          await AsyncStorage.removeItem('purchase_in_progress');
+        } catch (error) {
+          console.error('Error clearing purchase state:', error);
+        }
+        
         // Check for existing subscriptions when app becomes active
         if (isIAPInitialized.current) {
           const existingSubscription = await checkExistingSubscriptions();
@@ -488,26 +546,73 @@ const PaywallScreen = () => {
     }
   }, [products]);
 
+  // Ensure custom loading screen shows for at least 3 seconds
+  useEffect(() => {
+    // Set a minimum loading time of 3 seconds for the custom loading screen
+    loadingTimerRef.current = setTimeout(() => {
+      setShowCustomLoading(false);
+    }, 3000);
+
+    // Clean up the timer when component unmounts
+    return () => {
+      if (loadingTimerRef.current) {
+        clearTimeout(loadingTimerRef.current);
+        loadingTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  // Hide custom loading when products are ready AND minimum time has passed
+  useEffect(() => {
+    if (!isLoading && !showCustomLoading) {
+      // Both conditions are met: products loaded and minimum time passed
+      console.log('Everything loaded and ready to show paywall');
+    }
+  }, [isLoading, showCustomLoading]);
+
   const handleContinue = async () => {
+    // Immediately disable the button to prevent double-clicks
+    setIsPurchasing(true);
+    
     try {
-      // Check for existing subscription first
-      const existingSubscription = await checkExistingSubscriptions();
+      // Clear any stale purchase flags
+      await AsyncStorage.removeItem('purchase_in_progress').catch(console.error);
+      await AsyncStorage.removeItem('purchase_just_cancelled').catch(console.error);
+      
+      // Don't automatically remove the loading UI - let the app state listener 
+      // handle this when the user returns from the Apple payment sheet
+      
+      // Use cached subscription check result if available (from initialization)
+      // This makes both monthly and yearly options equally fast
+      let existingSubscription = cachedSubscriptionCheck.current;
       
       if (existingSubscription) {
+        console.log('Using cached subscription check result from initialization');
+        
         // Process existing subscription and navigate directly
         await handleSuccessfulPurchase(existingSubscription.data);
         router.replace('/(tabs)/home');
         return;
       }
       
-      // No existing subscription, proceed with new purchase
+      // No existing subscription, proceed with new purchase immediately
+      // This will be equally fast for both monthly and yearly options
       const productId = PRODUCT_IDS[selectedPlan as keyof typeof PRODUCT_IDS];
       
-      // Start the purchase immediately
-      await handlePurchase(productId);
+      // Direct purchase with no additional checks - faster response
+      console.log('Starting purchase for:', productId);
+      
+      // Set a flag to track that we're initiating a purchase
+      await AsyncStorage.setItem('purchase_in_progress', 'true');
+      
+      // Directly start the purchase - this will trigger Apple's payment sheet
+      await InAppPurchases.purchaseItemAsync(productId);
       
     } catch (error: any) {
       console.error('Error in handleContinue:', error);
+      setIsPurchasing(false); // Reset purchasing state on error
+      await AsyncStorage.removeItem('purchase_in_progress').catch(console.error);
+      
       if (error.code === 'ERR_IN_APP_PURCHASES_CONNECTION') {
         Alert.alert(
           'Connection Error',
@@ -673,7 +778,25 @@ const PaywallScreen = () => {
     return null;
   };
 
-  // Function to check for existing subscriptions
+  // Optimized version that only checks Firebase quickly for purchase flow
+  const quickSubscriptionCheck = async () => {
+    try {
+      // Only check Firebase if user is logged in - this is much faster than IAP validation
+      if (user) {
+        const firebaseSubscription = await subscriptionService.getSubscriptionData(user.uid);
+        if (firebaseSubscription && firebaseSubscription.isActive) {
+          return { source: 'firebase', data: firebaseSubscription };
+        }
+      }
+      // Skip IAP validation for initial purchase flow to make it faster
+      return null;
+    } catch (error) {
+      console.error('Error in quick subscription check:', error);
+      return null;
+    }
+  };
+
+  // Original function kept for full validation when needed
   const checkExistingSubscriptions = async () => {
     try {
       console.log('Checking for existing Firebase subscription...');
@@ -820,127 +943,161 @@ const PaywallScreen = () => {
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Add back button */}
-      <Pressable onPress={handleBack} style={styles.backButton}>
-        <Ionicons name="arrow-back" size={24} color="#000" />
-      </Pressable>
-      
-      {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <View style={styles.loadingIndicator}>
-            {/* Activity indicator with color matching the app's theme */}
-            <Text style={styles.loadingText}>Loading subscription options...</Text>
-            <ActivityIndicator size="large" color="#4064F6" />
-          </View>
-        </View>
-      ) : (
-        <>
-          <View style={styles.content}>
-            <Text style={styles.title}>Better training.</Text>
-            <Text style={styles.subtitle}>Better results!</Text>
-
-            {/* Subscription Status */}
-            {renderSubscriptionStatus()}
-
-            {/* Subscription Plans */}
-            <View style={styles.plansContainer}>
-              {subscriptionPlans.map((plan) => (
-                <Pressable
-                  key={plan.id}
-                  style={[
-                    styles.planCard,
-                    selectedPlan === plan.id && styles.selectedPlan,
-                  ]}
-                  onPress={() => setSelectedPlan(plan.id)}
-                >
-                  {plan.isBestValue && (
-                    <View style={styles.badge}>
-                      <Text style={styles.badgeText} allowFontScaling={false}>
-                        BEST VALUE
-                      </Text>
-                    </View>
-                  )}
-                  
-                  <View style={styles.planHeader}>
-                    <Text style={styles.planDuration}>{plan.duration}</Text>
-                    <Text style={styles.planPeriod}>Month{plan.duration !== '1' ? 's' : ''}</Text>
-                  </View>
-                  
-                  {selectedPlan === plan.id && (
-                    <View style={styles.selectedIndicator}>
-                      <Ionicons name="checkmark-circle" size={24} color="#4064F6" />
-                    </View>
-                  )}
-                  
-                  <View style={styles.planPricing}>
-                    <Text style={styles.planPrice}>{plan.price}</Text>
-                    <Text style={styles.planPriceDetail}>{plan.period}</Text>
-                  </View>
-                  
-                  <Text style={styles.planTotal}>{plan.totalPrice}</Text>
-                  <Text style={styles.planTotalPeriod}>{plan.period2}</Text>
-                </Pressable>
-              ))}
+    <>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        {/* Add back button */}
+        <Pressable onPress={handleBack} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#000" />
+        </Pressable>
+        
+        {isLoading && !showCustomLoading ? (
+          <View style={styles.loadingContainer}>
+            <View style={styles.loadingIndicator}>
+              {/* Activity indicator with color matching the app's theme */}
+              <Text style={styles.loadingText}>Loading subscription options...</Text>
+              <ActivityIndicator size="large" color="#4064F6" />
             </View>
+          </View>
+        ) : !showCustomLoading ? (
+          <>
+            <View style={styles.content}>
+              <Text style={styles.title}>Better training.</Text>
+              <Text style={styles.subtitle}>Better results!</Text>
 
-            {/* Pro Testimonial Section */}
-            <View style={styles.testimonialSection}>
-              <Text style={styles.testimonialTitle}>Trusted by Professionals</Text>
-              <View style={styles.testimonialContent}>
-                <Image 
-                  source={require('../../assets/images/2027.png')}
-                  style={styles.testimonialImage}
-                  resizeMode="cover"
-                />
-                <Text style={styles.testimonialText}>
-                  "BallerAI changed the way I approach training forever. The ease of use and the amount of value it has brought to my professional life is incredible. I have loved the recovery plans and macro calculation methods the most. I'm improving at the highest rate possible."
-                </Text>
+              {/* Subscription Status */}
+              {renderSubscriptionStatus()}
+
+              {/* Subscription Plans */}
+              <View style={styles.plansContainer}>
+                {subscriptionPlans.map((plan) => (
+                  <Pressable
+                    key={plan.id}
+                    style={[
+                      styles.planCard,
+                      selectedPlan === plan.id && styles.selectedPlan,
+                    ]}
+                    onPress={() => setSelectedPlan(plan.id)}
+                  >
+                    {plan.isBestValue && (
+                      <View style={styles.badge}>
+                        <Text style={styles.badgeText} allowFontScaling={false}>
+                          BEST VALUE
+                        </Text>
+                      </View>
+                    )}
+                    
+                    <View style={styles.planHeader}>
+                      <Text style={styles.planDuration}>{plan.duration}</Text>
+                      <Text style={styles.planPeriod}>Month{plan.duration !== '1' ? 's' : ''}</Text>
+                    </View>
+                    
+                    {selectedPlan === plan.id && (
+                      <View style={styles.selectedIndicator}>
+                        <Ionicons name="checkmark-circle" size={24} color="#4064F6" />
+                      </View>
+                    )}
+                    
+                    <View style={styles.planPricing}>
+                      <Text style={styles.planPrice}>{plan.price}</Text>
+                      <Text style={styles.planPriceDetail}>{plan.period}</Text>
+                    </View>
+                    
+                    <Text style={styles.planTotal}>{plan.totalPrice}</Text>
+                    <Text style={styles.planTotalPeriod}>{plan.period2}</Text>
+                  </Pressable>
+                ))}
               </View>
-            </View>
 
-            {/* Continue Button */}
-            <CustomButton
-              title="Continue"
-              onPress={handleContinue}
-              buttonStyle={styles.continueButton}
-              textStyle={styles.continueButtonText}
-            />
+              {/* Pro Testimonial Section */}
+              <View style={styles.testimonialSection}>
+                <Text style={styles.testimonialTitle}>Trusted by Professionals</Text>
+                <View style={styles.testimonialContent}>
+                  <Image 
+                    source={require('../../assets/images/2027.png')}
+                    style={styles.testimonialImage}
+                    resizeMode="cover"
+                  />
+                  <Text style={styles.testimonialText}>
+                    "BallerAI changed the way I approach training forever. The ease of use and the amount of value it has brought to my professional life is incredible. I have loved the recovery plans and macro calculation methods the most. I'm improving at the highest rate possible."
+                  </Text>
+                </View>
+              </View>
+
+              {/* Continue Button */}
+              <CustomButton
+                title="Continue"
+                onPress={handleContinue}
+                buttonStyle={styles.continueButton}
+                textStyle={styles.continueButtonText}
+                disabled={isPurchasing}
+              />
+            </View>
+            
+            {/* Add this before the closing ScrollView tag */}
+            <Pressable 
+              onPress={handleRestorePurchases}
+              style={styles.restoreButton}
+              disabled={isLoading || isPurchasing}
+            >
+              <Text style={styles.restoreButtonText}>
+                Restore Purchases
+              </Text>
+            </Pressable>
+            
+            {/* Legal links */}
+            <View style={styles.legalLinksContainer}>
+              <Text style={styles.legalText}>
+                By continuing, you agree to our{' '}
+                <Text 
+                  style={styles.legalLink}
+                  onPress={() => Linking.openURL('https://ballerbizoy.com/privacy')}
+                >
+                  Privacy Policy
+                </Text>
+                {' '}and{' '}
+                <Text 
+                  style={styles.legalLink}
+                  onPress={() => Linking.openURL('https://www.apple.com/legal/internet-services/itunes/dev/stdeula')}
+                >
+                  Terms of Use
+                </Text>
+              </Text>
+            </View>
+          </>
+        ) : null}
+        
+        {/* Purchase overlay with loading indicator */}
+        {isPurchasing && (
+          <View style={styles.disableInteractionOverlay}>
+            <ActivityIndicator size="large" color="#FFFFFF" />
           </View>
-          
-          {/* Add this before the closing ScrollView tag */}
-          <Pressable 
-            onPress={handleRestorePurchases}
-            style={styles.restoreButton}
-            disabled={isLoading}
+        )}
+      </ScrollView>
+      
+      {/* Custom account creation loading screen - moved outside ScrollView */}
+      {showCustomLoading && (
+        <Animated.View 
+          style={styles.fullScreenOverlay}
+          entering={FadeIn.duration(300)}
+        >
+          <Animated.View 
+            style={styles.loadingContent}
+            entering={FadeInDown.duration(400).springify()}
           >
-            <Text style={styles.restoreButtonText}>
-              Restore Purchases
+            <Image 
+              source={require('../../assets/images/mascot.png')}
+              style={styles.loadingMascot}
+              resizeMode="contain"
+            />
+            <Text style={styles.loadingTitle}>Creating your customised account</Text>
+            <Text style={styles.loadingSubtext}>
+              Please wait while we set up your personalized experience
             </Text>
-          </Pressable>
-          
-          {/* Legal links */}
-          <View style={styles.legalLinksContainer}>
-            <Text style={styles.legalText}>
-              By continuing, you agree to our{' '}
-              <Text 
-                style={styles.legalLink}
-                onPress={() => Linking.openURL('https://ballerbizoy.com/privacy')}
-              >
-                Privacy Policy
-              </Text>
-              {' '}and{' '}
-              <Text 
-                style={styles.legalLink}
-                onPress={() => Linking.openURL('https://www.apple.com/legal/internet-services/itunes/dev/stdeula')}
-              >
-                Terms of Use
-              </Text>
-            </Text>
-          </View>
-        </>
+            <ActivityIndicator size="large" color="#4064F6" />
+          </Animated.View>
+        </Animated.View>
       )}
-    </ScrollView>
+    </>
   );
 };
 
@@ -1147,5 +1304,61 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#4064F6',
     marginBottom: 20,
+  },
+  disableInteractionOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    zIndex: 1000,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullScreenOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 2000,
+    paddingHorizontal: 24,
+    elevation: 10, // For Android
+  },
+  loadingContent: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
+    width: '90%',
+    maxWidth: 340,
+  },
+  loadingMascot: {
+    width: 120,
+    height: 120,
+    marginBottom: 24,
+  },
+  loadingTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#000000',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  loadingSubtext: {
+    fontSize: 16,
+    color: '#666666',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
   },
 }); 
