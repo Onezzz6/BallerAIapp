@@ -354,17 +354,34 @@ export default function WelcomeScreen() {
                 />
 
                 {isAppleAvailable && (
-                  <AppleAuthentication.AppleAuthenticationButton
-                    buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
-                    buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-                    cornerRadius={36}
-                    style={{
-                      width: '100%',
-                      height: 55,
-                      marginBottom: 16,
-                    }}
-                    onPress={handleAppleSignIn}
-                  />
+                  <View style={{ 
+                    opacity: isLoading ? 0.5 : 1,
+                    width: '100%'
+                  }}>
+                    {isLoading ? (
+                      <View
+                        style={{
+                          width: '100%',
+                          height: 55,
+                          marginBottom: 16,
+                          backgroundColor: 'black',
+                          borderRadius: 36,
+                        }}
+                      />
+                    ) : (
+                      <AppleAuthentication.AppleAuthenticationButton
+                        buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+                        buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                        cornerRadius={36}
+                        style={{
+                          width: '100%',
+                          height: 55,
+                          marginBottom: 16,
+                        }}
+                        onPress={handleAppleSignIn}
+                      />
+                    )}
+                  </View>
                 )}
 
                 <Pressable
