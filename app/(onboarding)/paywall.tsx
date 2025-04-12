@@ -107,11 +107,15 @@ const PaywallScreen = () => {
   const appState = useRef(AppState.currentState);
   const [subscriptionData, setSubscriptionData] = useState<SubscriptionData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const isSignUp = params.isSignUp === 'true';
   const [isPurchasing, setIsPurchasing] = useState(false);
+  const [isNavigatingHome, setIsNavigatingHome] = useState(false);
   const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
   // Add custom loading screen state and timing
   const [showCustomLoading, setShowCustomLoading] = useState(true);
   const loadingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Add a reference to track ongoing subscription checks
+  const subscriptionCheckInProgress = useRef<Promise<any> | null>(null);
   // Reference to store cached subscription check result
   const cachedSubscriptionCheck = useRef<{ source: string; data: any } | null>(null);
 
@@ -518,12 +522,31 @@ const PaywallScreen = () => {
         }
         
         // Check for existing subscriptions when app becomes active
-        if (isIAPInitialized.current) {
-          const existingSubscription = await checkExistingSubscriptions();
-          if (existingSubscription) {
-            console.log('Processing existing subscription on app active:', existingSubscription);
-            await handleSuccessfulPurchase(existingSubscription.data);
-            router.replace('/(tabs)/home');
+        // Only perform this check if we're not already navigating home
+        // This prevents accidental navigation when user returns from canceled payment
+        if (isIAPInitialized.current && !isNavigatingHome) {
+          try {
+            // Make sure we're not already checking subscriptions
+            if (!subscriptionCheckInProgress.current) {
+              const existingSubscription = await checkExistingSubscriptions();
+              if (existingSubscription) {
+                console.log('Processing existing subscription on app active:', existingSubscription);
+                
+                // Show navigation screen
+                setIsNavigatingHome(true);
+                
+                await handleSuccessfulPurchase(existingSubscription.data);
+                
+                // Navigate with delay to show transition
+                setTimeout(() => {
+                  router.replace('/(tabs)/home');
+                }, 2000);
+              }
+            } else {
+              console.log('Subscription check already in progress, skipping duplicate check');
+            }
+          } catch (checkError) {
+            console.error('Error checking subscription on app state change:', checkError);
           }
         }
       }
@@ -533,7 +556,7 @@ const PaywallScreen = () => {
     return () => {
       subscription.remove();
     };
-  }, []);
+  }, [isNavigatingHome]);
 
   // Monitor products state
   useEffect(() => {
@@ -777,12 +800,27 @@ const PaywallScreen = () => {
 
   // Optimized version that only checks Firebase quickly for purchase flow
   const quickSubscriptionCheck = async () => {
+    // If there's a full check already in progress, wait for it to complete
+    if (subscriptionCheckInProgress.current) {
+      try {
+        console.log('Using existing subscription check that is already in progress');
+        return await subscriptionCheckInProgress.current;
+      } catch (error) {
+        console.error('Error while waiting for existing subscription check:', error);
+        return null;
+      }
+    }
+    
     try {
       // Only check Firebase if user is logged in - this is much faster than IAP validation
       if (user) {
-        const firebaseSubscription = await subscriptionService.getSubscriptionData(user.uid);
-        if (firebaseSubscription && firebaseSubscription.isActive) {
-          return { source: 'firebase', data: firebaseSubscription };
+        try {
+          const firebaseSubscription = await subscriptionService.getSubscriptionData(user.uid);
+          if (firebaseSubscription && firebaseSubscription.isActive) {
+            return { source: 'firebase', data: firebaseSubscription };
+          }
+        } catch (error) {
+          console.error('Error in quick Firebase subscription check:', error);
         }
       }
       // Skip IAP validation for initial purchase flow to make it faster
@@ -793,77 +831,116 @@ const PaywallScreen = () => {
     }
   };
 
-  // Original function kept for full validation when needed
+  // Function to check for existing subscriptions
   const checkExistingSubscriptions = async () => {
+    // If there's already a check in progress, wait for it to complete
+    if (subscriptionCheckInProgress.current) {
+      try {
+        console.log('Subscription check already in progress, waiting for it to complete...');
+        return await subscriptionCheckInProgress.current;
+      } catch (error) {
+        console.error('Error while waiting for existing subscription check:', error);
+        return null;
+      }
+    }
+
+    // Create a new promise for this check
     try {
-      console.log('Checking for existing Firebase subscription...');
-      
-      // First check Firebase if user is logged in
-      if (user) {
-        const firebaseSubscription = await subscriptionService.getSubscriptionData(user.uid);
-        console.log('Firebase subscription check done.');
+      const checkPromise = (async () => {
+        if (!user) return null;
         
-        if (firebaseSubscription) {
-          console.log('Found subscription check result: ', firebaseSubscription);
-          
-          if (firebaseSubscription.isActive) {
-            // Update local state
-            setSubscriptionData(firebaseSubscription);
-            setDaysRemaining(subscriptionService.getDaysRemaining(firebaseSubscription));
-            return { source: 'firebase', data: firebaseSubscription };
-          } else {
-            console.log('Firebase subscription is not active');
+        console.log('Checking for existing Firebase subscription...');
+        
+        // First check Firebase if user is logged in
+        if (user) {
+          try {
+            const firebaseSubscription = await subscriptionService.getSubscriptionData(user.uid);
+            console.log('Firebase subscription check done.');
+            
+            if (firebaseSubscription) {
+              console.log('Found subscription check result: ', firebaseSubscription);
+              
+              if (firebaseSubscription.isActive) {
+                // Update local state
+                setSubscriptionData(firebaseSubscription);
+                setDaysRemaining(subscriptionService.getDaysRemaining(firebaseSubscription));
+                return { source: 'firebase', data: firebaseSubscription };
+              } else {
+                console.log('Firebase subscription is not active');
+              }
+            }
+          } catch (fbError) {
+            console.error('Error checking Firebase subscription:', fbError);
+            // Continue to IAP check even if Firebase check fails
           }
         }
-      }
-      
-      // If no active subscription in Firebase, check IAP
-      console.log('Checking for IAP subscription in purchase history...');
-      const history = await InAppPurchases.getPurchaseHistoryAsync();
-      //console.log('Purchase history:', history);
-      
-      if (history && history.results && history.results.length > 0) {
-        // Find active subscriptions
-        const activeSubscriptions = history.results.filter(purchase => {
-          const productId = purchase.productId;
-          return (
-            (productId === PRODUCT_IDS['1month'] ||
-            productId === PRODUCT_IDS['12months']) &&
-            purchase.transactionReceipt &&
-            (purchase.purchaseState === InAppPurchases.InAppPurchaseState.PURCHASED ||
-            purchase.purchaseState === InAppPurchases.InAppPurchaseState.RESTORED)
-          );
-        });
+        
+        // If no active subscription in Firebase, check IAP
+        console.log('Checking for IAP subscription in purchase history...');
+        try {
+          const history = await InAppPurchases.getPurchaseHistoryAsync();
+          //console.log('Purchase history:', history);
+          
+          if (history && history.results && history.results.length > 0) {
+            // Find active subscriptions
+            const activeSubscriptions = history.results.filter(purchase => {
+              const productId = purchase.productId;
+              return (
+                (productId === PRODUCT_IDS['1month'] ||
+                productId === PRODUCT_IDS['12months']) &&
+                purchase.transactionReceipt &&
+                (purchase.purchaseState === InAppPurchases.InAppPurchaseState.PURCHASED ||
+                purchase.purchaseState === InAppPurchases.InAppPurchaseState.RESTORED)
+              );
+            });
 
-        // Validate receipts for active subscriptions
-        const validatedSubscriptions = [];
-        let validationResult: { expirationDate: Date | null, isRenewing: boolean } = { expirationDate: null, isRenewing: false };
-        for (const subscription of activeSubscriptions) {
-          validationResult = await validateReceipt(subscription);
-          if (validationResult.expirationDate) {
-            validatedSubscriptions.push(subscription);
-            break;
-          } else {
-            console.log('Subscription validation failed:', subscription.productId);
-          }
-        }
+            // Validate receipts for active subscriptions
+            const validatedSubscriptions = [];
+            let validationResult: { expirationDate: Date | null, isRenewing: boolean } = { expirationDate: null, isRenewing: false };
+            for (const subscription of activeSubscriptions) {
+              validationResult = await validateReceipt(subscription);
+              if (validationResult.expirationDate) {
+                validatedSubscriptions.push(subscription);
+                break;
+              } else {
+                console.log('Subscription validation failed:', subscription.productId);
+              }
+            }
 
-        if (validatedSubscriptions.length > 0 && validationResult.expirationDate) {
-          console.log('Found validated active subscription in IAP, expiration date:', validationResult.expirationDate);
-          
-          // If user is logged in, save this to Firebase
-          if (user) {
-            await subscriptionService.saveSubscriptionData(user.uid, validatedSubscriptions[0], validationResult.expirationDate, validationResult.isRenewing);
+            if (validatedSubscriptions.length > 0 && validationResult.expirationDate) {
+              console.log('Found validated active subscription in IAP, expiration date:', validationResult.expirationDate);
+              
+              // If user is logged in, save this to Firebase
+              if (user) {
+                await subscriptionService.saveSubscriptionData(user.uid, validatedSubscriptions[0], validationResult.expirationDate, validationResult.isRenewing);
+              }
+              
+              return { source: 'iap', data: validatedSubscriptions[0] };
+            }
           }
           
-          return { source: 'iap', data: validatedSubscriptions[0] };
+          console.log('IAP subscription check done: No valid IAP subscriptions found');
+          return null;
+        } catch (iapError) {
+          console.error('Error checking IAP subscription status:', iapError);
+          return null;
         }
-      }
+      })();
       
-      console.log('IAP subscription check done: No valid IAP subscriptions found');
-      return null;
+      // Store the promise in the ref
+      subscriptionCheckInProgress.current = checkPromise;
+      
+      // Wait for the check to complete
+      const result = await checkPromise;
+      
+      // Clear the ref when done
+      subscriptionCheckInProgress.current = null;
+      
+      return result;
     } catch (error) {
       console.error('Error checking subscription status:', error);
+      // Clean up the ref on error
+      subscriptionCheckInProgress.current = null;
       return null;
     }
   };
@@ -1072,7 +1149,7 @@ const PaywallScreen = () => {
       </ScrollView>
       
       {/* Custom account creation loading screen - moved outside ScrollView */}
-      {showCustomLoading && (
+      {isSignUp && showCustomLoading && (
         <Animated.View 
           style={styles.fullScreenOverlay}
           entering={FadeIn.duration(300)}
@@ -1086,9 +1163,33 @@ const PaywallScreen = () => {
               style={styles.loadingMascot}
               resizeMode="contain"
             />
-            <Text style={styles.loadingTitle}>Creating your customised account</Text>
+            <Text style={styles.loadingTitle}>Creating Customized Account</Text>
             <Text style={styles.loadingSubtext}>
-              Please wait while we set up your personalized experience
+              Please wait while we set up your personalized experience.
+            </Text>
+            <ActivityIndicator size="large" color="#4064F6" />
+          </Animated.View>
+        </Animated.View>
+      )}
+
+      {/* Custom account creation loading screen - moved outside ScrollView */}
+      {!isSignUp && showCustomLoading && (
+        <Animated.View 
+          style={styles.fullScreenOverlay}
+          entering={FadeIn.duration(300)}
+        >
+          <Animated.View 
+            style={styles.loadingContent}
+            entering={FadeInDown.duration(400).springify()}
+          >
+            <Image 
+              source={require('../../assets/images/mascot.png')}
+              style={styles.loadingMascot}
+              resizeMode="contain"
+            />
+            <Text style={styles.loadingTitle}>Subscription Expired</Text>
+            <Text style={styles.loadingSubtext}>
+              Please wait while we load your subscription options.
             </Text>
             <ActivityIndicator size="large" color="#4064F6" />
           </Animated.View>

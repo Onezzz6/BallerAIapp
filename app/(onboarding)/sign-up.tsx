@@ -45,7 +45,10 @@ export default function SignUpScreen() {
       const user = await authService.signUpWithEmail(email, password, onboardingData);
       if (user) {
         await analytics().logEvent('onboarding_signup_complete');
-        router.replace('/paywall');
+        router.replace({
+          pathname: '/(onboarding)/paywall', 
+          params: { isSignUp: 'true' }
+        });
       }
     } catch (error: any) {
       // If email exists, prompt for sign in
@@ -107,7 +110,8 @@ export default function SignUpScreen() {
           pathname: '/paywall',
           params: { 
             uid: user.uid,
-            hasAppleInfo: 'true'
+            hasAppleInfo: 'true',
+            isSignUp: 'true'
           }
         });
       }

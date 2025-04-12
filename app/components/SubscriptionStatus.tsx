@@ -101,7 +101,8 @@ const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
           }
         }
       } catch (error) {
-        console.error('Error checking subscription:', error);
+        console.log('Error checking subscription:', error);
+        router.replace('/(onboarding)/paywall');
       } finally {
         setIsLoading(false);
       }
