@@ -327,14 +327,15 @@ export default function WelcomeScreen() {
                   onPress={handleForgotPassword}
                   style={({ pressed }) => ({
                     opacity: pressed ? 0.7 : 1,
-                    alignSelf: 'flex-end',
+                    alignItems: 'center',
                     marginTop: -8,
                     marginBottom: 8,
                   })}
                 >
                   <Text style={{
                     fontSize: 14,
-                    color: '#4064F6',
+                    color: '#666666',
+                    textDecorationLine: 'underline',
                   }}>
                     Forgot Password?
                   </Text>
@@ -346,7 +347,8 @@ export default function WelcomeScreen() {
                   disabled={isLoading}
                   buttonStyle={{
                     backgroundColor: '#4064F6',
-                    marginBottom: 16,
+                    marginTop: 16,
+                    marginBottom: 8,
                     opacity: isLoading ? 0.5 : 1,
                   }}
                 />

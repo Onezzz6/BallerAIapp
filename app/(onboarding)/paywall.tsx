@@ -510,9 +510,6 @@ const PaywallScreen = () => {
       ) {
         console.log('App has come to the foreground!');
         
-        // Always immediately clear UI states to ensure paywall is functional
-        setIsPurchasing(false);
-        
         // Clean up any purchase flags
         try {
           await AsyncStorage.removeItem('purchase_in_progress');
@@ -1268,7 +1265,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   restoreButtonText: {
-    color: '#666',
+    color: '#666000',
     fontSize: 14,
     textDecorationLine: 'underline',
   },
