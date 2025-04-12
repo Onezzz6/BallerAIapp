@@ -227,18 +227,18 @@ export default function WelcomeScreen() {
               }}
             />
             
-            <Text style={{
-              fontSize: 32,
-              color: '#000000',
-              fontWeight: '600',
-              textAlign: 'center',
-              marginBottom: 0,
-            }}>
-              Ready to go pro?
-            </Text>
-
             {!showSignIn ? (
               <>
+                <Text style={{
+                  fontSize: 32,
+                  color: '#000000',
+                  fontWeight: '600',
+                  textAlign: 'center',
+                  marginBottom: 0,
+                }}>
+                  Ready to go pro?
+                </Text>
+
                 <Button 
                   title="Get Started" 
                   onPress={handleGetStarted}
@@ -273,6 +273,16 @@ export default function WelcomeScreen() {
               </>
             ) : (
               <View style={{ width: '100%', gap: 16 }}>
+                <Text style={{
+                  fontSize: 32,
+                  color: '#000000',
+                  fontWeight: '600',
+                  textAlign: 'center',
+                  marginBottom: 0,
+                }}>
+                  Welcome back!
+                </Text>
+
                 <TextInput
                   value={email}
                   onChangeText={setEmail}
@@ -281,11 +291,10 @@ export default function WelcomeScreen() {
                   autoCapitalize="none"
                   style={{
                     width: '100%',
-                    height: 50,
                     borderWidth: 1,
                     borderColor: '#E5E5E5',
                     borderRadius: 12,
-                    paddingHorizontal: 16,
+                    padding: 16,
                     fontSize: 16,
                   }}
                 />
@@ -298,7 +307,6 @@ export default function WelcomeScreen() {
                     secureTextEntry={!showPassword}
                     style={{
                       width: '100%',
-                      height: 50,
                       borderWidth: 1,
                       borderColor: '#E5E5E5',
                       borderRadius: 12,
@@ -312,7 +320,8 @@ export default function WelcomeScreen() {
                     style={{
                       position: 'absolute',
                       right: 12,
-                      top: 12,
+                      top: '50%',
+                      transform: [{ translateY: -12 }]
                     }}
                   >
                     <Ionicons
@@ -337,7 +346,7 @@ export default function WelcomeScreen() {
                     color: '#666666',
                     textDecorationLine: 'underline',
                   }}>
-                    Forgot Password?
+                    Forgot password?
                   </Text>
                 </Pressable>
 
