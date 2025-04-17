@@ -125,15 +125,11 @@ const PaywallScreen = () => {
     '12months': 'BallerAISubscriptionOneYear'
   };
 
-  let expirationDateFromValidReceipt: Date | null = null;
-
   const handleSuccessfulPurchase = async (purchase: any) => {
     try {
       const { uid, hasAppleInfo } = params;
       console.log('Processing successful purchase:', purchase);
       
-      expirationDateFromValidReceipt = null;
-
       // Validate the receipt before processing the purchase
       const validationResult = await validateReceipt(purchase);
       const { expirationDate, isRenewing } = validationResult;

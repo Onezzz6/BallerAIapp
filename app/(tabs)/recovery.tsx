@@ -1,10 +1,10 @@
 import { View, Text, Pressable, StyleSheet, Image, ScrollView, Alert, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Slider from '@react-native-community/slider';
-import { format, addDays, startOfWeek } from 'date-fns';
-import { doc, getDoc, setDoc, collection, Timestamp } from 'firebase/firestore';
+import { format, addDays, startOfWeek, differenceInHours, differenceInMinutes, isYesterday, parseISO, isSameDay, subDays } from 'date-fns';
+import { doc, getDoc, setDoc, collection, Timestamp, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -58,6 +58,10 @@ export default function RecoveryScreen() {
   const [planLoading, setPlanLoading] = useState(true);
   const [isToday, setIsToday] = useState(true);
   const [planExists, setPlanExists] = useState(false);
+  const [streakCount, setStreakCount] = useState(0);
+  const [hoursLeft, setHoursLeft] = useState(0);
+  const [minutesLeft, setMinutesLeft] = useState(0);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch recovery data for selected date
   useEffect(() => {
@@ -242,6 +246,12 @@ export default function RecoveryScreen() {
   const handleGeneratePlan = async () => {
     if (!user) return;
     
+    // Don't allow generating plans for past days
+    if (!isToday) {
+      Alert.alert('Not Available', 'You can only create recovery plans for today.');
+      return;
+    }
+    
     if (!recoveryData.submitted) {
       Alert.alert('Error', 'Please submit your recovery data first');
       return;
@@ -416,6 +426,11 @@ IMPORTANT USAGE GUIDELINES:
       setPlanExists(true);
       console.log(`Recovery plan saved to Firebase for ${dateStr}`);
 
+      // Add a small delay to ensure Firebase has updated before calculating the streak
+      setTimeout(() => {
+        calculateStreak();
+      }, 500);
+
     } catch (error) {
       console.error('Error generating recovery plan:', error);
       Alert.alert('Error', 'Failed to generate recovery plan. Please try again.');
@@ -536,7 +551,7 @@ IMPORTANT USAGE GUIDELINES:
     }
   }, []);
 
-  // Add function to toggle plan completion status
+  // Add function to toggle plan completion status - updated to recalculate streak
   const togglePlanCompletion = async () => {
     if (!user || !planExists) return;
     
@@ -556,9 +571,138 @@ IMPORTANT USAGE GUIDELINES:
       setPlanCompleted(newCompletionStatus);
       
       console.log(`Plan marked as ${newCompletionStatus ? 'completed' : 'incomplete'}`);
+      
+      // Recalculate streak after marking as complete/incomplete
+      setTimeout(() => {
+        calculateStreak();
+      }, 500);
     } catch (error) {
       console.error('Error updating plan completion status:', error);
       Alert.alert('Error', 'Failed to update completion status. Please try again.');
+    }
+  };
+
+  // Load streak data when component mounts
+  useEffect(() => {
+    if (user) {
+      calculateStreak();
+      startStreakTimer();
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [user]);
+
+  // Calculate and update time until midnight
+  const startStreakTimer = () => {
+    // Update immediately
+    updateTimeUntilMidnight();
+    
+    // Then update every minute
+    timerRef.current = setInterval(() => {
+      updateTimeUntilMidnight();
+    }, 60000); // Update every minute
+  };
+
+  const updateTimeUntilMidnight = () => {
+    const now = new Date();
+    const midnight = new Date(now);
+    midnight.setHours(24, 0, 0, 0);
+    
+    const hours = differenceInHours(midnight, now);
+    const minutesTotal = differenceInMinutes(midnight, now);
+    const minutes = minutesTotal % 60;
+    
+    setHoursLeft(hours);
+    setMinutesLeft(minutes);
+  };
+
+  // Calculate current streak - updated to count completed plans
+  const calculateStreak = async () => {
+    if (!user) return;
+    
+    try {
+      console.log('Calculating streak based on completed plans...');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const plansRef = collection(db, 'users', user.uid, 'recoveryPlans');
+      const plansSnapshot = await getDocs(plansRef);
+      
+      if (plansSnapshot.empty) {
+        console.log('No plans found in Firebase');
+        setStreakCount(0);
+        return;
+      }
+      
+      // Convert to array of plans with dates, filtering for completed plans only
+      const plans = plansSnapshot.docs
+        .map(doc => {
+          console.log(`Plan document ID: ${doc.id}, Completed: ${doc.data().completed}`);
+          return {
+            id: doc.id,
+            date: parseISO(doc.id),
+            completed: doc.data().completed === true, // Fix type issue by explicit extraction
+            ...doc.data()
+          };
+        })
+        .filter(plan => plan.completed === true) // Only include completed plans
+        .sort((a, b) => b.date.getTime() - a.date.getTime()); // Sort by date desc
+      
+      console.log(`Found ${plans.length} completed plans total`);
+      
+      // Check if there's a completed plan for today
+      const hasTodayPlan = plans.some(plan => {
+        const isSame = isSameDay(plan.date, today);
+        console.log(`Checking completed plan date ${format(plan.date, 'yyyy-MM-dd')} against today ${format(today, 'yyyy-MM-dd')}: ${isSame}`);
+        return isSame;
+      });
+      
+      console.log(`Has completed plan for today: ${hasTodayPlan}`);
+      
+      // If no completed plan for today, check if there's a streak from previous days
+      let currentStreak = hasTodayPlan ? 1 : 0;
+      
+      if (plans.length > 0) {
+        // Start checking from yesterday if we have a plan for today
+        let checkDate = hasTodayPlan ? subDays(today, 1) : today;
+        
+        for (let i = 0; i < plans.length; i++) {
+          const plan = plans[i];
+          
+          // Debug log for each check
+          console.log(`Checking date ${format(checkDate, 'yyyy-MM-dd')} against plan date ${format(plan.date, 'yyyy-MM-dd')}`);
+          
+          // If the plan date matches the date we're checking
+          if (isSameDay(plan.date, checkDate)) {
+            console.log(`Found match for ${format(checkDate, 'yyyy-MM-dd')}`);
+            
+            // If we're checking today and there's no plan, don't increment
+            if (!(isSameDay(checkDate, today) && !hasTodayPlan)) {
+              currentStreak++;
+              console.log(`Streak incremented to ${currentStreak}`);
+            }
+            // Move to previous day
+            checkDate = subDays(checkDate, 1);
+          } else if (isSameDay(plan.date, today) && hasTodayPlan) {
+            // Skip if this is today's plan and we already counted it
+            console.log(`Skipping today's plan as it's already counted`);
+            continue;
+          } else {
+            // Break the streak if we miss a day
+            console.log(`Streak broken at ${format(checkDate, 'yyyy-MM-dd')}, no matching plan`);
+            break;
+          }
+        }
+      }
+      
+      console.log(`Final streak count: ${currentStreak} days`);
+      setStreakCount(currentStreak);
+    } catch (error) {
+      console.error('Error calculating streak:', error);
     }
   };
 
@@ -642,28 +786,29 @@ IMPORTANT USAGE GUIDELINES:
               onDateSelect={setSelectedDate}
             />
 
-            {/* Recovery Inputs */}
+            {/* Recovery Inputs - Always accessible for all days */}
             <Animated.View 
               entering={FadeIn.duration(300)}
               style={styles.inputsContainer}
             >
               <View style={{alignItems: 'center'}}>
                 <Text style={styles.loadText}>Recovery Query</Text>
+                {!isToday && (
+                  <Text style={styles.pastDayNotice}>Past day - data still editable</Text>
+                )}
               </View>
               {recoveryData.submitted && !isEditing ? (
-                // Show submitted data with edit button if plan doesn't exist
+                // Show submitted data with edit button
                 <>
                   <View style={styles.submittedHeader}>
                     <Text style={styles.submittedText}>Submitted</Text>
-                    {!planExists && (
-                      <Pressable
-                        style={styles.editButton}
-                        onPress={() => setIsEditing(true)}
-                      >
-                        <Ionicons name="create-outline" size={24} color="#FFFFFF" />
-                        <Text style={styles.editButtonText}>Edit</Text>
-                      </Pressable>
-                    )}
+                    <Pressable
+                      style={styles.editButton}
+                      onPress={() => setIsEditing(true)}
+                    >
+                      <Ionicons name="create-outline" size={24} color="#FFFFFF" />
+                      <Text style={styles.editButtonText}>Edit</Text>
+                    </Pressable>
                   </View>
                   
                   <RecoverySlider
@@ -708,7 +853,7 @@ IMPORTANT USAGE GUIDELINES:
                   />
                 </>
               ) : (
-                // Show editable sliders
+                // Show editable sliders (both for today and past days)
                 <>
                   <RecoverySlider
                     icon="fitness"
@@ -777,25 +922,30 @@ IMPORTANT USAGE GUIDELINES:
               )}
             </Animated.View>
 
-            {/* Recovery Tools Selection Card */}
+            {/* Recovery Tools Selection Card - Disabled for past days */}
             <Animated.View 
               entering={FadeIn.duration(300)}
               style={[
                 styles.inputsContainer, 
                 planExists && styles.disabledContainer,
-                (toolsConfirmed && !planExists) && styles.confirmedContainer
+                (toolsConfirmed && !planExists) && styles.confirmedContainer,
+                !isToday && styles.pastDayContainer
               ]}
             >
               <View style={{alignItems: 'center'}}>
                 <Text style={[
                   styles.loadText,
                   planExists && {color: '#999999'},
-                  (toolsConfirmed && !planExists) && {color: '#4064F6'}
+                  (toolsConfirmed && !planExists) && {color: '#4064F6'},
+                  !isToday && {color: '#999999'}
                 ]}>Recovery Tools</Text>
+                {!isToday && (
+                  <Text style={styles.pastDayText}>Past day - view only</Text>
+                )}
               </View>
               
-              {toolsConfirmed && !planExists ? (
-                // Show confirmed header with edit button
+              {toolsConfirmed && !planExists && isToday ? (
+                // Show confirmed header with edit button - only for today
                 <View style={styles.submittedHeader}>
                   <Text style={styles.submittedText}>Tools Confirmed</Text>
                   <Pressable
@@ -810,7 +960,8 @@ IMPORTANT USAGE GUIDELINES:
                 <Text style={[
                   styles.toolsSelectionText,
                   planExists && {color: '#999999'},
-                  (toolsConfirmed && !planExists) && {color: '#999999'}
+                  (toolsConfirmed && !planExists) && {color: '#999999'},
+                  !isToday && {color: '#999999'}
                 ]}>
                   Select the recovery tools you have access to:
                 </Text>
@@ -822,56 +973,56 @@ IMPORTANT USAGE GUIDELINES:
                   label="Cold Exposure" 
                   selected={selectedTools.includes("Cold Exposure")}
                   onPress={() => toggleTool("Cold Exposure")} 
-                  disabled={planExists || (toolsConfirmed && !isEditing)}
+                  disabled={planExists || (toolsConfirmed && !isEditing) || !isToday}
                 />
                 <RecoveryToolButton 
                   icon="heart-outline" 
                   label="Foam Roller" 
                   selected={selectedTools.includes("Foam Roller")}
                   onPress={() => toggleTool("Foam Roller")} 
-                  disabled={planExists || (toolsConfirmed && !isEditing)}
+                  disabled={planExists || (toolsConfirmed && !isEditing) || !isToday}
                 />
                 <RecoveryToolButton 
                   icon="bicycle-outline" 
                   label="Cycling" 
                   selected={selectedTools.includes("Cycling")}
                   onPress={() => toggleTool("Cycling")} 
-                  disabled={planExists || (toolsConfirmed && !isEditing)}
+                  disabled={planExists || (toolsConfirmed && !isEditing) || !isToday}
                 />
                 <RecoveryToolButton 
                   icon="water-outline" 
                   label="Swimming" 
                   selected={selectedTools.includes("Swimming")}
                   onPress={() => toggleTool("Swimming")} 
-                  disabled={planExists || (toolsConfirmed && !isEditing)}
+                  disabled={planExists || (toolsConfirmed && !isEditing) || !isToday}
                 />
                 <RecoveryToolButton 
                   icon="pulse-outline" 
                   label="Compression" 
                   selected={selectedTools.includes("Compression")}
                   onPress={() => toggleTool("Compression")} 
-                  disabled={planExists || (toolsConfirmed && !isEditing)}
+                  disabled={planExists || (toolsConfirmed && !isEditing) || !isToday}
                 />
                 <RecoveryToolButton 
                   icon="flash-outline" 
                   label="Massage Gun" 
                   selected={selectedTools.includes("Massage Gun")}
                   onPress={() => toggleTool("Massage Gun")} 
-                  disabled={planExists || (toolsConfirmed && !isEditing)}
+                  disabled={planExists || (toolsConfirmed && !isEditing) || !isToday}
                 />
                 <RecoveryToolButton 
                   icon="flame-outline" 
                   label="Sauna" 
                   selected={selectedTools.includes("Sauna")}
                   onPress={() => toggleTool("Sauna")} 
-                  disabled={planExists || (toolsConfirmed && !isEditing)}
+                  disabled={planExists || (toolsConfirmed && !isEditing) || !isToday}
                 />
                 <RecoveryToolButton 
                   icon="barbell-outline" 
                   label="Resistance Bands" 
                   selected={selectedTools.includes("Resistance Bands")}
                   onPress={() => toggleTool("Resistance Bands")} 
-                  disabled={planExists || (toolsConfirmed && !isEditing)}
+                  disabled={planExists || (toolsConfirmed && !isEditing) || !isToday}
                 />
               </View>
               <View style={styles.noneToolContainer}>
@@ -880,11 +1031,11 @@ IMPORTANT USAGE GUIDELINES:
                   label="None" 
                   selected={selectedTools.includes("None")}
                   onPress={() => toggleTool("None")} 
-                  disabled={planExists || (toolsConfirmed && !isEditing)}
+                  disabled={planExists || (toolsConfirmed && !isEditing) || !isToday}
                 />
               </View>
               
-              {!planExists && !toolsConfirmed && (
+              {!planExists && !toolsConfirmed && isToday && (
                 <Pressable 
                   style={styles.submitButton}
                   onPress={handleConfirmTools}
@@ -896,13 +1047,13 @@ IMPORTANT USAGE GUIDELINES:
                 </Pressable>
               )}
               
-              {toolsConfirmed && !planExists && (
+              {toolsConfirmed && !planExists && isToday && (
                 <Text style={[styles.toolsConfirmedText]}>
                   Your selection has been saved
                 </Text>
               )}
               
-              {!toolsConfirmed && !planExists && selectedTools.length === 0 && (
+              {!toolsConfirmed && !planExists && selectedTools.length === 0 && isToday && (
                 <Text style={styles.toolsHelperText}>
                   Please select at least one option
                 </Text>
@@ -913,27 +1064,38 @@ IMPORTANT USAGE GUIDELINES:
                   Recovery plan already generated
                 </Text>
               )}
+              
+              {!isToday && !planExists && (
+                <Text style={[styles.toolsHelperText, {color: '#999999'}]}>
+                  Past day - cannot create plan
+                </Text>
+              )}
             </Animated.View>
 
-            {/* Recovery Time Card */}
+            {/* Recovery Time Card - Disabled for past days */}
             <Animated.View 
               entering={FadeIn.duration(300)}
               style={[
                 styles.inputsContainer, 
                 planExists && styles.disabledContainer,
-                (timeConfirmed && !planExists) && styles.confirmedContainer
+                (timeConfirmed && !planExists) && styles.confirmedContainer,
+                !isToday && styles.pastDayContainer
               ]}
             >
               <View style={{alignItems: 'center'}}>
                 <Text style={[
                   styles.loadText,
                   planExists && {color: '#999999'},
-                  (timeConfirmed && !planExists) && {color: '#4064F6'}
+                  (timeConfirmed && !planExists) && {color: '#4064F6'},
+                  !isToday && {color: '#999999'}
                 ]}>Recovery Time</Text>
+                {!isToday && (
+                  <Text style={styles.pastDayText}>Past day - view only</Text>
+                )}
               </View>
               
-              {timeConfirmed && !planExists ? (
-                // Show confirmed header with edit button
+              {timeConfirmed && !planExists && isToday ? (
+                // Show confirmed header with edit button - only for today
                 <View style={styles.submittedHeader}>
                   <Text style={styles.submittedText}>Time Confirmed</Text>
                   <Pressable
@@ -948,7 +1110,8 @@ IMPORTANT USAGE GUIDELINES:
                 <Text style={[
                   styles.toolsSelectionText,
                   planExists && {color: '#999999'},
-                  (timeConfirmed && !planExists) && {color: '#999999'}
+                  (timeConfirmed && !planExists) && {color: '#999999'},
+                  !isToday && {color: '#999999'}
                 ]}>
                   How much time do you have for today's recovery plan?
                 </Text>
@@ -961,16 +1124,16 @@ IMPORTANT USAGE GUIDELINES:
                     style={[
                       styles.timeOptionButton,
                       selectedTime === '15 mins' && styles.timeOptionSelected,
-                      (planExists || (timeConfirmed && !timeConfirmed)) && styles.timeOptionDisabled
+                      (planExists || (timeConfirmed && !isToday) || !isToday) && styles.timeOptionDisabled
                     ]}
-                    onPress={() => setSelectedTime('15 mins')}
-                    disabled={planExists || (timeConfirmed && !isEditing)}
+                    onPress={() => isToday ? setSelectedTime('15 mins') : null}
+                    disabled={planExists || (timeConfirmed && !isEditing) || !isToday}
                   >
                     <Ionicons 
                       name="time-outline" 
                       size={24} 
                       color={
-                        planExists || (timeConfirmed && !isEditing)
+                        planExists || (timeConfirmed && !isEditing) || !isToday
                           ? "#BBBBBB" 
                           : selectedTime === '15 mins'
                             ? "#FFFFFF" 
@@ -981,7 +1144,7 @@ IMPORTANT USAGE GUIDELINES:
                       style={[
                         styles.timeOptionText,
                         selectedTime === '15 mins' && styles.timeOptionTextSelected,
-                        (planExists || (timeConfirmed && !isEditing)) && styles.timeOptionTextDisabled
+                        (planExists || (timeConfirmed && !isEditing) || !isToday) && styles.timeOptionTextDisabled
                       ]}
                     >
                       15 mins
@@ -992,16 +1155,16 @@ IMPORTANT USAGE GUIDELINES:
                     style={[
                       styles.timeOptionButton,
                       selectedTime === '30 mins' && styles.timeOptionSelected,
-                      (planExists || (timeConfirmed && !timeConfirmed)) && styles.timeOptionDisabled
+                      (planExists || (timeConfirmed && !isToday) || !isToday) && styles.timeOptionDisabled
                     ]}
-                    onPress={() => setSelectedTime('30 mins')}
-                    disabled={planExists || (timeConfirmed && !isEditing)}
+                    onPress={() => isToday ? setSelectedTime('30 mins') : null}
+                    disabled={planExists || (timeConfirmed && !isEditing) || !isToday}
                   >
                     <Ionicons 
                       name="time-outline" 
                       size={24} 
                       color={
-                        planExists || (timeConfirmed && !isEditing)
+                        planExists || (timeConfirmed && !isEditing) || !isToday
                           ? "#BBBBBB" 
                           : selectedTime === '30 mins'
                             ? "#FFFFFF" 
@@ -1012,7 +1175,7 @@ IMPORTANT USAGE GUIDELINES:
                       style={[
                         styles.timeOptionText,
                         selectedTime === '30 mins' && styles.timeOptionTextSelected,
-                        (planExists || (timeConfirmed && !isEditing)) && styles.timeOptionTextDisabled
+                        (planExists || (timeConfirmed && !isEditing) || !isToday) && styles.timeOptionTextDisabled
                       ]}
                     >
                       30 mins
@@ -1025,16 +1188,16 @@ IMPORTANT USAGE GUIDELINES:
                     style={[
                       styles.timeOptionButton,
                       selectedTime === '45 mins' && styles.timeOptionSelected,
-                      (planExists || (timeConfirmed && !timeConfirmed)) && styles.timeOptionDisabled
+                      (planExists || (timeConfirmed && !isToday) || !isToday) && styles.timeOptionDisabled
                     ]}
-                    onPress={() => setSelectedTime('45 mins')}
-                    disabled={planExists || (timeConfirmed && !isEditing)}
+                    onPress={() => isToday ? setSelectedTime('45 mins') : null}
+                    disabled={planExists || (timeConfirmed && !isEditing) || !isToday}
                   >
                     <Ionicons 
                       name="time-outline" 
                       size={24} 
                       color={
-                        planExists || (timeConfirmed && !isEditing)
+                        planExists || (timeConfirmed && !isEditing) || !isToday
                           ? "#BBBBBB" 
                           : selectedTime === '45 mins'
                             ? "#FFFFFF" 
@@ -1045,7 +1208,7 @@ IMPORTANT USAGE GUIDELINES:
                       style={[
                         styles.timeOptionText,
                         selectedTime === '45 mins' && styles.timeOptionTextSelected,
-                        (planExists || (timeConfirmed && !isEditing)) && styles.timeOptionTextDisabled
+                        (planExists || (timeConfirmed && !isEditing) || !isToday) && styles.timeOptionTextDisabled
                       ]}
                     >
                       45 mins
@@ -1056,16 +1219,16 @@ IMPORTANT USAGE GUIDELINES:
                     style={[
                       styles.timeOptionButton,
                       selectedTime === '1h+' && styles.timeOptionSelected,
-                      (planExists || (timeConfirmed && !timeConfirmed)) && styles.timeOptionDisabled
+                      (planExists || (timeConfirmed && !isToday) || !isToday) && styles.timeOptionDisabled
                     ]}
-                    onPress={() => setSelectedTime('1h+')}
-                    disabled={planExists || (timeConfirmed && !isEditing)}
+                    onPress={() => isToday ? setSelectedTime('1h+') : null}
+                    disabled={planExists || (timeConfirmed && !isEditing) || !isToday}
                   >
                     <Ionicons 
                       name="time-outline" 
                       size={24} 
                       color={
-                        planExists || (timeConfirmed && !isEditing)
+                        planExists || (timeConfirmed && !isEditing) || !isToday
                           ? "#BBBBBB" 
                           : selectedTime === '1h+'
                             ? "#FFFFFF" 
@@ -1076,7 +1239,7 @@ IMPORTANT USAGE GUIDELINES:
                       style={[
                         styles.timeOptionText,
                         selectedTime === '1h+' && styles.timeOptionTextSelected,
-                        (planExists || (timeConfirmed && !isEditing)) && styles.timeOptionTextDisabled
+                        (planExists || (timeConfirmed && !isEditing) || !isToday) && styles.timeOptionTextDisabled
                       ]}
                     >
                       1h+
@@ -1085,7 +1248,7 @@ IMPORTANT USAGE GUIDELINES:
                 </View>
               </View>
               
-              {!planExists && !timeConfirmed && (
+              {!planExists && !timeConfirmed && isToday && (
                 <Pressable 
                   style={[
                     styles.submitButton,
@@ -1101,13 +1264,13 @@ IMPORTANT USAGE GUIDELINES:
                 </Pressable>
               )}
               
-              {timeConfirmed && !planExists && (
+              {timeConfirmed && !planExists && isToday && (
                 <Text style={[styles.toolsConfirmedText]}>
                   Your time selection has been saved
                 </Text>
               )}
               
-              {!timeConfirmed && !planExists && (
+              {!timeConfirmed && !planExists && isToday && (
                 <Text style={styles.toolsHelperText}>
                   Please select how much time you have
                 </Text>
@@ -1116,6 +1279,12 @@ IMPORTANT USAGE GUIDELINES:
               {planExists && (
                 <Text style={[styles.toolsHelperText, {color: '#999999'}]}>
                   Recovery plan already generated
+                </Text>
+              )}
+              
+              {!isToday && !planExists && (
+                <Text style={[styles.toolsHelperText, {color: '#999999'}]}>
+                  Past day - cannot create plan
                 </Text>
               )}
             </Animated.View>
@@ -1129,10 +1298,10 @@ IMPORTANT USAGE GUIDELINES:
                   <Pressable
                     style={[
                       styles.generateButton, 
-                      (loading || !recoveryData.submitted || !toolsConfirmed || !timeConfirmed) && styles.generateButtonDisabled
+                      (loading || !recoveryData.submitted || !toolsConfirmed || !timeConfirmed || !isToday) && styles.generateButtonDisabled
                     ]}
                     onPress={handleGeneratePlan}
-                    disabled={loading || !recoveryData.submitted || !toolsConfirmed || !timeConfirmed}
+                    disabled={loading || !recoveryData.submitted || !toolsConfirmed || !timeConfirmed || !isToday}
                   >
                     <Text style={styles.generateButtonText}>
                       {loading ? 'Generating Plan...' : 'Generate Recovery Plan'}
@@ -1140,7 +1309,7 @@ IMPORTANT USAGE GUIDELINES:
                     <Ionicons name="fitness" size={20} color="#FFFFFF" />
                   </Pressable>
                   
-                  {(!recoveryData.submitted || !toolsConfirmed || !timeConfirmed) && (
+                  {(!recoveryData.submitted || !toolsConfirmed || !timeConfirmed) && isToday ? (
                     <View style={styles.infoMessageContainer}>
                       <Text style={styles.infoMessageText}>
                         {!recoveryData.submitted && !toolsConfirmed && !timeConfirmed
@@ -1152,7 +1321,13 @@ IMPORTANT USAGE GUIDELINES:
                               : 'Confirm your available time to generate a plan'}
                       </Text>
                     </View>
-                  )}
+                  ) : !isToday ? (
+                    <View style={styles.infoMessageContainer}>
+                      <Text style={styles.infoMessageText}>
+                        You can only generate recovery plans for today
+                      </Text>
+                    </View>
+                  ) : null}
                 </>
               ) : (
                 <Pressable
@@ -1245,17 +1420,43 @@ IMPORTANT USAGE GUIDELINES:
                       <Text style={styles.emptyPlanSubtext}>
                         {isToday 
                           ? 'Click the generate button to create your recovery plan'
-                          : 'Click the generate button to create a recovery plan for this day'}
+                          : 'No recovery plan was created for this day'}
                       </Text>
                     ) : (
                       <Text style={styles.emptyPlanSubtext}>
-                        Submit your recovery data using the form above
+                        {isToday
+                          ? 'Submit your recovery data using the form above'
+                          : 'No recovery data was submitted for this day'}
                       </Text>
                     )}
                   </View>
                 )}
               </View>
             </View>
+            
+            {/* Streak Card - Added at the bottom */}
+            <Animated.View 
+              entering={FadeIn.duration(300)}
+              style={styles.streakCardContainer}
+            >
+              <View style={styles.streakCardContent}>
+                <View style={styles.streakMascotContainer}>
+                  <Image 
+                    source={require('../../assets/images/mascot.png')}
+                    style={styles.streakMascot}
+                    resizeMode="contain"
+                  />
+                </View>
+                
+                <View style={styles.streakInfoContainer}>
+                  <Text style={styles.streakTitle}>Current Recovery Streak</Text>
+                  <Text style={styles.streakCount}>{streakCount} {streakCount === 1 ? 'day' : 'days'}</Text>
+                  <Text style={styles.streakTimerText}>
+                    {hoursLeft}h {minutesLeft}m until streak ends
+                  </Text>
+                </View>
+              </View>
+            </Animated.View>
           </View>
         </KeyboardAvoidingView>
       </ScrollView>
@@ -1989,5 +2190,75 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  // New styles for streak card
+  streakCardContainer: {
+    margin: 24,
+    marginTop: 0,
+    backgroundColor: '#F0F9FF',
+    borderRadius: 16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#E0E7FF',
+    overflow: 'hidden',
+  },
+  streakCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+  },
+  streakMascotContainer: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: '#DCF4F5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  streakMascot: {
+    width: 60,
+    height: 60,
+  },
+  streakInfoContainer: {
+    flex: 1,
+  },
+  streakTitle: {
+    fontSize: 14,
+    color: '#666666',
+    marginBottom: 4,
+  },
+  streakCount: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#4064F6',
+    marginBottom: 4,
+  },
+  streakTimerText: {
+    fontSize: 12,
+    color: '#F56C6C',
+    fontWeight: '500',
+  },
+  // Add styles for past days
+  pastDayContainer: {
+    opacity: 0.8,
+    backgroundColor: '#F5F5F5',
+    borderColor: '#E5E5E5',
+  },
+  pastDayText: {
+    fontSize: 12,
+    color: '#999999',
+    fontStyle: 'italic',
+    marginTop: 4,
+  },
+  pastDayNotice: {
+    fontSize: 12,
+    color: '#4064F6',
+    fontStyle: 'italic',
+    marginTop: 4,
   },
 }); 
