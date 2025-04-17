@@ -1909,7 +1909,35 @@ export default function NutritionScreen() {
       setIsLogMealModalVisible(false);
       console.log('Starting photo analysis process for URI:', imageUri);
       
-      const result = await analyzeImage(imageUri);
+      // Compress and resize the image before analysis to avoid timeouts
+      console.log('Compressing and resizing image...');
+      let processedUri = imageUri;
+      
+      try {
+        // Use image manipulator to resize the image to a more manageable size
+        const manipResult = await manipulateAsync(
+          imageUri,
+          [{ resize: { width: 800 } }], // Resize to width of 800px (maintain aspect ratio)
+          { compress: 0.7, format: SaveFormat.JPEG } // 70% quality JPEG
+        );
+        
+        processedUri = manipResult.uri;
+        console.log('Image compressed and resized successfully');
+      } catch (manipError) {
+        console.warn('Failed to compress image, using original:', manipError);
+        // Continue with original image if manipulation fails
+      }
+      
+      // Set a timeout to prevent the app from hanging indefinitely
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Image analysis timed out. Please try again with a clearer photo.')), 60000);
+      });
+      
+      // Race between the normal analysis and the timeout
+      const result = await Promise.race([
+        analyzeImage(processedUri),
+        timeoutPromise
+      ]);
       
       if (!result) {
         console.error('Analysis result is undefined or null');
@@ -1918,14 +1946,47 @@ export default function NutritionScreen() {
       }
       
       console.log('Successfully analyzed image, logging meal');
-      await logMealToFirestore(result);
-      // Modal is already closed, no need to call setIsLogMealModalVisible(false) here
+      
+      // Ensure all macro values are rounded to the nearest whole number
+      const roundedResult = {
+        ...result,
+        items: result.items.map((item: any) => ({
+          ...item,
+          macros: {
+            calories: Math.round(item.macros.calories),
+            protein: Math.round(item.macros.protein),
+            carbs: Math.round(item.macros.carbs),
+            fats: Math.round(item.macros.fats)
+          }
+        })),
+        totalMacros: {
+          calories: Math.round(result.totalMacros.calories),
+          protein: Math.round(result.totalMacros.protein),
+          carbs: Math.round(result.totalMacros.carbs),
+          fats: Math.round(result.totalMacros.fats)
+        }
+      };
+      
+      await logMealToFirestore(roundedResult);
       
       // Refresh the data
       await loadSelectedDayData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Photo analysis error:', error);
-      // Error messaging handled in analyzeImage
+      
+      // Handle timeout error specifically
+      if (error.message && error.message.includes('timed out')) {
+        Alert.alert(
+          'Analysis Timeout',
+          'The analysis is taking too long. Please try again with a smaller or clearer photo.'
+        );
+      } else {
+        // Error messaging handled in analyzeImage
+        Alert.alert(
+          'Image Analysis Failed', 
+          'We couldn\'t properly analyze this image. Please try again with a clearer photo of your food.'
+        );
+      }
     } finally {
       setIsLoading(false);
       setIsAnalyzing(false);
