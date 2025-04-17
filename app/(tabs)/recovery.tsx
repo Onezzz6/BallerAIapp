@@ -885,11 +885,11 @@ IMPORTANT USAGE GUIDELINES:
                 )}
               </View>
               {recoveryData.submitted && !isEditing ? (
-                // Show submitted data with edit button only if it's today and not submitted
+                // Show submitted data with edit button only if it's today
                 <>
                   <View style={styles.submittedHeader}>
                     <Text style={styles.submittedText}>Submitted</Text>
-                    {isToday && !planExists && (
+                    {isToday && (
                       <Pressable
                         style={styles.editButton}
                         onPress={() => setIsEditing(true)}

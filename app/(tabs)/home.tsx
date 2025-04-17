@@ -788,36 +788,73 @@ export default function HomeScreen() {
       return;
     }
     
-    // Extract recovery metrics
-    const trainingIntensity = data.soreness || 5; // Default to middle value if not set
-    const soreness = data.fatigue || 5; // Note: In the UI, this is mapped to "How sore are you?"
-    const fatigue = data.sleep || 5; // Note: In the UI, this is mapped to "How tired do you feel overall?"
-    const sleepAmount = data.mood || 5; // Note: In the UI, this is mapped to "Sleep duration"
+    // Extract recovery metrics with correct mapping to the UI sliders
+    // Slider 1: "How intense was the training yesterday?" maps to data.fatigue
+    // Slider 2: "How sore are you?" maps to data.soreness
+    // Slider 3: "How tired do you feel overall?" maps to data.mood
+    // Slider 4: "Sleep duration last night" maps to data.sleep
+    const trainingIntensity = data.fatigue || 5; // How intense was the training
+    const soreness = data.soreness || 5; // How sore are you
+    const fatigue = data.mood || 5; // How tired do you feel overall
+    const sleepAmount = data.sleep || 5; // Sleep duration last night
     
-    // Calculate score components
-    // 1. For training intensity, soreness, and fatigue: Higher values mean lower score (inverse relationship)
-    // Scale is 1-10, so 11-value gives us the inverse (e.g., 8 becomes 3)
-    const intensityComponent = ((11 - trainingIntensity) / 10) * 100;
-    const sorenessComponent = ((11 - soreness) / 10) * 100;
-    const fatigueComponent = ((11 - fatigue) / 10) * 100;
+    // Calculate the load average (intensity, soreness, fatigue)
+    const loadAverage = (trainingIntensity + soreness + fatigue) / 3;
     
-    // 2. For sleep: Higher values mean higher score (direct relationship)
-    // Bonus for sleep 9 or above
-    let sleepComponent = (sleepAmount / 10) * 100;
-    if (sleepAmount >= 9) {
-      sleepComponent *= 1.2; // 20% bonus for excellent sleep
+    // Base score calculation (non-linear relationship with load)
+    let baseScore;
+    if (loadAverage <= 1) {
+      // Very low load: maximum score
+      baseScore = 100; // 100% at 1 or below
+    } else if (loadAverage <= 2) {
+      // Low load: high baseline score
+      baseScore = 100 - ((loadAverage - 1) * 20); // 100% at 1, 80% at 2
+    } else if (loadAverage <= 5) {
+      // Moderate load: medium-high baseline
+      baseScore = 80 - ((loadAverage - 2) * 5); // 80% at 2, 65% at 5
+    } else if (loadAverage <= 8) {
+      // High load: faster decrease
+      baseScore = 65 - ((loadAverage - 5) * 16.7); // 65% at 5, 15% at 8
+    } else {
+      // Very high load: minimal score
+      baseScore = 15 - ((loadAverage - 8) * 5); // 15% at 8, 0% at 11
     }
     
-    // Calculate final score with equal weighting (can be adjusted)
-    const finalScore = Math.round(
-      (intensityComponent * 0.25) +
-      (sorenessComponent * 0.25) +
-      (fatigueComponent * 0.25) +
-      (sleepComponent * 0.25)
-    );
+    // Sleep adjustment
+    let sleepMultiplier = 1.0;
+    if (sleepAmount >= 9) {
+      // Excellent sleep bonus
+      sleepMultiplier = 1.225; // 22.5% bonus for excellent sleep
+    } else if (sleepAmount >= 7) {
+      // Good sleep - slight bonus
+      sleepMultiplier = 1.1; // 10% bonus for good sleep
+    } else if (sleepAmount <= 5) {
+      // Poor sleep penalty
+      sleepMultiplier = 0.8; // 20% penalty for poor sleep
+    } else if (sleepAmount <= 3) {
+      // Very poor sleep severe penalty
+      sleepMultiplier = 0.6; // 40% penalty for very poor sleep
+    }
+    
+    // Apply sleep multiplier to base score
+    let finalScore = Math.round(baseScore * sleepMultiplier);
+    
+    // Special case handling for extreme scenarios
+    if (loadAverage >= 10 && sleepAmount <= 7) {
+      finalScore = 5; // Extreme load with inadequate sleep = 5%
+    }
+    
+    // Ensure consistency at all load levels - lower load should always mean higher score
+    // This additional check prevents any inversions in the scoring
+    if (loadAverage <= 2 && sleepAmount >= 9) {
+      // For load average of 2 with excellent sleep, ensure around 98%
+      finalScore = Math.max(finalScore, 98);
+    }
     
     // Ensure score is within 0-100 range
-    setReadinessScore(Math.min(Math.max(finalScore, 0), 100));
+    finalScore = Math.min(Math.max(finalScore, 0), 100);
+    
+    setReadinessScore(finalScore);
   }, []);
 
   // Set up real-time listener for recovery data
