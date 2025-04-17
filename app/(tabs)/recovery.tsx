@@ -63,6 +63,7 @@ export default function RecoveryScreen() {
   const [minutesLeft, setMinutesLeft] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [hasTodayCompletedPlan, setHasTodayCompletedPlan] = useState(false);
+  const [isLoadingStreak, setIsLoadingStreak] = useState(true);
 
   // Fetch recovery data for selected date
   useEffect(() => {
@@ -584,10 +585,14 @@ IMPORTANT USAGE GUIDELINES:
         
         // If marking today's plan as completed, immediately increment streak
         if (newCompletionStatus) {
-          setStreakCount(prevStreak => prevStreak + 1);
+          const newStreak = streakCount + 1;
+          setStreakCount(newStreak);
+          saveStreakCountToFirebase(newStreak);
         } else {
           // If unmarking as completed, decrement streak
-          setStreakCount(prevStreak => Math.max(0, prevStreak - 1));
+          const newStreak = Math.max(0, streakCount - 1);
+          setStreakCount(newStreak);
+          saveStreakCountToFirebase(newStreak);
         }
       }
       
@@ -604,7 +609,7 @@ IMPORTANT USAGE GUIDELINES:
   // Load streak data when component mounts
   useEffect(() => {
     if (user) {
-      calculateStreak();
+      loadStreakCountFromFirebase();
       checkTodayCompletedPlan();
       startStreakTimer();
     }
@@ -647,7 +652,7 @@ IMPORTANT USAGE GUIDELINES:
     setMinutesLeft(minutes);
   };
 
-  // Calculate current streak - updated to count completed plans
+  // Calculate current streak - updated to count completed plans and save to Firebase
   const calculateStreak = async () => {
     if (!user) return;
     
@@ -662,6 +667,7 @@ IMPORTANT USAGE GUIDELINES:
       if (plansSnapshot.empty) {
         console.log('No plans found in Firebase');
         setStreakCount(0);
+        saveStreakCountToFirebase(0);
         return;
       }
       
@@ -728,6 +734,9 @@ IMPORTANT USAGE GUIDELINES:
       
       console.log(`Final streak count: ${currentStreak} days`);
       setStreakCount(currentStreak);
+      
+      // Save the calculated streak count to Firebase
+      saveStreakCountToFirebase(currentStreak);
     } catch (error) {
       console.error('Error calculating streak:', error);
     }
@@ -755,7 +764,51 @@ IMPORTANT USAGE GUIDELINES:
     }
   };
 
-  // Update Streak Card with timer logic
+  // Save streak count to Firebase whenever it changes
+  const saveStreakCountToFirebase = async (count: number) => {
+    if (!user) return;
+    
+    try {
+      console.log(`Saving streak count to Firebase: ${count}`);
+      const streakRef = doc(db, 'users', user.uid, 'recoveryStreak', 'current');
+      await setDoc(streakRef, {
+        count: count,
+        updatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error saving streak count to Firebase:', error);
+    }
+  };
+
+  // Load streak count from Firebase
+  const loadStreakCountFromFirebase = async () => {
+    if (!user) return;
+    
+    try {
+      setIsLoadingStreak(true);
+      console.log('Loading streak count from Firebase');
+      const streakRef = doc(db, 'users', user.uid, 'recoveryStreak', 'current');
+      const streakDoc = await getDoc(streakRef);
+      
+      if (streakDoc.exists()) {
+        const data = streakDoc.data();
+        console.log(`Loaded streak count: ${data.count}`);
+        setStreakCount(data.count);
+      } else {
+        console.log('No saved streak count found, calculating from plans');
+        // If no saved streak, calculate it from plans
+        await calculateStreak();
+      }
+    } catch (error) {
+      console.error('Error loading streak count from Firebase:', error);
+      // Fallback to calculation if loading fails
+      await calculateStreak();
+    } finally {
+      setIsLoadingStreak(false);
+    }
+  };
+
+  // Update Streak Card with timer logic and loading state
   const renderStreakCard = () => {
     return (
       <Animated.View 
@@ -773,7 +826,11 @@ IMPORTANT USAGE GUIDELINES:
           
           <View style={styles.streakInfoContainer}>
             <Text style={styles.streakTitle}>Current Recovery Streak</Text>
-            <Text style={styles.streakCount}>{streakCount} {streakCount === 1 ? 'day' : 'days'}</Text>
+            {isLoadingStreak ? (
+              <ActivityIndicator size="small" color="#4064F6" style={{ marginVertical: 8 }} />
+            ) : (
+              <Text style={styles.streakCount}>{streakCount} {streakCount === 1 ? 'day' : 'days'}</Text>
+            )}
             {!hasTodayCompletedPlan && (
               <Text style={styles.streakTimerText}>
                 {hoursLeft}h {minutesLeft}m until streak ends{"\n"}
