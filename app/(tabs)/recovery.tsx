@@ -62,6 +62,7 @@ export default function RecoveryScreen() {
   const [hoursLeft, setHoursLeft] = useState(0);
   const [minutesLeft, setMinutesLeft] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const [hasTodayCompletedPlan, setHasTodayCompletedPlan] = useState(false);
 
   // Fetch recovery data for selected date
   useEffect(() => {
@@ -572,7 +573,25 @@ IMPORTANT USAGE GUIDELINES:
       
       console.log(`Plan marked as ${newCompletionStatus ? 'completed' : 'incomplete'}`);
       
-      // Recalculate streak after marking as complete/incomplete
+      // Check if this is today's plan
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const selected = new Date(selectedDate);
+      selected.setHours(0, 0, 0, 0);
+      
+      if (today.getTime() === selected.getTime()) {
+        setHasTodayCompletedPlan(newCompletionStatus);
+        
+        // If marking today's plan as completed, immediately increment streak
+        if (newCompletionStatus) {
+          setStreakCount(prevStreak => prevStreak + 1);
+        } else {
+          // If unmarking as completed, decrement streak
+          setStreakCount(prevStreak => Math.max(0, prevStreak - 1));
+        }
+      }
+      
+      // Full recalculation after the immediate UI update
       setTimeout(() => {
         calculateStreak();
       }, 500);
@@ -586,6 +605,7 @@ IMPORTANT USAGE GUIDELINES:
   useEffect(() => {
     if (user) {
       calculateStreak();
+      checkTodayCompletedPlan();
       startStreakTimer();
     }
 
@@ -604,6 +624,13 @@ IMPORTANT USAGE GUIDELINES:
     // Then update every minute
     timerRef.current = setInterval(() => {
       updateTimeUntilMidnight();
+      
+      // Check if it's a new day, and if so, reset the completed plan status
+      const now = new Date();
+      if (now.getHours() === 0 && now.getMinutes() === 0) {
+        setHasTodayCompletedPlan(false);
+        checkTodayCompletedPlan(); // Double-check from database
+      }
     }, 60000); // Update every minute
   };
 
@@ -706,6 +733,64 @@ IMPORTANT USAGE GUIDELINES:
     }
   };
 
+  // Check if there's a completed plan for today
+  const checkTodayCompletedPlan = async () => {
+    if (!user) return;
+    
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const dateStr = format(today, 'yyyy-MM-dd');
+      
+      const planRef = doc(db, 'users', user.uid, 'recoveryPlans', dateStr);
+      const planSnap = await getDoc(planRef);
+      
+      if (planSnap.exists() && planSnap.data().completed === true) {
+        setHasTodayCompletedPlan(true);
+      } else {
+        setHasTodayCompletedPlan(false);
+      }
+    } catch (error) {
+      console.error('Error checking today completed plan:', error);
+    }
+  };
+
+  // Update Streak Card with timer logic
+  const renderStreakCard = () => {
+    return (
+      <Animated.View 
+        entering={FadeIn.duration(300)}
+        style={styles.streakCardContainer}
+      >
+        <View style={styles.streakCardContent}>
+          <View style={styles.streakMascotContainer}>
+            <Image 
+              source={require('../../assets/images/mascot.png')}
+              style={styles.streakMascot}
+              resizeMode="contain"
+            />
+          </View>
+          
+          <View style={styles.streakInfoContainer}>
+            <Text style={styles.streakTitle}>Current Recovery Streak</Text>
+            <Text style={styles.streakCount}>{streakCount} {streakCount === 1 ? 'day' : 'days'}</Text>
+            {!hasTodayCompletedPlan && (
+              <Text style={styles.streakTimerText}>
+                {hoursLeft}h {minutesLeft}m until streak ends{"\n"}
+                Generate and complete today's plan to keep your streak going!
+              </Text>
+            )}
+            {hasTodayCompletedPlan && (
+              <Text style={styles.streakCompletedText}>
+                Today's plan completed! ✓
+              </Text>
+            )}
+          </View>
+        </View>
+      </Animated.View>
+    );
+  };
+
   return (
     <>
       <ScrollView
@@ -793,22 +878,26 @@ IMPORTANT USAGE GUIDELINES:
             >
               <View style={{alignItems: 'center'}}>
                 <Text style={styles.loadText}>Recovery Query</Text>
-                {!isToday && (
-                  <Text style={styles.pastDayNotice}>Past day - data still editable</Text>
+                {!isToday && recoveryData.submitted && (
+                  <Text style={styles.pastDayNotice}>
+                    Past day - view only
+                  </Text>
                 )}
               </View>
               {recoveryData.submitted && !isEditing ? (
-                // Show submitted data with edit button
+                // Show submitted data with edit button only if it's today and not submitted
                 <>
                   <View style={styles.submittedHeader}>
                     <Text style={styles.submittedText}>Submitted</Text>
-                    <Pressable
-                      style={styles.editButton}
-                      onPress={() => setIsEditing(true)}
-                    >
-                      <Ionicons name="create-outline" size={24} color="#FFFFFF" />
-                      <Text style={styles.editButtonText}>Edit</Text>
-                    </Pressable>
+                    {isToday && !planExists && (
+                      <Pressable
+                        style={styles.editButton}
+                        onPress={() => setIsEditing(true)}
+                      >
+                        <Ionicons name="create-outline" size={24} color="#FFFFFF" />
+                        <Text style={styles.editButtonText}>Edit</Text>
+                      </Pressable>
+                    )}
                   </View>
                   
                   <RecoverySlider
@@ -852,8 +941,8 @@ IMPORTANT USAGE GUIDELINES:
                     type="sleep"
                   />
                 </>
-              ) : (
-                // Show editable sliders (both for today and past days)
+              ) : isEditing || !recoveryData.submitted ? (
+                // Show editable sliders only if editing or not submitted yet
                 <>
                   <RecoverySlider
                     icon="fitness"
@@ -919,7 +1008,7 @@ IMPORTANT USAGE GUIDELINES:
                     <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
                   </Pressable>
                 </>
-              )}
+              ) : null}
             </Animated.View>
 
             {/* Recovery Tools Selection Card - Disabled for past days */}
@@ -1435,28 +1524,7 @@ IMPORTANT USAGE GUIDELINES:
             </View>
             
             {/* Streak Card - Added at the bottom */}
-            <Animated.View 
-              entering={FadeIn.duration(300)}
-              style={styles.streakCardContainer}
-            >
-              <View style={styles.streakCardContent}>
-                <View style={styles.streakMascotContainer}>
-                  <Image 
-                    source={require('../../assets/images/mascot.png')}
-                    style={styles.streakMascot}
-                    resizeMode="contain"
-                  />
-                </View>
-                
-                <View style={styles.streakInfoContainer}>
-                  <Text style={styles.streakTitle}>Current Recovery Streak</Text>
-                  <Text style={styles.streakCount}>{streakCount} {streakCount === 1 ? 'day' : 'days'}</Text>
-                  <Text style={styles.streakTimerText}>
-                    {hoursLeft}h {minutesLeft}m until streak ends
-                  </Text>
-                </View>
-              </View>
-            </Animated.View>
+            {renderStreakCard()}
           </View>
         </KeyboardAvoidingView>
       </ScrollView>
@@ -2241,6 +2309,11 @@ const styles = StyleSheet.create({
   streakTimerText: {
     fontSize: 12,
     color: '#F56C6C',
+    fontWeight: '500',
+  },
+  streakCompletedText: {
+    fontSize: 12,
+    color: '#99E86C',
     fontWeight: '500',
   },
   // Add styles for past days
