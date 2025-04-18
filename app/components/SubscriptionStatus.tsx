@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Alert, Modal, Pressable, Platform } from 'react
 import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 import subscriptionService, { PRODUCT_IDS, SubscriptionData } from '../services/subscription';
+import subscriptionCheck from '../services/subscriptionCheck';
 import CustomButton from './CustomButton';
 import * as InAppPurchases from 'expo-in-app-purchases';
 import axios from 'axios';
@@ -68,7 +69,7 @@ const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
                 let validationResult: { expirationDate: Date | null, isRenewing: boolean } = { expirationDate: null, isRenewing: false };
                 const validatedSubscriptions = [];
                 for (const subscription of activeSubscriptions) {
-                  validationResult = await validateReceipt(subscription);
+                  validationResult = await subscriptionCheck.validateReceipt(subscription);
                   if (validationResult.expirationDate) {
                     validatedSubscriptions.push(subscription);
                     break;
@@ -110,72 +111,6 @@ const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
     
     checkSubscription();
   }, [user, showExpirationAlert]);
-
-  const validateReceipt = async (purchase: InAppPurchases.InAppPurchase): Promise<{ expirationDate: Date | null, isRenewing: boolean }> => {
-    try {
-      //console.log('Validating receipt on client side:', purchase);
-      
-      // For iOS, we can use the InAppPurchases API
-      if (Platform.OS === 'ios') {
-        // Check if the purchase has a valid receipt
-        if (!purchase.transactionReceipt) {
-          console.log('Validate receipt: No transaction receipt found');
-          return { expirationDate: null, isRenewing: false };
-        }
-
-        const prodURL = 'https://buy.itunes.apple.com/verifyReceipt'
-        const stagingURL = 'https://sandbox.itunes.apple.com/verifyReceipt'
-        const appSecret = '7e261d6bb5084148a94d1a665aa891da'
-
-        const payload = {
-          "receipt-data": purchase.transactionReceipt,
-          "password": appSecret,
-          "exclude-old-transactions": true,
-        }
-
-        // First, try to validate against production
-        //console.log('Validate receipt: Contacting production server...');
-        const prodRes = await axios.post(prodURL, payload)
-        //console.log('Validate receipt: Production server response: ', prodRes.data);
-        // If status is 21007, fall back to sandbox
-        if (prodRes.data && prodRes.data.status === 21007) {
-          //console.log('Validate receipt: Falling back to sandbox server...');
-          const sandboxRes = await axios.post(stagingURL, payload)
-          //console.log('Validate receipt: Sandbox server response: ', sandboxRes.data);
-
-          if (sandboxRes.data && sandboxRes.data.latest_receipt_info && sandboxRes.data.latest_receipt_info.length > 0) {
-            const receipt = sandboxRes.data.latest_receipt_info[0]
-            //console.log('Validate receipt: Latest receipt: ', receipt);
-
-            // Check expiration
-            const purchaseTime = new Date(purchase.purchaseTime);
-            const expirationTime = new Date(parseInt(receipt.expires_date_ms));
-            const now = new Date();
-            console.log('Validate receipt: purchase: ', purchaseTime);
-            console.log('Validate receipt: expiration: ', expirationTime);
-            console.log('Validate receipt: now: ', now);
-            const isValid = expirationTime > now;
-            console.log('Validate receipt: Is receipt valid:', isValid);
-
-            if (isValid) {
-              if (sandboxRes.data.pending_renewal_info.length > 0) {  
-                const renewalInfo = sandboxRes.data.pending_renewal_info[0]
-                //console.log('Validate receipt: renewalInfo: ', renewalInfo);
-                const isRenewingValue = renewalInfo.auto_renew_status === '1'
-                console.log('Validate receipt: isRenewing:', isRenewingValue);
-                return { expirationDate: expirationTime, isRenewing: isRenewingValue };
-              }
-              return { expirationDate: expirationTime, isRenewing: false };
-            }
-          }
-        }
-      } 
-      return { expirationDate: null, isRenewing: false };
-    } catch (error) {
-      console.error('Error validating receipt:', error);
-      return { expirationDate: null, isRenewing: false };
-    }
-  };
 
   const handleRenewSubscription = () => {
     router.push('/(onboarding)/paywall');

@@ -20,6 +20,7 @@ import axios from 'axios';
 import { Buffer } from "buffer";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import subscriptionCheck from '../services/subscriptionCheck';
 
 // Initialize data listeners function defined locally to avoid circular imports
 const initializeAllDataListeners = async (userId: string) => {
@@ -102,7 +103,7 @@ const PaywallScreen = () => {
   const { user } = useAuth();
   const isIAPInitialized = useRef(false);
   const purchaseListenerSet = useRef(false);
-  const expoPurchaseListenerSet = useRef(false);
+  const Set = useRef(false);
   const purchaseEmitter = useRef<NativeEventEmitter | null>(null);
   const appState = useRef(AppState.currentState);
   const [subscriptionData, setSubscriptionData] = useState<SubscriptionData | null>(null);
@@ -110,7 +111,6 @@ const PaywallScreen = () => {
   const isSignUp = params.isSignUp === 'true';
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isNavigatingHome, setIsNavigatingHome] = useState(false);
-  const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
   // Add custom loading screen state and timing
   const [showCustomLoading, setShowCustomLoading] = useState(true);
   const loadingTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -125,13 +125,33 @@ const PaywallScreen = () => {
     '12months': 'BallerAISubscriptionOneYear'
   };
 
+  // Update local state whenever isPurchasing changes in AsyncStorage
+  useEffect(() => {
+    const checkPurchasingStatus = async () => {
+      try {
+        const status = await subscriptionCheck.checkIsPurchasing();
+        setIsPurchasing(status);
+      } catch (error) {
+        console.error('Error checking purchasing status:', error);
+      }
+    };
+    
+    // Initial check
+    checkPurchasingStatus();
+    
+    // Set up interval to check regularly
+    const intervalId = setInterval(checkPurchasingStatus, 500);
+    
+    return () => clearInterval(intervalId);
+  }, []);
+  
   const handleSuccessfulPurchase = async (purchase: any) => {
     try {
       const { uid, hasAppleInfo } = params;
       console.log('Processing successful purchase:', purchase);
       
       // Validate the receipt before processing the purchase
-      const validationResult = await validateReceipt(purchase);
+      const validationResult = await subscriptionCheck.validateReceipt(purchase);
       const { expirationDate, isRenewing } = validationResult;
       if (expirationDate === null) {
         console.error('Receipt validation failed');
@@ -220,7 +240,7 @@ const PaywallScreen = () => {
           Alert.alert('Error', 'Failed to process purchase. Please try again.');
         } finally {
           // Always reset purchasing state regardless of outcome
-          setIsPurchasing(false);
+          await subscriptionCheck.cancelIsPurchasing();
         }
       }
     } else if (responseCode === InAppPurchases.IAPResponseCode.USER_CANCELED) {
@@ -233,34 +253,14 @@ const PaywallScreen = () => {
       
       // Do nothing on cancel - user just stays on paywall
       console.log('Purchase cancelled by user');
-      setIsPurchasing(false); // Reset purchasing state when user cancels
+      await subscriptionCheck.cancelIsPurchasing();
     } else if (responseCode === InAppPurchases.IAPResponseCode.DEFERRED) {
       Alert.alert('Purchase Pending', 'The purchase needs to be approved by a parent or guardian.');
-      setIsPurchasing(false); // Reset purchasing state when purchase is deferred
+      await subscriptionCheck.cancelIsPurchasing();
     } else {
       console.error('Purchase failed:', { responseCode });
       Alert.alert('Purchase Failed', 'There was an error processing your purchase. Please try again.');
-      setIsPurchasing(false); // Reset purchasing state on error
-    }
-  };
-
-  // Expo purchase listener
-  const expoPurchaseListener = (event: any) => {
-    console.log('Expo purchase listener triggered:', event);
-    if (event && event.purchases && event.purchases.length > 0) {
-      const purchase = event.purchases[0];
-      console.log('Processing Expo purchase:', purchase);
-      
-      // Handle the successful purchase
-      handleSuccessfulPurchase(purchase)
-        .then(() => {
-          console.log('Expo purchase successful, navigating to home');
-          router.replace('/(tabs)/home');
-        })
-        .catch(error => {
-          console.error('Error processing Expo purchase:', error);
-          Alert.alert('Error', 'Failed to process purchase. Please try again.');
-        });
+      await subscriptionCheck.cancelIsPurchasing();
     }
   };
 
@@ -337,46 +337,6 @@ const PaywallScreen = () => {
     }
   };
 
-  const handlePurchase = async (productId: string) => {
-    try {
-      console.log('Starting purchase flow for:', productId);
-      
-      // Immediately find the product without extra loading
-      const product = products.find(p => p.productId === productId);
-      if (!product) {
-        console.error('Product not found:', productId);
-        throw new Error('Selected subscription plan not available');
-      }
-
-      // Set a flag to track that we're initiating a purchase
-      await AsyncStorage.setItem('purchase_in_progress', 'true');
-
-      console.log('Initiating purchase for:', product.productId);
-      
-      // Purchase will remain active until either:
-      // 1. User completes or cancels purchase and returns to app
-      // 2. Purchase API throws an error
-      await InAppPurchases.purchaseItemAsync(productId);
-      
-    } catch (error: any) {
-      console.error('Purchase error:', {
-        message: error.message,
-        code: error?.code,
-        name: error?.name
-      });
-      
-      setIsPurchasing(false); // Reset purchasing state on error
-      await AsyncStorage.removeItem('purchase_in_progress');
-      
-      Alert.alert(
-        'Purchase Error',
-        error.message === 'Selected subscription plan not available'
-          ? 'The selected subscription plan is not available. Please try again later.'
-          : 'Unable to complete the purchase. Please try again.'
-      );
-    }
-  };
-
   // Update initialization
   useEffect(() => {
     let isMounted = true;
@@ -415,19 +375,25 @@ const PaywallScreen = () => {
             // This prevents checks during purchase flow
             try {
               console.log('Pre-checking subscription status...');
-              const existingSubscription = await checkExistingSubscriptions();
+              // Use the new shared service instead
+              const existingSubscription = await subscriptionCheck.checkExistingSubscriptions(
+                user?.uid || null, 
+                isIAPInitialized.current
+              );
+              
               if (existingSubscription) {
                 cachedSubscriptionCheck.current = existingSubscription;
                 console.log('Found existing subscription during initialization:', existingSubscription.source);
                 
-                // Update UI state with subscription info
+                /*// Update UI state with subscription info
                 if (existingSubscription.source === 'firebase' && user) {
                   const firebaseSubscription = await subscriptionService.getSubscriptionData(user.uid);
                   if (firebaseSubscription && firebaseSubscription.isActive) {
                     setSubscriptionData(firebaseSubscription);
-                    setDaysRemaining(subscriptionService.getDaysRemaining(firebaseSubscription));
                   }
-                }
+                }*/
+
+                router.replace('/(tabs)/home');
               } else {
                 console.log('No active subscription found during initialization');
               }
@@ -491,68 +457,10 @@ const PaywallScreen = () => {
         InAppPurchases.setPurchaseListener(() => {});
         purchaseListenerSet.current = false;
       }
-      if (expoPurchaseListenerSet.current && purchaseEmitter.current) {
-        purchaseEmitter.current.removeAllListeners('purchasesUpdated');
-        expoPurchaseListenerSet.current = false;
-        purchaseEmitter.current = null;
-      }
       InAppPurchases.disconnectAsync().catch(console.error);
       isIAPInitialized.current = false;*/
     };
   }, []);
-
-  // Handle app state changes
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', async (nextAppState) => {
-      if (
-        appState.current.match(/inactive|background/) &&
-        nextAppState === 'active'
-      ) {
-        console.log('App has come to the foreground!');
-        
-        // Clean up any purchase flags
-        try {
-          await AsyncStorage.removeItem('purchase_in_progress');
-        } catch (error) {
-          console.error('Error clearing purchase state:', error);
-        }
-        
-        // Check for existing subscriptions when app becomes active
-        // Only perform this check if we're not already navigating home
-        // This prevents accidental navigation when user returns from canceled payment
-        if (isIAPInitialized.current && !isNavigatingHome) {
-          try {
-            // Make sure we're not already checking subscriptions
-            if (!subscriptionCheckInProgress.current) {
-              const existingSubscription = await checkExistingSubscriptions();
-              if (existingSubscription) {
-                console.log('Processing existing subscription on app active:', existingSubscription);
-                
-                // Show navigation screen
-                setIsNavigatingHome(true);
-                
-                await handleSuccessfulPurchase(existingSubscription.data);
-                
-                // Navigate with delay to show transition
-                setTimeout(() => {
-                  router.replace('/(tabs)/home');
-                }, 2000);
-              }
-            } else {
-              console.log('Subscription check already in progress, skipping duplicate check');
-            }
-          } catch (checkError) {
-            console.error('Error checking subscription on app state change:', checkError);
-          }
-        }
-      }
-      appState.current = nextAppState;
-    });
-
-    return () => {
-      subscription.remove();
-    };
-  }, [isNavigatingHome]);
 
   // Monitor products state
   useEffect(() => {
@@ -588,46 +496,40 @@ const PaywallScreen = () => {
 
   const handleContinue = async () => {
     // Immediately disable the button to prevent double-clicks
-    setIsPurchasing(true);
+    await subscriptionCheck.setIsPurchasing();
     
     try {
-      // Clear any stale purchase flags
-      await AsyncStorage.removeItem('purchase_in_progress').catch(console.error);
-      await AsyncStorage.removeItem('purchase_just_cancelled').catch(console.error);
-      
-      // Don't automatically remove the loading UI - let the app state listener 
-      // handle this when the user returns from the Apple payment sheet
-      
-      // Use cached subscription check result if available (from initialization)
-      // This makes both monthly and yearly options equally fast
-      let existingSubscription = cachedSubscriptionCheck.current;
-      
-      if (existingSubscription) {
-        console.log('Using cached subscription check result from initialization');
-        
-        // Process existing subscription and navigate directly
-        await handleSuccessfulPurchase(existingSubscription.data);
-        router.replace('/(tabs)/home');
-        return;
+      // Note: Comprehensive subscription check is now in app/_layout.tsx
+      // We do a simple check here only to see if we should skip purchase flow
+      if (user) {
+        try {
+          const firebaseSubscription = await subscriptionService.getSubscriptionData(user.uid);
+          if (firebaseSubscription && firebaseSubscription.isActive) {
+            console.log('Found active subscription in Firebase, navigating to home');
+            await handleSuccessfulPurchase(firebaseSubscription);
+            router.replace('/(tabs)/home');
+            return;
+          }
+        } catch (error) {
+          console.error('Error checking Firebase subscription in handleContinue:', error);
+          // Continue with purchase if check fails
+        }
       }
       
       // No existing subscription, proceed with new purchase immediately
-      // This will be equally fast for both monthly and yearly options
       const productId = PRODUCT_IDS[selectedPlan as keyof typeof PRODUCT_IDS];
       
-      // Direct purchase with no additional checks - faster response
       console.log('Starting purchase for:', productId);
-      
-      // Set a flag to track that we're initiating a purchase
-      await AsyncStorage.setItem('purchase_in_progress', 'true');
       
       // Directly start the purchase - this will trigger Apple's payment sheet
       await InAppPurchases.purchaseItemAsync(productId);
-      
+
+      //await subscriptionCheck.cancelIsPurchasing();
     } catch (error: any) {
       console.error('Error in handleContinue:', error);
-      setIsPurchasing(false); // Reset purchasing state on error
-      await AsyncStorage.removeItem('purchase_in_progress').catch(console.error);
+      
+      // Make sure to update purchasing state on error
+      await subscriptionCheck.cancelIsPurchasing();
       
       if (error.code === 'ERR_IN_APP_PURCHASES_CONNECTION') {
         Alert.alert(
@@ -752,264 +654,9 @@ const PaywallScreen = () => {
     ));
   };
 
-  // Render subscription status if available
-  const renderSubscriptionStatus = () => {
-    if (!subscriptionData) return null;
-    
-    const status = subscriptionData.status;
-    const daysLeft = daysRemaining;
-    
-    if (status === 'active' && daysLeft !== null && daysLeft > 0) {
-      return (
-        <View style={styles.subscriptionStatusContainer}>
-          <Text style={styles.subscriptionStatusText}>
-            You have an active subscription with {daysLeft} days remaining
-          </Text>
-          <CustomButton
-            title="Continue to App"
-            onPress={() => router.replace('/(tabs)/home')}
-            buttonStyle={styles.continueButton}
-            textStyle={styles.continueButtonText}
-          />
-        </View>
-      );
-    } else if (status === 'expired') {
-      return (
-        <View style={styles.subscriptionStatusContainer}>
-          <Text style={styles.subscriptionStatusText}>
-            Your subscription has expired. Please renew to continue using the app.
-          </Text>
-        </View>
-      );
-    } else if (status === 'cancelled') {
-      return (
-        <View style={styles.subscriptionStatusContainer}>
-          <Text style={styles.subscriptionStatusText}>
-            Your subscription has been cancelled. Please subscribe again to continue using the app.
-          </Text>
-        </View>
-      );
-    }
-    
-    return null;
-  };
-
-  // Optimized version that only checks Firebase quickly for purchase flow
-  const quickSubscriptionCheck = async () => {
-    // If there's a full check already in progress, wait for it to complete
-    if (subscriptionCheckInProgress.current) {
-      try {
-        console.log('Using existing subscription check that is already in progress');
-        return await subscriptionCheckInProgress.current;
-      } catch (error) {
-        console.error('Error while waiting for existing subscription check:', error);
-        return null;
-      }
-    }
-    
-    try {
-      // Only check Firebase if user is logged in - this is much faster than IAP validation
-      if (user) {
-        try {
-          const firebaseSubscription = await subscriptionService.getSubscriptionData(user.uid);
-          if (firebaseSubscription && firebaseSubscription.isActive) {
-            return { source: 'firebase', data: firebaseSubscription };
-          }
-        } catch (error) {
-          console.error('Error in quick Firebase subscription check:', error);
-        }
-      }
-      // Skip IAP validation for initial purchase flow to make it faster
-      return null;
-    } catch (error) {
-      console.error('Error in quick subscription check:', error);
-      return null;
-    }
-  };
-
-  // Function to check for existing subscriptions
-  const checkExistingSubscriptions = async () => {
-    // If there's already a check in progress, wait for it to complete
-    if (subscriptionCheckInProgress.current) {
-      try {
-        console.log('Subscription check already in progress, waiting for it to complete...');
-        return await subscriptionCheckInProgress.current;
-      } catch (error) {
-        console.error('Error while waiting for existing subscription check:', error);
-        return null;
-      }
-    }
-
-    // Create a new promise for this check
-    try {
-      const checkPromise = (async () => {
-        if (!user) return null;
-        
-        console.log('Checking for existing Firebase subscription...');
-        
-        // First check Firebase if user is logged in
-        if (user) {
-          try {
-            const firebaseSubscription = await subscriptionService.getSubscriptionData(user.uid);
-            console.log('Firebase subscription check done.');
-            
-            if (firebaseSubscription) {
-              console.log('Found subscription check result: ', firebaseSubscription);
-              
-              if (firebaseSubscription.isActive) {
-                // Update local state
-                setSubscriptionData(firebaseSubscription);
-                setDaysRemaining(subscriptionService.getDaysRemaining(firebaseSubscription));
-                return { source: 'firebase', data: firebaseSubscription };
-              } else {
-                console.log('Firebase subscription is not active');
-              }
-            }
-          } catch (fbError) {
-            console.error('Error checking Firebase subscription:', fbError);
-            // Continue to IAP check even if Firebase check fails
-          }
-        }
-        
-        // If no active subscription in Firebase, check IAP
-        console.log('Checking for IAP subscription in purchase history...');
-        try {
-          const history = await InAppPurchases.getPurchaseHistoryAsync();
-          //console.log('Purchase history:', history);
-          
-          if (history && history.results && history.results.length > 0) {
-            // Find active subscriptions
-            const activeSubscriptions = history.results.filter(purchase => {
-              const productId = purchase.productId;
-              return (
-                (productId === PRODUCT_IDS['1month'] ||
-                productId === PRODUCT_IDS['12months']) &&
-                purchase.transactionReceipt &&
-                (purchase.purchaseState === InAppPurchases.InAppPurchaseState.PURCHASED ||
-                purchase.purchaseState === InAppPurchases.InAppPurchaseState.RESTORED)
-              );
-            });
-
-            // Validate receipts for active subscriptions
-            const validatedSubscriptions = [];
-            let validationResult: { expirationDate: Date | null, isRenewing: boolean } = { expirationDate: null, isRenewing: false };
-            for (const subscription of activeSubscriptions) {
-              validationResult = await validateReceipt(subscription);
-              if (validationResult.expirationDate) {
-                validatedSubscriptions.push(subscription);
-                break;
-              } else {
-                console.log('Subscription validation failed:', subscription.productId);
-              }
-            }
-
-            if (validatedSubscriptions.length > 0 && validationResult.expirationDate) {
-              console.log('Found validated active subscription in IAP, expiration date:', validationResult.expirationDate);
-              
-              // If user is logged in, save this to Firebase
-              if (user) {
-                await subscriptionService.saveSubscriptionData(user.uid, validatedSubscriptions[0], validationResult.expirationDate, validationResult.isRenewing);
-              }
-              
-              return { source: 'iap', data: validatedSubscriptions[0] };
-            }
-          }
-          
-          console.log('IAP subscription check done: No valid IAP subscriptions found');
-          return null;
-        } catch (iapError) {
-          console.error('Error checking IAP subscription status:', iapError);
-          return null;
-        }
-      })();
-      
-      // Store the promise in the ref
-      subscriptionCheckInProgress.current = checkPromise;
-      
-      // Wait for the check to complete
-      const result = await checkPromise;
-      
-      // Clear the ref when done
-      subscriptionCheckInProgress.current = null;
-      
-      return result;
-    } catch (error) {
-      console.error('Error checking subscription status:', error);
-      // Clean up the ref on error
-      subscriptionCheckInProgress.current = null;
-      return null;
-    }
-  };
-
   // Add navigation handler for back button
   const handleBack = () => {
     router.replace('/(onboarding)/sign-up');
-  };
-
-  const validateReceipt = async (purchase: InAppPurchases.InAppPurchase): Promise<{ expirationDate: Date | null, isRenewing: boolean }> => {
-    try {
-      //console.log('Validating receipt on client side:', purchase);
-      
-      // For iOS, we can use the InAppPurchases API
-      if (Platform.OS === 'ios') {
-        // Check if the purchase has a valid receipt
-        if (!purchase.transactionReceipt) {
-          console.log('Validate receipt: No transaction receipt found');
-          return { expirationDate: null, isRenewing: false };
-        }
-
-        const prodURL = 'https://buy.itunes.apple.com/verifyReceipt'
-        const stagingURL = 'https://sandbox.itunes.apple.com/verifyReceipt'
-        const appSecret = '7e261d6bb5084148a94d1a665aa891da'
-
-        const payload = {
-          "receipt-data": purchase.transactionReceipt,
-          "password": appSecret,
-          "exclude-old-transactions": true,
-        }
-
-        // First, try to validate against production
-        //console.log('Validate receipt: Contacting production server...');
-        const prodRes = await axios.post(prodURL, payload)
-        //console.log('Validate receipt: Production server response: ', prodRes.data);
-        // If status is 21007, fall back to sandbox
-        if (prodRes.data && prodRes.data.status === 21007) {
-          //console.log('Validate receipt: Falling back to sandbox server...');
-          const sandboxRes = await axios.post(stagingURL, payload)
-          //console.log('Validate receipt: Sandbox server response: ', sandboxRes.data);
-
-          if (sandboxRes.data && sandboxRes.data.latest_receipt_info && sandboxRes.data.latest_receipt_info.length > 0) {
-            const receipt = sandboxRes.data.latest_receipt_info[0]
-            //console.log('Validate receipt: Latest receipt: ', receipt);
-
-            // Check expiration
-            const purchaseTime = new Date(purchase.purchaseTime);
-            const expirationTime = new Date(parseInt(receipt.expires_date_ms));
-            const now = new Date();
-            console.log('Validate receipt: purchase: ', purchaseTime);
-            console.log('Validate receipt: expiration: ', expirationTime);
-            console.log('Validate receipt: now: ', now);
-            const isValid = expirationTime > now;
-            console.log('Validate receipt: Is receipt valid:', isValid);
-
-            if (isValid) {
-              if (sandboxRes.data.pending_renewal_info.length > 0) {  
-                const renewalInfo = sandboxRes.data.pending_renewal_info[0]
-                //console.log('Validate receipt: renewalInfo: ', renewalInfo);
-                const isRenewingValue = renewalInfo.auto_renew_status === '1'
-                console.log('Validate receipt: isRenewing:', isRenewingValue);
-                return { expirationDate: expirationTime, isRenewing: isRenewingValue };
-              }
-              return { expirationDate: expirationTime, isRenewing: false };
-            }
-          }
-        }
-      } 
-      return { expirationDate: null, isRenewing: false };
-    } catch (error) {
-      console.error('Error validating receipt:', error);
-      return { expirationDate: null, isRenewing: false };
-    }
   };
 
   return (
@@ -1033,9 +680,6 @@ const PaywallScreen = () => {
             <View style={styles.content}>
               <Text style={styles.title}>Better training.</Text>
               <Text style={styles.subtitle}>Better results!</Text>
-
-              {/* Subscription Status */}
-              {renderSubscriptionStatus()}
 
               {/* Subscription Plans */}
               <View style={styles.plansContainer}>

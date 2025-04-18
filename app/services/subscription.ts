@@ -82,16 +82,23 @@ const subscriptionService = {
       const userDoc = await getDoc(userRef);
       
       if (userDoc.exists() && userDoc.data().subscription) {
+        let subscriptionData = userDoc.data().subscription as SubscriptionData;
+
         // Check if subscription has expired
-        const expirationDate = new Date(userDoc.data().expiresDate);
+        const expirationDate = new Date(subscriptionData.expiresDate);
         const now = new Date();
-        
+
+        console.log('Checking subscription expiration for user:', userId);
+        console.log('Expiration date:', expirationDate);
+        console.log('Current date:', now);
+
         if (expirationDate < now) {
-          console.log('Updating Firebase subscription status to expired for user:', userId);
           await this.updateSubscriptionStatus(userId, 'expired');
+          subscriptionData.isActive = false;
+          subscriptionData.status = 'expired';
         }
 
-        return userDoc.data().subscription as SubscriptionData;
+        return subscriptionData;
       }
       
       console.log('User has no subscription:', userId);
