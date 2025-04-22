@@ -119,12 +119,6 @@ const PaywallScreen = () => {
   // Reference to store cached subscription check result
   const cachedSubscriptionCheck = useRef<{ source: string; data: any } | null>(null);
 
-  // Product IDs for your subscription plans
-  const PRODUCT_IDS = {
-    '1month': 'BallerAISubscriptionOneMonth',
-    '12months': 'BallerAISubscriptionOneYear'
-  };
-
   // Update local state whenever isPurchasing changes in AsyncStorage
   useEffect(() => {
     const checkPurchasingStatus = async () => {

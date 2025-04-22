@@ -4,8 +4,8 @@ import * as InAppPurchases from 'expo-in-app-purchases';
 
 // Product IDs for subscription plans
 export const PRODUCT_IDS = {
-  '1month': 'BallerAISubscriptionOneMonth',
-  '12months': 'BallerAISubscriptionOneYear'
+  '1month': 'BallerAIProSubscriptionOneMonth',
+  '12months': 'BallerAIProSubscriptionOneYear'
 };
 
 // Subscription status types
