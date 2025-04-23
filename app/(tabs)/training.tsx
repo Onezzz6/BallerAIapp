@@ -59,6 +59,7 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     padding: 16,
     justifyContent: 'center',
+    alignItems: 'center',
     flexDirection: 'row',
     gap: 8,
   },
@@ -115,7 +116,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#000000',
     marginBottom: 8,
   },
   subtitle: {
@@ -646,7 +646,7 @@ Focus on recovery today`;
       const now = new Date();
       
       await addPlan({
-        name: `Your personalized plan - ${format(now, 'M.d.yy')}`,
+        name: `Your Personalized Plan - ${format(now, 'd.m.yy')}`,
         createdAt: now,
         schedule: dailyPlans,
       });
@@ -802,7 +802,7 @@ Focus on recovery today`;
 
           <View style={styles.content}>
             <View style={styles.sectionBackgroundGray}>
-              <Text style={styles.sectionTitle}>Focus Area</Text>
+              <Text style={[styles.sectionTitle, { color: canGeneratePlan ? '#000000' : '#666666' }]}>Focus Area</Text>
               <Text style={styles.subtitle}>Select your training focus to get a personalized plan</Text>
               
               <View style={styles.optionsContainer}>
@@ -814,7 +814,8 @@ Focus on recovery today`;
                       selectedFocus === focus && styles.selectedOption
                     ]}
                     onPress={() => setSelectedFocus(focus)}
-                  >
+                    disabled={!canGeneratePlan}
+                    >
                     <Text style={[
                       styles.optionText,
                       selectedFocus === focus && styles.selectedOptionText
@@ -827,7 +828,7 @@ Focus on recovery today`;
             </View>
 
             <View style={styles.sectionBackgroundGray}>
-              <Text style={styles.sectionTitle}>Gym Access</Text>
+              <Text style={[styles.sectionTitle, { color: canGeneratePlan ? '#000000' : '#666666' }]}>Gym Access</Text>
               <Text style={styles.subtitle}>Do you have access to a gym?</Text>
               <View style={styles.optionsContainer}>
                 {gymOptions.map((option) => (
@@ -838,6 +839,7 @@ Focus on recovery today`;
                       gymAccess === option && styles.selectedOption
                     ]}
                     onPress={() => setGymAccess(option)}
+                    disabled={!canGeneratePlan}
                   >
                     <Text style={[
                       styles.optionText,
@@ -859,8 +861,8 @@ Focus on recovery today`;
                 flexWrap: 'wrap',
                 gap: 8
               }}>
-                <Text style={[styles.sectionTitle, { flex: 1 }]}>Team Training schedule <Text style={styles.subtitleInline}>(minutes/day)</Text></Text>
-                {scheduleConfirmed && (
+                <Text style={[styles.sectionTitle, { flex: 1 }, { color: canGeneratePlan ? '#000000' : '#666666' }]}>Team Training Schedule <Text style={styles.subtitleInline}>(minutes/day)</Text></Text>
+                {canGeneratePlan && scheduleConfirmed && (
                   <Pressable
                     style={styles.editButton}
                     onPress={editSchedule}
@@ -870,11 +872,11 @@ Focus on recovery today`;
                   </Pressable>
                 )}
               </View>
-              <Text style={styles.subtitle}>Fill in your team training schedule so BallerAI can take this into consideration when making ur personalized training plan.</Text>
+              <Text style={styles.subtitle}>Fill in your team training schedule, so BallerAI can take this into consideration when creating your personalized training plan.</Text>
 
               {Object.entries(schedule).map(([day, daySchedule]) => (
                 <View key={day} style={[styles.dayContainer, scheduleConfirmed && styles.disabledContainer]}>
-                  <Text style={styles.dayTitle}>{day.toUpperCase()}</Text>
+                  <Text style={[styles.dayTitle, { color: canGeneratePlan ? '#000000' : '#666666' }]}>{day.toUpperCase()}</Text>
                   <View style={styles.dayOptions}>
                     <Pressable
                       style={[
@@ -883,7 +885,7 @@ Focus on recovery today`;
                         scheduleConfirmed && styles.disabledOption
                       ]}
                       onPress={() => updateSchedule(day, 'off')}
-                      disabled={scheduleConfirmed}
+                      disabled={scheduleConfirmed || !canGeneratePlan}
                     >
                       <Text style={styles.dayOptionText}>Off</Text>
                     </Pressable>
@@ -894,7 +896,7 @@ Focus on recovery today`;
                         scheduleConfirmed && styles.disabledOption
                       ]}
                       onPress={() => updateSchedule(day, 'game')}
-                      disabled={scheduleConfirmed}
+                      disabled={scheduleConfirmed || !canGeneratePlan}
                     >
                       <Text style={styles.dayOptionText}>Game</Text>
                     </Pressable>
@@ -905,7 +907,7 @@ Focus on recovery today`;
                         scheduleConfirmed && styles.disabledOption
                       ]}
                       onPress={() => updateSchedule(day, 'training')}
-                      disabled={scheduleConfirmed}
+                      disabled={scheduleConfirmed || !canGeneratePlan}
                     >
                       <Text style={styles.dayOptionText}>Training</Text>
                     </Pressable>
@@ -925,7 +927,7 @@ Focus on recovery today`;
                           value={daySchedule.duration}
                           onChangeText={(text) => updateDuration(day, text)}
                           keyboardType="numeric"
-                          editable={!scheduleConfirmed}
+                          editable={!scheduleConfirmed && canGeneratePlan}
                         />
                       </View>
                     </View>
@@ -933,7 +935,7 @@ Focus on recovery today`;
                 </View>
               ))}
               
-              {!scheduleConfirmed && (
+              {canGeneratePlan && !scheduleConfirmed && (
                 <Pressable 
                   style={styles.confirmButton}
                   onPress={confirmSchedule}
@@ -969,7 +971,7 @@ Focus on recovery today`;
                   <Text style={styles.timerText}>
                     New plan available on Sunday
                   </Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, justifyContent: 'center', gap: 5 }}>
                     <Ionicons name="time-outline" size={18} color="#4064F6" />
                     <Text style={styles.countdownText}>
                       {timeUntilNextSunday.days > 0 && `${timeUntilNextSunday.days} day${timeUntilNextSunday.days !== 1 ? 's' : ''}, `}

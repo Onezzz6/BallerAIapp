@@ -59,7 +59,7 @@ export default function PlanDetailsScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#000000" />
+          <Ionicons name="chevron-back" size={24} color="#000000" />
         </Pressable>
         <Text style={styles.title}>{plan.name}</Text>
       </View>
@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   title: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '600',
     color: '#000000',
   },
