@@ -39,15 +39,9 @@
           <string>com.googleusercontent.apps.764862532296-fkvrcavkkultnmks81lbq7nqv4d4682i</string>
         </array>
       </dict>
-      <dict>
-        <key>CFBundleURLSchemes</key>
-        <array>
-          <string>exp+ballerai</string>
-        </array>
-      </dict>
     </array>
     <key>CFBundleVersion</key>
-    <string>12</string>
+    <string>13</string>
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
     <key>LSMinimumSystemVersion</key>
@@ -56,36 +50,11 @@
     <true/>
     <key>NSAppTransportSecurity</key>
     <dict>
-      <key>NSExceptionDomains</key>
-      <dict>
-        <key>localhost</key>
-        <dict>
-          <key>NSExceptionAllowsInsecureHTTPLoads</key>
-          <true/>
-          <key>NSIncludesSubdomains</key>
-          <true/>
-        </dict>
-        <key>192.168.86.225</key>
-        <dict>
-          <key>NSExceptionAllowsInsecureHTTPLoads</key>
-          <true/>
-          <key>NSIncludesSubdomains</key>
-          <true/>
-          <key>NSTemporaryExceptionAllowsInsecureHTTPLoads</key>
-          <true/>
-        </dict>
-      </dict>
       <key>NSAllowsArbitraryLoads</key>
-      <true/>
+      <false/>
       <key>NSAllowsLocalNetworking</key>
       <true/>
     </dict>
-    <key>NSLocalNetworkUsageDescription</key>
-    <string>Allow $(PRODUCT_NAME) to connect to local network devices for development</string>
-    <key>NSBonjourServices</key>
-    <array>
-      <string>_http._tcp</string>
-    </array>
     <key>NSCameraUsageDescription</key>
     <string>This app uses the camera to analyze your meals for nutritional information.</string>
     <key>NSMicrophoneUsageDescription</key>

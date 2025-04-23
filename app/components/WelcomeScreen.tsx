@@ -238,7 +238,7 @@ export default function WelcomeScreen() {
                   textAlign: 'center',
                   marginBottom: 0,
                 }}>
-                  Ready to go pro?
+                  Ready to Go Pro?
                 </Text>
 
                 <Button 
@@ -282,7 +282,7 @@ export default function WelcomeScreen() {
                   textAlign: 'center',
                   marginBottom: 0,
                 }}>
-                  Welcome back!
+                  Welcome Back!
                 </Text>
 
                 <TextInput
@@ -439,6 +439,7 @@ export default function WelcomeScreen() {
                 fontSize: 20,
                 fontWeight: '600',
                 marginBottom: 8,
+                textAlign: 'center',
               }}>
                 Reset Password
               </Text>
@@ -448,7 +449,7 @@ export default function WelcomeScreen() {
                 color: '#666666',
                 marginBottom: 8,
               }}>
-                Enter your email address and we'll send you instructions to reset your password.
+                Enter your email address, and we'll send you a link to reset your password.
               </Text>
               
               <TextInput
@@ -489,7 +490,7 @@ export default function WelcomeScreen() {
                 </Pressable>
                 
                 <Button 
-                  title={isLoading ? "Sending..." : "Send Reset Link"}
+                  title={isLoading ? "Sending..." : "Send Link"}
                   onPress={handleResetPassword}
                   disabled={isLoading}
                   buttonStyle={{

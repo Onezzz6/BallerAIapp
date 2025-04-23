@@ -89,8 +89,6 @@ PODS:
     - ExpoModulesCore
   - fast_float (6.1.4)
   - FBLazyVector (0.76.9)
-  - Firebase (11.10.0):
-    - Firebase/Core (= 11.10.0)
   - Firebase/Analytics (11.10.0):
     - Firebase/Core
   - Firebase/Auth (11.10.0):
@@ -194,17 +192,6 @@ PODS:
     - AppAuth (< 2.0, >= 1.7.3)
     - GTMAppAuth (< 5.0, >= 4.1.1)
     - GTMSessionFetcher/Core (~> 3.3)
-  - GoogleUtilities (8.0.2):
-    - GoogleUtilities/AppDelegateSwizzler (= 8.0.2)
-    - GoogleUtilities/Environment (= 8.0.2)
-    - GoogleUtilities/Logger (= 8.0.2)
-    - GoogleUtilities/MethodSwizzler (= 8.0.2)
-    - GoogleUtilities/Network (= 8.0.2)
-    - "GoogleUtilities/NSData+zlib (= 8.0.2)"
-    - GoogleUtilities/Privacy (= 8.0.2)
-    - GoogleUtilities/Reachability (= 8.0.2)
-    - GoogleUtilities/SwizzlerTestHelpers (= 8.0.2)
-    - GoogleUtilities/UserDefaults (= 8.0.2)
   - GoogleUtilities/AppDelegateSwizzler (8.0.2):
     - GoogleUtilities/Environment
     - GoogleUtilities/Logger
@@ -229,8 +216,6 @@ PODS:
   - GoogleUtilities/Reachability (8.0.2):
     - GoogleUtilities/Logger
     - GoogleUtilities/Privacy
-  - GoogleUtilities/SwizzlerTestHelpers (8.0.2):
-    - GoogleUtilities/MethodSwizzler
   - GoogleUtilities/UserDefaults (8.0.2):
     - GoogleUtilities/Logger
     - GoogleUtilities/Privacy
@@ -2261,11 +2246,8 @@ DEPENDENCIES:
   - ExpoWebBrowser (from `../node_modules/expo-web-browser/ios`)
   - fast_float (from `../node_modules/react-native/third-party-podspecs/fast_float.podspec`)
   - FBLazyVector (from `../node_modules/react-native/Libraries/FBLazyVector`)
-  - Firebase
-  - FirebaseCore
   - fmt (from `../node_modules/react-native/third-party-podspecs/fmt.podspec`)
   - glog (from `../node_modules/react-native/third-party-podspecs/glog.podspec`)
-  - GoogleUtilities
   - hermes-engine (from `../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
   - RCT-Folly (from `../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec`)
   - RCT-Folly/Fabric (from `../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec`)
@@ -2702,10 +2684,10 @@ SPEC CHECKSUMS:
   RecaptchaInterop: 11e0b637842dfb48308d242afc3f448062325aba
   RNCAsyncStorage: 9ff617df4a485f2efba57bdf4face05a41767390
   RNCPicker: 2a41d02bcc3467f84b9f5c77a4d54583f16f6430
-  RNFBAnalytics: 3a15852b35e9ce00facac8cf5182ad33086231f6
-  RNFBApp: 40dddac677bdc020c7669ffc52ed849930b8c694
-  RNFBAuth: 1af20a72de76b03656c15b792e93c503dd23e5fb
-  RNFBCrashlytics: 468a67446894a5234a0fd47b99b3263298546729
+  RNFBAnalytics: 9cbc50c04fb157ae30d703e774bb06c6d5452279
+  RNFBApp: a438a9444c965b4b1053330f8e54217de2075823
+  RNFBAuth: 6293803f7c8c6df475d6cc38e0bb2d3ef7fd8739
+  RNFBCrashlytics: 4194c40a0c8f6d6bfe7af294fb3411d73925594b
   RNGestureHandler: de2b7ccdbf18766609fb9490c7f11c18805705a3
   RNGoogleSignin: 63aece50494903112899a0cd370ab8f19b061487
   RNReanimated: 758e433dea58eb219208bd209ef91a6f8ee096fb
@@ -2717,6 +2699,6 @@ SPEC CHECKSUMS:
   Yoga: 1259c7a8cbaccf7b4c3ddf8ee36ca11be9dee407
   ZXingObjC: 8898711ab495761b2dbbdec76d90164a6d7e14c5
 
-PODFILE CHECKSUM: 2612cb8522fe7366ee0fd7aabf5f03d5e778684f
+PODFILE CHECKSUM: 61a58090873f92b01186ae7fc38abdc54cf5c1a3
 
 COCOAPODS: 1.16.2

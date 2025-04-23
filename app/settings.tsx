@@ -324,7 +324,7 @@ export default function SettingsScreen() {
         <View style={styles.modalContent}>
           <Text style={styles.modalTitle}>We're sorry to see you go</Text>
           <Text style={styles.modalSubtitle}>
-            Please, let us know why you're leaving, so we can improve our service
+            Please, let us know why you're leaving, so we can improve our service.
           </Text>
 
           <ScrollView style={styles.reasonsContainer}>
@@ -372,10 +372,11 @@ export default function SettingsScreen() {
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 4,
+                justifyContent: 'center',
               })}
             >
               <Ionicons name="mail-outline" size={24} color="#4064F6" />
-              <Text style={{ color: '#4064F6', fontSize: 16 }}>Send Feedback</Text>
+              <Text style={{ color: '#4064F6', fontSize: 16, textAlign: 'center' }}>Send Feedback</Text>
             </Pressable>
             
             <View style={styles.actionButtons}>
@@ -391,7 +392,7 @@ export default function SettingsScreen() {
                   { opacity: pressed ? 0.8 : 1 }
                 ]}
               >
-                <Text style={styles.customButtonText}>Go Back</Text>
+                <Text style={styles.customButtonText}>Cancel</Text>
               </Pressable>
               <Pressable
                 onPress={() => {
@@ -430,7 +431,7 @@ export default function SettingsScreen() {
 
       <ScrollView style={styles.content}>
         {/* Subscription Section */}
-        <View style={styles.section}>
+        {/*<View style={styles.section}>
           <Text style={styles.sectionTitle}>Subscription</Text>
           <Pressable
             style={styles.settingItem}
@@ -442,7 +443,7 @@ export default function SettingsScreen() {
             </View>
             <Ionicons name="chevron-forward" size={24} color="#000000" />
           </Pressable>
-        </View>
+        </View>*/}
 
         {/* Privacy Policy and Contact Us */}
         <View style={styles.section}>
@@ -573,13 +574,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#000000',
-    justifyContent: 'center',
+    textAlign: 'center',
   },
   modalSubtitle: {
     fontSize: 14,
     color: '#666666',
     marginBottom: 8,
-    textAlign: 'center',
   },
   modalInput: {
     borderWidth: 1,

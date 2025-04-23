@@ -936,7 +936,7 @@ IMPORTANT USAGE GUIDELINES:
               <View style={{alignItems: 'center'}}>
                 <Text style={styles.loadText}>Recovery Query</Text>
                 {!isToday && recoveryData.submitted && (
-                  <Text style={styles.pastDayNotice}>
+                  <Text style={[styles.pastDayNotice, {color: '#999999'}]}>
                     Past day - view only
                   </Text>
                 )}
@@ -1060,7 +1060,7 @@ IMPORTANT USAGE GUIDELINES:
                     onPress={handleSubmit}
                   >
                     <Text style={styles.submitButtonText}>
-                      {isEditing ? 'Update Recovery Data' : 'Submit Recovery Data'}
+                      {isEditing ? 'Update Data' : 'Submit Data'}
                     </Text>
                     <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
                   </Pressable>
@@ -1093,7 +1093,7 @@ IMPORTANT USAGE GUIDELINES:
               {toolsConfirmed && !planExists && isToday ? (
                 // Show confirmed header with edit button - only for today
                 <View style={styles.submittedHeader}>
-                  <Text style={styles.submittedText}>Tools Confirmed</Text>
+                  <Text style={styles.submittedText}>Confirmed</Text>
                   <Pressable
                     style={styles.editButton}
                     onPress={() => setToolsConfirmed(false)}
@@ -1109,7 +1109,7 @@ IMPORTANT USAGE GUIDELINES:
                   (toolsConfirmed && !planExists) && {color: '#999999'},
                   !isToday && {color: '#999999'}
                 ]}>
-                  Select the recovery tools you have access to:
+                  Select the recovery tools you have access to.
                 </Text>
               )}
               
@@ -1243,7 +1243,7 @@ IMPORTANT USAGE GUIDELINES:
               {timeConfirmed && !planExists && isToday ? (
                 // Show confirmed header with edit button - only for today
                 <View style={styles.submittedHeader}>
-                  <Text style={styles.submittedText}>Time Confirmed</Text>
+                  <Text style={styles.submittedText}>Confirmed</Text>
                   <Pressable
                     style={styles.editButton}
                     onPress={() => setTimeConfirmed(false)}
@@ -1412,7 +1412,7 @@ IMPORTANT USAGE GUIDELINES:
               
               {timeConfirmed && !planExists && isToday && (
                 <Text style={[styles.toolsConfirmedText]}>
-                  Your time selection has been saved
+                  Your selection has been saved
                 </Text>
               )}
               
@@ -1730,7 +1730,6 @@ function RecoveryToolButton({
       style={[
         styles.toolButton,
         selected && styles.toolButtonSelected,
-        disabled && styles.toolButtonDisabled
       ]}
       onPress={disabled ? undefined : onPress}
       disabled={disabled}
