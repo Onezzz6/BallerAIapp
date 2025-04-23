@@ -1906,6 +1906,13 @@ export default function HomeScreen() {
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
+            shadowColor: '#000000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.3,
+            shadowRadius: 4,
+            elevation: 4,
+            borderWidth: 1,
+            borderColor: '#E5E5E5',
           }}>
             <View style={{ flex: 1 }}>
               <Text style={{

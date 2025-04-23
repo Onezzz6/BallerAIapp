@@ -675,6 +675,7 @@ IMPORTANT USAGE GUIDELINES:
       const plans = plansSnapshot.docs
         .map(doc => {
           console.log(`Plan document ID: ${doc.id}, Completed: ${doc.data().completed}`);
+          console.log(`Plan document ID as Date: ${parseISO(doc.id)}, Date.getTime(): ${new Date(parseISO(doc.id)).getTime()}`);
           return {
             id: doc.id,
             date: parseISO(doc.id),
@@ -683,7 +684,7 @@ IMPORTANT USAGE GUIDELINES:
           };
         })
         .filter(plan => plan.completed === true) // Only include completed plans
-        .sort((a, b) => b.date.getTime() - a.date.getTime()); // Sort by date desc
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // Sort by date desc
       
       console.log(`Found ${plans.length} completed plans total`);
       
@@ -810,7 +811,7 @@ IMPORTANT USAGE GUIDELINES:
 
   // Update Streak Card with timer logic and loading state
   const renderStreakCard = () => {
-    return (
+    return streakCount >= 1 && (
       <Animated.View 
         entering={FadeIn.duration(300)}
         style={styles.streakCardContainer}
@@ -833,7 +834,7 @@ IMPORTANT USAGE GUIDELINES:
             )}
             {!hasTodayCompletedPlan && (
               <Text style={styles.streakTimerText}>
-                {hoursLeft}h {minutesLeft}m until streak ends{"\n"}
+                {hoursLeft}h {minutesLeft}m until streak ends.{"\n"}
                 Generate and complete today's plan to keep your streak going!
               </Text>
             )}
@@ -935,11 +936,6 @@ IMPORTANT USAGE GUIDELINES:
             >
               <View style={{alignItems: 'center'}}>
                 <Text style={styles.loadText}>Recovery Query</Text>
-                {!isToday && recoveryData.submitted && (
-                  <Text style={[styles.pastDayNotice, {color: '#999999'}]}>
-                    Past day - view only
-                  </Text>
-                )}
               </View>
               {recoveryData.submitted && !isEditing ? (
                 // Show submitted data with edit button only if it's today
@@ -1085,9 +1081,6 @@ IMPORTANT USAGE GUIDELINES:
                   (toolsConfirmed && !planExists) && {color: '#4064F6'},
                   !isToday && {color: '#999999'}
                 ]}>Recovery Tools</Text>
-                {!isToday && (
-                  <Text style={styles.pastDayText}>Past day - view only</Text>
-                )}
               </View>
               
               {toolsConfirmed && !planExists && isToday ? (
@@ -1210,12 +1203,6 @@ IMPORTANT USAGE GUIDELINES:
                   Recovery plan already generated
                 </Text>
               )}
-              
-              {!isToday && !planExists && (
-                <Text style={[styles.toolsHelperText, {color: '#999999'}]}>
-                  Past day - cannot create plan
-                </Text>
-              )}
             </Animated.View>
 
             {/* Recovery Time Card - Disabled for past days */}
@@ -1235,9 +1222,6 @@ IMPORTANT USAGE GUIDELINES:
                   (timeConfirmed && !planExists) && {color: '#4064F6'},
                   !isToday && {color: '#999999'}
                 ]}>Recovery Time</Text>
-                {!isToday && (
-                  <Text style={styles.pastDayText}>Past day - view only</Text>
-                )}
               </View>
               
               {timeConfirmed && !planExists && isToday ? (
@@ -1425,12 +1409,6 @@ IMPORTANT USAGE GUIDELINES:
               {planExists && (
                 <Text style={[styles.toolsHelperText, {color: '#999999'}]}>
                   Recovery plan already generated
-                </Text>
-              )}
-              
-              {!isToday && !planExists && (
-                <Text style={[styles.toolsHelperText, {color: '#999999'}]}>
-                  Past day - cannot create plan
                 </Text>
               )}
             </Animated.View>
@@ -1986,7 +1964,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
     padding: 20,
     backgroundColor: '#F0F9FF',
-    borderRadius: 16,
+    borderRadius: 24,
     borderLeftWidth: 4,
     borderLeftColor: '#3F63F6',
     shadowColor: '#000',
@@ -2018,7 +1996,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     padding: 20,
     backgroundColor: '#F5F9FF',
-    borderRadius: 16,
+    borderRadius: 24,
     borderWidth: 1,
     borderColor: '#E0E7FF',
     shadowColor: '#000000',
@@ -2319,16 +2297,15 @@ const styles = StyleSheet.create({
   streakCardContainer: {
     margin: 24,
     marginTop: 0,
-    backgroundColor: '#F0F9FF',
-    borderRadius: 16,
+    backgroundColor: '#DCF4F5',
+    borderRadius: 24,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 4,
     borderWidth: 1,
-    borderColor: '#E0E7FF',
-    overflow: 'hidden',
+    borderColor: '#E5E5E5',
   },
   streakCardContent: {
     flexDirection: 'row',
@@ -2353,7 +2330,8 @@ const styles = StyleSheet.create({
   },
   streakTitle: {
     fontSize: 14,
-    color: '#666666',
+    color: '#000000',
+    fontWeight: '700',
     marginBottom: 4,
   },
   streakCount: {
