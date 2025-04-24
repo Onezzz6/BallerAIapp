@@ -50,7 +50,7 @@ function RootLayoutContent() {
     let isActive = true;
     
     const initializeIAP = async () => {
-      if (!isIAPInitialized.current) {
+      if (user && !isIAPInitialized.current) {
         try {
           console.log('Starting IAP initialization in RootLayout...');
           console.log('Environment:', __DEV__ ? 'Development' : 'Production');
@@ -70,6 +70,27 @@ function RootLayoutContent() {
           }
           
           isIAPInitialized.current = true;
+
+          // Use the shared service
+          const existingSubscription = await subscriptionCheck.checkExistingSubscriptions(
+            user.uid, 
+            isIAPInitialized.current
+          );
+
+          // Check if we have a valid subscription
+          const hasValidSubscription = existingSubscription && 
+            existingSubscription.data &&
+            existingSubscription.source === 'firebase' &&
+            existingSubscription.data.isActive;
+            
+          if (hasValidSubscription) {
+            // If we have a valid Firebase subscription, navigate to home
+            console.log('Navigating to home screen after successful Firebase subscription verification');
+            router.replace('/(tabs)/home');
+          }
+          else {
+            console.log('No valid Firebase subscription found');
+          }
         } catch (error) {
           console.error('Error initializing IAP in RootLayout:', error);
           // Don't block the app from loading if IAP initialization fails
@@ -82,7 +103,7 @@ function RootLayoutContent() {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [user]);
 
   // Handle app state changes
   useEffect(() => {
