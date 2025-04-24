@@ -1,6 +1,11 @@
 import { View, Text, Image, Pressable, TextInput, Alert, Keyboard, TouchableWithoutFeedback, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
-import Animated, { FadeInLeft, FadeOutRight } from 'react-native-reanimated';
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withTiming,
+  FadeOutRight
+} from 'react-native-reanimated';
 import Button from './Button';
 import { useState, useEffect } from 'react';
 import React from 'react';
@@ -28,6 +33,29 @@ export default function WelcomeScreen() {
   const [isAppleAvailable, setIsAppleAvailable] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [showResetModal, setShowResetModal] = useState(false);
+
+  // Use shared value for opacity animation
+  const opacity = useSharedValue(0);
+
+  // Create animated style for opacity
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      opacity: opacity.value,
+    };
+  });
+
+  // Start fade-in animation on mount
+  useEffect(() => {
+    console.log("Preparing welcome screen animation");
+    
+    // Add a 500ms delay before starting the fade-in animation
+    const animationTimer = setTimeout(() => {
+      console.log("Starting fade-in animation after delay");
+      opacity.value = withTiming(1, { duration: 500 });
+    }, 500);
+    
+    return () => clearTimeout(animationTimer);
+  }, []);
 
   // Check if Apple authentication is available on this device
   useEffect(() => {
@@ -204,13 +232,14 @@ export default function WelcomeScreen() {
     <>
       <TouchableWithoutFeedback onPress={dismissKeyboard}>
         <Animated.View 
-          entering={FadeInLeft.duration(500)}
-          exiting={FadeOutRight.duration(500)}
-          style={{
-            flex: 1,
-            backgroundColor: '#ffffff',
-            padding: 24,
-          }}
+          style={[
+            {
+              flex: 1,
+              backgroundColor: '#ffffff',
+              padding: 24,
+            },
+            animatedStyle
+          ]}
         >
           <View style={{
             flex: 1,

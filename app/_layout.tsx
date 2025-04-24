@@ -70,27 +70,8 @@ function RootLayoutContent() {
           }
           
           isIAPInitialized.current = true;
-
-          // Use the shared service
-          const existingSubscription = await subscriptionCheck.checkExistingSubscriptions(
-            user.uid, 
-            isIAPInitialized.current
-          );
-
-          // Check if we have a valid subscription
-          const hasValidSubscription = existingSubscription && 
-            existingSubscription.data &&
-            existingSubscription.source === 'firebase' &&
-            existingSubscription.data.isActive;
-            
-          if (hasValidSubscription) {
-            // If we have a valid Firebase subscription, navigate to home
-            console.log('Navigating to home screen after successful Firebase subscription verification');
-            router.replace('/(tabs)/home');
-          }
-          else {
-            console.log('No valid Firebase subscription found');
-          }
+          console.log('IAP initialization complete');
+          // Navigation is now handled by AuthStateManager
         } catch (error) {
           console.error('Error initializing IAP in RootLayout:', error);
           // Don't block the app from loading if IAP initialization fails
@@ -257,7 +238,7 @@ export default function RootLayout() {
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   useEffect(() => {
     if (error) throw error;
@@ -266,9 +247,9 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
 
-    // Show loading screen for 2 seconds
+    // Show initial loading screen for 2 seconds
     const timer = setTimeout(() => {
-      setIsLoading(false);
+      setInitialLoading(false);
     }, 2000);
 
     return () => clearTimeout(timer);
@@ -278,21 +259,49 @@ export default function RootLayout() {
     return null;
   }
 
-  if (isLoading) {
+  if (initialLoading) {
     return <LoadingScreen />;
   }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AuthProvider>
-        <NutritionProvider>
-          <OnboardingProvider>
-            <TrainingProvider>
-              <RootLayoutContent />
-            </TrainingProvider>
-          </OnboardingProvider>
-        </NutritionProvider>
+        <AuthStateManager>
+          <NutritionProvider>
+            <OnboardingProvider>
+              <TrainingProvider>
+                <RootLayoutContent />
+              </TrainingProvider>
+            </OnboardingProvider>
+          </NutritionProvider>
+        </AuthStateManager>
       </AuthProvider>
     </GestureHandlerRootView>
   );
+}
+
+// New component to manage auth state
+function AuthStateManager({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useAuth();
+  
+  // Navigate to home when user is authenticated
+  useEffect(() => {
+    if (user && !isLoading) {
+      
+      // Keep showing loading screen while we prepare to navigate
+      const timer = setTimeout(() => {
+        router.replace('/(tabs)/home');
+      }, 400);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [user, isLoading]);
+  
+  // Show loading screen until auth state is determined
+  // OR if we're authenticated and preparing to navigate
+  if (isLoading && user === null) {
+    return <LoadingScreen />;
+  }
+  
+  return <>{children}</>;
 }
