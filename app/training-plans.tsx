@@ -65,7 +65,7 @@ export default function TrainingPlansScreen() {
           <Pressable onPress={handleBack} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#000" />
           </Pressable>
-          <Text style={styles.title}>This weeks training plan.</Text>
+          <Text style={styles.title}>Your Training Plans</Text>
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#000022" />
