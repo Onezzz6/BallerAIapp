@@ -132,11 +132,12 @@ const styles = StyleSheet.create({
   option: {
     flex: 1,
     minWidth: '45%',
-    padding: 16,
-    borderRadius: 100,
+    height: 60,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E5E5E5',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#FFFFFF',
   },
   selectedOption: {
@@ -170,8 +171,8 @@ const styles = StyleSheet.create({
   },
   dayOption: {
     flex: 1,
-    padding: 8,
-    borderRadius: 100,
+    height: 60,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E5E5E5',
     alignItems: 'center',
@@ -195,6 +196,9 @@ const styles = StyleSheet.create({
     color: '#000000',
   },
   timeInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     marginTop: 8,
   },
   timeInput: {
@@ -205,6 +209,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E5E5',
     paddingLeft: 40,
+    height: 50,
+    width: '100%',
   },
   subtitleInline: {
     fontSize: 14,
@@ -214,8 +220,7 @@ const styles = StyleSheet.create({
   clockIcon: {
     position: 'absolute',
     left: 16,
-    top: '50%',
-    transform: [{ translateY: -12 }],
+    top: '30%',
     zIndex: 1,
   },
   timerText: {
@@ -680,11 +685,11 @@ Focus on recovery today`;
 
   const confirmSchedule = () => {
     const missingDurations = Object.entries(schedule).some(([day, { type, duration }]) => 
-      (type === 'game' || type === 'training') && !duration
+      (type === 'training') && !duration
     );
     
     if (missingDurations) {
-      Alert.alert('Missing information', 'Please enter duration for all game and training days.');
+      Alert.alert('Missing Information', 'Please enter duration for all training days.');
       return;
     }
     
@@ -870,7 +875,7 @@ Focus on recovery today`;
                 flexWrap: 'wrap',
                 gap: 8
               }}>
-                <Text style={[styles.sectionTitle, { flex: 1 }, { color: canGeneratePlan ? '#000000' : '#666666' }]}>Team Training Schedule <Text style={styles.subtitleInline}>(minutes/day)</Text></Text>
+                <Text style={[styles.sectionTitle, { flex: 1 }, { color: canGeneratePlan ? '#000000' : '#666666' }]}>Team Training <Text style={styles.subtitleInline}>(mins/day)</Text></Text>
                 {canGeneratePlan && scheduleConfirmed && (
                   <Pressable
                     style={styles.editButton}
@@ -896,7 +901,7 @@ Focus on recovery today`;
                       onPress={() => updateSchedule(day, 'off')}
                       disabled={scheduleConfirmed || !canGeneratePlan}
                     >
-                      <Text style={styles.dayOptionText}>Off</Text>
+                      <Text style={[styles.dayOptionText, { color: canGeneratePlan ? '#000000' : '#666666' }]}>Off</Text>
                     </Pressable>
                     <Pressable
                       style={[
@@ -907,7 +912,7 @@ Focus on recovery today`;
                       onPress={() => updateSchedule(day, 'game')}
                       disabled={scheduleConfirmed || !canGeneratePlan}
                     >
-                      <Text style={styles.dayOptionText}>Game</Text>
+                      <Text style={[styles.dayOptionText, { color: canGeneratePlan ? '#000000' : '#666666' }]}>Game</Text>
                     </Pressable>
                     <Pressable
                       style={[
@@ -918,27 +923,25 @@ Focus on recovery today`;
                       onPress={() => updateSchedule(day, 'training')}
                       disabled={scheduleConfirmed || !canGeneratePlan}
                     >
-                      <Text style={styles.dayOptionText}>Training</Text>
+                      <Text style={[styles.dayOptionText, { color: canGeneratePlan ? '#000000' : '#666666' }]}>Training</Text>
                     </Pressable>
                   </View>
-                  {(daySchedule.type === 'game' || daySchedule.type === 'training') && (
+                  {(daySchedule.type === 'training') && (
                     <View style={styles.timeInputContainer}>
-                      <View style={{ position: 'relative' }}>
-                        <Ionicons 
-                          name="time-outline" 
-                          size={20} 
-                          color="#666666" 
-                          style={styles.clockIcon}
-                        />
-                        <TextInput
-                          style={[styles.timeInput, scheduleConfirmed && styles.disabledInput]}
-                          placeholder={`Enter ${daySchedule.type} time`}
-                          value={daySchedule.duration}
-                          onChangeText={(text) => updateDuration(day, text)}
-                          keyboardType="numeric"
-                          editable={!scheduleConfirmed && canGeneratePlan}
-                        />
-                      </View>
+                      <Ionicons 
+                        name="time-outline" 
+                        size={20} 
+                        color="#666666" 
+                        style={styles.clockIcon}
+                      />
+                      <TextInput
+                        style={[styles.timeInput, scheduleConfirmed && styles.disabledInput]}
+                        placeholder={`Enter ${daySchedule.type} time`}
+                        value={daySchedule.duration}
+                        onChangeText={(text) => updateDuration(day, text)}
+                        keyboardType="numeric"
+                        editable={!scheduleConfirmed && canGeneratePlan}
+                      />
                     </View>
                   )}
                 </View>
