@@ -729,22 +729,22 @@ Focus on recovery today`;
 
   return (
     <>
-      <ScrollView
-        ref={scrollViewRef}
-        style={styles.container}
-        contentContainerStyle={{
-          flexGrow: 1,
-          paddingBottom: 120,
-        }}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={true}
-        bounces={true}
-        overScrollMode="never"
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={{ flex: 1 }}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.container}
+          contentContainerStyle={{
+            flexGrow: 1,
+            paddingBottom: 120,
+          }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={true}
+          bounces={true}
+          overScrollMode="never"
         >
           {/* Header - Scrolls with content */}
           <View style={{
@@ -998,8 +998,8 @@ Focus on recovery today`;
               </Pressable>
             </View>
           </View>
-        </KeyboardAvoidingView>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
       
       {loading && (
         <Animated.View 

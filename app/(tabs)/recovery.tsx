@@ -851,22 +851,21 @@ IMPORTANT USAGE GUIDELINES:
 
   return (
     <>
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={{
-          flexGrow: 1,
-          paddingBottom: Platform.OS === 'ios' ? 180 : 140,
-        }}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={true}
-        bounces={true}
-        overScrollMode="auto"
-        alwaysBounceVertical={true}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 40}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={{ flex: 1 }}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 40}
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={{
+            flexGrow: 1,
+            paddingBottom: 120,
+          }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={true}
+          bounces={true}
+          overScrollMode="never"
         >
           {/* Header - Scrolls with content */}
           <View style={{
@@ -1561,8 +1560,8 @@ IMPORTANT USAGE GUIDELINES:
             {/* Streak Card - Added at the bottom */}
             {renderStreakCard()}
           </View>
-        </KeyboardAvoidingView>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
       
       {loading && (
         <Animated.View 
