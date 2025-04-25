@@ -319,9 +319,10 @@ type LogMealModalProps = {
   isPhotoAnalysisDisabled: boolean;
   dailyAnalysisCount: number;
   dailyAnalysisLimit: number;
+  timeUntilReset: string;
 };
 
-function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal, isPhotoAnalysisDisabled, dailyAnalysisCount, dailyAnalysisLimit }: LogMealModalProps) {
+function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal, isPhotoAnalysisDisabled, dailyAnalysisCount, dailyAnalysisLimit, timeUntilReset }: LogMealModalProps) {
   const [method, setMethod] = useState<'manual' | 'gallery' | 'camera' | null>(null);
   const [manualEntry, setManualEntry] = useState({
     name: '',
@@ -512,9 +513,16 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal, isPhotoAna
                 {isPhotoAnalysisDisabled && (
                   <View style={styles.limitWarningContainer}>
                     <Ionicons name="alert-circle" size={24} color="#FF6B6B" />
-                    <Text style={styles.limitWarningText}>
-                      Daily limit reached ({dailyAnalysisCount}/{dailyAnalysisLimit}). Please use manual entry until tomorrow.
-                    </Text>
+                    <View style={styles.limitWarningTextContainer}>
+                      <Text style={styles.limitWarningText}>
+                        Daily limit reached ({dailyAnalysisCount}/{dailyAnalysisLimit}). Please use manual entry until reset.
+                      </Text>
+                      {timeUntilReset && (
+                        <Text style={styles.limitCountdownText}>
+                          Resets at midnight in: {timeUntilReset}
+                        </Text>
+                      )}
+                    </View>
                   </View>
                 )}
 
@@ -1389,18 +1397,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FF6B6B',
     borderRadius: 4,
-    padding: 8,
+    padding: 12,
     marginHorizontal: 16,
     marginTop: 16,
     marginBottom: 16,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+  },
+  limitWarningTextContainer: {
+    flex: 1,
+    marginLeft: 8,
   },
   limitWarningText: {
     fontSize: 14,
     color: '#FF6B6B',
-    marginLeft: 8,
-    flex: 1,
+    marginBottom: 4,
+  },
+  limitCountdownText: {
+    fontSize: 13,
+    color: '#666666',
+    fontWeight: '500',
   },
 });
 
@@ -1416,6 +1432,7 @@ export default function NutritionScreen() {
   const [foodItems, setFoodItems] = useState<FoodItem[]>([]);
   const [dailyAnalysisCount, setDailyAnalysisCount] = useState(0);
   const [analysisLimitReached, setAnalysisLimitReached] = useState(false);
+  const [timeUntilReset, setTimeUntilReset] = useState('');
   const DAILY_ANALYSIS_LIMIT = 8;
   const { 
     selectedDate,
@@ -1426,6 +1443,37 @@ export default function NutritionScreen() {
   const [weeklyData, setWeeklyData] = useState<DailyMacros[]>([]);
   const [isLoadingWeek, setIsLoadingWeek] = useState(true);
   const [isUpdatingFromLoad, setIsUpdatingFromLoad] = useState(false);
+
+  // Track the time until midnight (when analysis limit resets)
+  useEffect(() => {
+    if (!analysisLimitReached) return;
+    
+    // Function to calculate time until midnight in user's local timezone
+    const calculateTimeUntilMidnight = () => {
+      const now = new Date();
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0); // Midnight in user's local timezone
+      
+      const diffMs = tomorrow.getTime() - now.getTime();
+      const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+      const diffSecs = Math.floor((diffMs % (1000 * 60)) / 1000);
+      
+      return `${diffHrs.toString().padStart(2, '0')}:${diffMins.toString().padStart(2, '0')}:${diffSecs.toString().padStart(2, '0')}`;
+    };
+    
+    // Initial calculation
+    setTimeUntilReset(calculateTimeUntilMidnight());
+    
+    // Set up interval to update every second
+    const intervalId = setInterval(() => {
+      setTimeUntilReset(calculateTimeUntilMidnight());
+    }, 1000);
+    
+    // Clean up interval on unmount or when limit is no longer reached
+    return () => clearInterval(intervalId);
+  }, [analysisLimitReached]);
 
   // Listen for tab navigation attempting to leave nutrition tab
   // If isLeavingNutrition is true, reset to today's date
@@ -2034,9 +2082,22 @@ export default function NutritionScreen() {
           
           // Check if limit reached based on fresh data
           if (currentCount >= DAILY_ANALYSIS_LIMIT) {
+            // Calculate time until midnight for alert message
+            const now = new Date();
+            const tomorrow = new Date(now);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(0, 0, 0, 0); // Midnight in user's local timezone
+            
+            const diffMs = tomorrow.getTime() - now.getTime();
+            const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
+            const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+            
+            // Format as "HH hrs MM mins"
+            const timeString = `${diffHrs} hr${diffHrs !== 1 ? 's' : ''} ${diffMins} min${diffMins !== 1 ? 's' : ''}`;
+            
             Alert.alert(
               'Daily Limit Reached',
-              "You've reached your daily limit of 8 image analyses. Please log your meals manually until tomorrow."
+              `You've reached your daily limit of ${DAILY_ANALYSIS_LIMIT} image analyses. Please log meals manually.\n\nLimit resets at midnight (local time) in: ${timeString}`
             );
             return;
           }
@@ -2391,6 +2452,7 @@ export default function NutritionScreen() {
           isPhotoAnalysisDisabled={analysisLimitReached}
           dailyAnalysisCount={dailyAnalysisCount}
           dailyAnalysisLimit={DAILY_ANALYSIS_LIMIT}
+          timeUntilReset={timeUntilReset}
         />
       </ScrollView>
       
