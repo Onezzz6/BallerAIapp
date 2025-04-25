@@ -244,13 +244,13 @@ export default function SignUpScreen() {
               }}
             />
           ) : (
-            <AppleAuthentication.AppleAuthenticationButton
-              buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
-              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-              cornerRadius={36}
-              style={styles.appleButton}
-              onPress={handleAppleSignIn}
-            />
+        <AppleAuthentication.AppleAuthenticationButton
+          buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+          buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+          cornerRadius={36}
+          style={styles.appleButton}
+          onPress={handleAppleSignIn}
+        />
           )}
         </View>
       )}

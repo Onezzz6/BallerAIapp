@@ -734,17 +734,17 @@ Focus on recovery today`;
         style={{ flex: 1 }}
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
-        <ScrollView
-          ref={scrollViewRef}
-          style={styles.container}
-          contentContainerStyle={{
-            flexGrow: 1,
-            paddingBottom: 120,
-          }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={true}
-          bounces={true}
-          overScrollMode="never"
+      <ScrollView
+        ref={scrollViewRef}
+        style={styles.container}
+        contentContainerStyle={{
+          flexGrow: 1,
+          paddingBottom: 120,
+        }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={true}
+        bounces={true}
+        overScrollMode="never"
         >
           {/* Header - Scrolls with content */}
           <View style={{
@@ -801,7 +801,7 @@ Focus on recovery today`;
           </View>
 
           <View style={styles.content}>
-            <View style={styles.sectionBackgroundGray}>
+            <View style={[styles.sectionBackgroundGray, { backgroundColor: '#DCF4F5' }]}>
               <Text style={[styles.sectionTitle, { color: canGeneratePlan ? '#000000' : '#666666' }]}>Focus Area</Text>
               <Text style={styles.subtitle}>Select your training focus to get a personalized plan</Text>
               
@@ -827,7 +827,7 @@ Focus on recovery today`;
               </View>
             </View>
 
-            <View style={styles.sectionBackgroundGray}>
+            <View style={[styles.sectionBackgroundGray, { backgroundColor: '#DCF4F5' }]}>
               <Text style={[styles.sectionTitle, { color: canGeneratePlan ? '#000000' : '#666666' }]}>Gym Access</Text>
               <Text style={styles.subtitle}>Do you have access to a gym?</Text>
               <View style={styles.optionsContainer}>
@@ -852,7 +852,7 @@ Focus on recovery today`;
               </View>
             </View>
 
-            <View style={[styles.sectionBackgroundGray, scheduleConfirmed && { opacity: 0.8 }]}>
+            <View style={[styles.sectionBackgroundGray, { backgroundColor: '#DCF4F5' }, scheduleConfirmed && { opacity: 0.8 }]}>
               <View style={{ 
                 flexDirection: 'row', 
                 justifyContent: 'space-between', 
@@ -998,7 +998,7 @@ Focus on recovery today`;
               </Pressable>
             </View>
           </View>
-        </ScrollView>
+      </ScrollView>
       </KeyboardAvoidingView>
       
       {loading && (

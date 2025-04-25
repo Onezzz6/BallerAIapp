@@ -856,15 +856,15 @@ IMPORTANT USAGE GUIDELINES:
         style={{ flex: 1 }}
         keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 40}
       >
-        <ScrollView
-          style={styles.container}
-          contentContainerStyle={{
-            flexGrow: 1,
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={{
+          flexGrow: 1,
             paddingBottom: 120,
-          }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={true}
-          bounces={true}
+        }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={true}
+        bounces={true}
           overScrollMode="never"
         >
           {/* Header - Scrolls with content */}
@@ -1560,7 +1560,7 @@ IMPORTANT USAGE GUIDELINES:
             {/* Streak Card - Added at the bottom */}
             {renderStreakCard()}
           </View>
-        </ScrollView>
+      </ScrollView>
       </KeyboardAvoidingView>
       
       {loading && (
