@@ -3,11 +3,25 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useTraining } from './context/TrainingContext';
+import Accordion from './components/Accordion';
+
+// Add type definition for TrainingPlan
+type TrainingPlan = {
+  id: string;
+  name: string;
+  createdAt: Date;
+  schedule: {
+    [key: string]: string;
+  };
+};
+
+const DAYS_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
 export default function TrainingPlansScreen() {
   const router = useRouter();
   const { plans, loading } = useTraining();
   const { fromTraining } = useLocalSearchParams<{ fromTraining: string }>();
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
 
   const handleBack = () => {
     if (fromTraining === 'true') {
@@ -19,6 +33,23 @@ export default function TrainingPlansScreen() {
       router.back();
     }
   };
+
+  // Helper function to safely format day headers
+  const formatDayHeader = (day: string): string => {
+    if (!day) return '';
+    return day.charAt(0).toUpperCase() + day.slice(1);
+  };
+  
+  // Helper function to safely get plan content
+  const getDayContent = (plan: TrainingPlan, day: string): string => {
+    if (!plan.schedule || !plan.schedule[day]) {
+      return "No content available for this day.";
+    }
+    return plan.schedule[day];
+  };
+
+  // Find the selected plan
+  const selectedPlan = plans.find(p => p.id === selectedPlanId);
 
   if (loading) {
     return (
@@ -63,17 +94,50 @@ export default function TrainingPlansScreen() {
 
       <ScrollView style={styles.content}>
         {plans.map((plan) => (
-          <Pressable
-            key={plan.id}
-            style={styles.planCard}
-            onPress={() => router.push(`../plan-details?id=${plan.id}`)}
-          >
-            <View style={styles.planHeader}>
-              <Text style={styles.planTitle}>{plan.name}</Text>
-              <View style={styles.planActions}>
+          <View key={plan.id}>
+            <Pressable
+              style={[
+                styles.planCard, 
+                selectedPlanId === plan.id && styles.selectedPlanCard
+              ]}
+              onPress={() => setSelectedPlanId(plan.id === selectedPlanId ? null : plan.id)}
+            >
+              <View style={styles.planHeader}>
+                <Text style={styles.planTitle}>{plan.name}</Text>
+                <Ionicons 
+                  name={selectedPlanId === plan.id ? "chevron-up" : "chevron-down"} 
+                  size={24} 
+                  color="#000000" 
+                />
               </View>
-            </View>
-          </Pressable>
+            </Pressable>
+
+            {/* Plan details accordion section */}
+            {selectedPlanId === plan.id && (
+              <View style={styles.planDetailsContainer}>
+                <View style={styles.planMeta}>
+                  <Text style={styles.planDate}>
+                    Created on {plan.createdAt.toLocaleDateString()}
+                  </Text>
+                </View>
+                
+                {/* Days of the week */}
+                {DAYS_ORDER.map((day) => (
+                  <Accordion 
+                    key={day}
+                    title={formatDayHeader(day)}
+                    expanded={false}
+                  >
+                    <View style={styles.planContent}>
+                      <ScrollView style={{ maxHeight: 400 }}>
+                        <Text style={styles.planText}>{getDayContent(plan, day)}</Text>
+                      </ScrollView>
+                    </View>
+                  </Accordion>
+                ))}
+              </View>
+            )}
+          </View>
         ))}
         
         <View style={styles.infoContainer}>
@@ -82,7 +146,7 @@ export default function TrainingPlansScreen() {
             <Text style={styles.infoTitle}>About Training Plans</Text>
           </View>
           <Text style={styles.infoText}>
-            The personalized plan is above, click it to open it.
+            Click on a plan above to see the daily details.
           </Text>
           <Text style={styles.infoText}>
             You can generate one plan per week and old ones get deleted after 2 weeks.
@@ -125,6 +189,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     overflow: 'hidden',
   },
+  selectedPlanCard: {
+    backgroundColor: '#E8F0FF',
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    marginBottom: 0,
+    borderColor: '#4064F6',
+    borderWidth: 1,
+  },
   planHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -157,6 +229,19 @@ const styles = StyleSheet.create({
   planActions: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  planDetailsContainer: {
+    backgroundColor: '#F8F8F8',
+    padding: 16,
+    marginBottom: 16,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+    borderColor: '#4064F6',
+    borderWidth: 1,
+    borderTopWidth: 0,
+  },
+  planMeta: {
+    marginBottom: 16,
   },
   planContent: {
     padding: 16,
