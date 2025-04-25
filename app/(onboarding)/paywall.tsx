@@ -151,7 +151,7 @@ const PaywallScreen = () => {
         console.error('Receipt validation failed');
         Alert.alert(
           'Purchase Verification Failed',
-          'We were unable to verify your purchase. Please contact support if this issue persists.'
+          'We were unable to verify your purchase. Please contact support if the issue persists.'
         );
         return false;
       }
@@ -295,9 +295,9 @@ const PaywallScreen = () => {
           ].join('\n'));
           
           Alert.alert(
-            'Store Configuration',
+            'Error',
             Platform.OS === 'ios' 
-              ? 'Unable to load subscription options. Please ensure you are signed in with a Sandbox test account and have an active internet connection.'
+              ? 'Unable to load subscription options. Please ensure you are signed in and have an active internet connection.'
               : 'Unable to load subscription options. Please ensure you are signed in with a test account and have an active internet connection.'
           );
           setIsLoading(false); // Set loading to false even if there's an error
@@ -322,9 +322,9 @@ const PaywallScreen = () => {
       });
       
       Alert.alert(
-        'Store Connection Error',
+        'Error',
         Platform.OS === 'ios'
-          ? 'Unable to connect to the App Store. Please ensure you are signed in with a Sandbox test account and have an active internet connection.'
+          ? 'Unable to connect to the App Store. Please ensure you are signed in and have an active internet connection.'
           : 'Unable to connect to the Play Store. Please ensure you are signed in and have an active internet connection.'
       );
       setIsLoading(false); // Set loading to false when there's an error
@@ -424,9 +424,9 @@ const PaywallScreen = () => {
             console.error('Recovery attempt failed:', retryError);
             if (isMounted) {
               Alert.alert(
-                'Store Connection Error',
+                'Error',
                 Platform.OS === 'ios'
-                  ? 'Unable to connect to the App Store. Please ensure you are signed in with a Sandbox test account and have an active internet connection.'
+                  ? 'Unable to connect to the App Store. Please ensure you are signed in and have an active internet connection.'
                   : 'Unable to connect to the Play Store. Please ensure you are signed in and have an active internet connection.'
               );
             }
@@ -527,13 +527,13 @@ const PaywallScreen = () => {
       
       if (error.code === 'ERR_IN_APP_PURCHASES_CONNECTION') {
         Alert.alert(
-          'Connection Error',
+          'Error',
           'Unable to connect to the App Store. Please make sure you are signed in to your Apple ID and have a valid payment method.'
         );
       } else {
         Alert.alert(
-          'Purchase Error',
-          error.message || 'Unable to start the purchase. Please try again.'
+          'Error',
+          'Unable to start the purchase. Please try again.'
         );
       }
     }
@@ -564,7 +564,7 @@ const PaywallScreen = () => {
 
           if (activeSubscription) {
             await handleSuccessfulPurchase(activeSubscription);
-            Alert.alert('Success', 'Your purchases have been restored!');
+            Alert.alert('Success', 'Your purchases were successfully restored.');
             router.replace('/(tabs)/home');
             return;
           }

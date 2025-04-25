@@ -368,7 +368,7 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal, isPhotoAna
       // Modal is already closed, so no need to call onClose() here
     } catch (error) {
       console.error('Error logging meal:', error);
-      Alert.alert('Error', 'Failed to log meal');
+      Alert.alert('Error', 'Failed to log a meal. Please try again.');
       setIsLogging(false);
     }
   };
@@ -391,7 +391,7 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal, isPhotoAna
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to select image');
+      Alert.alert('Error', 'Failed to select an image. Please try again.');
     }
   };
 
@@ -399,7 +399,7 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal, isPhotoAna
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Please grant camera permissions to take photos');
+        Alert.alert('Permission Needed', 'Please grant camera permissions to take photos.');
         return;
       }
 
@@ -419,7 +419,7 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal, isPhotoAna
       }
     } catch (error) {
       console.error('Error taking photo:', error);
-      Alert.alert('Error', 'Failed to take photo');
+      Alert.alert('Error', 'Failed to take a photo. Please try again.');
     }
   };
 
@@ -1774,7 +1774,7 @@ export default function NutritionScreen() {
       await loadSelectedDayData();
     } catch (error) {
       console.error('Error logging meal:', error);
-      Alert.alert('Error', 'Failed to log meal. Please try again.');
+      Alert.alert('Error', 'Failed to log a meal. Please try again.');
     } finally {
       setIsLoading(false);
       setIsLoggingMeal(false);
@@ -2224,7 +2224,7 @@ export default function NutritionScreen() {
         // Error messaging handled in analyzeImage
         Alert.alert(
           'Image Analysis Failed', 
-          'We couldn\'t properly analyze this image. Please try again with a clearer photo of your food.'
+          'We could not properly analyze this image. Please try again with a clearer photo of your food.'
         );
       }
     } finally {
@@ -2414,12 +2414,12 @@ export default function NutritionScreen() {
               setIsLoading(true);
               await deleteMeal(mealId);
               // Show success message
-              Alert.alert('Success', 'Meal deleted successfully');
+              Alert.alert('Success', 'Meal deleted successfully.');
               // Refresh weekly data to update the overview
               await loadSelectedDayData();
             } catch (error) {
               console.error('Error deleting meal:', error);
-              Alert.alert('Error', 'Failed to delete meal');
+              Alert.alert('Error', 'Failed to delete meal. Please try again.');
             } finally {
               setIsLoading(false);
             }

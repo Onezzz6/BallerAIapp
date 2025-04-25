@@ -120,7 +120,7 @@ export default function WelcomeScreen() {
       } else {
         Alert.alert(
           'Error',
-          error.message || 'Failed to sign in. Please try again.'
+          'Failed to sign in. Please try again.'
         );
       }
     } finally {
@@ -166,7 +166,7 @@ export default function WelcomeScreen() {
         console.error('Apple sign in error:', error);
         Alert.alert(
           'Sign in with Apple Failed',
-          error.message || 'Failed to sign in with Apple. Please try again.'
+          'Failed to sign in with Apple. Please try again.'
         );
       } else {
         console.log("User canceled Apple Sign-In");

@@ -30,12 +30,12 @@ export default function SignUpScreen() {
 
   const handleSubmit = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert('Error', 'Please fill in all fields.');
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+      Alert.alert('Error', 'Password must be at least 6 characters long.');
       return;
     }
 
@@ -77,7 +77,7 @@ export default function SignUpScreen() {
       } else {
         Alert.alert(
           'Error',
-          error.message || 'Failed to create account. Please try again.'
+          'Failed to create an account. Please try again.'
         );
       }
     } finally {
@@ -121,7 +121,7 @@ export default function SignUpScreen() {
       if (error.code !== 'ERR_REQUEST_CANCELED') {
         Alert.alert(
           'Sign in with Apple Failed',
-          error.message || 'Failed to sign up with Apple. Please try again.'
+          'Failed to sign up with Apple. Please try again.'
         );
       }
     } finally {

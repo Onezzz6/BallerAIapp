@@ -113,7 +113,7 @@ const MealList = ({ selectedDate, refreshTrigger, onDataChange }) => {
           onDataChange(meals.filter(meal => meal.id !== mealId));
         }
         
-        Alert.alert("Success", "Meal deleted successfully!");
+        Alert.alert("Success", "Meal deleted successfully.");
       }
     } catch (error) {
       console.error("Error deleting meal:", error);

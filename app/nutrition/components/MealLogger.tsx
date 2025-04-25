@@ -63,7 +63,7 @@ const MealLogger: React.FC = () => {
       }
 
       // Show success message using Alert instead of toast
-      Alert.alert("Success", "Meal logged successfully!");
+      Alert.alert("Success", "Meal logged successfully.");
       
       // Reset form or close modal if needed
       // ... existing code ...

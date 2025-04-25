@@ -486,7 +486,7 @@ export default function TrainingScreen() {
 
   const handleGeneratePlan = async () => {
     if (!user || !selectedFocus || !gymAccess || !scheduleConfirmed) {
-      Alert.alert('Cannot generate plan', 
+      Alert.alert('Cannot Generate Plan', 
         'Please select a focus area, answer the gym access question, and confirm your team training schedule.');
       return;
     }
@@ -498,7 +498,7 @@ export default function TrainingScreen() {
       }
       
       Alert.alert(
-        'Plan generation limit reached', 
+        'Plan Generation Limit Reached', 
         `You can only generate one plan per week. You can generate a new plan on Sunday (${format(nextSunday, 'MMMM d')}).`
       );
       return;

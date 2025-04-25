@@ -14,12 +14,12 @@ export default function SignInScreen() {
 
   const handleSubmit = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert('Error', 'Please fill in all fields.');
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+      Alert.alert('Error', 'Password must be at least 6 characters.');
       return;
     }
 
@@ -57,7 +57,7 @@ export default function SignInScreen() {
       } else {
         Alert.alert(
           'Error',
-          error.message || 'Failed to sign in. Please try again.'
+          'Failed to sign in. Please check your network connection and try again.'
         );
       }
     } finally {

@@ -255,17 +255,17 @@ export default function RecoveryScreen() {
     }
     
     if (!recoveryData.submitted) {
-      Alert.alert('Error', 'Please submit your recovery data first');
+      Alert.alert('Error', 'Please submit your recovery data first.');
       return;
     }
     
     if (!toolsConfirmed) {
-      Alert.alert('Error', 'Please confirm your recovery tools first');
+      Alert.alert('Error', 'Please confirm your recovery tools first.');
       return;
     }
     
     if (!timeConfirmed || !selectedTime) {
-      Alert.alert('Error', 'Please confirm how much time you have available');
+      Alert.alert('Error', 'Please confirm how much time you have available.');
       return;
     }
     
@@ -483,7 +483,7 @@ IMPORTANT USAGE GUIDELINES:
     if (!user) return;
     
     if (!selectedTime) {
-      Alert.alert('Error', 'Please select how much time you have available');
+      Alert.alert('Error', 'Please select the time available.');
       return;
     }
     

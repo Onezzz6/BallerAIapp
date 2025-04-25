@@ -108,7 +108,7 @@ export default function SettingsScreen() {
           if (error.code !== 'ERR_REQUEST_CANCELED') {
             Alert.alert(
               'Sign in with Apple Failed',
-              error.message || 'Failed to sign in with Apple. Please try again.'
+              'Failed to sign in with Apple. Please try again.'
             );
           }
           return false;
