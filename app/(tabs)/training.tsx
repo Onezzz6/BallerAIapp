@@ -8,7 +8,7 @@ import { db } from '../config/firebase';
 import Constants from 'expo-constants';
 import Animated, { FadeIn, FadeInDown, PinwheelIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { startOfWeek, endOfWeek, differenceInMilliseconds, format, isSunday, subWeeks, isAfter, parseISO, addDays } from 'date-fns';
+import { startOfWeek, endOfWeek, differenceInMilliseconds, format, isSunday, subWeeks, isAfter, parseISO, addDays, getWeek } from 'date-fns';
 import analytics from '@react-native-firebase/analytics';
 
 type FocusArea = 'technique' | 'strength' | 'endurance' | 'speed' | 'overall';
@@ -611,9 +611,9 @@ Focus on recovery today`;
       
       // Simple parse function to extract content between day headers
       days.forEach(day => {
-        // Updated regex to handle day headers with parenthetical notes
+        // Updated regex to handle both plain and markdown formatted day headers (with **DAY**)
         const dayRegex = new RegExp(
-          `${day.toUpperCase()}\\s*(?:\\([^)]+\\))?\\s*\\n([\\s\\S]*?)(?=(?:${days.join('|').toUpperCase()}\\s*(?:\\([^)]+\\))?\\s*\\n|$))`,
+          `(?:\\*\\*)?${day.toUpperCase()}(?:\\*\\*)?\\s*(?:\\([^)]+\\))?\\s*\\n([\\s\\S]*?)(?=(?:\\*\\*)?(?:${days.join('|').toUpperCase()})(?:\\*\\*)?\\s*(?:\\([^)]+\\))?\\s*\\n|$|\\n---\\s*\\n|\\n\\*\\*Notes:|$)`,
           'i'
         );
         
@@ -626,12 +626,13 @@ Focus on recovery today`;
         });
         
         if (match && match[1]) {
-          // Clean up the training text by removing age-related explanatory notes
+          // Clean up the training text by removing age-related explanatory notes and markdown
           let cleanedText = match[1].trim()
             .replace(/\(no weights,?\s+as\s+user\s+is\s+under\s+14\)/gi, '')
             .replace(/no weights? training as user is under \d+/gi, '')
             .replace(/bodyweight only as user is under \d+/gi, '')
             .replace(/\(bodyweight exercises? only\)/gi, '')
+            .replace(/\*\*/g, '') // Remove markdown formatting
             .replace(/\s{2,}/g, ' ') // Remove extra spaces
             .trim();
           
@@ -645,8 +646,16 @@ Focus on recovery today`;
 
       const now = new Date();
       
+      // Get the week number for plan naming
+      let weekNumber = getWeek(now);
+      
+      // If today is Sunday, this plan is for the next week
+      if (isSunday(now)) {
+        weekNumber += 1;
+      }
+      
       await addPlan({
-        name: `Your Personalized Plan - ${format(now, 'd.m.yy')}`,
+        name: `Your Personalized Plan for Week ${weekNumber}`,
         createdAt: now,
         schedule: dailyPlans,
       });
