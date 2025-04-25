@@ -19,7 +19,7 @@ interface DayData {
   isSelected: boolean;
   isDisabled: boolean;
   isToday: boolean;
-  adherenceScore: number | null;
+  adherenceScore: number | null | undefined;
 }
 
 export default function WeeklyOverview({ selectedDate, onDateSelect }: WeeklyOverviewProps) {
@@ -28,6 +28,9 @@ export default function WeeklyOverview({ selectedDate, onDateSelect }: WeeklyOve
   const [weekDates, setWeekDates] = useState<DayData[]>([]);
   const { user } = useAuth();
   const pathname = usePathname();
+  
+  // Define minimum date - January 1, 2025
+  const minDate = new Date(2025, 0, 1); // Month is 0-indexed, so 0 = January
   
   // Check if we're on the home tab
   const isHomeTab = pathname === '/' || pathname === '/home';
@@ -129,7 +132,14 @@ export default function WeeklyOverview({ selectedDate, onDateSelect }: WeeklyOve
   };
 
   const handlePreviousWeek = () => {
-    setCurrentWeekStart(prev => subWeeks(prev, 1));
+    const newWeekStart = subWeeks(currentWeekStart, 1);
+    // Check if new week would include dates before minDate using getTime() for proper type comparison
+    if (newWeekStart.getTime() >= minDate.getTime()) {
+      setCurrentWeekStart(newWeekStart);
+    } else {
+      // Set to the week containing minDate instead
+      setCurrentWeekStart(startOfWeek(minDate, { weekStartsOn: 1 }));
+    }
   };
 
   const handleNextWeek = () => {
@@ -139,6 +149,8 @@ export default function WeeklyOverview({ selectedDate, onDateSelect }: WeeklyOve
 
   const weekNumber = getWeek(currentWeekStart, { weekStartsOn: 1 });
   const isCurrentWeek = isSameDay(currentWeekStart, startOfWeek(today, { weekStartsOn: 1 }));
+  // Use time comparison to avoid TypeScript errors
+  const isMinimumWeek = currentWeekStart.getTime() <= minDate.getTime();
   
   // Standard height for all buttons now that we don't show adherence scores
   const dayButtonHeight = 64;
@@ -152,8 +164,9 @@ export default function WeeklyOverview({ selectedDate, onDateSelect }: WeeklyOve
             styles.arrowButton,
             { opacity: pressed ? 0.7 : 1 }
           ]}
+          disabled={isMinimumWeek}
         >
-          <Ionicons name="chevron-back" size={24} color="#000000" />
+          <Ionicons name="chevron-back" size={24} color={isMinimumWeek ? "#CCCCCC" : "#000000"} />
         </Pressable>
 
         <View style={styles.headerTextContainer}>

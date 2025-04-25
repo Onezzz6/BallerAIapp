@@ -10,7 +10,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Camera } from 'expo-camera';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { collection, doc, getDoc, getDocs, addDoc, deleteDoc, query, where, orderBy, setDoc, updateDoc, Timestamp, increment } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, addDoc, deleteDoc, query, where, orderBy, setDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
 import { useNutrition } from '../context/NutritionContext';
@@ -316,12 +316,9 @@ type LogMealModalProps = {
   onClose: () => void;
   onPhotoAnalysis: (imageUri: string) => Promise<void>;
   onLogMeal: (items: any[]) => Promise<void>;
-  isPhotoAnalysisDisabled: boolean;
-  dailyAnalysisCount: number;
-  dailyAnalysisLimit: number;
 };
 
-function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal, isPhotoAnalysisDisabled, dailyAnalysisCount, dailyAnalysisLimit }: LogMealModalProps) {
+function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal }: LogMealModalProps) {
   const [method, setMethod] = useState<'manual' | 'gallery' | 'camera' | null>(null);
   const [manualEntry, setManualEntry] = useState({
     name: '',
@@ -508,49 +505,30 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal, isPhotoAna
                 </Pressable>
               </ScrollView>
             ) : (
-              <View>
-                {isPhotoAnalysisDisabled && (
-                  <View style={styles.limitWarningContainer}>
-                    <Ionicons name="alert-circle" size={24} color="#FF6B6B" />
-                    <Text style={styles.limitWarningText}>
-                      Daily limit reached ({dailyAnalysisCount}/{dailyAnalysisLimit}). Please use manual entry until tomorrow.
-                    </Text>
-                  </View>
-                )}
+              <View style={styles.methodSelection}>
+                <Pressable
+                  style={styles.methodButton}
+                  onPress={() => setMethod('manual')}
+                >
+                  <Ionicons name="create-outline" size={32} color="#000000" />
+                  <Text style={styles.methodButtonText}>Log{'\n'}Manually</Text>
+                </Pressable>
 
-                <View style={styles.methodSelection}>
-                  <Pressable
-                    style={styles.methodButton}
-                    onPress={() => setMethod('manual')}
-                  >
-                    <Ionicons name="create-outline" size={32} color="#000000" />
-                    <Text style={styles.methodButtonText}>Log{'\n'}Manually</Text>
-                  </Pressable>
+                <Pressable
+                  style={styles.methodButton}
+                  onPress={() => handleGallerySelect()}
+                >
+                  <Ionicons name="images-outline" size={32} color="#000000" />
+                  <Text style={styles.methodButtonText}>Pick from{'\n'}Gallery</Text>
+                </Pressable>
 
-                  <Pressable
-                    style={[
-                      styles.methodButton,
-                      isPhotoAnalysisDisabled && styles.disabledButton
-                    ]}
-                    onPress={() => !isPhotoAnalysisDisabled && handleGallerySelect()}
-                    disabled={isPhotoAnalysisDisabled}
-                  >
-                    <Ionicons name="images-outline" size={32} color={isPhotoAnalysisDisabled ? "#999999" : "#000000"} />
-                    <Text style={[styles.methodButtonText, isPhotoAnalysisDisabled && {color: "#999999"}]}>Pick from{'\n'}Gallery</Text>
-                  </Pressable>
-
-                  <Pressable
-                    style={[
-                      styles.methodButton,
-                      isPhotoAnalysisDisabled && styles.disabledButton
-                    ]}
-                    onPress={() => !isPhotoAnalysisDisabled && handleCameraCapture()}
-                    disabled={isPhotoAnalysisDisabled}
-                  >
-                    <Ionicons name="camera-outline" size={32} color={isPhotoAnalysisDisabled ? "#999999" : "#000000"} />
-                    <Text style={[styles.methodButtonText, isPhotoAnalysisDisabled && {color: "#999999"}]}>Take{'\n'}Photo</Text>
-                  </Pressable>
-                </View>
+                <Pressable
+                  style={styles.methodButton}
+                  onPress={() => handleCameraCapture()}
+                >
+                  <Ionicons name="camera-outline" size={32} color="#000000" />
+                  <Text style={styles.methodButtonText}>Take{'\n'}Photo</Text>
+                </Pressable>
               </View>
             )}
           </View>
@@ -1378,30 +1356,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666666',
   },
-  pastDateError: {
-    color: '#FF6B6B',
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: 4,
-  },
-  limitWarningContainer: {
-    backgroundColor: '#FFE5E5',
-    borderWidth: 1,
-    borderColor: '#FF6B6B',
-    borderRadius: 4,
-    padding: 8,
-    marginHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  limitWarningText: {
-    fontSize: 14,
-    color: '#FF6B6B',
-    marginLeft: 8,
-    flex: 1,
-  },
 });
 
 export default function NutritionScreen() {
@@ -1414,9 +1368,6 @@ export default function NutritionScreen() {
   const [isLogMealModalVisible, setIsLogMealModalVisible] = useState(false);
   const [selectedLoggingMethod, setSelectedLoggingMethod] = useState<'manual' | 'photo' | null>(null);
   const [foodItems, setFoodItems] = useState<FoodItem[]>([]);
-  const [dailyAnalysisCount, setDailyAnalysisCount] = useState(0);
-  const [analysisLimitReached, setAnalysisLimitReached] = useState(false);
-  const DAILY_ANALYSIS_LIMIT = 8;
   const { 
     selectedDate,
     setSelectedDate,
@@ -1624,7 +1575,7 @@ export default function NutritionScreen() {
     }
 
     if (!canLogMeal()) {
-      throw new Error('Cannot log meals for dates older than a week ago');
+      throw new Error('Cannot log meals for dates more than 8 days in the past or any future dates');
     }
 
     try {
@@ -1977,75 +1928,9 @@ export default function NutritionScreen() {
     }
   };
   
-  // Track image analyses per day - only fetch when component loads or the date changes to today
-  useEffect(() => {
-    const fetchAnalysisCount = async () => {
-      if (!user) return;
-      
-      const today = new Date();
-      const isTodaySelected = isSameDay(selectedDate, today);
-      
-      // Only fetch the count if today is selected
-      if (isTodaySelected) {
-        const todayStr = formatDateId(today);
-        const analysisCountRef = doc(db, 'users', user?.uid || '', 'imageAnalysisUsage', todayStr);
-        
-        try {
-          const docSnap = await getDoc(analysisCountRef);
-          if (docSnap.exists()) {
-            const count = docSnap.data().count || 0;
-            setDailyAnalysisCount(count);
-            setAnalysisLimitReached(count >= DAILY_ANALYSIS_LIMIT);
-          } else {
-            // No document means no analyses today
-            setDailyAnalysisCount(0);
-            setAnalysisLimitReached(false);
-          }
-        } catch (error) {
-          console.error('Error fetching analysis count:', error);
-          // In case of error, don't restrict functionality
-          setDailyAnalysisCount(0);
-          setAnalysisLimitReached(false);
-        }
-      }
-    };
-    
-    fetchAnalysisCount();
-  }, [user, selectedDate]);
-
   // On photo analysis error handling
   const handlePhotoAnalysis = async (imageUri: string) => {
     try {
-      // Check if today is selected
-      const today = new Date();
-      const isTodaySelected = isSameDay(selectedDate, today);
-      
-      if (isTodaySelected) {
-        // Get the latest count directly from Firestore to avoid race conditions
-        const todayStr = formatDateId(today);
-        const analysisCountRef = doc(db, 'users', user?.uid || '', 'imageAnalysisUsage', todayStr);
-        let currentCount = 0;
-        
-        try {
-          const docSnap = await getDoc(analysisCountRef);
-          if (docSnap.exists()) {
-            currentCount = docSnap.data().count || 0;
-          }
-          
-          // Check if limit reached based on fresh data
-          if (currentCount >= DAILY_ANALYSIS_LIMIT) {
-            Alert.alert(
-              'Daily Limit Reached',
-              "You've reached your daily limit of 8 image analyses. Please log your meals manually until tomorrow."
-            );
-            return;
-          }
-        } catch (error) {
-          console.error('Error checking analysis count:', error);
-          // Continue with analysis if we can't check (don't block user)
-        }
-      }
-
       setIsLoading(true);
       setIsAnalyzing(true);
       // Close the modal immediately when analysis/logging begins
@@ -2109,42 +1994,6 @@ export default function NutritionScreen() {
           fats: Math.round(result.totalMacros.fats)
         }
       };
-
-      // Increment the analysis count in Firebase using atomic operation
-      if (isTodaySelected && user) {
-        const todayStr = formatDateId(today);
-        const analysisCountRef = doc(db, 'users', user.uid, 'imageAnalysisUsage', todayStr);
-        
-        try {
-          // Use updateDoc with increment for atomic update
-          await updateDoc(analysisCountRef, {
-            count: increment(1),
-            updatedAt: new Date().toISOString()
-          }).catch(async (error) => {
-            // Document might not exist yet, create it
-            if (error.code === 'not-found') {
-              await setDoc(analysisCountRef, {
-                count: 1,
-                updatedAt: new Date().toISOString(),
-                createdAt: new Date().toISOString()
-              });
-            } else {
-              throw error;
-            }
-          });
-          
-          // Refresh the count after successful update
-          const updatedDocSnap = await getDoc(analysisCountRef);
-          if (updatedDocSnap.exists()) {
-            const newCount = updatedDocSnap.data().count || 1;
-            setDailyAnalysisCount(newCount);
-            setAnalysisLimitReached(newCount >= DAILY_ANALYSIS_LIMIT);
-          }
-        } catch (error) {
-          console.error('Error updating analysis count:', error);
-          // Continue with meal logging even if tracking fails
-        }
-      }
       
       await logMealToFirestore(roundedResult);
       
@@ -2341,7 +2190,7 @@ export default function NutritionScreen() {
           </Pressable>
           {!canLogMeal() && (
             <Text style={styles.pastDateError}>
-              Cannot log meals for dates older than a week ago
+              Cannot log meals for dates more than 8 days in the past
             </Text>
           )}
         </View>
@@ -2388,9 +2237,6 @@ export default function NutritionScreen() {
               setIsLoading(false);
             }
           }}
-          isPhotoAnalysisDisabled={analysisLimitReached}
-          dailyAnalysisCount={dailyAnalysisCount}
-          dailyAnalysisLimit={DAILY_ANALYSIS_LIMIT}
         />
       </ScrollView>
       

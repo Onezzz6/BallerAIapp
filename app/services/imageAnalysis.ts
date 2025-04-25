@@ -55,11 +55,7 @@ const analyzeImage = async (imageUri: string) => {
           ]
         }
       ],
-      max_tokens: 1000, // Increased token limit for more detailed analysis
-      temperature: 0.2, // Slightly lower temperature for more precision
-      top_p: 0.95, // Add top_p parameter for better quality
-      presence_penalty: 0.0, // Add presence_penalty to maintain focus
-      frequency_penalty: 0.0 // Add frequency_penalty for consistency
+      max_completion_tokens: 3000 // Token limit for detailed analysis
     };
     
     console.log('Sending request to OpenAI API with base64-encoded image...');
