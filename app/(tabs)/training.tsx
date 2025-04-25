@@ -655,7 +655,7 @@ Focus on recovery today`;
       }
       
       await addPlan({
-        name: `Your Personalized Plan for Week ${weekNumber}`,
+        name: `Plan for Week ${weekNumber}`,
         createdAt: now,
         schedule: dailyPlans,
       });
