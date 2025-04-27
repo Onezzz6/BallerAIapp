@@ -17,7 +17,7 @@ const FREQUENCY_OPTIONS = [
   },
   {
     id: '4-6',
-    title: '4-7 days',
+    title: '5-6 days',
   },
   {
     id: '7+',

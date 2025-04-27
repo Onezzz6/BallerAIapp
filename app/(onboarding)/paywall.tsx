@@ -10,7 +10,7 @@ import nutritionService from '../services/nutrition';
 import recoveryService from '../services/recovery';
 import trainingService from '../services/training';
 import { useOnboarding } from '../context/OnboardingContext';
-import { getAnalytics, logEvent } from '@react-native-firebase/analytics';
+import analytics from '@react-native-firebase/analytics';
 import * as InAppPurchases from 'expo-in-app-purchases';
 import { Platform, NativeEventEmitter, NativeModules } from 'react-native';
 import Constants from 'expo-constants';
@@ -184,8 +184,7 @@ const PaywallScreen = () => {
       }
       
       // Log the purchase event using the new modular API
-      const analytics = getAnalytics();
-      await logEvent(analytics, 'subscription_purchased', {
+      await analytics().logEvent('subscription_purchased', {
         productId: purchase.productId,
         transactionId: purchase.transactionId
       });
