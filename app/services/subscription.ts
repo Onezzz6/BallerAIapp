@@ -41,7 +41,7 @@ const subscriptionService = {
   async saveSubscriptionData(userId: string, purchase: any, expirationDate: Date, isRenewing: boolean): Promise<boolean> {
     try {
       console.log('Saving subscription data for user:', userId);
-      console.log('Saving subscription, purchase:', purchase);
+      //console.log('Saving subscription, purchase:', purchase);
       console.log('Saving subscription, expirationDate:', expirationDate);
       console.log('Saving subscription, isRenewing:', isRenewing);
 

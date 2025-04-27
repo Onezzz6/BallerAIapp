@@ -62,8 +62,6 @@ export default function FootballGoalScreen() {
         paddingHorizontal: 24,
         paddingTop: 80,
         paddingBottom: 24,
-        justifyContent: 'top',
-        alignItems: 'left',
         gap: 48,
       }}>
         <Text style={{
