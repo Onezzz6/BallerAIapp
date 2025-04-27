@@ -20,12 +20,12 @@ const ACTIVITY_LEVELS = [
   {
     id: 'moderate',
     title: 'Moderately Active',
-    description: 'Excercise 3-5 days/week',
+    description: 'Excercise 3-4 days/week',
   },
   {
     id: 'very',
     title: 'Very Active',
-    description: 'Excercise 6-7 days/week',
+    description: 'Excercise 5-7 days/week',
   },
   {
     id: 'extra',

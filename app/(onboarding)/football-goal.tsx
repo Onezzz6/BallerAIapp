@@ -13,7 +13,7 @@ const GOALS = [
   },
   {
     id: 'friends',
-    title: 'Be good among friends',
+    title: 'Competitive amateur',
   },
   {
     id: 'semi-pro',

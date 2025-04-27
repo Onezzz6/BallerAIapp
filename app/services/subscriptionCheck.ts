@@ -195,13 +195,16 @@ export const checkExistingSubscriptions = async (
           }*/
 
           const purchaseHistory = await InAppPurchases.getPurchaseHistoryAsync();
+          console.log('Got purchase history');
       
           if (purchaseHistory && purchaseHistory.responseCode === InAppPurchases.IAPResponseCode.OK) {
+            console.log('Purchase history response code is OK');
             if (purchaseHistory.results && purchaseHistory.results.length > 0) {
+              console.log('Purchase history results found');
               // Find the most recent active subscription
               const activeSubscription = purchaseHistory.results
                 .filter(purchase => 
-                  purchase.productId.includes('BallerAISubscription') && 
+                  purchase.productId.includes('BallerAIProSubscription') && 
                   purchase.transactionReceipt
                 )
                 .sort((a, b) => {
@@ -211,6 +214,7 @@ export const checkExistingSubscriptions = async (
                 })[0];
     
               if (activeSubscription) {
+                console.log('Found active subscription');
                 let validationResult: { expirationDate: Date | null, isRenewing: boolean } = { expirationDate: null, isRenewing: false };
                 validationResult = await validateReceipt(activeSubscription);
                 if (validationResult.expirationDate) {

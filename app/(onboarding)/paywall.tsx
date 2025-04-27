@@ -19,7 +19,7 @@ import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import { Buffer } from "buffer";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown, PinwheelIn } from 'react-native-reanimated';
 import subscriptionCheck from '../services/subscriptionCheck';
 
 // Initialize data listeners function defined locally to avoid circular imports
@@ -656,9 +656,8 @@ const PaywallScreen = () => {
   return (
     <>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        {/* Add back button */}
         <Pressable onPress={handleBack} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#000" />
+          <Ionicons name="chevron-back" size={24} color="#000" />
         </Pressable>
         
         {isLoading && !showCustomLoading ? (
@@ -672,8 +671,60 @@ const PaywallScreen = () => {
         ) : !showCustomLoading ? (
           <>
             <View style={styles.content}>
-              <Text style={styles.title}>Better training.</Text>
-              <Text style={styles.subtitle}>Better results!</Text>
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginTop: 0,
+              }}>
+                <Pressable onPress={handleBack} style={styles.backButton}>
+                  <Ionicons name="chevron-back" size={24} color="#000" />
+                </Pressable>
+                <View style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                }}>
+                  <Animated.View 
+                    entering={PinwheelIn.duration(500)}
+                  >
+                  <Image 
+                    source={require('../../assets/images/BallerAILogo.png')}
+                    style={{
+                      width: 32,
+                      height: 32,
+                    }}
+                    resizeMode="contain"
+                  />
+                  </Animated.View>
+                  <Text style={{
+                    fontSize: 28,
+                    fontWeight: '300',
+                    color: '#000000',
+                  }} 
+                  allowFontScaling={false}
+                  maxFontSizeMultiplier={1.2}>
+                    BallerAI
+                  </Text>
+                </View>
+              </View>
+
+              {/* Pro Testimonial Section */}
+              <View style={styles.testimonialSection}>
+                <Text style={styles.testimonialTitle}>Trusted by Professionals</Text>
+                <View style={styles.testimonialContent}>
+                  <Image 
+                    source={require('../../assets/images/2027.png')}
+                    style={styles.testimonialImage}
+                    resizeMode="cover"
+                  />
+                  <Text style={styles.testimonialText}>
+                    "BallerAI changed the way I approach training forever. The ease of use and the amount of value it has brought to my professional life is incredible. I have loved the recovery plans and macro calculation methods the most. I'm improving at the highest rate possible."
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={styles.subscribeTitle}>Subscribe</Text>
 
               {/* Subscription Plans */}
               <View style={styles.plansContainer}>
@@ -714,21 +765,6 @@ const PaywallScreen = () => {
                     <Text style={styles.planTotalPeriod}>{plan.period2}</Text>
                   </Pressable>
                 ))}
-              </View>
-
-              {/* Pro Testimonial Section */}
-              <View style={styles.testimonialSection}>
-                <Text style={styles.testimonialTitle}>Trusted by Professionals</Text>
-                <View style={styles.testimonialContent}>
-                  <Image 
-                    source={require('../../assets/images/2027.png')}
-                    style={styles.testimonialImage}
-                    resizeMode="cover"
-                  />
-                  <Text style={styles.testimonialText}>
-                    "BallerAI changed the way I approach training forever. The ease of use and the amount of value it has brought to my professional life is incredible. I have loved the recovery plans and macro calculation methods the most. I'm improving at the highest rate possible."
-                  </Text>
-                </View>
               </View>
 
               {/* Continue Button */}
@@ -821,9 +857,9 @@ const PaywallScreen = () => {
               style={styles.loadingMascot}
               resizeMode="contain"
             />
-            <Text style={styles.loadingTitle}>Subscription Expired</Text>
+            <Text style={styles.loadingTitle}>Checking Subscription</Text>
             <Text style={styles.loadingSubtext}>
-              Please wait while we load your subscription options.
+              Please wait while we check your subscription status.
             </Text>
             <ActivityIndicator size="large" color="#4064F6" />
           </Animated.View>
@@ -856,6 +892,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#000000',
     marginBottom: 24,
+    textAlign: 'center',
+  },
+  subscribeTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#000000',
+    marginBottom: 16,
     textAlign: 'center',
   },
   plansContainer: {
@@ -936,16 +979,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   testimonialSection: {
-    marginBottom: 32,
+    marginBottom: 24,
     backgroundColor: '#F8F8F8',
     borderRadius: 24,
     padding: 24,
+    marginTop: 24,
   },
   testimonialTitle: {
     fontSize: 24,
     fontWeight: '700',
     color: '#000000',
-    marginBottom: 24,
+    marginBottom: 12,
+    textAlign: 'center',
   },
   testimonialContent: {
     flexDirection: 'column',
@@ -962,6 +1007,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     textAlign: 'center',
     fontStyle: 'italic',
+    marginTop: 12,
   },
   continueButton: {
     backgroundColor: '#4064F6',
@@ -988,11 +1034,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   backButton: {
-    position: 'absolute',
-    top: 72,
-    left: 20,
-    zIndex: 1,
-    padding: 8,
   },
   restoreButton: {
     marginTop: 10,
