@@ -176,7 +176,7 @@ function RootLayoutContent() {
                         // Find the most recent active subscription
                         const activeSubscription = purchaseHistory.results
                           .filter(purchase => 
-                            purchase.productId.includes('BallerAISubscription') && 
+                            purchase.productId.includes('BallerAIProSubscription') && 
                             purchase.transactionReceipt
                           )
                           .sort((a, b) => {

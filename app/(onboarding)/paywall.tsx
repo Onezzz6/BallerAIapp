@@ -552,9 +552,8 @@ const PaywallScreen = () => {
           // Find the most recent active subscription
           const activeSubscription = purchaseHistory.results
             .filter(purchase => 
-              purchase.productId.includes('BallerAISubscription') && 
-              purchase.transactionReceipt && 
-              !purchase.transactionReceipt.includes('sandbox')
+              purchase.productId.includes('BallerAIProSubscription') && 
+              purchase.transactionReceipt
             )
             .sort((a, b) => {
               const dateA = a.purchaseTime ? new Date(a.purchaseTime).getTime() : 0;
@@ -563,19 +562,26 @@ const PaywallScreen = () => {
             })[0];
 
           if (activeSubscription) {
-            await handleSuccessfulPurchase(activeSubscription);
-            Alert.alert('Success', 'Your purchases were successfully restored.');
-            router.replace('/(tabs)/home');
-            return;
+            // Validate the receipt before processing the purchase
+            const validationResult = await subscriptionCheck.validateReceipt(activeSubscription);
+            const { expirationDate, isRenewing } = validationResult;
+            if (expirationDate === null) {
+              console.log('Receipt validation failed');
+            }
+            else {
+              Alert.alert('Success', 'Your previous purchase corresponding to an active subscription was successfully restored.');
+              router.replace('/(tabs)/home');
+              return;
+            }
           }
         }
-        Alert.alert('No Purchases Found', 'No previous purchases were found to restore.');
+        Alert.alert('No Purchases Found', 'No previous purchases corresponding to an active subscription were found to restore.');
       } else {
         Alert.alert('Error', 'Failed to restore purchases. Please try again.');
       }
     } catch (error) {
       console.error('Error restoring purchases:', error);
-      Alert.alert('Error', 'Failed to restore purchases. Please try again.');
+      Alert.alert('Error', 'Failed to restore purchases. Please try again later.');
     } finally {
       setIsLoading(false);
     }
@@ -658,10 +664,6 @@ const PaywallScreen = () => {
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         {!isLoading && !showCustomLoading && (
           <>
-            <Pressable onPress={handleBack} style={styles.backButton}>
-              <Ionicons name="chevron-back" size={24} color="#000" />
-            </Pressable>
-            
             <View style={styles.content}>
               <View style={{
                 flexDirection: 'row',
@@ -894,7 +896,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 24,
-    paddingTop: 48,
+    paddingTop: 76,
   },
   title: {
     fontSize: 24,
