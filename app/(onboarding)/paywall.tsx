@@ -354,11 +354,11 @@ const PaywallScreen = () => {
             }
           }
           
-          if (isMounted && !purchaseListenerSet.current) {
+          /*if (isMounted && !purchaseListenerSet.current) {
             InAppPurchases.setPurchaseListener(purchaseListener);
             purchaseListenerSet.current = true;
             console.log('Purchase listener setup complete');
-          }
+          }*/
           
           isIAPInitialized.current = true;
           if (isMounted) {
@@ -405,7 +405,7 @@ const PaywallScreen = () => {
           environment: __DEV__ ? 'Development' : 'Production'
         });
         
-        if (error.code === 'ERR_IN_APP_PURCHASES_CONNECTION' && isMounted) {
+        /*if (error.code === 'ERR_IN_APP_PURCHASES_CONNECTION' && isMounted) {
           // If we get a connection error, try to recover by reconnecting
           try {
             console.log('Attempting recovery after connection error...');
@@ -430,7 +430,7 @@ const PaywallScreen = () => {
               );
             }
           }
-        }
+        }*/
       } finally {
         // Ensure loading state is updated even if there are errors
         if (isMounted) {
