@@ -593,7 +593,7 @@ const PaywallScreen = () => {
           // Calculate yearly price from monthly price in micros
           const yearlyPriceInMicros = monthlyProduct.priceAmountMicros * 12;
           // Format the price using the same currency code
-          const formatter = new Intl.NumberFormat("en-US", {
+          const formatter = new Intl.NumberFormat(monthlyProduct.priceCurrencyCode == 'EUR' ? "de-DE" : "en-US", {
             style: 'currency',
             currency: monthlyProduct.priceCurrencyCode
           });
@@ -612,7 +612,7 @@ const PaywallScreen = () => {
           // Calculate monthly price from yearly price in micros
           const monthlyPriceInMicros = yearlyProduct.priceAmountMicros / 12;
           // Format the price using the same currency code
-          const formatter = new Intl.NumberFormat("en-US", {
+          const formatter = new Intl.NumberFormat(yearlyProduct.priceCurrencyCode == 'EUR' ? "de-DE" : "en-US", {
             style: 'currency',
             currency: yearlyProduct.priceCurrencyCode
           });
@@ -656,20 +656,12 @@ const PaywallScreen = () => {
   return (
     <>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        <Pressable onPress={handleBack} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={24} color="#000" />
-        </Pressable>
-        
-        {isLoading && !showCustomLoading ? (
-          <View style={styles.loadingContainer}>
-            <View style={styles.loadingIndicator}>
-              {/* Activity indicator with color matching the app's theme */}
-              <Text style={styles.loadingText}>Loading subscription options...</Text>
-              <ActivityIndicator size="large" color="#4064F6" />
-            </View>
-          </View>
-        ) : !showCustomLoading ? (
+        {!isLoading && !showCustomLoading && (
           <>
+            <Pressable onPress={handleBack} style={styles.backButton}>
+              <Ionicons name="chevron-back" size={24} color="#000" />
+            </Pressable>
+            
             <View style={styles.content}>
               <View style={{
                 flexDirection: 'row',
@@ -808,7 +800,7 @@ const PaywallScreen = () => {
               </Text>
             </View>
           </>
-        ) : null}
+        )}
         
         {/* Purchase overlay with loading indicator */}
         {isPurchasing && (
@@ -817,6 +809,30 @@ const PaywallScreen = () => {
           </View>
         )}
       </ScrollView>
+      
+      {/* Restoring Purchases loading screen - moved outside ScrollView */}
+      {isLoading && !showCustomLoading && (
+        <Animated.View 
+          style={styles.fullScreenOverlay}
+          entering={FadeIn.duration(300)}
+        >
+          <Animated.View 
+            style={styles.loadingContent}
+            entering={FadeInDown.duration(400).springify()}
+          >
+            <Image 
+              source={require('../../assets/images/mascot.png')}
+              style={styles.loadingMascot}
+              resizeMode="contain"
+            />
+            <Text style={styles.loadingTitle}>Restoring Purchases</Text>
+            <Text style={styles.loadingSubtext}>
+              Please wait while we restore your purchases.
+            </Text>
+            <ActivityIndicator size="large" color="#4064F6" />
+          </Animated.View>
+        </Animated.View>
+      )}
       
       {/* Custom account creation loading screen - moved outside ScrollView */}
       {isSignUp && showCustomLoading && (
@@ -1095,7 +1111,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 2000,
