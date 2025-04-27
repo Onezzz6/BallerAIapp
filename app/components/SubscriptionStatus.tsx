@@ -7,6 +7,7 @@ import subscriptionCheck from '../services/subscriptionCheck';
 import CustomButton from './CustomButton';
 import * as InAppPurchases from 'expo-in-app-purchases';
 import axios from 'axios';
+import authService from '../services/auth';
 
 interface SubscriptionStatusProps {
   showExpirationAlert?: boolean;
@@ -97,8 +98,12 @@ const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
             }
           } else {
             console.log('Firebase subscription is not active');
-            // Subscription is not active, redirect to paywall
-            router.replace('/(onboarding)/paywall');
+
+            const userDoc = await authService.getUserDocument(user.uid);
+            if (userDoc) {
+              // Subscription is not active, redirect to paywall
+              router.replace('/(onboarding)/paywall');
+            }
           }
         }
       } catch (error) {

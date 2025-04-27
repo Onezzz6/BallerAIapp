@@ -43,19 +43,6 @@ const initializeAllDataListeners = async (userId: string) => {
   }
 };
 
-// Function to create user document
-const createUserDocument = async (userId: string, userData: any) => {
-  try {
-    const userDocRef = doc(db, "users", userId);
-    await setDoc(userDocRef, userData);
-    console.log("User document created successfully");
-    return true;
-  } catch (error) {
-    console.error("Error creating user document:", error);
-    throw error;
-  }
-};
-
 // Function to verify the user document exists and contains all required data
 const verifyUserDocument = async (userId: string) => {
   try {
@@ -156,29 +143,10 @@ const PaywallScreen = () => {
         return false;
       }
       
-      // If this is an Apple user who needs a document created
-      if (uid && hasAppleInfo === 'true') {
-        const userIdString = Array.isArray(uid) ? uid[0] : uid;
-        
-        // Create the user document with subscription info
-        await createUserDocument(userIdString, {
-          ...onboardingData,
-          createdAt: new Date().toISOString(),
-          hasCompletedOnboarding: true,
-          subscription: {
-            productId: purchase.productId,
-            purchaseTime: new Date().toISOString(),
-            expiresDate: expirationDate.toISOString(),
-            isActive: true,
-            transactionId: purchase.transactionId || null,
-            status: 'active',
-            autoRenewing: isRenewing
-          }
-        });
-        
+      if (user) {
         // Initialize data listeners
-        await initializeAllDataListeners(userIdString);
-      } else if (user) {
+        await initializeAllDataListeners(user.uid);
+
         // For logged-in users, use the subscription service
         await subscriptionService.saveSubscriptionData(user.uid, purchase, expirationDate, isRenewing);
       }
@@ -354,11 +322,11 @@ const PaywallScreen = () => {
             }
           }
           
-          /*if (isMounted && !purchaseListenerSet.current) {
+          if (isMounted && !purchaseListenerSet.current) {
             InAppPurchases.setPurchaseListener(purchaseListener);
             purchaseListenerSet.current = true;
             console.log('Purchase listener setup complete');
-          }*/
+          }
           
           isIAPInitialized.current = true;
           if (isMounted) {
@@ -433,9 +401,7 @@ const PaywallScreen = () => {
         }*/
       } finally {
         // Ensure loading state is updated even if there are errors
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        setIsLoading(false);
       }
     };
 

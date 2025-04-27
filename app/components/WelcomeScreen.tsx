@@ -48,11 +48,11 @@ export default function WelcomeScreen() {
   useEffect(() => {
     console.log("Preparing welcome screen animation");
     
-    // Add a 500ms delay before starting the fade-in animation
+    // Add a 1000ms delay before starting the fade-in animation
     const animationTimer = setTimeout(() => {
       console.log("Starting fade-in animation after delay");
-      opacity.value = withTiming(1, { duration: 500 });
-    }, 500);
+      opacity.value = withTiming(1, { duration: 300 });
+    }, 1000);
     
     return () => clearTimeout(animationTimer);
   }, []);
@@ -129,6 +129,8 @@ export default function WelcomeScreen() {
   };
 
   const handleAppleSignIn = async () => {
+    await subscriptionCheck.cancelIsPurchasing();
+
     try {
       setIsLoading(true);
       console.log("Starting Apple Sign-In process...");
@@ -153,6 +155,7 @@ export default function WelcomeScreen() {
         } else {
           console.log("User validation failed - showing no account alert");
           showNoAccountAlert();
+          router.replace('/(onboarding)/sign-up');
           return;
         }
       } else if (!wasCanceled) {
@@ -180,20 +183,16 @@ export default function WelcomeScreen() {
   const showNoAccountAlert = () => {
     Alert.alert(
       'Account Not Found',
-      'No account found with this Apple ID. Would you like to create one?',
+      'No account found with this Apple ID. You need to create one to continue.',
       [
-        { text: 'Cancel', style: 'cancel' },
         { 
-          text: 'Get Started', 
+          text: 'OK', 
           onPress: () => {
-            // Reset form and stay on welcome screen (match email behavior)
-            setEmail('');
-            setPassword('');
-            setShowSignIn(false);
+            setShowSignIn(true);
           }
         }
       ]
-    );
+);
   };
 
   const handleForgotPassword = () => {

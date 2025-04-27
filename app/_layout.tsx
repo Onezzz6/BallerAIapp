@@ -20,6 +20,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import subscriptionService, { PRODUCT_IDS } from './services/subscription';
 import subscriptionCheck from './services/subscriptionCheck';
 import axios from 'axios';
+import authService from './services/auth';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -135,7 +136,7 @@ function RootLayoutContent() {
               if (hasValidSubscription) {
                 await subscriptionCheck.setIsPurchasing();
                 if (existingSubscription.source === 'iap') {
-                  console.log('Processing existing subscription on app active:', existingSubscription);
+                  //console.log('Processing existing subscription on app active:', existingSubscription);
                   const result = await subscriptionCheck.handleSubscriptionData(
                     existingSubscription.data, 
                     user.uid
@@ -287,13 +288,19 @@ function AuthStateManager({ children }: { children: React.ReactNode }) {
   // Navigate to home when user is authenticated
   useEffect(() => {
     if (user && !isLoading) {
-      
-      // Keep showing loading screen while we prepare to navigate
-      const timer = setTimeout(() => {
-        router.replace('/(tabs)/home');
-      }, 400);
-      
-      return () => clearTimeout(timer);
+      const checkUser = async () => {
+        const userDoc = await authService.getUserDocument(user.uid);
+        if (userDoc) {
+          // Keep showing loading screen while we prepare to navigate
+          const timer = setTimeout(() => {
+            router.replace('/(tabs)/home');
+          }, 100);
+          
+          return () => clearTimeout(timer);
+        }
+      };
+
+      checkUser();
     }
   }, [user, isLoading]);
   

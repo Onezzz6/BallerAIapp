@@ -3,6 +3,8 @@ import { Alert, Platform } from 'react-native';
 import axios from 'axios';
 import subscriptionService, { PRODUCT_IDS } from './subscription';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../config/firebase';
 
 // Keep track of ongoing subscription checks
 let subscriptionCheckInProgress: Promise<any> | null = null;
@@ -83,7 +85,8 @@ export const validateReceipt = async (purchase: InAppPurchases.InAppPurchase): P
  */
 export const handleSubscriptionData = async (purchase: any, userId: string | null) => {
   try {
-    console.log('Handling subscription data:', purchase);
+    //console.log('Handling subscription data:', purchase);
+    console.log('Handling subscription data:');
     
     // Validate the receipt before processing the purchase
     const validationResult = await validateReceipt(purchase);
@@ -141,8 +144,19 @@ export const checkExistingSubscriptions = async (
           if (firebaseSubscription.isActive) {
             console.log('Firebase subscription is active');
             return { source: 'firebase', data: firebaseSubscription };
+          /*} else if (firebaseSubscription.status === 'none') {
+            console.log('Firebase subscription status is none, i.e. no actual Firebase doc found');
+            return null;*/
           } else {
-            console.log('Firebase subscription is not active');
+            const userRef = doc(db, 'users', userId);
+            const userDoc = await getDoc(userRef);
+            
+            if (userDoc.exists()) {
+              console.log('Firebase subscription is not active, but user doc exists');
+            } else {
+              console.log('Firebase subscription is not active, and user doc does not exist');
+              return null;
+            }
           }
         }
       } catch (fbError) {
@@ -218,17 +232,17 @@ export const checkExistingSubscriptions = async (
                 let validationResult: { expirationDate: Date | null, isRenewing: boolean } = { expirationDate: null, isRenewing: false };
                 validationResult = await validateReceipt(activeSubscription);
                 if (validationResult.expirationDate) {
-                    console.log('Found validated active subscription in IAP, expiration date:', validationResult.expirationDate);
-                  
-                    // If user is logged in, save this to Firebase
-                    if (userId) {
-                      await subscriptionService.saveSubscriptionData(userId, activeSubscription, validationResult.expirationDate, validationResult.isRenewing);
-                    }                        
-                    return { source: 'iap', data: activeSubscription };
-                  } else {
-                    console.log('Subscription validation failed:', activeSubscription.productId);
-                  }
+                  console.log('Found validated active subscription in IAP, expiration date:', validationResult.expirationDate);
+                
+                  // If user is logged in, save this to Firebase
+                  if (userId) {
+                    await subscriptionService.saveSubscriptionData(userId, activeSubscription, validationResult.expirationDate, validationResult.isRenewing);
+                  }                        
+                  return { source: 'iap', data: activeSubscription };
+                } else {
+                  console.log('Subscription validation failed:', activeSubscription.productId);
                 }
+              }
             }
           }
         } catch (iapError) {

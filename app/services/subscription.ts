@@ -66,7 +66,7 @@ const subscriptionService = {
       console.log('Subscription data saved successfully');
       return true;
     } catch (error) {
-      console.error('Error saving subscription data:', error);
+      console.error('Error saving subscription data to Firebase:', error);
       return false;
     }
   },
@@ -144,7 +144,7 @@ const subscriptionService = {
       console.log('Subscription status updated successfully');
       return true;
     } catch (error) {
-      console.error('Error updating subscription status:', error);
+      console.error('Error updating subscription status to Firebase:', error);
       return false;
     }
   },

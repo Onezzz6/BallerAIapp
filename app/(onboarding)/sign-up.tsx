@@ -8,6 +8,8 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import CustomButton from '../components/CustomButton';
 import analytics from '@react-native-firebase/analytics';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../config/firebase';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -85,10 +87,10 @@ export default function SignUpScreen() {
     }
   };
 
-  const handleAppleSignIn = async () => {
+  const handleAppleSignUp = async () => {
     setIsLoading(true);
     try {
-      console.log("Starting Apple Sign-In process...");
+      console.log("Starting Apple Sign-Up process...");
       
       const { user, hasDocument, isValidDocument, appleInfo } = await authService.authenticateWithApple();
       
@@ -104,10 +106,20 @@ export default function SignUpScreen() {
         await analytics().logEvent('onboarding_apple_signin_complete');
         router.replace('/(tabs)/home');
       } else {
-        console.log("User needs to go through paywall");
+        console.log("User needs a document created before going through paywall");
         await analytics().logEvent('onboarding_apple_signup_complete');
+
+        try {
+          const userDocRef = doc(db, "users", user.uid);
+          await setDoc(userDocRef, onboardingData);
+          console.log("User document created successfully");
+        } catch (error) {
+          console.error("Error creating user document:", error);
+          throw error;
+        }
+      
         router.push({
-          pathname: '/paywall',
+          pathname: '/(onboarding)/paywall',
           params: { 
             uid: user.uid,
             hasAppleInfo: 'true',
@@ -249,7 +261,7 @@ export default function SignUpScreen() {
           buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
           cornerRadius={36}
           style={styles.appleButton}
-          onPress={handleAppleSignIn}
+          onPress={handleAppleSignUp}
         />
           )}
         </View>
