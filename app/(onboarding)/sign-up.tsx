@@ -1,4 +1,4 @@
-import { View, Text, TextInput, Alert, StyleSheet, Pressable, Platform, Image } from 'react-native';
+import { View, Text, TextInput, Alert, StyleSheet, Pressable, Platform, Image, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
@@ -142,132 +142,127 @@ export default function SignUpScreen() {
   };
 
   return (
-    <Animated.View 
-      entering={FadeIn.duration(500)}
-      style={{
-        flex: 1,
-        backgroundColor: '#ffffff',
-      }}
-    >
-
-    <View style={styles.container}>
-
-      <View style={{
-          justifyContent: 'center',
-          alignItems: 'center',
-          gap: 12,
-          paddingTop: 128,
-        }}>
-
-      <Image
-        source={require('../../assets/images/BallerAILogo.png')}
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <Animated.View 
+        entering={FadeIn.duration(500)}
         style={{
-          width: 120,
-          height: 120,
-          resizeMode: 'contain',
-          marginBottom: 0,
+          flex: 1,
+          backgroundColor: '#ffffff',
         }}
-      />
-          
-      <Text style={{
-        fontSize: 32,
-        color: '#000000',
-        fontWeight: '600',
-        textAlign: 'center',
-        marginBottom: 0,
-      }} allowFontScaling={false}>
-        Create Your Account
-      </Text>
-      </View>
+      >
 
-      <View style={styles.inputContainer}>
-        <View style={styles.inputWrapper}>
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            editable={!isLoading}
-            placeholderTextColor="#666666"
-          />
-        </View>
-        
-        <View style={styles.passwordWrapper}>
-          <TextInput
-            style={styles.passwordInput}
-            placeholder="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry={!showPassword}
-            editable={!isLoading}
-            placeholderTextColor="#666666"
-          />
-          <Pressable
-            onPress={() => setShowPassword(!showPassword)}
-            style={styles.eyeIcon}
-            disabled={isLoading}
-          >
-            <Ionicons
-              name={showPassword ? 'eye-off' : 'eye'}
-              size={24}
-              color="#666666"
-            />
-          </Pressable>
-        </View>
-      </View>
+      <View style={styles.container}>
 
-      <CustomButton
-        title={isLoading ? "Creating Account..." : "Continue"}
-        onPress={handleSubmit}
-        disabled={isLoading}
-        buttonStyle={{
-          backgroundColor: '#4064F6',
-          borderRadius: 36,
-        }}
-        textStyle={{
-          color: '#FFFFFF',
-          fontSize: 18,
-          fontWeight: '600',
-        }}
-      />
+        <View style={{
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: 12,
+            paddingTop: 128,
+          }}>
 
-      {/* Divider */}
-      <View style={styles.dividerContainer}>
-        <View style={styles.divider} />
-        <Text style={styles.dividerText}>OR</Text>
-        <View style={styles.divider} />
-      </View>
-
-      {/* Apple Sign In */}
-      {isAppleAvailable && (
-        <View style={{ 
-          opacity: isLoading ? 0.5 : 1,
-          width: '100%'
-        }}>
-          {isLoading ? (
-            <View
-              style={{
-                width: '100%',
-                height: 55,
-                backgroundColor: 'black',
-                borderRadius: 36,
-              }}
-            />
-          ) : (
-        <AppleAuthentication.AppleAuthenticationButton
-          buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
-          buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-          cornerRadius={36}
-          style={styles.appleButton}
-          onPress={handleAppleSignUp}
+        <Image
+          source={require('../../assets/images/BallerAILogo.png')}
+          style={{
+            width: 120,
+            height: 120,
+            resizeMode: 'contain',
+            marginBottom: 0,
+          }}
         />
-          )}
+            
+        <Text style={{
+          fontSize: 32,
+          color: '#000000',
+          fontWeight: '600',
+          textAlign: 'center',
+          marginBottom: 0,
+        }} allowFontScaling={false}>
+          Create Your Account
+        </Text>
         </View>
-      )}
-    </View>
-    </Animated.View>
+
+        <View style={styles.inputContainer}>
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              editable={!isLoading}
+              placeholderTextColor="#666666"
+            />
+          </View>
+          
+          <View style={styles.passwordWrapper}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              editable={!isLoading}
+              placeholderTextColor="#666666"
+            />
+            <Pressable
+              onPress={() => setShowPassword(!showPassword)}
+              style={styles.eyeIcon}
+              disabled={isLoading}
+            >
+              <Ionicons
+                name={showPassword ? 'eye-off' : 'eye'}
+                size={24}
+                color="#666666"
+              />
+            </Pressable>
+          </View>
+        </View>
+
+        <CustomButton
+          title={isLoading ? "Creating Account..." : "Continue"}
+          onPress={handleSubmit}
+          disabled={isLoading}
+          buttonStyle={{
+            backgroundColor: '#4064F6',
+            borderRadius: 36,
+          }}
+          textStyle={{
+            color: '#FFFFFF',
+            fontSize: 18,
+            fontWeight: '600',
+          }}
+        />
+
+        {/* Apple Sign In */}
+        {isAppleAvailable && (
+          <View style={{ 
+            opacity: isLoading ? 0.5 : 1,
+            width: '100%'
+          }}>
+            {isLoading ? (
+              <View
+                style={{
+                  width: '100%',
+                  height: 55,
+                  backgroundColor: 'black',
+                  borderRadius: 36,
+                }}
+              />
+            ) : (
+          <AppleAuthentication.AppleAuthenticationButton
+            buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+            buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+            cornerRadius={36}
+            style={styles.appleButton}
+            onPress={handleAppleSignUp}
+          />
+            )}
+          </View>
+        )}
+      </View>
+      </Animated.View>
+    </TouchableWithoutFeedback>
   );
 }
 
@@ -354,5 +349,6 @@ const styles = StyleSheet.create({
   appleButton: {
     height: 55,
     width: '100%',
+    marginTop: 24,
   }
 }); 

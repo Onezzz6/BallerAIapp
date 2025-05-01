@@ -56,9 +56,7 @@ export default function MotivationReasonScreen() {
             paddingHorizontal: 24,
             paddingTop: 80,
             paddingBottom: 24,
-            justifyContent: 'flex-start',
-            alignItems: 'flex-start',
-            gap: 48,
+            gap: 12,
           }}>
             <Text style={{
               fontSize: 28,
@@ -74,7 +72,8 @@ export default function MotivationReasonScreen() {
               color: '#000000',
               fontWeight: '500',
               textAlign: 'left',
-            }}>
+              marginTop: 32,
+            }} allowFontScaling={false}>
               Tell me briefly, what drives you on this journey?
             </Text>
 
