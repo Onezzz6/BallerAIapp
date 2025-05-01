@@ -62,8 +62,14 @@ export default function TrainingPlansScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Pressable onPress={handleBack} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#000" />
+          <Pressable
+            onPress={handleBack}
+            style={({ pressed }) => [
+              styles.backButton,
+              pressed && { opacity: 0.6 }
+            ]}
+          >
+            <Ionicons name="chevron-back" size={24} color="#000" />
           </Pressable>
           <Text style={styles.title}>Your Training Plans</Text>
         </View>
@@ -78,7 +84,13 @@ export default function TrainingPlansScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Pressable onPress={handleBack} style={styles.backButton}>
+          <Pressable
+              onPress={handleBack}
+              style={({ pressed }) => [
+                styles.backButton,
+                pressed && { opacity: 0.6 }
+              ]}
+            >
             <Ionicons name="chevron-back" size={24} color="#000000" />
           </Pressable>
           <Text style={styles.title}>Your Training Plans</Text>
@@ -93,7 +105,13 @@ export default function TrainingPlansScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={handleBack} style={styles.backButton}>
+        <Pressable
+          onPress={handleBack}
+          style={({ pressed }) => [
+            styles.backButton,
+            pressed && { opacity: 0.6 }
+          ]}
+          >
           <Ionicons name="chevron-back" size={24} color="#000000" />
         </Pressable>
         <Text style={styles.title}>Your Training Plans</Text>
@@ -105,9 +123,10 @@ export default function TrainingPlansScreen() {
           {plans.map((plan) => (
             <Pressable
               key={plan.id}
-              style={[
+              style={({ pressed }) => [
                 styles.planButton,
-                selectedPlanId === plan.id && styles.selectedPlanButton
+                selectedPlanId === plan.id && styles.selectedPlanButton,
+                pressed && { opacity: 0.8 }
               ]}
               onPress={() => setSelectedPlanId(plan.id)}
             >

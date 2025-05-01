@@ -504,7 +504,11 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal, isPhotoAna
                   onChangeText={(text) => setManualEntry(prev => ({ ...prev, fats: text }))}
                 />
                 <Pressable
-                  style={[styles.logMealButton, { marginTop: 16 }]}
+                  style={({ pressed }) => [
+                    styles.logMealButton,
+                    { marginTop: 16 },
+                    pressed && { opacity: 0.8 }
+                  ]}
                   onPress={handleManualSubmit}
                 >
                   <Text style={styles.logMealText}>Log Meal</Text>
@@ -530,7 +534,10 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal, isPhotoAna
 
                 <View style={styles.methodSelection}>
                   <Pressable
-                    style={styles.methodButton}
+                    style={({ pressed }) => [
+                      styles.methodButton,
+                      pressed && { opacity: 0.8 }
+                    ]}
                     onPress={() => setMethod('manual')}
                   >
                     <Ionicons name="create-outline" size={32} color="#000000" />
@@ -538,9 +545,10 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal, isPhotoAna
                   </Pressable>
 
                   <Pressable
-                    style={[
+                    style={({ pressed }) => [
                       styles.methodButton,
-                      isPhotoAnalysisDisabled && styles.disabledButton
+                      isPhotoAnalysisDisabled && styles.disabledButton,
+                      pressed && { opacity: 0.8 }
                     ]}
                     onPress={() => !isPhotoAnalysisDisabled && handleGallerySelect()}
                     disabled={isPhotoAnalysisDisabled}
@@ -550,7 +558,7 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal, isPhotoAna
                   </Pressable>
 
                   <Pressable
-                    style={[
+                    style={({ pressed }) => [
                       styles.methodButton,
                       isPhotoAnalysisDisabled && styles.disabledButton
                     ]}
@@ -609,7 +617,10 @@ function LoggedMeals({ meals, onDelete }: { meals: any[]; onDelete: (mealId: str
             </View>
           </View>
           <Pressable
-            style={styles.deleteButton}
+            style={({ pressed }) => [
+              styles.deleteButton,
+              pressed && { opacity: 0.8 }
+            ]}
             onPress={() => onDelete(meal.id)}
           >
             <Ionicons name="trash-outline" size={24} color="#FF6B6B" />
@@ -2387,10 +2398,11 @@ export default function NutritionScreen() {
         </View>
 
         <View style={styles.mealsSection}>
-          <Pressable
-            style={[
+          <Pressable  
+            style={({ pressed }) => [
               styles.logMealButton,
-              !canLogMeal() && styles.disabledButton
+              !canLogMeal() && styles.disabledButton,
+              pressed && { opacity: 0.8 }
             ]}
             onPress={() => {
               if (canLogMeal()) {

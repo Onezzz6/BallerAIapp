@@ -943,7 +943,10 @@ IMPORTANT USAGE GUIDELINES:
                     <Text style={styles.submittedText}>Submitted</Text>
                     {isToday && (
                       <Pressable
-                        style={styles.editButton}
+                        style={({ pressed }) => [
+                          styles.editButton,
+                          pressed && { opacity: 0.8 }
+                        ]}
                         onPress={() => setIsEditing(true)}
                       >
                         <Ionicons name="create-outline" size={24} color="#FFFFFF" />
@@ -1051,7 +1054,11 @@ IMPORTANT USAGE GUIDELINES:
                   
                   {/* Submit button inside the Recovery Query card */}
                   <Pressable 
-                    style={[styles.submitButton, {marginTop: 16}]}
+                    style={({ pressed }) => [
+                      styles.submitButton,
+                      {marginTop: 16},
+                      pressed && { opacity: 0.8 }
+                    ]}
                     onPress={handleSubmit}
                   >
                     <Text style={styles.submitButtonText}>
@@ -1087,7 +1094,10 @@ IMPORTANT USAGE GUIDELINES:
                 <View style={styles.submittedHeader}>
                   <Text style={styles.submittedText}>Confirmed</Text>
                   <Pressable
-                    style={styles.editButton}
+                    style={({ pressed }) => [
+                      styles.editButton,
+                      pressed && { opacity: 0.8 }
+                    ]}
                     onPress={() => setToolsConfirmed(false)}
                   >
                     <Ionicons name="create-outline" size={24} color="#FFFFFF" />
@@ -1175,8 +1185,11 @@ IMPORTANT USAGE GUIDELINES:
               
               {!planExists && !toolsConfirmed && isToday && (
                 <Pressable 
-                  style={styles.submitButton}
-                  onPress={handleConfirmTools}
+                style={({ pressed }) => [
+                  styles.submitButton,
+                  pressed && { opacity: 0.8 }
+                ]}
+              onPress={handleConfirmTools}
                 >
                   <Text style={styles.submitButtonText}>
                     Confirm Tools
@@ -1228,7 +1241,10 @@ IMPORTANT USAGE GUIDELINES:
                 <View style={styles.submittedHeader}>
                   <Text style={styles.submittedText}>Confirmed</Text>
                   <Pressable
-                    style={styles.editButton}
+                    style={({ pressed }) => [
+                      styles.editButton,
+                      pressed && { opacity: 0.8 }
+                    ]}
                     onPress={() => setTimeConfirmed(false)}
                   >
                     <Ionicons name="create-outline" size={24} color="#FFFFFF" />
@@ -1250,10 +1266,11 @@ IMPORTANT USAGE GUIDELINES:
               <View style={styles.timeOptionsContainer}>
                 <View style={styles.timeOptionsRow}>
                   <Pressable 
-                    style={[
+                    style={({ pressed }) => [
                       styles.timeOptionButton,
                       selectedTime === '15 mins' && styles.timeOptionSelected,
-                      (planExists || (timeConfirmed && !isToday) || !isToday) && styles.timeOptionDisabled
+                      (planExists || (timeConfirmed && !isToday) || !isToday) && styles.timeOptionDisabled,
+                      pressed && { opacity: 0.8 }
                     ]}
                     onPress={() => isToday ? setSelectedTime('15 mins') : null}
                     disabled={planExists || (timeConfirmed && !isEditing) || !isToday}
@@ -1281,10 +1298,11 @@ IMPORTANT USAGE GUIDELINES:
                   </Pressable>
                   
                   <Pressable 
-                    style={[
+                    style={({ pressed }) => [
                       styles.timeOptionButton,
                       selectedTime === '30 mins' && styles.timeOptionSelected,
-                      (planExists || (timeConfirmed && !isToday) || !isToday) && styles.timeOptionDisabled
+                      (planExists || (timeConfirmed && !isToday) || !isToday) && styles.timeOptionDisabled,
+                      pressed && { opacity: 0.8 }
                     ]}
                     onPress={() => isToday ? setSelectedTime('30 mins') : null}
                     disabled={planExists || (timeConfirmed && !isEditing) || !isToday}
@@ -1314,10 +1332,11 @@ IMPORTANT USAGE GUIDELINES:
                 
                 <View style={styles.timeOptionsRow}>
                   <Pressable 
-                    style={[
+                    style={({ pressed }) => [
                       styles.timeOptionButton,
                       selectedTime === '45 mins' && styles.timeOptionSelected,
-                      (planExists || (timeConfirmed && !isToday) || !isToday) && styles.timeOptionDisabled
+                      (planExists || (timeConfirmed && !isToday) || !isToday) && styles.timeOptionDisabled,
+                      pressed && { opacity: 0.8 }
                     ]}
                     onPress={() => isToday ? setSelectedTime('45 mins') : null}
                     disabled={planExists || (timeConfirmed && !isEditing) || !isToday}
@@ -1345,10 +1364,11 @@ IMPORTANT USAGE GUIDELINES:
                   </Pressable>
                   
                   <Pressable 
-                    style={[
+                    style={({ pressed }) => [
                       styles.timeOptionButton,
                       selectedTime === '1h+' && styles.timeOptionSelected,
-                      (planExists || (timeConfirmed && !isToday) || !isToday) && styles.timeOptionDisabled
+                      (planExists || (timeConfirmed && !isToday) || !isToday) && styles.timeOptionDisabled,
+                      pressed && { opacity: 0.8 }
                     ]}
                     onPress={() => isToday ? setSelectedTime('1h+') : null}
                     disabled={planExists || (timeConfirmed && !isEditing) || !isToday}
@@ -1379,9 +1399,10 @@ IMPORTANT USAGE GUIDELINES:
               
               {!planExists && !timeConfirmed && isToday && (
                 <Pressable 
-                  style={[
+                  style={({ pressed }) => [
                     styles.submitButton,
-                    !selectedTime && styles.submitButtonDisabled
+                    !selectedTime && styles.submitButtonDisabled,
+                    pressed && { opacity: 0.8 }
                   ]}
                   onPress={handleConfirmTime}
                   disabled={!selectedTime}
@@ -1419,7 +1440,7 @@ IMPORTANT USAGE GUIDELINES:
               {!planExists ? (
                 <>
                   <Pressable
-                    style={[
+                    style={({ pressed }) => [
                       styles.generateButton, 
                       (loading || !recoveryData.submitted || !toolsConfirmed || !timeConfirmed || !isToday) && styles.generateButtonDisabled
                     ]}
@@ -1454,7 +1475,7 @@ IMPORTANT USAGE GUIDELINES:
                 </>
               ) : (
                 <Pressable
-                  style={[
+                  style={({ pressed }) => [
                     styles.generateButton, 
                     styles.generateButtonDisabled
                   ]}
@@ -1515,9 +1536,10 @@ IMPORTANT USAGE GUIDELINES:
                     )}
                     
                     <Pressable
-                      style={[
+                      style={({ pressed }) => [
                         styles.completionButton,
-                        planCompleted ? styles.incompleteButton : styles.completeButton
+                        planCompleted ? styles.incompleteButton : styles.completeButton,
+                        pressed && { opacity: 0.8 }
                       ]}
                       onPress={togglePlanCompletion}
                     >
@@ -1703,10 +1725,11 @@ function RecoveryToolButton({
   disabled?: boolean;
 }) {
   return (
-    <Pressable
-      style={[
+    <Pressable 
+      style={({ pressed }) => [
         styles.toolButton,
         selected && styles.toolButtonSelected,
+        pressed && { opacity: 0.8 }
       ]}
       onPress={disabled ? undefined : onPress}
       disabled={disabled}

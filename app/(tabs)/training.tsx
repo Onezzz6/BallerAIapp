@@ -821,11 +821,12 @@ Focus on recovery today`;
               
               <View style={styles.optionsContainer}>
                 {focusOptions.map((focus) => (
-                  <Pressable
+                  <Pressable  
                     key={focus}
-                    style={[
+                    style={({ pressed }) => [
                       styles.option,
-                      selectedFocus === focus && styles.selectedOption
+                      selectedFocus === focus && styles.selectedOption,
+                      pressed && { opacity: 0.8 }
                     ]}
                     onPress={() => setSelectedFocus(focus)}
                     disabled={!canGeneratePlan}
@@ -846,11 +847,12 @@ Focus on recovery today`;
               <Text style={styles.subtitle}>Do you have access to a gym?</Text>
               <View style={styles.optionsContainer}>
                 {gymOptions.map((option) => (
-                  <Pressable
+                  <Pressable  
                     key={option}
-                    style={[
+                    style={({ pressed }) => [
                       styles.option,
-                      gymAccess === option && styles.selectedOption
+                      gymAccess === option && styles.selectedOption,
+                      pressed && { opacity: 0.8 }
                     ]}
                     onPress={() => setGymAccess(option)}
                     disabled={!canGeneratePlan}
@@ -878,7 +880,10 @@ Focus on recovery today`;
                 <Text style={[styles.sectionTitle, { flex: 1 }, { color: canGeneratePlan ? '#000000' : '#666666' }]}>Team Training <Text style={styles.subtitleInline}>(mins/day)</Text></Text>
                 {canGeneratePlan && scheduleConfirmed && (
                   <Pressable
-                    style={styles.editButton}
+                    style={({ pressed }) => [
+                      styles.editButton,
+                      pressed && { opacity: 0.8 }
+                    ]}
                     onPress={editSchedule}
                   >
                     <Ionicons name="create-outline" size={18} color="#FFFFFF" />
@@ -893,10 +898,11 @@ Focus on recovery today`;
                   <Text style={[styles.dayTitle, { color: canGeneratePlan ? '#000000' : '#666666' }]}>{day.toUpperCase()}</Text>
                   <View style={styles.dayOptions}>
                     <Pressable
-                      style={[
+                      style={({ pressed }) => [
                         styles.dayOption,
                         daySchedule.type === 'off' && styles.selectedDayOption,
-                        scheduleConfirmed && styles.disabledOption
+                        scheduleConfirmed && styles.disabledOption,
+                        pressed && { opacity: 0.8 }
                       ]}
                       onPress={() => updateSchedule(day, 'off')}
                       disabled={scheduleConfirmed || !canGeneratePlan}
@@ -904,10 +910,11 @@ Focus on recovery today`;
                       <Text style={[styles.dayOptionText, { color: canGeneratePlan ? '#000000' : '#666666' }]}>Off</Text>
                     </Pressable>
                     <Pressable
-                      style={[
+                      style={({ pressed }) => [
                         styles.dayOption,
                         daySchedule.type === 'game' && styles.selectedGameOption,
-                        scheduleConfirmed && styles.disabledOption
+                        scheduleConfirmed && styles.disabledOption,
+                        pressed && { opacity: 0.8 }
                       ]}
                       onPress={() => updateSchedule(day, 'game')}
                       disabled={scheduleConfirmed || !canGeneratePlan}
@@ -915,10 +922,11 @@ Focus on recovery today`;
                       <Text style={[styles.dayOptionText, { color: canGeneratePlan ? '#000000' : '#666666' }]}>Game</Text>
                     </Pressable>
                     <Pressable
-                      style={[
+                      style={({ pressed }) => [
                         styles.dayOption,
                         daySchedule.type === 'training' && styles.selectedTrainingOption,
-                        scheduleConfirmed && styles.disabledOption
+                        scheduleConfirmed && styles.disabledOption,
+                        pressed && { opacity: 0.8 }
                       ]}
                       onPress={() => updateSchedule(day, 'training')}
                       disabled={scheduleConfirmed || !canGeneratePlan}
@@ -960,9 +968,10 @@ Focus on recovery today`;
 
             <View style={styles.buttonContainer}>
               <Pressable
-                style={[
+                style={({ pressed }) => [
                   styles.generateButton,
-                  (loading || !scheduleConfirmed || !selectedFocus || !gymAccess || !canGeneratePlan) && styles.generateButtonDisabled
+                  (loading || !scheduleConfirmed || !selectedFocus || !gymAccess || !canGeneratePlan) && styles.generateButtonDisabled,
+                  pressed && { opacity: 0.8 }
                 ]}
                 onPress={handleGeneratePlan}
                 disabled={loading || !scheduleConfirmed || !selectedFocus || !gymAccess || !canGeneratePlan}
@@ -994,9 +1003,10 @@ Focus on recovery today`;
               )}
 
               <Pressable
-                style={[
+                style={({ pressed }) =>   [
                   styles.plansButton,
-                  !plans.length && styles.plansButtonDisabled
+                  !plans.length && styles.plansButtonDisabled,
+                  pressed && { opacity: 0.6 }
                 ]}
                 onPress={() => plans.length > 0 && handleGoToPlans()}
                 disabled={!plans.length}

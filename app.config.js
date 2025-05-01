@@ -27,7 +27,7 @@ export default {
     },
     android: {
       package: "com.ballerai.app",
-      versionCode: 15,
+      versionCode: 16,
       googleServicesFile: "./google-services.json",
       adaptiveIcon: {
         foregroundImage: "./assets/images/adaptive-icon.png",
@@ -41,7 +41,7 @@ export default {
     },
     ios: {
       bundleIdentifier: "com.ballerbizoy.ballerai",
-      buildNumber: "15",
+      buildNumber: "16",
       googleServicesFile: "./GoogleService-Info.plist",
       supportsTablet: true,
       infoPlist: {
