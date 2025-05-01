@@ -2473,7 +2473,7 @@ export default function NutritionScreen() {
             />
             <Text style={styles.loadingTitle}>Analyzing Image</Text>
             <Text style={styles.loadingText}>
-              Please don't close the app while I analyze your meal
+              Please don't close the app while we analyze your meal.
             </Text>
             <ActivityIndicator size="large" color="#4064F6" />
           </Animated.View>
@@ -2497,7 +2497,7 @@ export default function NutritionScreen() {
             />
             <Text style={styles.loadingTitle}>Logging Meal</Text>
             <Text style={styles.loadingText}>
-              Please don't close the app while I log your meal
+              Please don't close the app while we log your meal.
             </Text>
             <ActivityIndicator size="large" color="#4064F6" />
           </Animated.View>

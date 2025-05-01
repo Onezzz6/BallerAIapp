@@ -77,7 +77,7 @@ export default function HomeScreen() {
   const showInfoAlertRecovery = () => {
     Alert.alert(
       "Recovery Score",
-      "Your recovery score shows how consistently and well you're performing recovery habits like quality sleep, good nutrition, and completing your recovery plans.\n\nThis score helps you visualize your overall consistency with recovery practices and identify areas where you might have room to improve.\n\nImportant: This score doesn't represent your training readiness, as it doesn't take into account your training load. It simply reflects how good your recovery habits have been over the past 7 days.",
+      "Your recovery score shows how consistently and well you're performing recovery habits like quality sleep, good nutrition, and completing your recovery plans.\n\nThis score helps you visualize your overall consistency with recovery practices and identify areas where you might have room to improve.\n\nImportant: This score doesn't represent your training readiness, as it doesn't take into account your training load. It simply reflects your recovery habits over the past 7 days.",
       [{ text: "OK" }]
     );
   };  
@@ -1664,11 +1664,11 @@ export default function HomeScreen() {
               }}>
                 {readinessScore > 0 
                   ? readinessScore >= 70 
-                    ? 'Your body is ready\nfor high intensity training!'
+                    ? 'Your body is ready for high intensity training!'
                     : readinessScore >= 40
-                    ? 'Your body needs\nmoderate intensity today.'
-                    : 'Focus on recovery\ntoday, take it easy.'
-                  : 'Submit recovery data\nto see your score'
+                    ? 'Your body needs moderate intensity today.'
+                    : 'Focus on recovery today, take it easy.'
+                  : 'Submit recovery data to see your score'
                 }
               </Text>
             </View>
@@ -1788,11 +1788,11 @@ export default function HomeScreen() {
               }}>
                 {nutritionAdherence > 0 
                   ? nutritionAdherence >= 80
-                    ? 'Excellent nutrition habits\nthis week!'
+                    ? 'Excellent nutrition habits this week!'
                     : nutritionAdherence >= 50
-                    ? 'Good nutrition habits\nthis week!'
-                    : 'Keep working on your\nnutrition goals!'
-                  : 'Start logging meals\nto improve your score'
+                    ? 'Good nutrition habits this week!'
+                    : 'Keep working on your nutrition goals!'
+                  : 'Start logging meals to improve your score'
                 }
               </Text>
             </View>
@@ -1888,11 +1888,11 @@ export default function HomeScreen() {
               }}>
                 {recoveryAdherence > 0 
                   ? recoveryAdherence >= 80
-                    ? 'Excellent recovery habits\nthis week!'
+                    ? 'Excellent recovery habits this week!'
                     : recoveryAdherence >= 50
-                    ? 'Good recovery routine.\nKeep it consistent!'
-                    : 'Focus on improving your\nsleep and recovery plans!'
-                  : 'Submit recovery data\nto see your score'
+                    ? 'Good recovery routine. Keep it consistent!'
+                    : 'Focus on improving your sleep and recovery plans!'
+                  : 'Submit recovery data to see your score'
                 }
               </Text>
             </View>
@@ -1900,7 +1900,7 @@ export default function HomeScreen() {
 
           {/* Ask AI Section */}
           <View style={{
-            backgroundColor: '#4A3AFF',
+            backgroundColor: '#4064F6',
             borderRadius: 24,
             padding: 24,
             flexDirection: 'row',
@@ -1931,13 +1931,13 @@ export default function HomeScreen() {
                   paddingVertical: 10,
                   borderRadius: 32,
                   alignSelf: 'flex-start',
-                  opacity: pressed ? 0.9 : 1,
+                  opacity: pressed ? 0.8 : 1,
                 })}
               >
                 <Text style={{
                   fontSize: 16,
                   fontWeight: '600',
-                  color: '#4A3AFF',
+                  color: '#4064F6',
                 }}>
                   {showQuestion ? 'Close' : 'Ask Ballzy'}
                 </Text>
@@ -2018,7 +2018,7 @@ export default function HomeScreen() {
                           <Ionicons
                             name="football"
                             size={32}
-                            color="#4A3AFF"
+                            color="#4064F6"
                             style={{
                               backgroundColor: '#F5F5FF',
                               padding: 8,
@@ -2089,11 +2089,11 @@ export default function HomeScreen() {
                 onPress={askAiQuestion}
                 disabled={!question.trim() || questionCount >= maxQuestions || isAiLoading}
                 style={({ pressed }) => ({
-                  backgroundColor: !question.trim() || questionCount >= maxQuestions ? '#CCCCCC' : pressed ? '#3A2AEE' : '#4A3AFF',
+                  backgroundColor: !question.trim() || questionCount >= maxQuestions ? '#CCCCCC' : '#4064F6',
                   paddingVertical: 12,
                   borderRadius: 36,
                   alignItems: 'center',
-                  opacity: questionCount >= maxQuestions ? 0.6 : pressed ? 0.9 : 1,
+                  opacity: questionCount >= maxQuestions ? 0.5 : pressed ? 0.8 : 1,
                 })}
               >
                 <Text style={{
@@ -2160,7 +2160,7 @@ export default function HomeScreen() {
                 <Pressable
                   onPress={() => setSelectedDate(null)}
                   style={({ pressed }) => ({
-                    opacity: pressed ? 0.7 : 1,
+                    opacity: pressed ? 0.8 : 1,
                   })}
                 >
                   <Text style={{

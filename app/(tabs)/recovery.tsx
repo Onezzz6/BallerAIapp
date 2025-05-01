@@ -1579,7 +1579,7 @@ IMPORTANT USAGE GUIDELINES:
             />
             <Text style={styles.loadingTitle}>Generating Plan</Text>
             <Text style={styles.loadingText}>
-              Please don't close the app while I generate a recovery plan for you.
+              Please don't close the app while we generate a recovery plan for you.
             </Text>
             <ActivityIndicator size="large" color="#4064F6" />
           </Animated.View>

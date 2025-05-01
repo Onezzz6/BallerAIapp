@@ -523,7 +523,6 @@ export default function WelcomeScreen() {
                   disabled={isLoading}
                   buttonStyle={{
                     backgroundColor: '#4064F6',
-                    opacity: isLoading ? 0.5 : 1,
                     paddingHorizontal: 16,
                     paddingVertical: 10,
                     height: 'auto',

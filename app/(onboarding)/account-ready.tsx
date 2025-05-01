@@ -44,7 +44,7 @@ export default function AccountReadyScreen() {
           color: '#666666',
           textAlign: 'center',
         }}>
-          Remember the more you use the app, the better it will get!
+          Remember, the more you use the app, the better it will get!
         </Text>
 
         <Button 
