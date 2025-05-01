@@ -173,7 +173,9 @@ function CircularProgress({ progress }: { progress: number }) {
 }
 
 function CalorieProgress({ eaten, burned, goal }: { eaten: number; burned: number; goal: number }) {
-  const remaining = goal - eaten;
+  // Ensure remaining never goes below 0
+  const remaining = Math.max(goal - eaten, 0);
+  // Progress is already capped at 1 (100%)
   const progress = Math.min(Math.max(eaten / goal, 0), 1);
 
   return (
