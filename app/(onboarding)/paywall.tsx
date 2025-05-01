@@ -226,82 +226,83 @@ const PaywallScreen = () => {
   };
 
   const loadProducts = async () => {
-    try {
-      const productIds = Object.values(PRODUCT_IDS);
-      console.log('IAP Debug Info:', {
-        environment: __DEV__ ? 'Development' : 'Production',
-        platform: Platform.OS,
-        bundleId: Constants.expoConfig?.ios?.bundleIdentifier,
-        productIds
-      });
-      
-      // Add a delay to ensure store connection is ready
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      const { responseCode, results, errorCode } = await InAppPurchases.getProductsAsync(productIds);
-      
-      console.log('Store Response Details:', {
-        responseCode,
-        errorCode,
-        productsCount: results?.length || 0,
-        products: results?.map(p => ({
-          id: p.productId,
-          price: p.price,
-          currency: p.priceCurrencyCode,
-          description: p.description
-        }))
-      });
-      
-      if (responseCode === InAppPurchases.IAPResponseCode.OK) {
-        if (!results || results.length === 0) {
-          console.error('No products returned from store. This might indicate:', [
-            '- Product IDs not matching App Store Connect',
-            '- Products not active in App Store Connect',
-            '- Sandbox tester not properly configured',
-            '- App Store Connect setup incomplete'
-          ].join('\n'));
-          
-          Alert.alert(
-            'Error',
-            Platform.OS === 'ios' 
-              ? 'Unable to load subscription options. Please ensure you are signed in and have an active internet connection.'
-              : 'Unable to load subscription options. Please ensure you are signed in with a test account and have an active internet connection.'
-          );
-          setIsLoading(false); // Set loading to false even if there's an error
-        } else {
-          console.log('Products loaded successfully:', results.map(p => ({
+    const productIds = Object.values(PRODUCT_IDS);
+    console.log('IAP Debug Info:', {
+      environment: __DEV__ ? 'Development' : 'Production',
+      platform: Platform.OS,
+      bundleId: Constants.expoConfig?.ios?.bundleIdentifier,
+      productIds
+    });
+    
+    let finalResults: InAppPurchases.IAPItemDetails[] = [];
+    let success = false;
+    let retryCount = 3;
+
+    for (let i = 0; i < retryCount; i++) {
+      try {
+        // Add a delay to ensure store connection is ready
+        let delay = 2000 + (i * 2000);
+        await new Promise(resolve => setTimeout(resolve, delay));
+    
+        const { responseCode, results, errorCode } = await InAppPurchases.getProductsAsync(productIds);
+
+        console.log('Store Response Details:', {
+          responseCode,
+          errorCode,
+          productsCount: results?.length || 0,
+          products: results?.map(p => ({
             id: p.productId,
             price: p.price,
-            currency: p.priceCurrencyCode
-          })));
-          setProducts(results);
-          setIsLoading(false); // Set loading to false when products are loaded
+            currency: p.priceCurrencyCode,
+            description: p.description
+          }))
+        });
+        
+        if (responseCode === InAppPurchases.IAPResponseCode.OK) {
+          if (results && results.length > 0) {
+            finalResults = results;
+            success = true;
+            break;
+          }
         }
-      } else {
-        throw new Error(`Store error: ${responseCode}${errorCode ? `, Error code: ${errorCode}` : ''}`);
+      } catch (error: any) {
+        console.log('Product loading error:', {
+          message: error.message,
+          code: error?.code,
+          name: error?.name,
+          stack: error?.stack
+        });
       }
-    } catch (error: any) {
-      console.error('Product loading error:', {
-        message: error.message,
-        code: error?.code,
-        name: error?.name,
-        stack: error?.stack
-      });
+    }
+
+    if (!success) {
+      console.log('No products returned from store. This might indicate:', [
+        '- Product IDs not matching App Store Connect',
+        '- Products not active in App Store Connect',
+        '- Apple ID not logged in',
+        '- App Store Connect setup incomplete'
+      ].join('\n'));
       
       Alert.alert(
         'Error',
-        Platform.OS === 'ios'
-          ? 'Unable to connect to the App Store. Please ensure you are signed in and have an active internet connection.'
-          : 'Unable to connect to the Play Store. Please ensure you are signed in and have an active internet connection.'
+        Platform.OS === 'ios' 
+          ? 'Unable to load subscription options. Please ensure you are signed in and have an active internet connection.'
+          : 'Unable to load subscription options. Please ensure you are signed in with a test account and have an active internet connection.'
       );
-      setIsLoading(false); // Set loading to false when there's an error
+      setIsLoading(false); // Set loading to false even if there's an error
+    } else {
+      console.log('Products loaded successfully:', finalResults.map(p => ({
+        id: p.productId,
+        price: p.price,
+        currency: p.priceCurrencyCode
+      })));
+      setProducts(finalResults);
     }
+    setIsLoading(false); // Set loading to false when there's an error
   };
 
   // Update initialization
   useEffect(() => {
-    let isMounted = true;
-    
     const initialize = async () => {
       try {
         if (!isIAPInitialized.current) {
@@ -322,46 +323,44 @@ const PaywallScreen = () => {
             }
           }
           
-          if (isMounted && !purchaseListenerSet.current) {
+          if (!purchaseListenerSet.current) {
             InAppPurchases.setPurchaseListener(purchaseListener);
             purchaseListenerSet.current = true;
             console.log('Purchase listener setup complete');
           }
           
           isIAPInitialized.current = true;
-          if (isMounted) {
-            await loadProducts();
+          await loadProducts();
+          
+          // Pre-check subscription status during loading phase
+          // This prevents checks during purchase flow
+          try {
+            console.log('Pre-checking subscription status...');
+            // Use the new shared service instead
+            const existingSubscription = await subscriptionCheck.checkExistingSubscriptions(
+              user?.uid || null, 
+              isIAPInitialized.current
+            );
             
-            // Pre-check subscription status during loading phase
-            // This prevents checks during purchase flow
-            try {
-              console.log('Pre-checking subscription status...');
-              // Use the new shared service instead
-              const existingSubscription = await subscriptionCheck.checkExistingSubscriptions(
-                user?.uid || null, 
-                isIAPInitialized.current
-              );
+            if (existingSubscription) {
+              cachedSubscriptionCheck.current = existingSubscription;
+              console.log('Found existing subscription during initialization:', existingSubscription.source);
               
-              if (existingSubscription) {
-                cachedSubscriptionCheck.current = existingSubscription;
-                console.log('Found existing subscription during initialization:', existingSubscription.source);
-                
-                /*// Update UI state with subscription info
-                if (existingSubscription.source === 'firebase' && user) {
-                  const firebaseSubscription = await subscriptionService.getSubscriptionData(user.uid);
-                  if (firebaseSubscription && firebaseSubscription.isActive) {
-                    setSubscriptionData(firebaseSubscription);
-                  }
-                }*/
+              /*// Update UI state with subscription info
+              if (existingSubscription.source === 'firebase' && user) {
+                const firebaseSubscription = await subscriptionService.getSubscriptionData(user.uid);
+                if (firebaseSubscription && firebaseSubscription.isActive) {
+                  setSubscriptionData(firebaseSubscription);
+                }
+              }*/
 
-                router.replace('/(tabs)/home');
-              } else {
-                console.log('No active subscription found during initialization');
-              }
-            } catch (subError) {
-              console.error('Error pre-checking subscription:', subError);
-              // Fail silently - we'll just do the check during purchase if needed
+              router.replace('/(tabs)/home');
+            } else {
+              console.log('No active subscription found during initialization');
             }
+          } catch (subError) {
+            console.error('Error pre-checking subscription:', subError);
+            // Fail silently - we'll just do the check during purchase if needed
           }
         }
       } catch (error: any) {
@@ -372,33 +371,9 @@ const PaywallScreen = () => {
           stack: error?.stack,
           environment: __DEV__ ? 'Development' : 'Production'
         });
-        
-        /*if (error.code === 'ERR_IN_APP_PURCHASES_CONNECTION' && isMounted) {
-          // If we get a connection error, try to recover by reconnecting
-          try {
-            console.log('Attempting recovery after connection error...');
-            await InAppPurchases.connectAsync();
-            
-            if (!purchaseListenerSet.current) {
-              InAppPurchases.setPurchaseListener(purchaseListener);
-              purchaseListenerSet.current = true;
-            }
-            
-            if (isMounted) {
-              await loadProducts();
-            }
-          } catch (retryError) {
-            console.error('Recovery attempt failed:', retryError);
-            if (isMounted) {
-              Alert.alert(
-                'Error',
-                Platform.OS === 'ios'
-                  ? 'Unable to connect to the App Store. Please ensure you are signed in and have an active internet connection.'
-                  : 'Unable to connect to the Play Store. Please ensure you are signed in and have an active internet connection.'
-              );
-            }
-          }
-        }*/
+
+        purchaseListenerSet.current = false;
+        await new Promise(resolve => setTimeout(resolve, 5000));
       } finally {
         // Ensure loading state is updated even if there are errors
         setIsLoading(false);
@@ -410,8 +385,7 @@ const PaywallScreen = () => {
 
     // Cleanup function
     return () => {
-      /*isMounted = false;
-      console.log('Cleaning up IAP...');
+      /*console.log('Cleaning up IAP...');
       if (purchaseListenerSet.current) {
         InAppPurchases.setPurchaseListener(() => {});
         purchaseListenerSet.current = false;
