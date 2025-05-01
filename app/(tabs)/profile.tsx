@@ -59,14 +59,14 @@ export default function ProfileScreen() {
       <Button
         title="Cancel"
         onPress={() => setEditingField(null)}
-        buttonStyle={{ backgroundColor: '#666666', flex: 1 }}
+        buttonStyle={{ backgroundColor: '#666666', flex: 1, minWidth: 130 }}
         textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
         disabled={isSaving}
       />
       <Button
         title={isSaving ? "Saving..." : "Save"}
         onPress={onSave}
-        buttonStyle={{ backgroundColor: '#4064F6', flex: 1 }}
+        buttonStyle={{ backgroundColor: '#4064F6', flex: 1, minWidth: 130 }}
         textStyle={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600' }}
         disabled={isSaving}
       />
@@ -437,7 +437,7 @@ export default function ProfileScreen() {
                       <Picker.Item label="Goalkeeper" value="goalkeeper" />
                       <Picker.Item label="Defender" value="defender" />
                       <Picker.Item label="Midfielder" value="midfielder" />
-                      <Picker.Item label="Forward" value="forward" />
+                      <Picker.Item label="Attacker" value="forward" />
                     </Picker>
                   </View>
 
@@ -517,13 +517,13 @@ export default function ProfileScreen() {
                         <Text style={[
                           styles.optionText,
                           editValue === level.id && styles.selectedOptionText
-                        ]}>
+                        ]} allowFontScaling={false}>
                           {level.title}
                         </Text>
                         <Text style={[
                           styles.optionDescription,
                           editValue === level.id && styles.selectedOptionText
-                        ]}>
+                        ]} allowFontScaling={false}>
                           {level.description}
                         </Text>
                       </Pressable>

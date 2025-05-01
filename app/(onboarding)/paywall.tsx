@@ -236,7 +236,7 @@ const PaywallScreen = () => {
       });
       
       // Add a delay to ensure store connection is ready
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 3000));
       
       const { responseCode, results, errorCode } = await InAppPurchases.getProductsAsync(productIds);
       

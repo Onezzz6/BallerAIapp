@@ -238,7 +238,8 @@ export default function SignUpScreen() {
         {isAppleAvailable && (
           <View style={{ 
             opacity: isLoading ? 0.5 : 1,
-            width: '100%'
+            width: '100%',
+            marginTop: 24,
           }}>
             {isLoading ? (
               <View
@@ -349,6 +350,5 @@ const styles = StyleSheet.create({
   appleButton: {
     height: 55,
     width: '100%',
-    marginTop: 24,
   }
 }); 
