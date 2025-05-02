@@ -98,9 +98,16 @@ export const handleSubscriptionData = async (purchase: any, userId: string | nul
     
     if (userId) {
       // For logged-in users, use the subscription service
-      await subscriptionService.saveSubscriptionData(userId, purchase, expirationDate, isRenewing);
+      const result = await subscriptionService.saveSubscriptionData(userId, purchase, expirationDate, isRenewing);
+      if (result) {
+        console.log('Succesfully handled subscription data for user:', userId);
+      } else {
+        console.error('Failed to handle subscription data for user:', userId);
+      }
+      return result;
     }
     
+    console.log('Receipt validation success, but no user ID:', validationResult);
     return true;
   } catch (error) {
     console.error('Error handling subscription data:', error);
@@ -160,7 +167,7 @@ export const checkExistingSubscriptions = async (
           }
         }
       } catch (fbError) {
-        console.error('Error checking Firebase subscription:', fbError);
+        console.log('Error checking Firebase subscription:', fbError);
         // Continue to IAP check even if Firebase check fails
       }
       
