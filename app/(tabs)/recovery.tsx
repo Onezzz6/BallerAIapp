@@ -265,14 +265,14 @@ export default function RecoveryScreen() {
     }
     
     if (!timeConfirmed || !selectedTime) {
-      Alert.alert('Error', 'Please confirm how much time you have available.');
+      Alert.alert('Error', 'Please confirm the time you have available.');
       return;
     }
     
     // Warn user about not being able to edit data after generating a plan
     Alert.alert(
       'Confirm Plan Generation',
-      'Once you generate a recovery plan, you will no longer be able to edit this day\'s recovery data. Continue?',
+      'Once you generate a recovery plan, you will no longer be able to edit today\'s recovery data. Continue?',
       [
         {
           text: 'Cancel',
@@ -435,7 +435,7 @@ IMPORTANT USAGE GUIDELINES:
 
     } catch (error) {
       console.error('Error generating recovery plan:', error);
-      Alert.alert('Error', 'Failed to generate recovery plan. Please try again.');
+      Alert.alert('Error', 'Failed to generate a recovery plan. Please try again.');
     } finally {
       setLoading(false);
     }

@@ -2230,7 +2230,7 @@ export default function NutritionScreen() {
       // Handle timeout error specifically
       if (error.message && error.message.includes('timed out')) {
         Alert.alert(
-          'Analysis Timeout',
+          'Image Analysis Timeout',
           'The analysis is taking too long. Please try again with a smaller or clearer photo.'
         );
       } else {
@@ -2455,12 +2455,22 @@ export default function NutritionScreen() {
           }}
           onLogMeal={async (items) => {
             try {
-              await logMealToFirestore(items);
+              // Set a timeout to prevent the app from hanging indefinitely
+              const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Logging meal timed out. Please try again.')), 8000);
+              });
+              
+              // Race between the normal analysis and the timeout
+              await Promise.race([
+                logMealToFirestore(items),
+                timeoutPromise
+              ]);
             } catch (error) {
               console.error('Error logging meal:', error);
-              Alert.alert('Error', 'Failed to log meal. Please try again.');
+              Alert.alert('Error', 'Failed to log meal. Please check your network connection and try again.');
             } finally {
               setIsLoading(false);
+              setIsLoggingMeal(false);
             }
           }}
           isPhotoAnalysisDisabled={analysisLimitReached}

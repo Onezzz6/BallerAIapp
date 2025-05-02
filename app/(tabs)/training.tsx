@@ -677,7 +677,7 @@ Focus on recovery today`;
       router.push('/training-plans');
     } catch (error) {
       console.error('Error generating plan:', error);
-      Alert.alert('Error', 'Failed to generate training plan. Please try again.');
+      Alert.alert('Error', 'Failed to generate a training plan. Please try again.');
     } finally {
       setLoading(false);
     }

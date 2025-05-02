@@ -79,7 +79,7 @@ export default function SignUpScreen() {
       } else {
         Alert.alert(
           'Error',
-          'Failed to create an account. Please try again.'
+          'Failed to create an account. Please check your network connection and try again.'
         );
       }
     } finally {

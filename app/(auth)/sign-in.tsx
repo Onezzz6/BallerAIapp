@@ -19,7 +19,7 @@ export default function SignInScreen() {
     }
 
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters.');
+      Alert.alert('Error', 'Password must be at least 6 characters long.');
       return;
     }
 

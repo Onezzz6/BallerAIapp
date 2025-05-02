@@ -285,9 +285,7 @@ const PaywallScreen = () => {
       
       Alert.alert(
         'Error',
-        Platform.OS === 'ios' 
-          ? 'Unable to load subscription options. Please ensure you are signed in and have an active internet connection.'
-          : 'Unable to load subscription options. Please ensure you are signed in with a test account and have an active internet connection.'
+        'Unable to load subscription options. Please check your network connection, ensure you are signed in, and try again.'
       );
       setIsLoading(false); // Set loading to false even if there's an error
     } else {
@@ -467,12 +465,12 @@ const PaywallScreen = () => {
       if (error.code === 'ERR_IN_APP_PURCHASES_CONNECTION') {
         Alert.alert(
           'Error',
-          'Unable to connect to the App Store. Please make sure you are signed in to your Apple ID and have a valid payment method.'
+          'Unable to connect to the App Store. Please check your network connection, ensure you are signed in, and try again.'
         );
       } else {
         Alert.alert(
           'Error',
-          'Unable to start the purchase. Please try again.'
+          'Unable to start the purchase. Please check your network connection, ensure you are signed in, and try again.'
         );
       }
     }
@@ -516,11 +514,11 @@ const PaywallScreen = () => {
         }
         Alert.alert('No Purchases Found', 'No previous purchases corresponding to an active subscription were found to restore.');
       } else {
-        Alert.alert('Error', 'Failed to restore purchases. Please try again.');
+        Alert.alert('Error', 'Failed to restore purchases. Please check your network connection, ensure you are signed in, and try again.');
       }
     } catch (error) {
       console.error('Error restoring purchases:', error);
-      Alert.alert('Error', 'Failed to restore purchases. Please try again later.');
+      Alert.alert('Error', 'Failed to restore purchases. Please check your network connection, ensure you are signed in, and try again.');
     } finally {
       setIsLoading(false);
     }

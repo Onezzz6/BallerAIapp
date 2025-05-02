@@ -227,8 +227,19 @@ export default function ProfileScreen() {
       const userRef = doc(db, 'users', user.uid);
       
       console.log('📝 Attempting to update Firebase document...');
-      // Update the specific field in Firebase immediately
-      await updateDoc(userRef, { [field]: value });
+
+      // Set a timeout to prevent the app from hanging indefinitely
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Firebase update timed out. Please try again.')), 8000);
+      });
+      
+      // Race between the normal analysis and the timeout
+      await Promise.race([
+        // Update the specific field in Firebase immediately
+        updateDoc(userRef, { [field]: value }),
+        timeoutPromise
+      ]);
+
       console.log('✅ Successfully updated Firebase document');
       
       console.log('🔄 Updating local state...');
@@ -245,8 +256,8 @@ export default function ProfileScreen() {
       console.log('✅ Update process completed successfully');
       setEditingField(null);
     } catch (error) {
-      console.error('❌ Error updating field:', error);
-      alert('Failed to update. Please try again.');
+      console.log('❌ Error updating field:', error);
+      Alert.alert('Error', 'Failed to update profile. Please check your network connection and try again.');
     } finally {
       setIsSaving(false);
       console.log('🏁 Update process finished');

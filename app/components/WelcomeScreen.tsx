@@ -215,7 +215,7 @@ export default function WelcomeScreen() {
         'Check your email for instructions to reset your password.'
       );
     } catch (error: any) {
-      let errorMessage = 'Failed to send reset email. Please try again.';
+      let errorMessage = 'Failed to send the reset email. Please try again.';
       if (error.code === 'auth/user-not-found') {
         errorMessage = 'No account found with this email address.';
       } else if (error.code === 'auth/invalid-email') {
