@@ -47,7 +47,7 @@ export default function CalorieProgress() {
         elevation: 4,
         borderWidth: 1,
         borderColor: '#E5E5E5',
-        minHeight: 280,
+        minHeight: 340,
         width: '100%',
       }}>
         <View style={{
@@ -108,7 +108,7 @@ export default function CalorieProgress() {
         elevation: 4,
         borderWidth: 1,
         borderColor: '#E5E5E5',
-        minHeight: 280,
+        minHeight: 340,
         width: '100%',
       }}>
         <View style={{
@@ -167,7 +167,7 @@ export default function CalorieProgress() {
       elevation: 4,
       borderWidth: 1,
       borderColor: '#E5E5E5',
-      minHeight: 280,
+      minHeight: 340,
       width: '100%',
       alignSelf: 'stretch',
       flexGrow: 1,

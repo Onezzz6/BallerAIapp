@@ -1536,7 +1536,7 @@ export default function HomeScreen() {
               onPress={showCalorieInfoAlert}
               style={({ pressed }) => ({
                 width: '49%', // Slightly less than 50% to account for the gap
-                opacity: pressed ? 0.9 : 1,
+                opacity: pressed ? 0.7 : 1,
               })}
             >
               <View>
@@ -1549,7 +1549,7 @@ export default function HomeScreen() {
               onPress={showInfoAlertReadiness}
               style={({ pressed }) => ({
                 width: '49%', // Slightly less than 50% to account for the gap
-                opacity: pressed ? 0.9 : 1,
+                opacity: pressed ? 0.7 : 1,
               })}
             >
               <View style={{
@@ -1565,7 +1565,7 @@ export default function HomeScreen() {
                 elevation: 4,
                 borderWidth: 1,
                 borderColor: '#E5E5E5',
-                minHeight: 280,
+                minHeight: 340,
               }}>
                 <View style={{
                   flexDirection: 'row',
@@ -1638,7 +1638,7 @@ export default function HomeScreen() {
                   fontSize: 14, 
                   color: '#666666',
                   textAlign: 'center',
-                }}>
+                }} allowFontScaling={false}>
                   {readinessScore > 0 
                     ? readinessScore >= 70 
                       ? 'Your body is ready for high intensity training!'
@@ -1680,7 +1680,7 @@ export default function HomeScreen() {
               onPress={showInfoAlertNutrition}
               style={({ pressed }) => ({
                 width: '49%', // Slightly less than 50% to account for the gap
-                opacity: pressed ? 0.9 : 1,
+                opacity: pressed ? 0.7 : 1,
               })}
             >
               <View style={{
@@ -1696,7 +1696,7 @@ export default function HomeScreen() {
                 elevation: 4,
                 borderWidth: 1,
                 borderColor: '#E5E5E5',
-                minHeight: 280,
+                minHeight: 340,
               }}>
                 <View style={{
                   flexDirection: 'row',
@@ -1707,7 +1707,7 @@ export default function HomeScreen() {
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <Ionicons name="nutrition-outline" size={24} color="#000000" />
                     <Text style={{
-                      fontSize: 20,
+                      fontSize: 18,
                       fontWeight: '600',
                       color: '#000000',
                     }} allowFontScaling={false}>
@@ -1769,7 +1769,7 @@ export default function HomeScreen() {
                   fontSize: 14, 
                   color: '#666666',
                   textAlign: 'center',
-                }}>
+                }} allowFontScaling={false}>
                   {nutritionAdherence > 0 
                     ? nutritionAdherence >= 80
                       ? 'Excellent nutrition habits this week!'
@@ -1787,7 +1787,7 @@ export default function HomeScreen() {
               onPress={showInfoAlertRecovery}
               style={({ pressed }) => ({
                 width: '49%', // Slightly less than 50% to account for the gap
-                opacity: pressed ? 0.9 : 1,
+                opacity: pressed ? 0.7 : 1,
               })}
             >
               <View style={{
@@ -1803,7 +1803,7 @@ export default function HomeScreen() {
                 elevation: 4,
                 borderWidth: 1,
                 borderColor: '#E5E5E5',
-                minHeight: 280,
+                minHeight: 340,
               }}>
                 <View style={{
                   flexDirection: 'row',
@@ -1814,7 +1814,7 @@ export default function HomeScreen() {
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <Ionicons name="fitness-outline" size={24} color="#000000" />
                     <Text style={{
-                      fontSize: 20,
+                      fontSize: 18,
                       fontWeight: '600',
                       color: '#000000',
                     }} allowFontScaling={false}>
@@ -1876,7 +1876,7 @@ export default function HomeScreen() {
                   fontSize: 14, 
                   color: '#666666',
                   textAlign: 'center',
-                }}>
+                }} allowFontScaling={false}>
                   {recoveryAdherence > 0 
                     ? recoveryAdherence >= 80
                       ? 'Excellent recovery habits this week!'
