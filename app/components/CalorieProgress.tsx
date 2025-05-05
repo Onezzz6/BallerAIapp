@@ -4,6 +4,15 @@ import Svg, { Circle } from 'react-native-svg';
 import { useNutrition } from '../context/NutritionContext';
 import { useEffect } from 'react';
 
+// Export the info alert function so it can be used by the parent component
+export const showCalorieInfoAlert = () => {
+  Alert.alert(
+    "Calorie Tracking",
+    "This card shows your current day's calorie consumption progress. Track your meals in the nutrition tab to update your progress.",
+    [{ text: "OK" }]
+  );
+};
+
 export default function CalorieProgress() {
   // Get data directly from the nutrition context
   const { macros, isLoading } = useNutrition();
@@ -17,13 +26,8 @@ export default function CalorieProgress() {
     console.log(`DEBUG - CalorieProgress: isLoading=${isLoading}, goal=${goal}, eaten=${eaten}`);
   }, [isLoading, goal, eaten]);*/
 
-  const showInfoAlert = () => {
-    Alert.alert(
-      "Calorie Tracking",
-      "This card shows your current day's calorie consumption progress. Track your meals in the nutrition tab to update your progress.",
-      [{ text: "OK" }]
-    );
-  };
+  // Use the exported function for the info alert
+  const showInfoAlert = showCalorieInfoAlert;
 
   // Show loading indicator while data is being fetched
   if (isLoading) {

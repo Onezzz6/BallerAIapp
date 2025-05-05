@@ -8,7 +8,7 @@ import { db } from '../config/firebase';
 import { shadowProps } from '../constants/Styles';
 import { useNutrition } from '../context/NutritionContext';
 import { useIsFocused } from '@react-navigation/native';
-import CalorieProgress from '../components/CalorieProgress';
+import CalorieProgress, { showCalorieInfoAlert } from '../components/CalorieProgress';
 import WorkoutCard from '../components/WorkoutCard';
 import StepProgress from '../components/StepProgress';
 import ExerciseCard from '../components/ExerciseCard';
@@ -95,35 +95,6 @@ export default function HomeScreen() {
     }, 300); // 300ms debounce time
   };
   
-  // Debug effect for nutrition adherence
-  /*useEffect(() => {
-    console.log(`DEBUG - NUTRITION ADHERENCE UPDATED TO: ${nutritionAdherence}%`);
-  }, [nutritionAdherence]);
-  
-  // Debug effect for today's calories
-  useEffect(() => {
-    console.log(`DEBUG - Today's calories state updated: ${JSON.stringify(todayCalories)}`);
-  }, [todayCalories]);
-  
-  // Debug effect for macros context
-  useEffect(() => {
-    console.log('DEBUG - Nutrition Context Macros:', JSON.stringify(macros));
-    
-    // IMPORTANT: Immediately update the goal from macros context when it becomes available
-    // This ensures we don't show the default goal when a real goal exists
-    if (macros.calories.goal > 0 && todayCalories.goal !== macros.calories.goal) {
-      console.log(`DEBUG - Updating goal from macros context: ${macros.calories.goal} calories`);
-      setTodayCalories(prev => ({
-        ...prev,
-        goal: macros.calories.goal
-      }));
-    }
-  }, [macros, todayCalories.goal]);*/
-  
-  // IMPORTANT: Remove the context syncing effect that was causing issues
-  // We no longer want to sync with the macros context for current calories
-  // as it will show the selected day instead of today
-  
   // Fetch user's profile picture and calorie goal immediately
   useEffect(() => {
     const fetchUserData = async () => {
@@ -134,8 +105,6 @@ export default function HomeScreen() {
             ...prev,
             isLoading: true
           }));
-          
-          //console.log('DEBUG - Starting to fetch user data for calorie goal calculation');
           
           // Fetch user profile data
           const userDocRef = doc(db, 'users', user.uid);
@@ -236,8 +205,6 @@ export default function HomeScreen() {
     if (!user) return;
     
     try {
-      //console.log(`DEBUG - Loading calories for date: ${format(date, 'yyyy-MM-dd')}`);
-      
       // Set loading state
       setTodayCalories(prev => ({
         ...prev,
@@ -937,8 +904,6 @@ export default function HomeScreen() {
     if (!user) return;
     
     try {
-      //console.log(`DEBUG - Loading today's calories specifically for the calorie card`);
-      
       // Set loading state
       setTodayCalories(prev => ({
         ...prev,
@@ -1567,111 +1532,124 @@ export default function HomeScreen() {
             justifyContent: 'space-between',
           }}>
             {/* Daily Calories Card - Now using CalorieProgress component */}
-            <View style={{ 
-              width: '49%', // Slightly less than 50% to account for the gap
-            }}>
-              <CalorieProgress />
-            </View>
+            <Pressable
+              onPress={showCalorieInfoAlert}
+              style={({ pressed }) => ({
+                width: '49%', // Slightly less than 50% to account for the gap
+                opacity: pressed ? 0.9 : 1,
+              })}
+            >
+              <View>
+                <CalorieProgress />
+              </View>
+            </Pressable>
 
             {/* Readiness Card */}
-            <View style={{
-              width: '49%', // Slightly less than 50% to account for the gap
-              padding: 16,
-              gap: 24,
-              borderRadius: 16,
-              backgroundColor: '#DCF4F5',
-              alignItems: 'center',
-              shadowColor: '#000000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 4,
-              elevation: 4,
-              borderWidth: 1,
-              borderColor: '#E5E5E5',
-              minHeight: 280,
-            }}>
+            <Pressable 
+              onPress={showInfoAlertReadiness}
+              style={({ pressed }) => ({
+                width: '49%', // Slightly less than 50% to account for the gap
+                opacity: pressed ? 0.9 : 1,
+              })}
+            >
               <View style={{
-                flexDirection: 'row',
+                padding: 16,
+                gap: 24,
+                borderRadius: 16,
+                backgroundColor: '#DCF4F5',
                 alignItems: 'center',
-                justifyContent: 'space-between',
-                width: '100%',
+                shadowColor: '#000000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 4,
+                borderWidth: 1,
+                borderColor: '#E5E5E5',
+                minHeight: 280,
               }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Ionicons name="trending-up" size={24} color="#000000" />
-                  <Text style={{
-                    fontSize: 18,
-                    fontWeight: '600',
+                <View style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  width: '100%',
+                }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Ionicons name="trending-up" size={24} color="#000000" />
+                    <Text style={{
+                      fontSize: 18,
+                      fontWeight: '600',
+                      color: '#000000',
+                    }} allowFontScaling={false}>
+                      Readiness 
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={showInfoAlertReadiness}
+                    style={({ pressed }) => ({
+                      opacity: pressed ? 0.7 : 1,
+                    })}
+                  >
+                    <Ionicons name="information-circle-outline" size={24} color="#000000" />
+                  </Pressable>
+                </View>
+
+                {/* Progress Circle Container */}
+                <View style={{ 
+                  width: 180,
+                  height: 180,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                  <Svg width="180" height="180" style={{
+                    position: 'absolute',
+                    transform: [{ rotate: '-90deg' }],
+                  }}>
+                    <Circle
+                      cx="90"
+                      cy="90"
+                      r="70"
+                      stroke="#ffffff"
+                      strokeWidth="12"
+                      fill="none"
+                    />
+                    <Circle
+                      cx="90"
+                      cy="90"
+                      r="70"
+                      stroke="#17B3BB"
+                      strokeWidth="12"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeDasharray={`${2 * Math.PI * 70}`}
+                      strokeDashoffset={2 * Math.PI * 70 * (1 - readinessScore / 100)}
+                    />
+                  </Svg>
+
+                  <Text style={{ 
+                    fontSize: 34, 
+                    fontWeight: '700', 
                     color: '#000000',
-                  }} allowFontScaling={false}>
-                    Readiness 
+                  }}>
+                    {readinessScore}%
                   </Text>
                 </View>
-                <Pressable
-                  onPress={showInfoAlertReadiness}
-                  style={({ pressed }) => ({
-                    opacity: pressed ? 0.7 : 1,
-                  })}
-                >
-                  <Ionicons name="information-circle-outline" size={24} color="#000000" />
-                </Pressable>
-              </View>
-
-              {/* Progress Circle Container */}
-              <View style={{ 
-                width: 180,
-                height: 180,
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}>
-                <Svg width="180" height="180" style={{
-                  position: 'absolute',
-                  transform: [{ rotate: '-90deg' }],
-                }}>
-                  <Circle
-                    cx="90"
-                    cy="90"
-                    r="70"
-                    stroke="#ffffff"
-                    strokeWidth="12"
-                    fill="none"
-                  />
-                  <Circle
-                    cx="90"
-                    cy="90"
-                    r="70"
-                    stroke="#17B3BB"
-                    strokeWidth="12"
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeDasharray={`${2 * Math.PI * 70}`}
-                    strokeDashoffset={2 * Math.PI * 70 * (1 - readinessScore / 100)}
-                  />
-                </Svg>
 
                 <Text style={{ 
-                  fontSize: 34, 
-                  fontWeight: '700', 
-                  color: '#000000',
+                  fontSize: 14, 
+                  color: '#666666',
+                  textAlign: 'center',
                 }}>
-                  {readinessScore}%
+                  {readinessScore > 0 
+                    ? readinessScore >= 70 
+                      ? 'Your body is ready for high intensity training!'
+                      : readinessScore >= 40
+                      ? 'Your body needs moderate intensity today.'
+                      : 'Focus on recovery today, take it easy.'
+                    : 'Submit recovery data to see your score'
+                  }
                 </Text>
               </View>
-
-              <Text style={{ 
-                fontSize: 14, 
-                color: '#666666',
-                textAlign: 'center',
-              }}>
-                {readinessScore > 0 
-                  ? readinessScore >= 70 
-                    ? 'Your body is ready for high intensity training!'
-                    : readinessScore >= 40
-                    ? 'Your body needs moderate intensity today.'
-                    : 'Focus on recovery today, take it easy.'
-                  : 'Submit recovery data to see your score'
-                }
-              </Text>
-            </View>
+            </Pressable>
           </View>
 
           {/* Weekly Progress Section Header */}
@@ -1698,204 +1676,218 @@ export default function HomeScreen() {
             gap: 8,
           }}>
             {/* Nutrition Adherence Card */}
-            <View style={{
-              width: '49%', // Slightly less than 50% to account for the gap
-              padding: 16,
-              gap: 24,
-              borderRadius: 16,
-              backgroundColor: '#FFDDBB',
-              alignItems: 'center',
-              shadowColor: '#000000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 4,
-              elevation: 4,
-              borderWidth: 1,
-              borderColor: '#E5E5E5',
-              minHeight: 280,
-            }}>
+            <Pressable
+              onPress={showInfoAlertNutrition}
+              style={({ pressed }) => ({
+                width: '49%', // Slightly less than 50% to account for the gap
+                opacity: pressed ? 0.9 : 1,
+              })}
+            >
               <View style={{
-                flexDirection: 'row',
+                padding: 16,
+                gap: 24,
+                borderRadius: 16,
+                backgroundColor: '#FFDDBB',
                 alignItems: 'center',
-                justifyContent: 'space-between',
-                width: '100%',
+                shadowColor: '#000000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 4,
+                borderWidth: 1,
+                borderColor: '#E5E5E5',
+                minHeight: 280,
               }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Ionicons name="nutrition-outline" size={24} color="#000000" />
-                  <Text style={{
-                    fontSize: 20,
-                    fontWeight: '600',
+                <View style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  width: '100%',
+                }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Ionicons name="nutrition-outline" size={24} color="#000000" />
+                    <Text style={{
+                      fontSize: 20,
+                      fontWeight: '600',
+                      color: '#000000',
+                    }} allowFontScaling={false}>
+                      Nutrition
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={showInfoAlertNutrition}
+                    style={({ pressed }) => ({
+                      opacity: pressed ? 0.7 : 1,
+                    })}
+                  >
+                    <Ionicons name="information-circle-outline" size={24} color="#000000" />
+                  </Pressable>
+                </View>
+
+                {/* Weekly Nutrition Adherence Circle - Keeps showing the WEEKLY average */}
+                <View style={{ 
+                  width: 180,
+                  height: 180,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                  <Svg width="180" height="180" style={{
+                    position: 'absolute',
+                    transform: [{ rotate: '-90deg' }],
+                  }}>
+                    <Circle
+                      cx="90"
+                      cy="90"
+                      r="70"
+                      stroke="#ffffff"
+                      strokeWidth="12"
+                      fill="none"
+                    />
+                    <Circle
+                      cx="90"
+                      cy="90"
+                      r="70"
+                      stroke="#ED7E1C"
+                      strokeWidth="12"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeDasharray={`${2 * Math.PI * 70}`}
+                      strokeDashoffset={2 * Math.PI * 70 * (1 - nutritionAdherence / 100)}
+                    />
+                  </Svg>
+
+                  <Text style={{ 
+                    fontSize: 34, 
+                    fontWeight: '700', 
                     color: '#000000',
-                  }} allowFontScaling={false}>
-                    Nutrition
+                  }}>
+                    {nutritionAdherence}%
                   </Text>
                 </View>
-                <Pressable
-                  onPress={showInfoAlertNutrition}
-                  style={({ pressed }) => ({
-                    opacity: pressed ? 0.7 : 1,
-                  })}
-                >
-                  <Ionicons name="information-circle-outline" size={24} color="#000000" />
-                </Pressable>
-              </View>
-
-              {/* Weekly Nutrition Adherence Circle - Keeps showing the WEEKLY average */}
-              <View style={{ 
-                width: 180,
-                height: 180,
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}>
-                <Svg width="180" height="180" style={{
-                  position: 'absolute',
-                  transform: [{ rotate: '-90deg' }],
-                }}>
-                  <Circle
-                    cx="90"
-                    cy="90"
-                    r="70"
-                    stroke="#ffffff"
-                    strokeWidth="12"
-                    fill="none"
-                  />
-                  <Circle
-                    cx="90"
-                    cy="90"
-                    r="70"
-                    stroke="#ED7E1C"
-                    strokeWidth="12"
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeDasharray={`${2 * Math.PI * 70}`}
-                    strokeDashoffset={2 * Math.PI * 70 * (1 - nutritionAdherence / 100)}
-                  />
-                </Svg>
 
                 <Text style={{ 
-                  fontSize: 34, 
-                  fontWeight: '700', 
-                  color: '#000000',
+                  fontSize: 14, 
+                  color: '#666666',
+                  textAlign: 'center',
                 }}>
-                  {nutritionAdherence}%
+                  {nutritionAdherence > 0 
+                    ? nutritionAdherence >= 80
+                      ? 'Excellent nutrition habits this week!'
+                      : nutritionAdherence >= 50
+                      ? 'Good nutrition habits this week!'
+                      : 'Keep working on your nutrition goals!'
+                    : 'Start logging meals to improve your score'
+                  }
                 </Text>
               </View>
-
-              <Text style={{ 
-                fontSize: 14, 
-                color: '#666666',
-                textAlign: 'center',
-              }}>
-                {nutritionAdherence > 0 
-                  ? nutritionAdherence >= 80
-                    ? 'Excellent nutrition habits this week!'
-                    : nutritionAdherence >= 50
-                    ? 'Good nutrition habits this week!'
-                    : 'Keep working on your nutrition goals!'
-                  : 'Start logging meals to improve your score'
-                }
-              </Text>
-            </View>
+            </Pressable>
             
             {/* New Recovery Card */}
-            <View style={{
-              width: '49%', // Slightly less than 50% to account for the gap
-              padding: 16,
-              gap: 24,
-              borderRadius: 16,
-              backgroundColor: '#DCF5DC', // Light green background
-              alignItems: 'center',
-              shadowColor: '#000000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 4,
-              elevation: 4,
-              borderWidth: 1,
-              borderColor: '#E5E5E5',
-              minHeight: 280,
-            }}>
+            <Pressable
+              onPress={showInfoAlertRecovery}
+              style={({ pressed }) => ({
+                width: '49%', // Slightly less than 50% to account for the gap
+                opacity: pressed ? 0.9 : 1,
+              })}
+            >
               <View style={{
-                flexDirection: 'row',
+                padding: 16,
+                gap: 24,
+                borderRadius: 16,
+                backgroundColor: '#DCF5DC', // Light green background
                 alignItems: 'center',
-                justifyContent: 'space-between',
-                width: '100%',
+                shadowColor: '#000000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 4,
+                borderWidth: 1,
+                borderColor: '#E5E5E5',
+                minHeight: 280,
               }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Ionicons name="fitness-outline" size={24} color="#000000" />
-                  <Text style={{
-                    fontSize: 20,
-                    fontWeight: '600',
+                <View style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  width: '100%',
+                }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Ionicons name="fitness-outline" size={24} color="#000000" />
+                    <Text style={{
+                      fontSize: 20,
+                      fontWeight: '600',
+                      color: '#000000',
+                    }} allowFontScaling={false}>
+                      Recovery
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={showInfoAlertRecovery}
+                    style={({ pressed }) => ({
+                      opacity: pressed ? 0.7 : 1,
+                    })}
+                  >
+                    <Ionicons name="information-circle-outline" size={24} color="#000000" />
+                  </Pressable>
+                </View>
+
+                {/* Recovery Progress Circle */}
+                <View style={{ 
+                  width: 180,
+                  height: 180,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                  <Svg width="180" height="180" style={{
+                    position: 'absolute',
+                    transform: [{ rotate: '-90deg' }],
+                  }}>
+                    <Circle
+                      cx="90"
+                      cy="90"
+                      r="70"
+                      stroke="#ffffff"
+                      strokeWidth="12"
+                      fill="none"
+                    />
+                    <Circle
+                      cx="90"
+                      cy="90"
+                      r="70"
+                      stroke="#99E86C" // Green progress color
+                      strokeWidth="12"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeDasharray={`${2 * Math.PI * 70}`}
+                      strokeDashoffset={2 * Math.PI * 70 * (1 - recoveryAdherence / 100)}
+                    />
+                  </Svg>
+
+                  <Text style={{ 
+                    fontSize: 34, 
+                    fontWeight: '700', 
                     color: '#000000',
-                  }} allowFontScaling={false}>
-                    Recovery
+                  }}>
+                    {recoveryAdherence}%
                   </Text>
                 </View>
-                <Pressable
-                  onPress={showInfoAlertRecovery}
-                  style={({ pressed }) => ({
-                    opacity: pressed ? 0.7 : 1,
-                  })}
-                >
-                  <Ionicons name="information-circle-outline" size={24} color="#000000" />
-                </Pressable>
-              </View>
-
-              {/* Recovery Progress Circle */}
-              <View style={{ 
-                width: 180,
-                height: 180,
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}>
-                <Svg width="180" height="180" style={{
-                  position: 'absolute',
-                  transform: [{ rotate: '-90deg' }],
-                }}>
-                  <Circle
-                    cx="90"
-                    cy="90"
-                    r="70"
-                    stroke="#ffffff"
-                    strokeWidth="12"
-                    fill="none"
-                  />
-                  <Circle
-                    cx="90"
-                    cy="90"
-                    r="70"
-                    stroke="#99E86C" // Green progress color
-                    strokeWidth="12"
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeDasharray={`${2 * Math.PI * 70}`}
-                    strokeDashoffset={2 * Math.PI * 70 * (1 - recoveryAdherence / 100)}
-                  />
-                </Svg>
 
                 <Text style={{ 
-                  fontSize: 34, 
-                  fontWeight: '700', 
-                  color: '#000000',
+                  fontSize: 14, 
+                  color: '#666666',
+                  textAlign: 'center',
                 }}>
-                  {recoveryAdherence}%
+                  {recoveryAdherence > 0 
+                    ? recoveryAdherence >= 80
+                      ? 'Excellent recovery habits this week!'
+                      : recoveryAdherence >= 50
+                      ? 'Good recovery routine. Keep it consistent!'
+                      : 'Focus on improving your sleep and recovery plans!'
+                    : 'Submit recovery data to see your score'
+                  }
                 </Text>
               </View>
-
-              <Text style={{ 
-                fontSize: 14, 
-                color: '#666666',
-                textAlign: 'center',
-              }}>
-                {recoveryAdherence > 0 
-                  ? recoveryAdherence >= 80
-                    ? 'Excellent recovery habits this week!'
-                    : recoveryAdherence >= 50
-                    ? 'Good recovery routine. Keep it consistent!'
-                    : 'Focus on improving your sleep and recovery plans!'
-                  : 'Submit recovery data to see your score'
-                }
-              </Text>
-            </View>
+            </Pressable>
           </View>
 
           {/* Ask AI Section */}
