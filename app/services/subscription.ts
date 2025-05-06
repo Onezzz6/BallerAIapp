@@ -1,6 +1,6 @@
 import { doc, getDoc, updateDoc, setDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import * as InAppPurchases from 'expo-in-app-purchases';
+// import * as InAppPurchases from 'expo-in-app-purchases'; // Comment out InAppPurchases
 
 // Product IDs for subscription plans
 export const PRODUCT_IDS = {

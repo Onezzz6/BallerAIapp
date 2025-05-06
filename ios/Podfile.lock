@@ -14,8 +14,6 @@ PODS:
   - EXImageLoader (5.0.0):
     - ExpoModulesCore
     - React-Core
-  - EXInAppPurchases (14.5.0):
-    - ExpoModulesCore
   - EXNotifications (0.29.14):
     - ExpoModulesCore
   - Expo (52.0.46):
@@ -246,6 +244,8 @@ PODS:
   - PromisesObjC (2.4.0)
   - PromisesSwift (2.4.0):
     - PromisesObjC (= 2.4.0)
+  - PurchasesHybridCommon (13.29.1):
+    - RevenueCat (= 5.22.2)
   - RCT-Folly (2024.10.14.00):
     - boost
     - DoubleConversion
@@ -1927,6 +1927,7 @@ PODS:
     - React-perflogger
     - React-utils (= 0.76.9)
   - RecaptchaInterop (101.0.0)
+  - RevenueCat (5.22.2)
   - RNCAsyncStorage (1.23.1):
     - DoubleConversion
     - glog
@@ -2028,6 +2029,9 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
+  - RNPurchases (8.9.6):
+    - PurchasesHybridCommon (= 13.29.1)
+    - React-Core
   - RNReanimated (3.16.7):
     - DoubleConversion
     - glog
@@ -2221,7 +2225,6 @@ DEPENDENCIES:
   - EXApplication (from `../node_modules/expo-application/ios`)
   - EXConstants (from `../node_modules/expo-constants/ios`)
   - EXImageLoader (from `../node_modules/expo-image-loader/ios`)
-  - EXInAppPurchases (from `../node_modules/expo-in-app-purchases/ios`)
   - EXNotifications (from `../node_modules/expo-notifications/ios`)
   - Expo (from `../node_modules/expo`)
   - "ExpoAdapterGoogleSignIn (from `../node_modules/@react-native-google-signin/google-signin/expo/ios`)"
@@ -2318,6 +2321,7 @@ DEPENDENCIES:
   - "RNFBCrashlytics (from `../node_modules/@react-native-firebase/crashlytics`)"
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
   - "RNGoogleSignin (from `../node_modules/@react-native-google-signin/google-signin`)"
+  - RNPurchases (from `../node_modules/react-native-purchases`)
   - RNReanimated (from `../node_modules/react-native-reanimated`)
   - RNScreens (from `../node_modules/react-native-screens`)
   - RNSVG (from `../node_modules/react-native-svg`)
@@ -2348,7 +2352,9 @@ SPEC REPOS:
     - nanopb
     - PromisesObjC
     - PromisesSwift
+    - PurchasesHybridCommon
     - RecaptchaInterop
+    - RevenueCat
     - SDWebImage
     - SDWebImageWebPCoder
     - SocketRocket
@@ -2365,8 +2371,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-constants/ios"
   EXImageLoader:
     :path: "../node_modules/expo-image-loader/ios"
-  EXInAppPurchases:
-    :path: "../node_modules/expo-in-app-purchases/ios"
   EXNotifications:
     :path: "../node_modules/expo-notifications/ios"
   Expo:
@@ -2556,6 +2560,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-gesture-handler"
   RNGoogleSignin:
     :path: "../node_modules/@react-native-google-signin/google-signin"
+  RNPurchases:
+    :path: "../node_modules/react-native-purchases"
   RNReanimated:
     :path: "../node_modules/react-native-reanimated"
   RNScreens:
@@ -2572,7 +2578,6 @@ SPEC CHECKSUMS:
   EXApplication: 4c72f6017a14a65e338c5e74fca418f35141e819
   EXConstants: fcfc75800824ac2d5c592b5bc74130bad17b146b
   EXImageLoader: e5da974e25b13585c196b658a440720c075482d5
-  EXInAppPurchases: 44558a44dca7293a3040e3cce135cc0b4e39dc81
   EXNotifications: 9d3d17e52c95f377750d4a2ae553a716313dd4aa
   Expo: a6ff273c618506b12129a0d06f2a08201bfbcf43
   ExpoAdapterGoogleSignIn: f5ca2b67502442629d99dbe202b6ae821d77c75d
@@ -2622,6 +2627,7 @@ SPEC CHECKSUMS:
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
   PromisesSwift: 9d77319bbe72ebf6d872900551f7eeba9bce2851
+  PurchasesHybridCommon: 1728ff834821ecfc85e987a565d51eda36213958
   RCT-Folly: ea9d9256ba7f9322ef911169a9f696e5857b9e17
   RCTDeprecation: ebe712bb05077934b16c6bf25228bdec34b64f83
   RCTRequired: ca91e5dd26b64f577b528044c962baf171c6b716
@@ -2682,6 +2688,7 @@ SPEC CHECKSUMS:
   ReactCodegen: 049be6309e06c1027544819670913680f2029b8e
   ReactCommon: b2eb96a61b826ff327a773a74357b302cf6da678
   RecaptchaInterop: 11e0b637842dfb48308d242afc3f448062325aba
+  RevenueCat: 234d2361e453ce1282cee7e18449d01aba45ebbf
   RNCAsyncStorage: 9ff617df4a485f2efba57bdf4face05a41767390
   RNCPicker: 2a41d02bcc3467f84b9f5c77a4d54583f16f6430
   RNFBAnalytics: 9cbc50c04fb157ae30d703e774bb06c6d5452279
@@ -2690,6 +2697,7 @@ SPEC CHECKSUMS:
   RNFBCrashlytics: 4194c40a0c8f6d6bfe7af294fb3411d73925594b
   RNGestureHandler: de2b7ccdbf18766609fb9490c7f11c18805705a3
   RNGoogleSignin: 63aece50494903112899a0cd370ab8f19b061487
+  RNPurchases: 44561894fbf72dbf21c3c82533951bd075e8fa96
   RNReanimated: 758e433dea58eb219208bd209ef91a6f8ee096fb
   RNScreens: 2fe3d999c2dee6ef1d5e863fec0fb6f7de60c45a
   RNSVG: d332ea2a8540218eadc5c8f31c2b58dfba6b14b5

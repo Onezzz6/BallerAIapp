@@ -12,7 +12,6 @@ import React from 'react';
 import authService from '../services/auth';
 import { Ionicons } from '@expo/vector-icons';
 import * as AppleAuthentication from 'expo-apple-authentication';
-import subscriptionCheck from '../services/subscriptionCheck';
 // Default empty onboarding data
 const defaultOnboardingData = {
   hasSmartwatch: null,
@@ -81,8 +80,6 @@ export default function WelcomeScreen() {
   };
 
   const handleSignIn = async () => {
-    await subscriptionCheck.cancelIsPurchasing();
-
     if (!email || !password) {
       Alert.alert('Error', 'Please enter your email and password.');
       return;
@@ -129,8 +126,6 @@ export default function WelcomeScreen() {
   };
 
   const handleAppleSignIn = async () => {
-    await subscriptionCheck.cancelIsPurchasing();
-
     try {
       setIsLoading(true);
       console.log("Starting Apple Sign-In process...");

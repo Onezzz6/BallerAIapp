@@ -23,7 +23,6 @@ import { format, startOfWeek, addDays, subDays } from 'date-fns';
 import { TextInput, ActivityIndicator, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard, Pressable, Modal, Alert } from 'react-native';
 import { askOpenAI } from '../utils/openai';
 import Svg, { Circle } from 'react-native-svg';
-import SubscriptionStatus from '../components/SubscriptionStatus';
 import Animated, { PinwheelIn } from 'react-native-reanimated';
 import analytics from '@react-native-firebase/analytics'; // Add analytics import
 
@@ -1504,9 +1503,6 @@ export default function HomeScreen() {
         </View>
 
         <View style={{ padding: 16, gap: 24 }}>
-          {/* Subscription Status Component */}
-          <SubscriptionStatus showExpirationAlert={true} />
-
           {/* Overview Section */}
           <View style={{ 
             alignItems: 'center',
