@@ -12,6 +12,8 @@ import React from 'react';
 import authService from '../services/auth';
 import { Ionicons } from '@expo/vector-icons';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import presentPaywallIfNeeded from '../(onboarding)/paywall';
+import { PAYWALL_RESULT } from 'react-native-purchases-ui';
 // Default empty onboarding data
 const defaultOnboardingData = {
   hasSmartwatch: null,
@@ -87,10 +89,25 @@ export default function WelcomeScreen() {
 
     setIsLoading(true);
     try {
-      // Try to sign in directly instead of checking email first
       const user = await authService.signInWithEmail(email, password);
       if (user) {
-        router.replace('/(tabs)/home');
+        const paywallResult = await presentPaywallIfNeeded();
+        if (paywallResult === PAYWALL_RESULT.PURCHASED) {
+          console.log("Paywall purchased...");
+          router.replace('/(tabs)/home');
+        }
+        else if (paywallResult === PAYWALL_RESULT.RESTORED) {
+          console.log("Paywall restored...");
+          router.replace('/(tabs)/home');
+        }
+        else if (paywallResult === PAYWALL_RESULT.CANCELLED) {
+          console.log("Paywall cancelled...");
+          if (router.canGoBack()) {
+              router.back();
+          } else {
+              router.replace('/');
+          }
+        }
       }
     } catch (error: any) {
       if (error.code === 'auth/user-not-found') {
@@ -145,7 +162,23 @@ export default function WelcomeScreen() {
         if (isValidUser) {
           console.log("User has valid document with complete onboarding data - navigating to home");
           // Only navigate if we have a confirmed valid user
-          router.replace('/(tabs)/home');
+          const paywallResult = await presentPaywallIfNeeded();
+          if (paywallResult === PAYWALL_RESULT.PURCHASED) {
+            console.log("Paywall purchased...");
+            router.replace('/(tabs)/home');
+          }
+          else if (paywallResult === PAYWALL_RESULT.RESTORED) {
+            console.log("Paywall restored...");
+            router.replace('/(tabs)/home');
+          }
+          else if (paywallResult === PAYWALL_RESULT.CANCELLED) {
+            console.log("Paywall cancelled...");
+            if (router.canGoBack()) {
+                router.back();
+            } else {
+                router.replace('/');
+            }
+          }
           return;
         } else {
           console.log("User validation failed - showing no account alert");

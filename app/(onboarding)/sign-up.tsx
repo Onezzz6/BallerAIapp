@@ -10,6 +10,8 @@ import analytics from '@react-native-firebase/analytics';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import presentPaywallIfNeeded from './paywall';
+import { PAYWALL_RESULT } from 'react-native-purchases-ui';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -47,10 +49,23 @@ export default function SignUpScreen() {
       const user = await authService.signUpWithEmail(email, password, onboardingData);
       if (user) {
         await analytics().logEvent('onboarding_signup_complete');
-        router.replace({
-          pathname: '/(onboarding)/paywall', 
-          params: { isSignUp: 'true' }
-        });
+        const paywallResult = await presentPaywallIfNeeded();
+        if (paywallResult === PAYWALL_RESULT.PURCHASED) {
+          console.log("Paywall purchased...");
+          router.replace('/(tabs)/home');
+        }
+        else if (paywallResult === PAYWALL_RESULT.RESTORED) {
+          console.log("Paywall restored...");
+          router.replace('/(tabs)/home');
+        }
+        else if (paywallResult === PAYWALL_RESULT.CANCELLED) {
+          console.log("Paywall cancelled...");
+          if (router.canGoBack()) {
+              router.back();
+          } else {
+              router.replace('/');
+          }
+        }
       }
     } catch (error: any) {
       // If email exists, prompt for sign in

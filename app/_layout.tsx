@@ -19,6 +19,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import subscriptionService, { PRODUCT_IDS } from './services/subscription';
 import axios from 'axios';
 import authService from './services/auth';
+import Purchases from 'react-native-purchases';
+import { PAYWALL_RESULT } from 'react-native-purchases-ui';
+import presentPaywallIfNeeded from './(onboarding)/paywall';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -28,6 +31,32 @@ function RootLayoutContent() {
   const pathname = usePathname();
   const appState = useRef(AppState.currentState);
   const lastPathRef = useRef(pathname);
+
+  // RevenueCat Initialization
+  useEffect(() => {
+    if (Platform.OS === 'ios') {
+      const apiKey = process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY;
+      if (apiKey) {
+        Purchases.configure({ apiKey });
+        console.log('RevenueCat SDK configured for iOS with API key from env');
+      } else {
+        console.error('RevenueCat iOS API key not found in environment variables.');
+        // Optionally, you could fall back to a hardcoded key for development here,
+        // or show an error to the user / prevent IAP functionality.
+        Alert.alert("Configuration Error", "In-app purchases are currently unavailable. Missing API Key.");
+      }
+    }
+    // Add Android configuration here if needed in the future
+    // else if (Platform.OS === 'android') {
+    //   const androidApiKey = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY;
+    //   if (androidApiKey) {
+    //     Purchases.configure({ apiKey: androidApiKey });
+    //     console.log('RevenueCat SDK configured for Android with API key from env');
+    //   } else {
+    //     console.error('RevenueCat Android API key not found in environment variables.');
+    //   }
+    // }
+  }, []);
 
   // Update last path whenever pathname changes
   useEffect(() => {
@@ -109,8 +138,24 @@ function AuthStateManager({ children }: { children: React.ReactNode }) {
         const userDoc = await authService.getUserDocument(user.uid);
         if (userDoc) {
           // Keep showing loading screen while we prepare to navigate
-          const timer = setTimeout(() => {
-            router.replace('/(tabs)/home');
+          const timer = setTimeout(async () => {
+            const paywallResult = await presentPaywallIfNeeded();
+            if (paywallResult === PAYWALL_RESULT.PURCHASED) {
+              console.log("Paywall purchased...");
+              router.replace('/(tabs)/home');
+            }
+            else if (paywallResult === PAYWALL_RESULT.RESTORED) {
+              console.log("Paywall restored...");
+              router.replace('/(tabs)/home');
+            }
+            else if (paywallResult === PAYWALL_RESULT.CANCELLED) {
+              console.log("Paywall cancelled...");
+              if (router.canGoBack()) {
+                  router.back();
+              } else {
+                  router.replace('/');
+              }
+            }
           }, 100);
           
           return () => clearTimeout(timer);
