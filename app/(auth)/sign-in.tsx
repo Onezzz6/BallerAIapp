@@ -4,7 +4,7 @@ import Button from '../components/Button';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import authService from '../services/auth';
-import { presentPaywallAfterAuth } from '../(onboarding)/paywall';
+import { runPostLoginSequence } from '../(onboarding)/paywall';
 import { PAYWALL_RESULT } from 'react-native-purchases-ui';
 
 export default function SignInScreen() {
@@ -51,23 +51,12 @@ export default function SignInScreen() {
       // Email exists - try to sign in
       const user = await authService.signInWithEmail(email, password);
       if (user) {
-        const paywallResult = await presentPaywallAfterAuth(user.uid);
-        if (paywallResult === PAYWALL_RESULT.PURCHASED) {
-          console.log("Paywall purchased...");
-          router.replace('/(tabs)/home');
-        }
-        else if (paywallResult === PAYWALL_RESULT.RESTORED) {
-          console.log("Paywall restored...");
-          router.replace('/(tabs)/home');
-        }
-        else if (paywallResult === PAYWALL_RESULT.CANCELLED) {
-          console.log("Paywall cancelled...");
-          if (router.canGoBack()) {
-              router.back();
-          } else {
-              router.replace('/');
-          }
-        }
+        // Run the post-login sequence (identification, subscription check, and paywall if needed)
+        await runPostLoginSequence(
+          user.uid,
+          () => router.replace('/(tabs)/home'),
+          () => router.replace('/')  // Navigate to welcome on cancellation
+        );
       }
     } catch (error: any) {
       if (error.code === 'auth/wrong-password') {

@@ -21,7 +21,7 @@ import axios from 'axios';
 import authService from './services/auth';
 import Purchases, { CustomerInfo } from 'react-native-purchases';
 import { PAYWALL_RESULT } from 'react-native-purchases-ui';
-import { presentPaywallAfterAuth } from './(onboarding)/paywall';
+import { checkSubscriptionOnForeground } from './(onboarding)/paywall';
 
 // Create a context for subscription state
 type SubscriptionContextType = {
@@ -46,6 +46,10 @@ function SubscriptionProvider({ children }: { children: React.ReactNode }) {
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
   const { user } = useAuth();
   const appState = useRef(AppState.currentState);
+  const lastCheckTimeRef = useRef<number>(Date.now());
+  
+  // Check minimum time between foreground checks (5 minutes)
+  const MIN_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds
 
   // Check if the user has an active subscription
   const isSubscriptionActive = React.useMemo(() => {
@@ -79,18 +83,6 @@ function SubscriptionProvider({ children }: { children: React.ReactNode }) {
             info.entitlements.active["BallerAISubscriptionGroup"] ? "ACTIVE" : "INACTIVE");
         });
         
-        // Set up AppState listener to refresh when app comes to foreground
-        const handleAppStateChange = (nextAppState: AppStateStatus) => {
-          if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-            console.log('App has come to the foreground, refreshing subscription data');
-            refreshSubscriptionStatus();
-          }
-          appState.current = nextAppState;
-        };
-        
-        // We just use this pattern for the listeners without trying to use the returned value
-        AppState.addEventListener('change', handleAppStateChange);
-        
         // Initial fetch of subscription data
         refreshSubscriptionStatus();
         
@@ -112,18 +104,81 @@ function SubscriptionProvider({ children }: { children: React.ReactNode }) {
     const identifyUser = async () => {
       if (user && user.uid) {
         try {
-          console.log(`Identifying user with RevenueCat: ${user.uid}`);
+          console.log(`==== IDENTIFYING USER WITH REVENUECAT: ${user.uid} ====`);
+          
+          // Step 1: Identify the user with RevenueCat
           await Purchases.logIn(user.uid);
+          console.log("RevenueCat user identification complete");
+          
+          // Step 2: Sync purchases to ensure all receipts are associated with this user
           await Purchases.syncPurchases();
-          await refreshSubscriptionStatus();
+          console.log("Purchase sync complete");
+          
+          // Step 3: Force a fresh fetch of subscription data
+          console.log("Fetching fresh subscription data after identification");
+          const info = await Purchases.getCustomerInfo();
+          setCustomerInfo(info);
+          
+          // Log subscription status for debugging
+          const hasActiveSubscription = !!info.entitlements.active["BallerAISubscriptionGroup"];
+          console.log(`User subscription status: ${hasActiveSubscription ? "ACTIVE" : "INACTIVE"}`);
+          console.log("==== REVENUECAT IDENTIFICATION SEQUENCE COMPLETE ====");
         } catch (error) {
-          console.error("Error identifying user with RevenueCat:", error);
+          console.error("Error in RevenueCat identification sequence:", error);
         }
       }
     };
     
     identifyUser();
   }, [user]);
+  
+  // Set up AppState change listener for foreground subscription check
+  useEffect(() => {
+    if (!user) return; // Only run this effect if there's a logged-in user
+    
+    const handleAppStateChange = async (nextAppState: AppStateStatus) => {
+      // Check if app is coming to foreground from background
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        console.log('App has come to the foreground');
+        
+        // Check if enough time has passed since last check
+        const now = Date.now();
+        const timeSinceLastCheck = now - lastCheckTimeRef.current;
+        
+        if (timeSinceLastCheck >= MIN_CHECK_INTERVAL) {
+          console.log(`Running foreground subscription check (${timeSinceLastCheck/1000}s since last check)`);
+          lastCheckTimeRef.current = now;
+          
+          // Only perform check if we have a user ID
+          if (user?.uid) {
+            await checkSubscriptionOnForeground(
+              user.uid,
+              // Navigate to home on purchase/restore
+              () => router.replace('/(tabs)/home'),
+              // Navigate to welcome on cancel
+              () => router.replace('/')
+            );
+          }
+        } else {
+          console.log(`Skipping foreground check - only ${timeSinceLastCheck/1000}s since last check (minimum: ${MIN_CHECK_INTERVAL/1000}s)`);
+        }
+      }
+      
+      appState.current = nextAppState;
+    };
+    
+    // Set up the AppState listener
+    AppState.addEventListener('change', handleAppStateChange);
+    
+    // Record the initial check time
+    lastCheckTimeRef.current = Date.now();
+    
+    // Return cleanup function
+    return () => {
+      // Note: modern versions of React Native don't require explicit removal
+      console.log("AppState listener cleanup");
+    };
+  }, [user]); // Only re-run if user changes
 
   return (
     <SubscriptionContext.Provider 
@@ -232,28 +287,10 @@ function AuthStateManager({ children }: { children: React.ReactNode }) {
             return;
           }
           
-          // Keep showing loading screen while we prepare to navigate
-          const timer = setTimeout(async () => {
-            const paywallResult = await presentPaywallAfterAuth(user.uid);
-            if (paywallResult === PAYWALL_RESULT.PURCHASED) {
-              console.log("Paywall purchased...");
-              router.replace('/(tabs)/home');
-            }
-            else if (paywallResult === PAYWALL_RESULT.RESTORED) {
-              console.log("Paywall restored...");
-              router.replace('/(tabs)/home');
-            }
-            else if (paywallResult === PAYWALL_RESULT.CANCELLED) {
-              console.log("Paywall cancelled...");
-              if (router.canGoBack()) {
-                  router.back();
-              } else {
-                  router.replace('/');
-              }
-            }
-          }, 100);
-          
-          return () => clearTimeout(timer);
+          // Otherwise, let the app continue normally
+          // We will NOT automatically show paywall here anymore
+          // Instead, each authentication component will handle subscription checks
+          // using the runPostLoginSequence function directly after login
         }
       };
 
@@ -262,7 +299,6 @@ function AuthStateManager({ children }: { children: React.ReactNode }) {
   }, [user, isLoading, isSubscriptionActive]);
   
   // Show loading screen until auth state is determined
-  // OR if we're authenticated and preparing to navigate
   if (isLoading && user === null) {
     return <LoadingScreen />;
   }

@@ -10,7 +10,7 @@ import analytics from '@react-native-firebase/analytics';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { presentPaywallAfterAuth } from './paywall';
+import { runPostLoginSequence } from './paywall';
 import { PAYWALL_RESULT } from 'react-native-purchases-ui';
 
 export default function SignUpScreen() {
@@ -49,23 +49,13 @@ export default function SignUpScreen() {
       const user = await authService.signUpWithEmail(email, password, onboardingData);
       if (user) {
         await analytics().logEvent('onboarding_signup_complete');
-        const paywallResult = await presentPaywallAfterAuth(user.uid);
-        if (paywallResult === PAYWALL_RESULT.PURCHASED) {
-          console.log("Paywall purchased...");
-          router.replace('/(tabs)/home');
-        }
-        else if (paywallResult === PAYWALL_RESULT.RESTORED) {
-          console.log("Paywall restored...");
-          router.replace('/(tabs)/home');
-        }
-        else if (paywallResult === PAYWALL_RESULT.CANCELLED) {
-          console.log("Paywall cancelled...");
-          if (router.canGoBack()) {
-              router.back();
-          } else {
-              router.replace('/');
-          }
-        }
+        
+        // Run the definitive post-login sequence
+        await runPostLoginSequence(
+          user.uid,
+          () => router.replace('/(tabs)/home'),
+          () => router.replace('/')  // Navigate to welcome on cancellation
+        );
       }
     } catch (error: any) {
       // If email exists, prompt for sign in
@@ -83,17 +73,12 @@ export default function SignUpScreen() {
                   if (user) {
                     await analytics().logEvent('onboarding_signin_complete');
                     
-                    // Present paywall if needed before going to home
-                    const paywallResult = await presentPaywallAfterAuth(user.uid);
-                    if (paywallResult === PAYWALL_RESULT.PURCHASED || paywallResult === PAYWALL_RESULT.RESTORED) {
-                      router.replace('/(tabs)/home');
-                    } else if (paywallResult === PAYWALL_RESULT.CANCELLED) {
-                      if (router.canGoBack()) {
-                        router.back();
-                      } else {
-                        router.replace('/');
-                      }
-                    }
+                    // Run the definitive post-login sequence
+                    await runPostLoginSequence(
+                      user.uid,
+                      () => router.replace('/(tabs)/home'),
+                      () => router.replace('/')  // Navigate to welcome on cancellation
+                    );
                   }
                 } catch (signInError: any) {
                   Alert.alert('Error', 'Invalid password. Please try again.');
@@ -131,17 +116,12 @@ export default function SignUpScreen() {
         console.log("User has valid document, navigating to home");
         await analytics().logEvent('onboarding_apple_signin_complete');
         
-        // Present paywall if needed before going to home
-        const paywallResult = await presentPaywallAfterAuth(user.uid);
-        if (paywallResult === PAYWALL_RESULT.PURCHASED || paywallResult === PAYWALL_RESULT.RESTORED) {
-          router.replace('/(tabs)/home');
-        } else if (paywallResult === PAYWALL_RESULT.CANCELLED) {
-          if (router.canGoBack()) {
-            router.back();
-          } else {
-            router.replace('/');
-          }
-        }
+        // Run the definitive post-login sequence
+        await runPostLoginSequence(
+          user.uid,
+          () => router.replace('/(tabs)/home'),
+          () => router.replace('/')  // Navigate to welcome on cancellation
+        );
       } else {
         console.log("User needs a document created before going through paywall");
         await analytics().logEvent('onboarding_apple_signup_complete');
@@ -151,17 +131,12 @@ export default function SignUpScreen() {
           await setDoc(userDocRef, onboardingData);
           console.log("User document created successfully");
           
-          // Present paywall if needed before going to home
-          const paywallResult = await presentPaywallAfterAuth(user.uid);
-          if (paywallResult === PAYWALL_RESULT.PURCHASED || paywallResult === PAYWALL_RESULT.RESTORED) {
-            router.replace('/(tabs)/home');
-          } else if (paywallResult === PAYWALL_RESULT.CANCELLED) {
-            if (router.canGoBack()) {
-              router.back();
-            } else {
-              router.replace('/');
-            }
-          }
+          // Run the definitive post-login sequence
+          await runPostLoginSequence(
+            user.uid,
+            () => router.replace('/(tabs)/home'),
+            () => router.replace('/')  // Navigate to welcome on cancellation
+          );
         } catch (error) {
           console.error("Error creating user document:", error);
           throw error;
