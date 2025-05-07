@@ -12,7 +12,7 @@ import React from 'react';
 import authService from '../services/auth';
 import { Ionicons } from '@expo/vector-icons';
 import * as AppleAuthentication from 'expo-apple-authentication';
-import presentPaywallIfNeeded from '../(onboarding)/paywall';
+import { presentPaywallAfterAuth } from '../(onboarding)/paywall';
 import { PAYWALL_RESULT } from 'react-native-purchases-ui';
 // Default empty onboarding data
 const defaultOnboardingData = {
@@ -91,7 +91,7 @@ export default function WelcomeScreen() {
     try {
       const user = await authService.signInWithEmail(email, password);
       if (user) {
-        const paywallResult = await presentPaywallIfNeeded();
+        const paywallResult = await presentPaywallAfterAuth(user.uid);
         if (paywallResult === PAYWALL_RESULT.PURCHASED) {
           console.log("Paywall purchased...");
           router.replace('/(tabs)/home');
@@ -162,7 +162,7 @@ export default function WelcomeScreen() {
         if (isValidUser) {
           console.log("User has valid document with complete onboarding data - navigating to home");
           // Only navigate if we have a confirmed valid user
-          const paywallResult = await presentPaywallIfNeeded();
+          const paywallResult = await presentPaywallAfterAuth(user.uid);
           if (paywallResult === PAYWALL_RESULT.PURCHASED) {
             console.log("Paywall purchased...");
             router.replace('/(tabs)/home');

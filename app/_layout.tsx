@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { createContext, useContext } from 'react';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { router, Slot, usePathname } from 'expo-router';
@@ -13,50 +13,135 @@ import { OnboardingProvider } from './context/OnboardingContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NutritionProvider } from './context/NutritionContext';
 import { TrainingProvider } from './context/TrainingContext';
-import { AppState, Alert, Platform } from 'react-native';
+import { AppState, AppStateStatus, Alert, Platform } from 'react-native';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import subscriptionService, { PRODUCT_IDS } from './services/subscription';
 import axios from 'axios';
 import authService from './services/auth';
-import Purchases from 'react-native-purchases';
+import Purchases, { CustomerInfo } from 'react-native-purchases';
 import { PAYWALL_RESULT } from 'react-native-purchases-ui';
-import presentPaywallIfNeeded from './(onboarding)/paywall';
+import { presentPaywallAfterAuth } from './(onboarding)/paywall';
+
+// Create a context for subscription state
+type SubscriptionContextType = {
+  customerInfo: CustomerInfo | null;
+  isSubscriptionActive: boolean;
+  refreshSubscriptionStatus: () => Promise<void>;
+};
+
+const SubscriptionContext = createContext<SubscriptionContextType>({
+  customerInfo: null,
+  isSubscriptionActive: false,
+  refreshSubscriptionStatus: async () => {}
+});
+
+export const useSubscription = () => useContext(SubscriptionContext);
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
-function RootLayoutContent() {
+// Subscription provider component
+function SubscriptionProvider({ children }: { children: React.ReactNode }) {
+  const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
   const { user } = useAuth();
-  const pathname = usePathname();
   const appState = useRef(AppState.currentState);
-  const lastPathRef = useRef(pathname);
 
-  // RevenueCat Initialization
+  // Check if the user has an active subscription
+  const isSubscriptionActive = React.useMemo(() => {
+    return customerInfo?.entitlements.active["BallerAISubscriptionGroup"] ? true : false;
+  }, [customerInfo]);
+
+  // Function to refresh subscription data
+  const refreshSubscriptionStatus = async () => {
+    try {
+      const info = await Purchases.getCustomerInfo();
+      setCustomerInfo(info);
+      console.log("Refreshed subscription data:", 
+        info.entitlements.active["BallerAISubscriptionGroup"] ? "ACTIVE" : "INACTIVE");
+    } catch (error) {
+      console.error("Error refreshing subscription data:", error);
+    }
+  };
+
+  // Initialize RevenueCat and set up listeners
   useEffect(() => {
     if (Platform.OS === 'ios') {
       const apiKey = process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY;
       if (apiKey) {
         Purchases.configure({ apiKey });
         console.log('RevenueCat SDK configured for iOS with API key from env');
+        
+        // Set up CustomerInfo update listener
+        const customerInfoUpdateListener = Purchases.addCustomerInfoUpdateListener((info) => {
+          setCustomerInfo(info);
+          console.log("CustomerInfo updated:", 
+            info.entitlements.active["BallerAISubscriptionGroup"] ? "ACTIVE" : "INACTIVE");
+        });
+        
+        // Set up AppState listener to refresh when app comes to foreground
+        const handleAppStateChange = (nextAppState: AppStateStatus) => {
+          if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+            console.log('App has come to the foreground, refreshing subscription data');
+            refreshSubscriptionStatus();
+          }
+          appState.current = nextAppState;
+        };
+        
+        // We just use this pattern for the listeners without trying to use the returned value
+        AppState.addEventListener('change', handleAppStateChange);
+        
+        // Initial fetch of subscription data
+        refreshSubscriptionStatus();
+        
+        // No cleanup needed for AppState listener in this implementation
+        // RevenueCat listeners are automatically cleaned up when the component unmounts
+        return () => {
+          // Cleanup is handled automatically
+          console.log("Cleaning up RevenueCat listeners");
+        };
       } else {
         console.error('RevenueCat iOS API key not found in environment variables.');
-        // Optionally, you could fall back to a hardcoded key for development here,
-        // or show an error to the user / prevent IAP functionality.
         Alert.alert("Configuration Error", "In-app purchases are currently unavailable. Missing API Key.");
       }
     }
-    // Add Android configuration here if needed in the future
-    // else if (Platform.OS === 'android') {
-    //   const androidApiKey = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY;
-    //   if (androidApiKey) {
-    //     Purchases.configure({ apiKey: androidApiKey });
-    //     console.log('RevenueCat SDK configured for Android with API key from env');
-    //   } else {
-    //     console.error('RevenueCat Android API key not found in environment variables.');
-    //   }
-    // }
   }, []);
+
+  // When user changes, identify them with RevenueCat and sync purchases
+  useEffect(() => {
+    const identifyUser = async () => {
+      if (user && user.uid) {
+        try {
+          console.log(`Identifying user with RevenueCat: ${user.uid}`);
+          await Purchases.logIn(user.uid);
+          await Purchases.syncPurchases();
+          await refreshSubscriptionStatus();
+        } catch (error) {
+          console.error("Error identifying user with RevenueCat:", error);
+        }
+      }
+    };
+    
+    identifyUser();
+  }, [user]);
+
+  return (
+    <SubscriptionContext.Provider 
+      value={{ 
+        customerInfo, 
+        isSubscriptionActive, 
+        refreshSubscriptionStatus 
+      }}
+    >
+      {children}
+    </SubscriptionContext.Provider>
+  );
+}
+
+function RootLayoutContent() {
+  const { user } = useAuth();
+  const pathname = usePathname();
+  const lastPathRef = useRef(pathname);
 
   // Update last path whenever pathname changes
   useEffect(() => {
@@ -113,23 +198,26 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AuthProvider>
-        <AuthStateManager>
-          <NutritionProvider>
-            <OnboardingProvider>
-              <TrainingProvider>
-                <RootLayoutContent />
-              </TrainingProvider>
-            </OnboardingProvider>
-          </NutritionProvider>
-        </AuthStateManager>
+        <SubscriptionProvider>
+          <AuthStateManager>
+            <NutritionProvider>
+              <OnboardingProvider>
+                <TrainingProvider>
+                  <RootLayoutContent />
+                </TrainingProvider>
+              </OnboardingProvider>
+            </NutritionProvider>
+          </AuthStateManager>
+        </SubscriptionProvider>
       </AuthProvider>
     </GestureHandlerRootView>
   );
 }
 
-// New component to manage auth state
+// Auth state manager component
 function AuthStateManager({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
+  const { isSubscriptionActive } = useSubscription();
   
   // Navigate to home when user is authenticated
   useEffect(() => {
@@ -137,9 +225,16 @@ function AuthStateManager({ children }: { children: React.ReactNode }) {
       const checkUser = async () => {
         const userDoc = await authService.getUserDocument(user.uid);
         if (userDoc) {
+          // If user is already subscribed, go directly to home
+          if (isSubscriptionActive) {
+            console.log("User has active subscription, navigating to home");
+            router.replace('/(tabs)/home');
+            return;
+          }
+          
           // Keep showing loading screen while we prepare to navigate
           const timer = setTimeout(async () => {
-            const paywallResult = await presentPaywallIfNeeded();
+            const paywallResult = await presentPaywallAfterAuth(user.uid);
             if (paywallResult === PAYWALL_RESULT.PURCHASED) {
               console.log("Paywall purchased...");
               router.replace('/(tabs)/home');
@@ -164,7 +259,7 @@ function AuthStateManager({ children }: { children: React.ReactNode }) {
 
       checkUser();
     }
-  }, [user, isLoading]);
+  }, [user, isLoading, isSubscriptionActive]);
   
   // Show loading screen until auth state is determined
   // OR if we're authenticated and preparing to navigate

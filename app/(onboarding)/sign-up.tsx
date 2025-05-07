@@ -10,7 +10,7 @@ import analytics from '@react-native-firebase/analytics';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import presentPaywallIfNeeded from './paywall';
+import { presentPaywallAfterAuth } from './paywall';
 import { PAYWALL_RESULT } from 'react-native-purchases-ui';
 
 export default function SignUpScreen() {
@@ -49,7 +49,7 @@ export default function SignUpScreen() {
       const user = await authService.signUpWithEmail(email, password, onboardingData);
       if (user) {
         await analytics().logEvent('onboarding_signup_complete');
-        const paywallResult = await presentPaywallIfNeeded();
+        const paywallResult = await presentPaywallAfterAuth(user.uid);
         if (paywallResult === PAYWALL_RESULT.PURCHASED) {
           console.log("Paywall purchased...");
           router.replace('/(tabs)/home');
@@ -82,7 +82,18 @@ export default function SignUpScreen() {
                   const user = await authService.signInWithEmail(email, password);
                   if (user) {
                     await analytics().logEvent('onboarding_signin_complete');
-                    router.replace('/paywall');
+                    
+                    // Present paywall if needed before going to home
+                    const paywallResult = await presentPaywallAfterAuth(user.uid);
+                    if (paywallResult === PAYWALL_RESULT.PURCHASED || paywallResult === PAYWALL_RESULT.RESTORED) {
+                      router.replace('/(tabs)/home');
+                    } else if (paywallResult === PAYWALL_RESULT.CANCELLED) {
+                      if (router.canGoBack()) {
+                        router.back();
+                      } else {
+                        router.replace('/');
+                      }
+                    }
                   }
                 } catch (signInError: any) {
                   Alert.alert('Error', 'Invalid password. Please try again.');
@@ -119,7 +130,18 @@ export default function SignUpScreen() {
       if (hasDocument && isValidDocument) {
         console.log("User has valid document, navigating to home");
         await analytics().logEvent('onboarding_apple_signin_complete');
-        router.replace('/(tabs)/home');
+        
+        // Present paywall if needed before going to home
+        const paywallResult = await presentPaywallAfterAuth(user.uid);
+        if (paywallResult === PAYWALL_RESULT.PURCHASED || paywallResult === PAYWALL_RESULT.RESTORED) {
+          router.replace('/(tabs)/home');
+        } else if (paywallResult === PAYWALL_RESULT.CANCELLED) {
+          if (router.canGoBack()) {
+            router.back();
+          } else {
+            router.replace('/');
+          }
+        }
       } else {
         console.log("User needs a document created before going through paywall");
         await analytics().logEvent('onboarding_apple_signup_complete');
@@ -128,19 +150,22 @@ export default function SignUpScreen() {
           const userDocRef = doc(db, "users", user.uid);
           await setDoc(userDocRef, onboardingData);
           console.log("User document created successfully");
+          
+          // Present paywall if needed before going to home
+          const paywallResult = await presentPaywallAfterAuth(user.uid);
+          if (paywallResult === PAYWALL_RESULT.PURCHASED || paywallResult === PAYWALL_RESULT.RESTORED) {
+            router.replace('/(tabs)/home');
+          } else if (paywallResult === PAYWALL_RESULT.CANCELLED) {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace('/');
+            }
+          }
         } catch (error) {
           console.error("Error creating user document:", error);
           throw error;
         }
-      
-        router.push({
-          pathname: '/(onboarding)/paywall',
-          params: { 
-            uid: user.uid,
-            hasAppleInfo: 'true',
-            isSignUp: 'true'
-          }
-        });
       }
     } catch (error: any) {
       console.error("Apple Sign-In error:", error);

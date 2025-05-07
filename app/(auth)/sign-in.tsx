@@ -4,7 +4,7 @@ import Button from '../components/Button';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import authService from '../services/auth';
-import presentPaywallIfNeeded from '../(onboarding)/paywall';
+import { presentPaywallAfterAuth } from '../(onboarding)/paywall';
 import { PAYWALL_RESULT } from 'react-native-purchases-ui';
 
 export default function SignInScreen() {
@@ -51,7 +51,7 @@ export default function SignInScreen() {
       // Email exists - try to sign in
       const user = await authService.signInWithEmail(email, password);
       if (user) {
-        const paywallResult = await presentPaywallIfNeeded();
+        const paywallResult = await presentPaywallAfterAuth(user.uid);
         if (paywallResult === PAYWALL_RESULT.PURCHASED) {
           console.log("Paywall purchased...");
           router.replace('/(tabs)/home');
