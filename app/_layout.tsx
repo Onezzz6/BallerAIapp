@@ -48,8 +48,8 @@ function SubscriptionProvider({ children }: { children: React.ReactNode }) {
   const appState = useRef(AppState.currentState);
   const lastCheckTimeRef = useRef<number>(Date.now());
   
-  // Check minimum time between foreground checks (5 minutes)
-  const MIN_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds
+  // Check minimum time between foreground checks (10 seconds)
+  const MIN_CHECK_INTERVAL = 10 * 1000; // 10 seconds in milliseconds
 
   // Check if the user has an active subscription
   const isSubscriptionActive = React.useMemo(() => {

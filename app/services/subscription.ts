@@ -4,8 +4,8 @@ import { db } from '../config/firebase';
 
 // Product IDs for subscription plans
 export const PRODUCT_IDS = {
-  '1month': 'BallerAIProSubscriptionOneMonth',
-  '12months': 'BallerAIProSubscriptionOneYear'
+  '1month': 'BallerAIOneMonth',
+  '12months': 'BallerAIOneYear'
 };
 
 // Subscription status types

@@ -54,7 +54,7 @@ export default function SignUpScreen() {
         await runPostLoginSequence(
           user.uid,
           () => router.replace('/(tabs)/home'),
-          () => router.replace('/')  // Navigate to welcome on cancellation
+          () => router.replace('/(onboarding)/motivation-reason')  // Navigate to motivation-reason screen on cancellation
         );
       }
     } catch (error: any) {
@@ -77,7 +77,7 @@ export default function SignUpScreen() {
                     await runPostLoginSequence(
                       user.uid,
                       () => router.replace('/(tabs)/home'),
-                      () => router.replace('/')  // Navigate to welcome on cancellation
+                      () => router.replace('/')  // Navigate to welcome on cancellation (this is sign-in flow so welcome is appropriate)
                     );
                   }
                 } catch (signInError: any) {
@@ -120,7 +120,7 @@ export default function SignUpScreen() {
         await runPostLoginSequence(
           user.uid,
           () => router.replace('/(tabs)/home'),
-          () => router.replace('/')  // Navigate to welcome on cancellation
+          () => router.replace('/(onboarding)/motivation-reason')  // Navigate to motivation-reason on cancellation
         );
       } else {
         console.log("User needs a document created before going through paywall");
@@ -135,7 +135,7 @@ export default function SignUpScreen() {
           await runPostLoginSequence(
             user.uid,
             () => router.replace('/(tabs)/home'),
-            () => router.replace('/')  // Navigate to welcome on cancellation
+            () => router.replace('/(onboarding)/motivation-reason')  // Navigate to motivation-reason on cancellation
           );
         } catch (error) {
           console.error("Error creating user document:", error);
