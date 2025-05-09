@@ -41,7 +41,7 @@ export default {
     },
     ios: {
       bundleIdentifier: "com.ballerbizoy.ballerai",
-      buildNumber: "20",
+      buildNumber: "22",
       googleServicesFile: "./GoogleService-Info.plist",
       supportsTablet: true,
       infoPlist: {

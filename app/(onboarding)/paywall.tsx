@@ -3,9 +3,47 @@ import { View, Text, ActivityIndicator, Alert, StyleSheet } from 'react-native';
 import Purchases, { LOG_LEVEL, CustomerInfo } from 'react-native-purchases';
 import RevenueCatUI, { PAYWALL_RESULT } from "react-native-purchases-ui";
 import CustomButton from '../components/CustomButton';
+import { usePathname } from 'expo-router';
+// Remove import from _layout to fix circular dependency
+// import { isOnOnboardingScreen } from '../_layout';
 
 // Correct entitlement identifier
 const ENTITLEMENT_ID = "BallerAISubscriptionGroup";
+
+// Track if paywall is currently visible to prevent duplicate displays at any time during the app flow
+let isPaywallCurrentlyPresented = false;
+
+// Track if user has completed authentication - paywall should never show before this is true
+let hasUserCompletedAuthentication = false;
+
+// Function to set auth completion flag - call this ONLY after successful sign-in or sign-up
+export function markAuthenticationComplete() {
+  console.log("✅ Authentication process completed - paywall can now be shown when needed");
+  hasUserCompletedAuthentication = true;
+}
+
+// Function to reset auth completion flag - call this on sign-out
+export function resetAuthenticationStatus() {
+  console.log("⏮️ Authentication status reset - paywall will not be shown until next sign-in");
+  hasUserCompletedAuthentication = false;
+}
+
+// Local implementation of onboarding screen detection to avoid circular dependency
+const isOnOnboardingScreen = (path: string) => {
+  return path.includes('/(onboarding)') || 
+    path.includes('/paywall') || 
+    path.includes('/sign') || 
+    path.includes('/intro') ||
+    path.includes('/motivation') ||
+    path.includes('/tracking') ||
+    path.includes('/football-goal') ||
+    path.includes('/smart-watch') ||
+    path.includes('/gym-access') ||
+    path.includes('/training-frequency') ||
+    path.includes('/improvement-focus') ||
+    path.includes('/username') ||
+    path === '/';
+};
 
 /**
  * Handles subscription check when app returns to foreground
@@ -14,13 +52,43 @@ const ENTITLEMENT_ID = "BallerAISubscriptionGroup";
  * @param userId The Firebase UID of the authenticated user
  * @param navigateToHome Function to navigate to the home screen
  * @param navigateToWelcome Function to navigate to the welcome screen
+ * @param currentPath Optional current path to check if in onboarding
  */
 export async function checkSubscriptionOnForeground(
   userId: string,
   navigateToHome: () => void,
-  navigateToWelcome: () => void
+  navigateToWelcome: () => void,
+  currentPath?: string
 ): Promise<void> {
   console.log("\n======== APP FOREGROUND SUBSCRIPTION CHECK ========");
+  console.log(`UserID: ${userId}, Current path: ${currentPath || 'undefined'}`);
+  console.log(`Authentication Status: ${hasUserCompletedAuthentication ? 'COMPLETED' : 'NOT COMPLETED'}`);
+  
+  // MOST IMPORTANT CHECK - Never show paywall if user hasn't completed sign-in/sign-up
+  if (!hasUserCompletedAuthentication) {
+    console.log("⚠️ User has not completed authentication - skipping subscription check");
+    return;
+  }
+  
+  // If a paywall is already being presented, skip this check entirely
+  if (isPaywallCurrentlyPresented) {
+    console.log("⚠️ Paywall is already being presented - skipping duplicate check");
+    return;
+  }
+  
+  // If we're in the onboarding flow, skip the check entirely
+  if (currentPath) {
+    console.log(`Current path for checking: "${currentPath}"`);
+    const inOnboarding = isOnOnboardingScreen(currentPath);
+    console.log(`Is in onboarding flow? ${inOnboarding ? 'YES' : 'NO'}`);
+    
+    if (inOnboarding) {
+      console.log("⚠️ User is in onboarding flow - skipping subscription check");
+      return;
+    }
+  } else {
+    console.log("⚠️ No current path provided - continuing with subscription check");
+  }
   
   try {
     // 1. Identify the user to ensure we're checking the right account
@@ -69,23 +137,44 @@ export async function checkSubscriptionOnForeground(
     
     // 5. If no active subscription, show the paywall
     console.log("STEP 5: Presenting paywall...");
-    const paywallResult = await RevenueCatUI.presentPaywallIfNeeded({
-      requiredEntitlementIdentifier: ENTITLEMENT_ID
-    });
     
-    // 6. Handle result with appropriate navigation
-    console.log("STEP 6: Handling paywall result:", paywallResult);
-    if (paywallResult === PAYWALL_RESULT.PURCHASED || 
-        paywallResult === PAYWALL_RESULT.RESTORED) {
-      // Success - navigate to home
-      console.log("Purchase/restore successful - navigating to home");
-      navigateToHome();
-    } else {
-      // Cancelled - navigate to welcome screen to sign in again
-      console.log("Paywall cancelled - navigating to welcome screen");
+    // Mark paywall as being presented to prevent duplicates
+    isPaywallCurrentlyPresented = true;
+    
+    // Important: we don't want to show the paywall twice, so we wrap this in a try/catch
+    // and ensure we only navigate once when necessary
+    try {
+      const paywallResult = await RevenueCatUI.presentPaywallIfNeeded({
+        requiredEntitlementIdentifier: ENTITLEMENT_ID
+      });
+      
+      // Reset paywall presented flag
+      isPaywallCurrentlyPresented = false;
+      
+      // 6. Handle result with appropriate navigation
+      console.log("STEP 6: Handling paywall result:", paywallResult);
+      if (paywallResult === PAYWALL_RESULT.PURCHASED || 
+          paywallResult === PAYWALL_RESULT.RESTORED) {
+        // Success - navigate to home
+        console.log("Purchase/restore successful - navigating to home");
+        navigateToHome();
+      } else {
+        // Cancelled - navigate to welcome screen to sign in again
+        console.log("Paywall cancelled - navigating to welcome screen");
+        navigateToWelcome();
+      }
+    } catch (error) {
+      // Reset paywall presented flag even if there's an error
+      isPaywallCurrentlyPresented = false;
+      
+      console.error("Error presenting paywall:", error);
+      // On paywall presentation error, default to welcome screen
       navigateToWelcome();
     }
   } catch (error) {
+    // Reset paywall presented flag even if there's an error
+    isPaywallCurrentlyPresented = false;
+    
     console.error("Error in foreground subscription check:", error);
     // On error, default to welcome screen
     navigateToWelcome();
@@ -100,13 +189,33 @@ export async function checkSubscriptionOnForeground(
  * @param userId The Firebase UID of the authenticated user
  * @param navigateToHome Function to navigate to the home screen
  * @param navigateToWelcome Function to navigate to the welcome screen
+ * @param currentPath Optional current path to check if in onboarding
  */
 export async function runPostLoginSequence(
   userId: string, 
   navigateToHome: () => void,
-  navigateToWelcome: () => void
+  navigateToWelcome: () => void,
+  currentPath?: string
 ): Promise<void> {
   console.log("======== RUNNING ONE-TIME POST-LOGIN SEQUENCE ========");
+  console.log(`UserID: ${userId}, Current path: ${currentPath || 'undefined'}`);
+  console.log(`Authentication Status: ${hasUserCompletedAuthentication ? 'COMPLETED' : 'NOT COMPLETED'}`);
+  
+  // If a paywall is already being presented, skip this check entirely
+  if (isPaywallCurrentlyPresented) {
+    console.log("⚠️ Paywall is already being presented - skipping duplicate post-login sequence");
+    return;
+  }
+  
+  // Check if we're in the onboarding flow
+  if (currentPath && isOnOnboardingScreen(currentPath)) {
+    // If we haven't yet completed onboarding, don't show the paywall yet
+    // Just navigate to the home screen for now
+    console.log("⚠️ User is still in onboarding flow - allowing them to finish onboarding first");
+    console.log("Navigating to home without showing paywall");
+    navigateToHome();
+    return;
+  }
   
   try {
     // 1. First identify the user with RevenueCat
@@ -143,32 +252,18 @@ export async function runPostLoginSequence(
     const customerInfo = await Purchases.getCustomerInfo();
     console.log("Network fetch complete");
     
-    // Log detailed subscription information
-    console.log("\n\n=================== DETAILED SUBSCRIPTION INFO ===================");
+    // Log detailed subscription info for debugging
+    console.log("\n=================== DETAILED SUBSCRIPTION INFO ===================");
     const entitlement = customerInfo.entitlements.active[ENTITLEMENT_ID];
     
     if (entitlement) {
       console.log("✅ ACTIVE SUBSCRIPTION FOUND");
       console.log("📅 Expiration Date:", entitlement.expirationDate);
       console.log("🔄 Will Renew:", entitlement.willRenew ? "YES" : "NO");
-      console.log("⚠️ Unsubscribe Detected At:", entitlement.unsubscribeDetectedAt || "N/A");
       
-      // Additional subscription details
-      console.log("🔄 Period Type:", entitlement.periodType || "N/A");
-      console.log("📱 Store:", entitlement.store || "N/A");
-      console.log("📂 Product Identifier:", entitlement.productIdentifier || "N/A");
-      console.log("⏱️ Latest Purchase Date:", entitlement.latestPurchaseDate || "N/A");
-      console.log("🏆 Original Purchase Date:", entitlement.originalPurchaseDate || "N/A");
-      
-      console.log("\n📊 Full entitlement object:");
-      console.log(JSON.stringify(entitlement, null, 2));
-      
-      // Also log the raw purchases data for troubleshooting
-      console.log("\n🧾 Active subscriptions from customerInfo:");
-      console.log(JSON.stringify(customerInfo.activeSubscriptions, null, 2));
-      
-      console.log("\n🛒 All purchases:");
-      console.log(JSON.stringify(customerInfo.allPurchaseDates, null, 2));
+      if (entitlement.unsubscribeDetectedAt) {
+        console.log("⚠️ Unsubscribe Detected At:", entitlement.unsubscribeDetectedAt);
+      }
     } else {
       console.log("❌ No active BallerAISubscriptionGroup entitlement found");
       console.log("\n📊 All entitlements:");
@@ -198,9 +293,16 @@ export async function runPostLoginSequence(
     
     // 6. Only if truly no subscription, show paywall ONCE
     console.log("STEP 6: No active subscription confirmed, showing paywall...");
+    
+    // Mark paywall as being presented to prevent duplicates
+    isPaywallCurrentlyPresented = true;
+    
     const paywallResult = await RevenueCatUI.presentPaywallIfNeeded({
       requiredEntitlementIdentifier: ENTITLEMENT_ID
     });
+    
+    // Reset paywall presented flag
+    isPaywallCurrentlyPresented = false;
     
     // 7. Handle paywall result with appropriate navigation
     if (paywallResult === PAYWALL_RESULT.PURCHASED || 
@@ -218,6 +320,9 @@ export async function runPostLoginSequence(
     
     console.log("Paywall sequence complete with result:", paywallResult);
   } catch (error) {
+    // Reset paywall presented flag even if there's an error
+    isPaywallCurrentlyPresented = false;
+    
     console.error("Error in RevenueCat post-login sequence:", error);
     // If any error occurs, navigate to welcome screen
     console.log("Navigating to welcome screen due to error");
@@ -232,6 +337,12 @@ export async function runPostLoginSequence(
 async function presentPaywallIfNeeded(): Promise<PAYWALL_RESULT> {
   console.warn("⚠️ WARNING: Using legacy paywall check - should NOT be used after authentication");
   
+  // If a paywall is already being presented, skip showing another one
+  if (isPaywallCurrentlyPresented) {
+    console.log("⚠️ Paywall is already being presented - skipping duplicate presentation");
+    return PAYWALL_RESULT.CANCELLED;
+  }
+  
   try {
     // Check subscription status
     const customerInfo = await Purchases.getCustomerInfo();
@@ -241,11 +352,22 @@ async function presentPaywallIfNeeded(): Promise<PAYWALL_RESULT> {
       return PAYWALL_RESULT.PURCHASED;
     }
     
+    // Mark paywall as being presented to prevent duplicates
+    isPaywallCurrentlyPresented = true;
+    
     // Present paywall if needed
-    return await RevenueCatUI.presentPaywallIfNeeded({
+    const result = await RevenueCatUI.presentPaywallIfNeeded({
       requiredEntitlementIdentifier: ENTITLEMENT_ID
     });
+    
+    // Reset paywall presented flag
+    isPaywallCurrentlyPresented = false;
+    
+    return result;
   } catch (error) {
+    // Reset paywall presented flag even if there's an error
+    isPaywallCurrentlyPresented = false;
+    
     console.error("Error in legacy paywall check:", error);
     return PAYWALL_RESULT.CANCELLED;
   }

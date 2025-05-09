@@ -10,11 +10,13 @@ import analytics from '@react-native-firebase/analytics';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { runPostLoginSequence } from './paywall';
+import { runPostLoginSequence, markAuthenticationComplete } from './paywall';
 import { PAYWALL_RESULT } from 'react-native-purchases-ui';
+import { usePathname } from 'expo-router';
 
 export default function SignUpScreen() {
   const router = useRouter();
+  const pathname = usePathname();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -50,11 +52,15 @@ export default function SignUpScreen() {
       if (user) {
         await analytics().logEvent('onboarding_signup_complete');
         
-        // Run the definitive post-login sequence
+        // Mark authentication as complete after successful sign-up
+        markAuthenticationComplete();
+        
+        // Run the definitive post-login sequence with current path
         await runPostLoginSequence(
           user.uid,
           () => router.replace('/(tabs)/home'),
-          () => router.replace('/(onboarding)/motivation-reason')  // Navigate to motivation-reason screen on cancellation
+          () => router.replace('/(onboarding)/motivation-reason'),  // Navigate to motivation-reason screen on cancellation
+          pathname
         );
       }
     } catch (error: any) {
@@ -73,11 +79,15 @@ export default function SignUpScreen() {
                   if (user) {
                     await analytics().logEvent('onboarding_signin_complete');
                     
-                    // Run the definitive post-login sequence
+                    // Mark authentication as complete after successful sign-in
+                    markAuthenticationComplete();
+                    
+                    // Run the definitive post-login sequence with current path
                     await runPostLoginSequence(
                       user.uid,
                       () => router.replace('/(tabs)/home'),
-                      () => router.replace('/')  // Navigate to welcome on cancellation (this is sign-in flow so welcome is appropriate)
+                      () => router.replace('/'),  // Navigate to welcome on cancellation
+                      pathname
                     );
                   }
                 } catch (signInError: any) {
@@ -107,6 +117,7 @@ export default function SignUpScreen() {
       
       if (!user) {
         console.log("No user returned from Apple authentication");
+        setIsLoading(false);
         return;
       }
 
@@ -116,11 +127,15 @@ export default function SignUpScreen() {
         console.log("User has valid document, navigating to home");
         await analytics().logEvent('onboarding_apple_signin_complete');
         
-        // Run the definitive post-login sequence
+        // Mark authentication as complete after successful Apple sign-in
+        markAuthenticationComplete();
+        
+        // Run the definitive post-login sequence with current path
         await runPostLoginSequence(
           user.uid,
           () => router.replace('/(tabs)/home'),
-          () => router.replace('/(onboarding)/motivation-reason')  // Navigate to motivation-reason on cancellation
+          () => router.replace('/(onboarding)/motivation-reason'),  // Navigate to motivation-reason on cancellation
+          pathname
         );
       } else {
         console.log("User needs a document created before going through paywall");
@@ -131,25 +146,28 @@ export default function SignUpScreen() {
           await setDoc(userDocRef, onboardingData);
           console.log("User document created successfully");
           
-          // Run the definitive post-login sequence
+          // Mark authentication as complete after successful Apple sign-up
+          markAuthenticationComplete();
+          
+          // Run the definitive post-login sequence with current path
           await runPostLoginSequence(
             user.uid,
             () => router.replace('/(tabs)/home'),
-            () => router.replace('/(onboarding)/motivation-reason')  // Navigate to motivation-reason on cancellation
+            () => router.replace('/(onboarding)/motivation-reason'),  // Navigate to motivation-reason on cancellation
+            pathname
           );
         } catch (error) {
           console.error("Error creating user document:", error);
+          setIsLoading(false);
           throw error;
         }
       }
-    } catch (error: any) {
-      console.error("Apple Sign-In error:", error);
+    } catch (error) {
+      console.error("Apple sign-up error:", error);
+      setIsLoading(false);
       
-      if (error.code !== 'ERR_REQUEST_CANCELED') {
-        Alert.alert(
-          'Sign in with Apple Failed',
-          'Failed to sign up with Apple. Please try again.'
-        );
+      if ((error as any)?.code !== 'ERR_CANCELED') {
+        Alert.alert('Error', 'Failed to sign up with Apple. Please try again.');
       }
     } finally {
       setIsLoading(false);

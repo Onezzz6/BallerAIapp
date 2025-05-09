@@ -47,6 +47,17 @@ function SubscriptionProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const appState = useRef(AppState.currentState);
   const lastCheckTimeRef = useRef<number>(Date.now());
+  const pathname = usePathname();
+  const currentPathRef = useRef(pathname);
+  const isInOnboardingRef = useRef(false);
+  
+  // Update currentPathRef when pathname changes
+  useEffect(() => {
+    currentPathRef.current = pathname;
+    // Also update onboarding status
+    isInOnboardingRef.current = isOnOnboardingScreen(pathname);
+    console.log(`Path changed to: "${pathname}" - In onboarding: ${isInOnboardingRef.current ? 'YES' : 'NO'}`);
+  }, [pathname]);
   
   // Check minimum time between foreground checks (10 seconds)
   const MIN_CHECK_INTERVAL = 10 * 1000; // 10 seconds in milliseconds
@@ -145,6 +156,25 @@ function SubscriptionProvider({ children }: { children: React.ReactNode }) {
         const now = Date.now();
         const timeSinceLastCheck = now - lastCheckTimeRef.current;
         
+        // Get current path and check if we should show paywall
+        const currentPath = currentPathRef.current;
+        
+        // Log the current path for debugging
+        console.log(`Current path when returning to foreground: "${currentPath}"`);
+        console.log(`Onboarding status: ${isInOnboardingRef.current ? 'IN ONBOARDING' : 'NOT IN ONBOARDING'}`);
+        
+        // First check for explicit paywall path
+        if (currentPath.includes('/paywall')) {
+          console.log('Already on paywall screen - skipping foreground subscription check');
+          return;
+        }
+        
+        // Then check for any onboarding path
+        if (isInOnboardingRef.current) {
+          console.log('User is in onboarding flow - skipping foreground subscription check');
+          return;
+        }
+        
         if (timeSinceLastCheck >= MIN_CHECK_INTERVAL) {
           console.log(`Running foreground subscription check (${timeSinceLastCheck/1000}s since last check)`);
           lastCheckTimeRef.current = now;
@@ -156,7 +186,9 @@ function SubscriptionProvider({ children }: { children: React.ReactNode }) {
               // Navigate to home on purchase/restore
               () => router.replace('/(tabs)/home'),
               // Navigate to welcome on cancel
-              () => router.replace('/')
+              () => router.replace('/'),
+              // Pass the current path for additional checks
+              currentPath
             );
           }
         } else {
@@ -208,6 +240,14 @@ function RootLayoutContent() {
     return path.includes('/(onboarding)') || 
       path.includes('/paywall') || 
       path.includes('/sign') || 
+      path.includes('/intro') ||
+      path.includes('/motivation') ||
+      path.includes('/tracking') ||
+      path.includes('/football-goal') ||
+      path.includes('/smart-watch') ||
+      path.includes('/gym-access') ||
+      path.includes('/training-frequency') ||
+      path.includes('/improvement-focus') ||
       path === '/';
   };
 
@@ -218,6 +258,22 @@ function RootLayoutContent() {
     </ThemeProvider>
   );
 }
+
+// Make the isOnOnboardingScreen function available to other components
+export const isOnOnboardingScreen = (path: string) => {
+  return path.includes('/(onboarding)') || 
+    path.includes('/paywall') || 
+    path.includes('/sign') || 
+    path.includes('/intro') ||
+    path.includes('/motivation') ||
+    path.includes('/tracking') ||
+    path.includes('/football-goal') ||
+    path.includes('/smart-watch') ||
+    path.includes('/gym-access') ||
+    path.includes('/training-frequency') ||
+    path.includes('/improvement-focus') ||
+    path === '/';
+};
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();

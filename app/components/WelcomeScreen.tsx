@@ -1,5 +1,5 @@
 import { View, Text, Image, Pressable, TextInput, Alert, Keyboard, TouchableWithoutFeedback, Modal } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -12,8 +12,9 @@ import React from 'react';
 import authService from '../services/auth';
 import { Ionicons } from '@expo/vector-icons';
 import * as AppleAuthentication from 'expo-apple-authentication';
-import { runPostLoginSequence } from '../(onboarding)/paywall';
+import { runPostLoginSequence, markAuthenticationComplete } from '../(onboarding)/paywall';
 import { PAYWALL_RESULT } from 'react-native-purchases-ui';
+import { requestAppTrackingPermission } from '../utils/tracking';
 // Default empty onboarding data
 const defaultOnboardingData = {
   hasSmartwatch: null,
@@ -26,6 +27,7 @@ const defaultOnboardingData = {
 
 export default function WelcomeScreen() {
   const router = useRouter();
+  const pathname = usePathname();
   const [showSignIn, setShowSignIn] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -56,6 +58,21 @@ export default function WelcomeScreen() {
     }, 1000);
     
     return () => clearTimeout(animationTimer);
+  }, []);
+
+  // Request App Tracking Transparency permission
+  useEffect(() => {
+    // Delay the tracking request to avoid showing it immediately on screen load
+    const trackingTimer = setTimeout(async () => {
+      try {
+        const trackingStatus = await requestAppTrackingPermission();
+        console.log(`App tracking permission status: ${trackingStatus}`);
+      } catch (error) {
+        console.error('Failed to request tracking permission:', error);
+      }
+    }, 2000); // Show after 2 seconds
+    
+    return () => clearTimeout(trackingTimer);
   }, []);
 
   // Check if Apple authentication is available on this device
@@ -91,11 +108,15 @@ export default function WelcomeScreen() {
     try {
       const user = await authService.signInWithEmail(email, password);
       if (user) {
-        // Run the definitive post-login sequence
+        // Mark authentication as complete - this user is now signed in
+        markAuthenticationComplete();
+        
+        // Run the definitive post-login sequence with current path
         await runPostLoginSequence(
           user.uid,
           () => router.replace('/(tabs)/home'),
-          () => router.replace('/')  // Navigate to welcome on cancellation (will essentially refresh the page)
+          () => router.replace('/'),  // Navigate to welcome on cancellation
+          pathname
         );
       }
     } catch (error: any) {
@@ -150,11 +171,16 @@ export default function WelcomeScreen() {
         
         if (isValidUser) {
           console.log("User has valid document with complete onboarding data - navigating to home");
+          
+          // Mark authentication as complete - this user is now signed in
+          markAuthenticationComplete();
+          
           // Only navigate if we have a confirmed valid user
           await runPostLoginSequence(
             user.uid,
             () => router.replace('/(tabs)/home'),
-            () => router.replace('/')  // Navigate to welcome on cancellation (will essentially refresh the page)
+            () => router.replace('/'),  // Navigate to welcome on cancellation
+            pathname
           );
           return;
         } else {

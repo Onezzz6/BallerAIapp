@@ -10,6 +10,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import { reauthenticateWithCredential, EmailAuthProvider, OAuthProvider, deleteUser, signOut } from 'firebase/auth';
 import { auth, db } from './config/firebase';
 import { collection, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { resetAuthenticationStatus } from './(onboarding)/paywall';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -24,6 +25,7 @@ export default function SettingsScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [isAppleUser, setIsAppleUser] = useState(false);
   const [isAppleAuthAvailable, setIsAppleAuthAvailable] = useState(false);
+  const [showConfirmDeleteModal, setShowConfirmDeleteModal] = useState(false);
 
   const handleSignOut = async () => {
     Alert.alert(
@@ -39,6 +41,8 @@ export default function SettingsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
+              // Reset authentication status before signing out
+              resetAuthenticationStatus();
               await authService.signOut();
               router.replace('/');
             } catch (error) {
