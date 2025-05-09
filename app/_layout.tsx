@@ -260,6 +260,8 @@ function RootLayoutContent() {
 }
 
 // Make the isOnOnboardingScreen function available to other components
+// This is only used to prevent foreground-background paywall checks during onboarding
+// It is NOT used to skip paywall display after sign-in/sign-up
 export const isOnOnboardingScreen = (path: string) => {
   return path.includes('/(onboarding)') || 
     path.includes('/paywall') || 

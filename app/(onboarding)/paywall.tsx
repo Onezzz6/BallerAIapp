@@ -17,18 +17,23 @@ let isPaywallCurrentlyPresented = false;
 let hasUserCompletedAuthentication = false;
 
 // Function to set auth completion flag - call this ONLY after successful sign-in or sign-up
+// This enables paywall presentation after authentication, in both the post-login sequence
+// and when the app returns to the foreground later
 export function markAuthenticationComplete() {
   console.log("✅ Authentication process completed - paywall can now be shown when needed");
   hasUserCompletedAuthentication = true;
 }
 
 // Function to reset auth completion flag - call this on sign-out
+// This ensures the paywall won't be shown again until the user signs in again
 export function resetAuthenticationStatus() {
   console.log("⏮️ Authentication status reset - paywall will not be shown until next sign-in");
   hasUserCompletedAuthentication = false;
 }
 
 // Local implementation of onboarding screen detection to avoid circular dependency
+// This is only used to prevent foreground-background paywall checks during onboarding
+// It is NOT used to skip paywall display after sign-in/sign-up
 const isOnOnboardingScreen = (path: string) => {
   return path.includes('/(onboarding)') || 
     path.includes('/paywall') || 
@@ -207,15 +212,9 @@ export async function runPostLoginSequence(
     return;
   }
   
-  // Check if we're in the onboarding flow
-  if (currentPath && isOnOnboardingScreen(currentPath)) {
-    // If we haven't yet completed onboarding, don't show the paywall yet
-    // Just navigate to the home screen for now
-    console.log("⚠️ User is still in onboarding flow - allowing them to finish onboarding first");
-    console.log("Navigating to home without showing paywall");
-    navigateToHome();
-    return;
-  }
+  // IMPORTANT: We removed the check for onboarding screens here
+  // We always want to show the paywall right after sign-in/sign-up
+  // regardless of what screen the user is on
   
   try {
     // 1. First identify the user with RevenueCat
