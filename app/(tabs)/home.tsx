@@ -25,6 +25,7 @@ import { askOpenAI } from '../utils/openai';
 import Svg, { Circle } from 'react-native-svg';
 import Animated, { PinwheelIn } from 'react-native-reanimated';
 import analytics from '@react-native-firebase/analytics'; // Add analytics import
+import HomeInstructions from '../components/HomeInstructions';
 
 export default function HomeScreen() {
   const { user } = useAuth();
@@ -57,6 +58,17 @@ export default function HomeScreen() {
     isLoading: true
   });
 
+  // Refs for elements to highlight in the instructions
+  const calorieCardRef = useRef<View>(null);
+  const readinessCardRef = useRef<View>(null);
+  const weeklyProgressRef = useRef<View>(null);
+  const nutritionCardRef = useRef<View>(null);
+  const recoveryCardRef = useRef<View>(null);
+  const askBallzyRef = useRef<View>(null);
+  
+  // State to track whether the instructions are shown
+  const [instructionsComplete, setInstructionsComplete] = useState(false);
+  
   const showInfoAlertReadiness = () => {
     Alert.alert(
       "Readiness Score",
@@ -1529,6 +1541,7 @@ export default function HomeScreen() {
           }}>
             {/* Daily Calories Card - Now using CalorieProgress component */}
             <Pressable
+              ref={calorieCardRef}
               onPress={showCalorieInfoAlert}
               style={({ pressed }) => ({
                 width: '49%', // Slightly less than 50% to account for the gap
@@ -1542,6 +1555,7 @@ export default function HomeScreen() {
 
             {/* Readiness Card */}
             <Pressable 
+              ref={readinessCardRef}
               onPress={showInfoAlertReadiness}
               style={({ pressed }) => ({
                 width: '49%', // Slightly less than 50% to account for the gap
@@ -1649,12 +1663,15 @@ export default function HomeScreen() {
           </View>
 
           {/* Weekly Progress Section Header */}
-          <View style={{ 
-            alignItems: 'center',
-            paddingVertical: 16,
-            borderBottomWidth: 1,
-            borderBottomColor: '#E5E5E5',
-          }}>
+          <View 
+            ref={weeklyProgressRef}
+            style={{ 
+              alignItems: 'center',
+              paddingVertical: 16,
+              borderBottomWidth: 1,
+              borderBottomColor: '#E5E5E5',
+            }}
+          >
             <Text style={{ 
               fontSize: 28, 
               fontWeight: '600',
@@ -1673,6 +1690,7 @@ export default function HomeScreen() {
           }}>
             {/* Nutrition Adherence Card */}
             <Pressable
+              ref={nutritionCardRef}
               onPress={showInfoAlertNutrition}
               style={({ pressed }) => ({
                 width: '49%', // Slightly less than 50% to account for the gap
@@ -1778,8 +1796,9 @@ export default function HomeScreen() {
               </View>
             </Pressable>
             
-            {/* New Recovery Card */}
+            {/* Recovery Card */}
             <Pressable
+              ref={recoveryCardRef}
               onPress={showInfoAlertRecovery}
               style={({ pressed }) => ({
                 width: '49%', // Slightly less than 50% to account for the gap
@@ -1887,21 +1906,24 @@ export default function HomeScreen() {
           </View>
 
           {/* Ask AI Section */}
-          <View style={{
-            backgroundColor: '#4064F6',
-            borderRadius: 24,
-            padding: 24,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            shadowColor: '#000000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.3,
-            shadowRadius: 4,
-            elevation: 4,
-            borderWidth: 1,
-            borderColor: '#E5E5E5',
-          }}>
+          <View 
+            ref={askBallzyRef}
+            style={{
+              backgroundColor: '#4064F6',
+              borderRadius: 24,
+              padding: 24,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              shadowColor: '#000000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.3,
+              shadowRadius: 4,
+              elevation: 4,
+              borderWidth: 1,
+              borderColor: '#E5E5E5',
+            }}
+          >
             <View style={{ flex: 1 }}>
               <Text style={{
                 fontSize: 24,
@@ -2429,6 +2451,18 @@ export default function HomeScreen() {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
+
+      {/* Add HomeInstructions component */}
+      <HomeInstructions
+        calorieCardRef={calorieCardRef}
+        readinessCardRef={readinessCardRef}
+        weeklyProgressRef={weeklyProgressRef}
+        nutritionCardRef={nutritionCardRef}
+        recoveryCardRef={recoveryCardRef}
+        askBallzyRef={askBallzyRef}
+        scrollViewRef={scrollViewRef}
+        onComplete={() => setInstructionsComplete(true)}
+      />
     </KeyboardAvoidingView>
   );
 }
