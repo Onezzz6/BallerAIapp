@@ -14,6 +14,7 @@ export type InstructionStep = {
     width: number;
     height: number;
   } | null;
+  tooltipVerticalOffset?: number;
 };
 
 type TabInstructionsProps = {
@@ -46,6 +47,15 @@ const TabInstructions: React.FC<TabInstructionsProps> = ({
   const currentStepIndex = externalStepIndex !== undefined ? externalStepIndex : internalStepIndex;
   const currentStep = steps[currentStepIndex];
   
+  // Add a check to ensure currentStep is defined before proceeding
+  if (!currentStep) {
+    console.error("Current instruction step is undefined for index:", currentStepIndex);
+    // Optionally, handle this case gracefully, e.g., by not rendering the modal or showing an error
+    // For now, returning null might prevent a crash during render, but might hide the component.
+    // A better approach might be to prevent the index from going out of bounds upstream.
+    return null; // Or render a fallback/loading state
+  }
+  
   // Update step index - if external control is used, call the callback
   const updateStepIndex = (newIndex: number) => {
     if (externalStepIndex !== undefined && onStepChange) {
@@ -68,28 +78,30 @@ const TabInstructions: React.FC<TabInstructionsProps> = ({
     }
 
     const { x, y, width, height } = currentStep.position;
-    
-    // Determine if element is too close to screen bottom
-    const isTooLow = y > WINDOW_HEIGHT - TOOLTIP_HEIGHT - height - SAFE_BOTTOM_MARGIN;
+    const verticalOffset = currentStep.tooltipVerticalOffset;
     
     // Calculate left position to center tooltip horizontally with element
     let left = x + (width / 2) - (TOOLTIP_WIDTH / 2);
-    
-    // Ensure tooltip stays within screen bounds horizontally
     left = Math.max(20, Math.min(left, WINDOW_WIDTH - TOOLTIP_WIDTH - 20));
     
-    // Position tooltip either above or below element with padding
     let top;
-    if (isTooLow) {
-      // Position above if element is too low on screen
-      top = Math.max(STATUSBAR_HEIGHT + 60, y - TOOLTIP_HEIGHT - 20);
+    if (verticalOffset !== undefined && verticalOffset !== null) {
+      // If a specific vertical offset is provided, use it
+      top = y + verticalOffset;
     } else {
-      // Position below if there's enough space
-      top = y + height + 20;
+      // Otherwise, use the default above/below logic
+      const isTooLow = y > WINDOW_HEIGHT - TOOLTIP_HEIGHT - height - SAFE_BOTTOM_MARGIN;
+      if (isTooLow) {
+        // Position above if element is too low
+        top = Math.max(STATUSBAR_HEIGHT + 60, y - TOOLTIP_HEIGHT - 20);
+      } else {
+        // Position below if there's enough space
+        top = y + height + 20;
+      }
     }
     
-    // Final safety check to ensure tooltip is on screen
-    top = Math.min(top, WINDOW_HEIGHT - TOOLTIP_HEIGHT - SAFE_BOTTOM_MARGIN);
+    // Final safety check to ensure tooltip is on screen vertically
+    top = Math.max(STATUSBAR_HEIGHT + 20, Math.min(top, WINDOW_HEIGHT - TOOLTIP_HEIGHT - SAFE_BOTTOM_MARGIN));
     
     return { left, top };
   };

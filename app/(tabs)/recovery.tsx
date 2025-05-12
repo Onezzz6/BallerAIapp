@@ -13,6 +13,8 @@ import WeeklyOverview from '../components/WeeklyOverview';
 import Constants from 'expo-constants';
 import Animated, { FadeIn, FadeInDown, PinwheelIn } from 'react-native-reanimated';
 import analytics from '@react-native-firebase/analytics';
+import RecoveryInstructions from '../components/RecoveryInstructions';
+import { markInstructionsAsShown, INSTRUCTION_KEYS } from '../utils/instructionManager';
 
 // Add this line to get the API key from Constants.expoConfig.extra
 const OPENAI_API_KEY = Constants.expoConfig?.extra?.openaiApiKey;
@@ -64,6 +66,14 @@ export default function RecoveryScreen() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [hasTodayCompletedPlan, setHasTodayCompletedPlan] = useState(false);
   const [isLoadingStreak, setIsLoadingStreak] = useState(true);
+  
+  // References for tutorial instructions
+  const scrollViewRef = useRef<ScrollView>(null);
+  const recoveryQueryRef = useRef<View>(null);
+  const recoveryToolsRef = useRef<View>(null);
+  const recoveryTimeRef = useRef<View>(null);
+  const generateButtonRef = useRef<View>(null);
+  const planHolderRef = useRef<View>(null);
 
   // Fetch recovery data for selected date
   useEffect(() => {
@@ -857,6 +867,7 @@ IMPORTANT USAGE GUIDELINES:
         keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 40}
       >
       <ScrollView
+        ref={scrollViewRef}
         style={styles.container}
         contentContainerStyle={{
           flexGrow: 1,
@@ -930,6 +941,7 @@ IMPORTANT USAGE GUIDELINES:
 
             {/* Recovery Inputs - Always accessible for all days */}
             <Animated.View 
+              ref={recoveryQueryRef}
               entering={FadeIn.duration(300)}
               style={styles.inputsContainer}
             >
@@ -1072,6 +1084,7 @@ IMPORTANT USAGE GUIDELINES:
 
             {/* Recovery Tools Selection Card - Disabled for past days */}
             <Animated.View 
+              ref={recoveryToolsRef}
               entering={FadeIn.duration(300)}
               style={[
                 styles.inputsContainer, 
@@ -1219,6 +1232,7 @@ IMPORTANT USAGE GUIDELINES:
 
             {/* Recovery Time Card - Disabled for past days */}
             <Animated.View 
+              ref={recoveryTimeRef}
               entering={FadeIn.duration(300)}
               style={[
                 styles.inputsContainer, 
@@ -1440,6 +1454,7 @@ IMPORTANT USAGE GUIDELINES:
               {!planExists ? (
                 <>
                   <Pressable
+                    ref={generateButtonRef}
                     style={({ pressed }) => [
                       styles.generateButton, 
                       (loading || !recoveryData.submitted || !toolsConfirmed || !timeConfirmed || !isToday) && styles.generateButtonDisabled
@@ -1490,9 +1505,12 @@ IMPORTANT USAGE GUIDELINES:
             </Animated.View>
 
             {/* Plan Holder - Always visible with different states */}
-            <View style={{
-              marginHorizontal: 24,
-            }}>
+            <View 
+              ref={planHolderRef}
+              style={{
+                marginHorizontal: 24,
+              }}
+            >
               <View style={[
                 styles.planHolderContainer,
                 !todaysPlan && !planLoading && styles.planHolderEmpty
@@ -1607,6 +1625,17 @@ IMPORTANT USAGE GUIDELINES:
           </Animated.View>
         </Animated.View>
       )}
+
+      {/* Recovery Instructions */}
+      <RecoveryInstructions
+        recoveryQueryRef={recoveryQueryRef}
+        recoveryToolsRef={recoveryToolsRef}
+        recoveryTimeRef={recoveryTimeRef}
+        generateButtonRef={generateButtonRef}
+        planHolderRef={planHolderRef}
+        scrollViewRef={scrollViewRef}
+        onComplete={() => markInstructionsAsShown(INSTRUCTION_KEYS.RECOVERY)}
+      />
     </>
   );
 }
