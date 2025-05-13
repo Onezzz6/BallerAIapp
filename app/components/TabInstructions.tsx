@@ -15,6 +15,9 @@ export type InstructionStep = {
     height: number;
   } | null;
   tooltipVerticalOffset?: number;
+  tooltipPosition?: 'top' | 'bottom'; // Allow forcing position above or below
+  tooltipOffset?: { x: number; y: number }; // Allow custom offset
+  positionStyles?: any; // Additional styles for the highlight
 };
 
 type TabInstructionsProps = {
@@ -79,24 +82,36 @@ const TabInstructions: React.FC<TabInstructionsProps> = ({
 
     const { x, y, width, height } = currentStep.position;
     const verticalOffset = currentStep.tooltipVerticalOffset;
+    const tooltipOffset = currentStep.tooltipOffset || { x: 0, y: 0 };
+    const forcedPosition = currentStep.tooltipPosition;
     
     // Calculate left position to center tooltip horizontally with element
-    let left = x + (width / 2) - (TOOLTIP_WIDTH / 2);
+    let left = x + (width / 2) - (TOOLTIP_WIDTH / 2) + tooltipOffset.x;
     left = Math.max(20, Math.min(left, WINDOW_WIDTH - TOOLTIP_WIDTH - 20));
     
     let top;
-    if (verticalOffset !== undefined && verticalOffset !== null) {
-      // If a specific vertical offset is provided, use it
+    
+    // Use forced position if specified
+    if (forcedPosition === 'bottom') {
+      // Force tooltip below the element with the specified offset
+      top = y + height + tooltipOffset.y;
+    } else if (forcedPosition === 'top') {
+      // Force tooltip above the element with the specified offset
+      top = y - TOOLTIP_HEIGHT - tooltipOffset.y;
+    } else if (currentStep.id === 'generateButton' || currentStep.id === 'recoveryTime') {
+      // Special cases - position tooltip below these elements
+      top = y + height + 30;
+    } else if (verticalOffset !== undefined && verticalOffset !== null) {
+      // Legacy support for verticalOffset
       top = y + verticalOffset;
     } else {
-      // Otherwise, use the default above/below logic
+      // For all other elements, position tooltip below with enhanced spacing
+      top = y + height + 30;
+      
+      // If element is too low in the screen, position tooltip above instead
       const isTooLow = y > WINDOW_HEIGHT - TOOLTIP_HEIGHT - height - SAFE_BOTTOM_MARGIN;
       if (isTooLow) {
-        // Position above if element is too low
-        top = Math.max(STATUSBAR_HEIGHT + 60, y - TOOLTIP_HEIGHT - 20);
-      } else {
-        // Position below if there's enough space
-        top = y + height + 20;
+        top = Math.max(STATUSBAR_HEIGHT + 60, y - TOOLTIP_HEIGHT - 30);
       }
     }
     
@@ -130,7 +145,7 @@ const TabInstructions: React.FC<TabInstructionsProps> = ({
     if (!currentStep.position) {
       return (
         <BlurView
-          intensity={Platform.OS === 'ios' ? 35 : 80}
+          intensity={Platform.OS === 'ios' ? 45 : 90}
           tint="dark"
           style={StyleSheet.absoluteFillObject}
         />
@@ -139,47 +154,53 @@ const TabInstructions: React.FC<TabInstructionsProps> = ({
     
     const { x, y, width, height } = currentStep.position;
     
+    // Use a stronger blur for all elements to make them pop out more
+    const blurIntensity = Platform.OS === 'ios' ? 45 : 90;
+    
     // Create a semi-transparent overlay with a cutout for the highlighted element
+    // Use the enhanced padding for all elements
+    const padding = 20;
+    
     return (
       <>
         {/* Top Section */}
         <BlurView
-          intensity={Platform.OS === 'ios' ? 35 : 80}
+          intensity={blurIntensity}
           tint="dark"
-          style={[styles.overlay, { top: 0, height: Math.max(0, y - 10) }]}
+          style={[styles.overlay, { top: 0, height: Math.max(0, y - padding) }]}
         />
         
         {/* Left Section */}
         <BlurView
-          intensity={Platform.OS === 'ios' ? 35 : 80}
+          intensity={blurIntensity}
           tint="dark"
           style={[styles.overlay, { 
-            top: Math.max(0, y - 10), 
+            top: Math.max(0, y - padding), 
             left: 0, 
-            width: Math.max(0, x - 10),
-            height: Math.min(height + 20, WINDOW_HEIGHT - y + 10)
+            width: Math.max(0, x - padding),
+            height: Math.min(height + (padding * 2), WINDOW_HEIGHT - y + padding)
           }]}
         />
         
         {/* Right Section */}
         <BlurView
-          intensity={Platform.OS === 'ios' ? 35 : 80}
+          intensity={blurIntensity}
           tint="dark"
           style={[styles.overlay, { 
-            top: Math.max(0, y - 10), 
-            left: x + width + 10, 
-            width: Math.max(0, WINDOW_WIDTH - x - width - 10),
-            height: Math.min(height + 20, WINDOW_HEIGHT - y + 10)
+            top: Math.max(0, y - padding), 
+            left: x + width + padding, 
+            width: Math.max(0, WINDOW_WIDTH - x - width - padding),
+            height: Math.min(height + (padding * 2), WINDOW_HEIGHT - y + padding)
           }]}
         />
         
         {/* Bottom Section */}
         <BlurView
-          intensity={Platform.OS === 'ios' ? 35 : 80}
+          intensity={blurIntensity}
           tint="dark"
           style={[styles.overlay, { 
-            top: y + height + 10, 
-            height: Math.max(0, WINDOW_HEIGHT - y - height - 10)
+            top: y + height + padding, 
+            height: Math.max(0, WINDOW_HEIGHT - y - height - padding)
           }]}
         />
       </>
@@ -198,12 +219,33 @@ const TabInstructions: React.FC<TabInstructionsProps> = ({
         
         {currentStep.position && (
           (() => {
-            let highlightX = currentStep.position.x - 10;
-            let highlightY = currentStep.position.y - 10;
-            let highlightW = currentStep.position.width + 20;
-            let highlightH = currentStep.position.height + 20;
+            // Use the enhanced padding for all elements
+            const padding = 20;
+            
+            let highlightX = currentStep.position.x - padding;
+            let highlightY = currentStep.position.y - padding;
+            let highlightW = currentStep.position.width + (padding * 2);
+            let highlightH = currentStep.position.height + (padding * 2);
 
-            console.log(`TabInstructions - Highlighting step: ${currentStep.id}, Final Highlight Style Props: left:${highlightX}, top:${highlightY}, width:${highlightW}, height:${highlightH}`);
+            // Calculate the appropriate border radius based on the element type
+            let borderRadius = 16;
+            if (currentStep.id === 'generateButton') {
+              borderRadius = 32; // Generate button has a larger border radius
+            } else if (currentStep.id.includes('Card') || 
+                     currentStep.id === 'calorieCard' || 
+                     currentStep.id === 'readinessCard' || 
+                     currentStep.id === 'nutritionCard' || 
+                     currentStep.id === 'recoveryCard' ||
+                     currentStep.id === 'recoveryQuery' ||
+                     currentStep.id === 'recoveryTools' ||
+                     currentStep.id === 'recoveryTime') {
+              borderRadius = 24; // All cards have a 24px border radius
+            }
+            
+            // Check if custom position styles are provided
+            const customStyles = currentStep.positionStyles || {};
+            
+            console.log(`TabInstructions - Highlighting step: ${currentStep.id}, Final Highlight Style Props: left:${highlightX}, top:${highlightY}, width:${highlightW}, height:${highlightH}, borderRadius:${borderRadius}`);
             return (
               <View
                 style={[
@@ -213,7 +255,14 @@ const TabInstructions: React.FC<TabInstructionsProps> = ({
                     top: highlightY,
                     width: highlightW,
                     height: highlightH,
+                    borderRadius: borderRadius,
                   },
+                  // Apply enhanced highlight styling to all elements
+                  styles.enhancedHighlight,
+                  // Apply custom styles if provided
+                  customStyles,
+                  // Special styling for specific elements if needed
+                  currentStep.id === 'generateButton' && { borderRadius: 32 }
                 ]}
               >
                 <View style={styles.clearArea} />
@@ -349,6 +398,25 @@ const styles = StyleSheet.create({
     right: 0,
     width: WINDOW_WIDTH,
     zIndex: 999,
+  },
+  generateButtonHighlight: {
+    borderColor: '#FFFFFF',
+    borderWidth: 3,
+    shadowColor: '#FFFFFF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 15,
+    elevation: 15,
+    borderRadius: 32, // Match the button's border radius
+  },
+  enhancedHighlight: {
+    borderColor: '#FFFFFF',
+    borderWidth: 3,
+    shadowColor: '#FFFFFF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 15,
+    elevation: 15,
   },
 });
 

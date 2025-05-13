@@ -34,25 +34,45 @@ const HomeInstructions: React.FC<HomeInstructionsProps> = ({
   const [elementPositions, setElementPositions] = useState<Record<string, any>>({});
   const [measureRetries, setMeasureRetries] = useState(0);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const MAX_RETRIES = 3;
+  const MAX_RETRIES = 2;
 
-  // Measure element positions with improved accuracy
-  const measureElements = () => {
-    // Helper function to measure a specific ref
-    const measureElement = (ref: React.RefObject<View>, key: string) => {
-      if (ref.current) {
-        ref.current.measureInWindow((x, y, width, height) => {
-          // Only update if we got valid measurements
-          if (width > 0 && height > 0) {
-            setElementPositions(prev => ({
-              ...prev,
-              [key]: { x, y, width, height }
-            }));
+  // Helper function to measure a specific ref
+  const measureElement = (ref: React.RefObject<View>, key: string) => {
+    if (ref.current) {
+      ref.current.measureInWindow((x, y, width, height) => {
+        // Only update if we got valid measurements
+        if (width > 0 && height > 0) {
+          console.log(`Measurement SUCCESS for ${key}:`, { x, y, width, height });
+          
+          // For card elements, slightly reduce the width to prevent adjacent card highlighting
+          let adjustedWidth = width;
+          let adjustedX = x;
+          
+          if (key === 'calorieCard' || key === 'readinessCard' || 
+              key === 'nutritionCard' || key === 'recoveryCard') {
+            // Reduce width by a small amount from both sides to prevent overlap
+            const reduction = 10; // Pixels to reduce from each side
+            adjustedWidth = width - (reduction * 2);
+            adjustedX = x + reduction;
           }
-        });
-      }
-    };
+          
+          // CRITICAL: Create a new object with ONLY this element's position
+          // This ensures we're not highlighting multiple elements
+          setElementPositions({ [key]: { 
+            x: adjustedX, 
+            y, 
+            width: adjustedWidth, 
+            height 
+          }});
+        } else {
+          console.log(`Measurement FAILED for ${key}`);
+        }
+      });
+    }
+  };
 
+  // Measure all elements
+  const measureElements = () => {
     // Measure all elements
     measureElement(calorieCardRef, 'calorieCard');
     measureElement(readinessCardRef, 'readinessCard');
@@ -62,11 +82,14 @@ const HomeInstructions: React.FC<HomeInstructionsProps> = ({
     measureElement(askBallzyRef, 'askBallzy');
   };
 
-  // Scroll to make sure an element is visible
-  const scrollToElement = (ref: React.RefObject<View>) => {
+  // Scroll to make sure an element is visible and focus on it exclusively
+  const scrollToElement = (ref: React.RefObject<View>, key: string) => {
     if (scrollViewRef.current && ref.current) {
       const node = findNodeHandle(ref.current);
       if (node) {
+        // First phase: Clear all positions to ensure nothing is highlighted during scroll
+        setElementPositions({});
+        
         ref.current.measureInWindow((x, y, width, height) => {
           // If element is below the screen or only partially visible
           if (y > SCREEN_HEIGHT - 200 || y + height > SCREEN_HEIGHT - 100) {
@@ -76,10 +99,74 @@ const HomeInstructions: React.FC<HomeInstructionsProps> = ({
               animated: true
             });
             
-            // Re-measure after scrolling
+            // Second phase: Re-measure after scrolling with a longer delay
             setTimeout(() => {
-              measureElements();
-            }, 300);
+              console.log(`Re-measuring ${key} after scrolling`);
+              
+              // Clear positions again to make sure no other elements are highlighted
+              setElementPositions({});
+              
+              // Final measure with a delay for scroll animation to complete
+              setTimeout(() => {
+                // Only measure the specific element we want to highlight
+                if (ref.current) {
+                  ref.current.measureInWindow((newX, newY, newWidth, newHeight) => {
+                    if (newWidth > 0 && newHeight > 0) {
+                      // Apply same width adjustment for cards to prevent overlap
+                      let adjustedWidth = newWidth;
+                      let adjustedX = newX;
+                      
+                      if (key === 'calorieCard' || key === 'readinessCard' || 
+                          key === 'nutritionCard' || key === 'recoveryCard') {
+                        // Reduce width from each side to prevent overlap
+                        const reduction = 10;
+                        adjustedWidth = newWidth - (reduction * 2);
+                        adjustedX = newX + reduction;
+                      }
+                      
+                      // Set ONLY this position, nothing else
+                      setElementPositions({ [key]: { 
+                        x: adjustedX, 
+                        y: newY, 
+                        width: adjustedWidth, 
+                        height: newHeight 
+                      }});
+                    }
+                  });
+                }
+              }, 100);
+            }, 350);
+          } else {
+            // Element already visible - just re-measure it precisely
+            setElementPositions({});
+            setTimeout(() => {
+              // Only measure the specific element we want to highlight
+              if (ref.current) {
+                ref.current.measureInWindow((newX, newY, newWidth, newHeight) => {
+                  if (newWidth > 0 && newHeight > 0) {
+                    // Apply same width adjustment for cards to prevent overlap
+                    let adjustedWidth = newWidth;
+                    let adjustedX = newX;
+                    
+                    if (key === 'calorieCard' || key === 'readinessCard' || 
+                        key === 'nutritionCard' || key === 'recoveryCard') {
+                      // Reduce width from each side to prevent overlap
+                      const reduction = 10;
+                      adjustedWidth = newWidth - (reduction * 2);
+                      adjustedX = newX + reduction;
+                    }
+                    
+                    // Set ONLY this position, nothing else
+                    setElementPositions({ [key]: { 
+                      x: adjustedX, 
+                      y: newY, 
+                      width: adjustedWidth, 
+                      height: newHeight 
+                    }});
+                  }
+                });
+              }
+            }, 100);
           }
         });
       }
@@ -148,15 +235,30 @@ const HomeInstructions: React.FC<HomeInstructionsProps> = ({
   // Handle step changes - scroll to element when needed
   useEffect(() => {
     if (showInstructions) {
-      // Scroll to the appropriate element based on the step
-      if (currentStepIndex === 2) { // Weekly Progress section
-        scrollToElement(weeklyProgressRef);
-      } else if (currentStepIndex === 3) { // Nutrition Card
-        scrollToElement(nutritionCardRef);
-      } else if (currentStepIndex === 4) { // Recovery Card
-        scrollToElement(recoveryCardRef);
-      } else if (currentStepIndex === 5) { // Ask Ballzy
-        scrollToElement(askBallzyRef);
+      // For elements that don't require scrolling, still focus on them exclusively
+      if (currentStepIndex === 0) {
+        // Welcome screen - no specific element
+        setElementPositions({});
+      } else if (currentStepIndex === 1) {
+        // Calories card - first clear, then measure exclusively
+        setElementPositions({});
+        setTimeout(() => {
+          measureElement(calorieCardRef, 'calorieCard');
+        }, 100);
+      } else if (currentStepIndex === 2) {
+        // Readiness card - first clear, then measure exclusively
+        setElementPositions({});
+        setTimeout(() => {
+          measureElement(readinessCardRef, 'readinessCard');
+        }, 100);
+      } else if (currentStepIndex === 3) { // Weekly Progress section
+        scrollToElement(weeklyProgressRef, 'weeklyProgress');
+      } else if (currentStepIndex === 4) { // Nutrition Card
+        scrollToElement(nutritionCardRef, 'nutritionCard');
+      } else if (currentStepIndex === 5) { // Recovery Card
+        scrollToElement(recoveryCardRef, 'recoveryCard');
+      } else if (currentStepIndex === 6) { // Ask Ballzy
+        scrollToElement(askBallzyRef, 'askBallzy');
       }
     }
   }, [currentStepIndex, showInstructions]);
@@ -225,6 +327,12 @@ const HomeInstructions: React.FC<HomeInstructionsProps> = ({
 
   // Handle completion
   const handleInstructionsComplete = () => {
+    // Scroll back to the top of the screen when completed
+    if (scrollViewRef.current) {
+      scrollViewRef.current.scrollTo({ y: 0, animated: true });
+      console.log('Scrolling to top after Home instructions tour completed');
+    }
+    
     setShowInstructions(false);
     onComplete();
   };

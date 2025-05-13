@@ -439,11 +439,6 @@ IMPORTANT USAGE GUIDELINES:
       setPlanExists(true);
       console.log(`Recovery plan saved to Firebase for ${dateStr}`);
 
-      // Add a small delay to ensure Firebase has updated before calculating the streak
-      setTimeout(() => {
-        calculateStreak();
-      }, 500);
-
     } catch (error) {
       console.error('Error generating recovery plan:', error);
       Alert.alert('Error', 'Failed to generate a recovery plan. Please try again.');
@@ -564,26 +559,23 @@ IMPORTANT USAGE GUIDELINES:
     }
   }, []);
 
-  // Add function to toggle plan completion status - updated to recalculate streak
+  // Mark a plan as completed and increment streak
   const togglePlanCompletion = async () => {
-    if (!user || !planExists) return;
+    if (!user || !planExists || planCompleted) return; // Early return if already completed
     
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
     const planRef = doc(db, 'users', user.uid, 'recoveryPlans', dateStr);
     
     try {
-      // Toggle the completed status
-      const newCompletionStatus = !planCompleted;
-      
-      // Update Firebase
+      // Always mark as completed (no toggling back to incomplete)
       await setDoc(planRef, {
-        completed: newCompletionStatus
+        completed: true
       }, { merge: true });
       
       // Update local state
-      setPlanCompleted(newCompletionStatus);
+      setPlanCompleted(true);
       
-      console.log(`Plan marked as ${newCompletionStatus ? 'completed' : 'incomplete'}`);
+      console.log(`Plan marked as completed`);
       
       // Check if this is today's plan
       const today = new Date();
@@ -592,36 +584,39 @@ IMPORTANT USAGE GUIDELINES:
       selected.setHours(0, 0, 0, 0);
       
       if (today.getTime() === selected.getTime()) {
-        setHasTodayCompletedPlan(newCompletionStatus);
+        setHasTodayCompletedPlan(true);
         
-        // If marking today's plan as completed, immediately increment streak
-        if (newCompletionStatus) {
-          const newStreak = streakCount + 1;
-          setStreakCount(newStreak);
-          saveStreakCountToFirebase(newStreak);
-        } else {
-          // If unmarking as completed, decrement streak
-          const newStreak = Math.max(0, streakCount - 1);
-          setStreakCount(newStreak);
-          saveStreakCountToFirebase(newStreak);
-        }
+        // Increment streak by exactly 1
+        const newStreak = streakCount + 1;
+        setStreakCount(newStreak);
+        
+        // Save to Firestore with today's date as lastCheckedDate
+        const todayStr = format(today, 'yyyy-MM-dd');
+        const streakRef = doc(db, 'users', user.uid, 'recoveryStreak', 'current');
+        await setDoc(streakRef, {
+          count: newStreak,
+          lastCheckedDate: todayStr,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+        
+        console.log(`Streak incremented to ${newStreak}`);
       }
-      
-      // Full recalculation after the immediate UI update
-      setTimeout(() => {
-        calculateStreak();
-      }, 500);
     } catch (error) {
       console.error('Error updating plan completion status:', error);
-      Alert.alert('Error', 'Failed to update completion status. Please try again.');
+      Alert.alert('Error', 'Failed to mark plan as completed. Please try again.');
     }
   };
 
-  // Load streak data when component mounts
+  // Load streak data and check for missed days when component mounts
   useEffect(() => {
     if (user) {
-      loadStreakCountFromFirebase();
-      checkTodayCompletedPlan();
+      // First load the current streak value
+      loadStreakFromFirebase().then(() => {
+        // After streak is loaded, check for missed days
+        checkForMissedDays();
+      });
+      
+      // Start the timer to show time until midnight
       startStreakTimer();
     }
 
@@ -631,7 +626,7 @@ IMPORTANT USAGE GUIDELINES:
       }
     };
   }, [user]);
-
+  
   // Calculate and update time until midnight
   const startStreakTimer = () => {
     // Update immediately
@@ -641,11 +636,12 @@ IMPORTANT USAGE GUIDELINES:
     timerRef.current = setInterval(() => {
       updateTimeUntilMidnight();
       
-      // Check if it's a new day, and if so, reset the completed plan status
+      // Check if it's a new day, and if so, perform the daily check
       const now = new Date();
       if (now.getHours() === 0 && now.getMinutes() === 0) {
         setHasTodayCompletedPlan(false);
-        checkTodayCompletedPlan(); // Double-check from database
+        // Check for missed days and update streak if needed
+        checkForMissedDays();
       }
     }, 60000); // Update every minute
   };
@@ -663,166 +659,9 @@ IMPORTANT USAGE GUIDELINES:
     setMinutesLeft(minutes);
   };
 
-  // Calculate current streak - updated to count completed plans and save to Firebase
-  const calculateStreak = async () => {
-    if (!user) return;
-    
-    try {
-      console.log('Calculating streak based on completed plans...');
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      const plansRef = collection(db, 'users', user.uid, 'recoveryPlans');
-      const plansSnapshot = await getDocs(plansRef);
-      
-      if (plansSnapshot.empty) {
-        console.log('No plans found in Firebase');
-        setStreakCount(0);
-        saveStreakCountToFirebase(0);
-        return;
-      }
-      
-      // Convert to array of plans with dates, filtering for completed plans only
-      const plans = plansSnapshot.docs
-        .map(doc => {
-          console.log(`Plan document ID: ${doc.id}, Completed: ${doc.data().completed}`);
-          console.log(`Plan document ID as Date: ${parseISO(doc.id)}, Date.getTime(): ${new Date(parseISO(doc.id)).getTime()}`);
-          return {
-            id: doc.id,
-            date: parseISO(doc.id),
-            completed: doc.data().completed === true, // Fix type issue by explicit extraction
-            ...doc.data()
-          };
-        })
-        .filter(plan => plan.completed === true) // Only include completed plans
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // Sort by date desc
-      
-      console.log(`Found ${plans.length} completed plans total`);
-      
-      // Check if there's a completed plan for today
-      const hasTodayPlan = plans.some(plan => {
-        const isSame = isSameDay(plan.date, today);
-        console.log(`Checking completed plan date ${format(plan.date, 'yyyy-MM-dd')} against today ${format(today, 'yyyy-MM-dd')}: ${isSame}`);
-        return isSame;
-      });
-      
-      console.log(`Has completed plan for today: ${hasTodayPlan}`);
-      
-      // If no completed plan for today, check if there's a streak from previous days
-      let currentStreak = hasTodayPlan ? 1 : 0;
-      
-      if (plans.length > 0) {
-        // Start checking from yesterday if we have a plan for today
-        let checkDate = hasTodayPlan ? subDays(today, 1) : today;
-        
-        for (let i = 0; i < plans.length; i++) {
-          const plan = plans[i];
-          
-          // Debug log for each check
-          console.log(`Checking date ${format(checkDate, 'yyyy-MM-dd')} against plan date ${format(plan.date, 'yyyy-MM-dd')}`);
-          
-          // If the plan date matches the date we're checking
-          if (isSameDay(plan.date, checkDate)) {
-            console.log(`Found match for ${format(checkDate, 'yyyy-MM-dd')}`);
-            
-            // If we're checking today and there's no plan, don't increment
-            if (!(isSameDay(checkDate, today) && !hasTodayPlan)) {
-              currentStreak++;
-              console.log(`Streak incremented to ${currentStreak}`);
-            }
-            // Move to previous day
-            checkDate = subDays(checkDate, 1);
-          } else if (isSameDay(plan.date, today) && hasTodayPlan) {
-            // Skip if this is today's plan and we already counted it
-            console.log(`Skipping today's plan as it's already counted`);
-            continue;
-          } else {
-            // Break the streak if we miss a day
-            console.log(`Streak broken at ${format(checkDate, 'yyyy-MM-dd')}, no matching plan`);
-            break;
-          }
-        }
-      }
-      
-      console.log(`Final streak count: ${currentStreak} days`);
-      setStreakCount(currentStreak);
-      
-      // Save the calculated streak count to Firebase
-      saveStreakCountToFirebase(currentStreak);
-    } catch (error) {
-      console.error('Error calculating streak:', error);
-    }
-  };
-
-  // Check if there's a completed plan for today
-  const checkTodayCompletedPlan = async () => {
-    if (!user) return;
-    
-    try {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const dateStr = format(today, 'yyyy-MM-dd');
-      
-      const planRef = doc(db, 'users', user.uid, 'recoveryPlans', dateStr);
-      const planSnap = await getDoc(planRef);
-      
-      if (planSnap.exists() && planSnap.data().completed === true) {
-        setHasTodayCompletedPlan(true);
-      } else {
-        setHasTodayCompletedPlan(false);
-      }
-    } catch (error) {
-      console.error('Error checking today completed plan:', error);
-    }
-  };
-
-  // Save streak count to Firebase whenever it changes
-  const saveStreakCountToFirebase = async (count: number) => {
-    if (!user) return;
-    
-    try {
-      console.log(`Saving streak count to Firebase: ${count}`);
-      const streakRef = doc(db, 'users', user.uid, 'recoveryStreak', 'current');
-      await setDoc(streakRef, {
-        count: count,
-        updatedAt: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error('Error saving streak count to Firebase:', error);
-    }
-  };
-
-  // Load streak count from Firebase
-  const loadStreakCountFromFirebase = async () => {
-    if (!user) return;
-    
-    try {
-      setIsLoadingStreak(true);
-      console.log('Loading streak count from Firebase');
-      const streakRef = doc(db, 'users', user.uid, 'recoveryStreak', 'current');
-      const streakDoc = await getDoc(streakRef);
-      
-      if (streakDoc.exists()) {
-        const data = streakDoc.data();
-        console.log(`Loaded streak count: ${data.count}`);
-        setStreakCount(data.count);
-      } else {
-        console.log('No saved streak count found, calculating from plans');
-        // If no saved streak, calculate it from plans
-        await calculateStreak();
-      }
-    } catch (error) {
-      console.error('Error loading streak count from Firebase:', error);
-      // Fallback to calculation if loading fails
-      await calculateStreak();
-    } finally {
-      setIsLoadingStreak(false);
-    }
-  };
-
   // Update Streak Card with timer logic and loading state
   const renderStreakCard = () => {
-    return streakCount >= 1 && (
+    return (
       <Animated.View 
         entering={FadeIn.duration(300)}
         style={styles.streakCardContainer}
@@ -843,23 +682,216 @@ IMPORTANT USAGE GUIDELINES:
             ) : (
               <Text style={styles.streakCount}>{streakCount} {streakCount === 1 ? 'day' : 'days'}</Text>
             )}
-            {!hasTodayCompletedPlan && (
-              <Text style={styles.streakTimerText}>
-                {hoursLeft}h {minutesLeft}m until streak ends.{"\n"}
-                Generate and complete today's plan to keep your streak going!
-              </Text>
-            )}
-            {hasTodayCompletedPlan && (
-              <Text style={styles.streakCompletedText}>
-                Today's plan completed! ✓
-              </Text>
-            )}
+            <Text style={styles.streakHelperText}>
+            Each recovery plan you mark as completed adds one to your streak. If you miss a day, the streak drops by one.
+            </Text>
           </View>
         </View>
       </Animated.View>
     );
   };
 
+  // Check for all missed days since the last completed plan
+  const checkForMissedDays = async () => {
+    if (!user) return;
+    
+    try {
+      console.log('==== CHECKING FOR MISSED DAYS ====');
+      
+      // Get the current date (today)
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStr = format(today, 'yyyy-MM-dd');
+      console.log(`Today: ${todayStr}`);
+      
+      // Get yesterday's date
+      const yesterday = subDays(today, 1);
+      const yesterdayStr = format(yesterday, 'yyyy-MM-dd');
+      console.log(`Yesterday: ${yesterdayStr}`);
+      
+      // Get the streak data from Firestore
+      const streakRef = doc(db, 'users', user.uid, 'recoveryStreak', 'current');
+      const streakDoc = await getDoc(streakRef);
+      
+      // Log current streak before any changes
+      const currentStreak = streakDoc.exists() ? streakDoc.data().count || 0 : 0;
+      console.log(`Current streak before check: ${currentStreak}`);
+      
+      // If we already checked today, skip checking again
+      if (streakDoc.exists()) {
+        const { lastCheckedDate } = streakDoc.data();
+        console.log(`Last checked date: ${lastCheckedDate}`);
+        
+        if (lastCheckedDate === todayStr) {
+          console.log('Already checked for missed days today, skipping check');
+          return;
+        }
+      }
+      
+      // Find the most recent completed plan
+      const plansRef = collection(db, 'users', user.uid, 'recoveryPlans');
+      const plansQuery = query(plansRef, where('completed', '==', true));
+      const plansSnapshot = await getDocs(plansQuery);
+      
+      console.log(`Found ${plansSnapshot.size} completed plans in total`);
+      
+      let mostRecentCompletedDate = null;
+      
+      if (!plansSnapshot.empty) {
+        // Convert to array of plans with dates
+        const completedPlans = plansSnapshot.docs
+          .map(doc => ({
+            id: doc.id,
+            date: parseISO(doc.id),
+            ...doc.data()
+          }))
+          .sort((a, b) => b.date.getTime() - a.date.getTime()); // Sort by date desc
+        
+        // Get the most recent completed plan date
+        if (completedPlans.length > 0) {
+          mostRecentCompletedDate = completedPlans[0].date;
+          console.log(`Most recent completed plan: ${format(mostRecentCompletedDate, 'yyyy-MM-dd')}`);
+        }
+      } else {
+        console.log('No completed plans found in database');
+      }
+      
+      // If no completed plans or the most recent is from today, no days missed
+      if (!mostRecentCompletedDate) {
+        console.log('No completed plans found, no days missed');
+        
+        // Still update lastCheckedDate to avoid checking again today
+        await setDoc(streakRef, {
+          count: currentStreak,
+          lastCheckedDate: todayStr,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+        
+        console.log('Updated lastCheckedDate to today, keeping streak at:', currentStreak);
+        return;
+      }
+      
+      if (isSameDay(mostRecentCompletedDate, today)) {
+        console.log('Most recent completion is today, no days missed');
+        
+        // Still update lastCheckedDate to avoid checking again today
+        await setDoc(streakRef, {
+          count: currentStreak,
+          lastCheckedDate: todayStr,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+        
+        console.log('Updated lastCheckedDate to today, keeping streak at:', currentStreak);
+        return;
+      }
+      
+      // Calculate days between most recent completed plan and yesterday
+      let daysMissed = 0;
+      
+      // If most recent plan is before yesterday, calculate days missed
+      if (mostRecentCompletedDate.getTime() < yesterday.getTime()) {
+        console.log('Most recent plan is before yesterday, checking missed days...');
+        
+        // Add one day to most recent completion to start counting from day after
+        const startDate = addDays(mostRecentCompletedDate, 1);
+        console.log(`Checking days from ${format(startDate, 'yyyy-MM-dd')} to ${yesterdayStr}`);
+        
+        // Calculate missed days up to yesterday (inclusive)
+        let currentDate = startDate;
+        while (currentDate.getTime() <= yesterday.getTime()) {
+          // Check if there's a completed plan for this date
+          const dateStr = format(currentDate, 'yyyy-MM-dd');
+          const planRef = doc(db, 'users', user.uid, 'recoveryPlans', dateStr);
+          const planDoc = await getDoc(planRef);
+          
+          // If no plan or not completed for this date, count as missed
+          if (!planDoc.exists()) {
+            daysMissed++;
+            console.log(`Missed day: ${dateStr} (no plan exists)`);
+          } else if (!planDoc.data().completed) {
+            daysMissed++;
+            console.log(`Missed day: ${dateStr} (plan exists but not completed)`);
+          } else {
+            console.log(`Day has completed plan: ${dateStr}`);
+          }
+          
+          // Move to next day
+          currentDate = addDays(currentDate, 1);
+        }
+      } else {
+        console.log(`Most recent plan is yesterday, no days missed`);
+      }
+      
+      // If days were missed, update the streak
+      if (daysMissed > 0) {
+        console.log(`Total days missed: ${daysMissed}`);
+        
+        // Decrement streak by daysMissed, but never below zero
+        const newCount = Math.max(0, currentStreak - daysMissed);
+        console.log(`Updating streak: ${currentStreak} - ${daysMissed} = ${newCount}`);
+        
+        // Update Firebase with new count and lastCheckedDate
+        await setDoc(streakRef, {
+          count: newCount,
+          lastCheckedDate: todayStr,
+          updatedAt: new Date().toISOString()
+        });
+        
+        // Update local state
+        setStreakCount(newCount);
+        console.log(`Streak updated to ${newCount}`);
+      } else {
+        console.log('No days missed since last completed plan');
+        
+        // Still update lastCheckedDate to avoid checking again today
+        await setDoc(streakRef, {
+          count: currentStreak,
+          lastCheckedDate: todayStr,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+        
+        console.log('Updated lastCheckedDate to today, keeping streak at:', currentStreak);
+      }
+      
+      console.log('==== FINISHED CHECKING FOR MISSED DAYS ====');
+    } catch (error) {
+      console.error('Error checking for missed days:', error);
+    }
+  };
+
+  // Load streak count from Firebase
+  const loadStreakFromFirebase = async () => {
+    if (!user) return;
+    
+    try {
+      setIsLoadingStreak(true);
+      console.log('Loading streak count from Firebase');
+      const streakRef = doc(db, 'users', user.uid, 'recoveryStreak', 'current');
+      const streakDoc = await getDoc(streakRef);
+      
+      if (streakDoc.exists()) {
+        const data = streakDoc.data();
+        console.log(`Loaded streak count: ${data.count}`);
+        setStreakCount(data.count || 0);
+      } else {
+        // Initialize with zero for new users
+        console.log('No saved streak found, initializing with zero');
+        setStreakCount(0);
+        await setDoc(streakRef, {
+          count: 0,
+          lastCheckedDate: format(new Date(), 'yyyy-MM-dd'),
+          updatedAt: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      console.error('Error loading streak count from Firebase:', error);
+      // Default to zero if there's an error
+      setStreakCount(0);
+    } finally {
+      setIsLoadingStreak(false);
+    }
+  };
+  
   return (
     <>
       <KeyboardAvoidingView
@@ -1561,23 +1593,26 @@ IMPORTANT USAGE GUIDELINES:
                       </View>
                     )}
                     
-                    <Pressable
-                      style={({ pressed }) => [
-                        styles.completionButton,
-                        planCompleted ? styles.incompleteButton : styles.completeButton,
-                        pressed && { opacity: 0.8 }
-                      ]}
-                      onPress={togglePlanCompletion}
-                    >
-                      <Text style={styles.completionButtonText}>
-                        {planCompleted ? 'Mark as Incomplete' : 'Mark as Completed'}
-                      </Text>
-                      <Ionicons 
-                        name={planCompleted ? "close" : "checkmark-circle"} 
-                        size={20} 
-                        color="#FFFFFF" 
-                      />
-                    </Pressable>
+                    {/* Only show the button if the plan is not completed */}
+                    {!planCompleted && (
+                      <Pressable
+                        style={({ pressed }) => [
+                          styles.completionButton,
+                          styles.completeButton,
+                          pressed && { opacity: 0.8 }
+                        ]}
+                        onPress={togglePlanCompletion}
+                      >
+                        <Text style={styles.completionButtonText}>
+                          Mark as Completed
+                        </Text>
+                        <Ionicons 
+                          name="checkmark-circle"
+                          size={20} 
+                          color="#FFFFFF" 
+                        />
+                      </Pressable>
+                    )}
                   </View>
                 ) : (
                   <View style={styles.emptyPlanContainer}>
@@ -1639,6 +1674,7 @@ IMPORTANT USAGE GUIDELINES:
         recoveryQueryRef={recoveryQueryRef}
         recoveryToolsRef={recoveryToolsRef}
         recoveryTimeRef={recoveryTimeRef}
+        generateButtonRef={generateButtonRef}
         scrollViewRef={scrollViewRef}
         onComplete={() => markInstructionsAsShown(INSTRUCTION_KEYS.RECOVERY)}
         ref={recoveryInstructionsRef}
@@ -2324,9 +2360,6 @@ const styles = StyleSheet.create({
   completeButton: {
     backgroundColor: '#4064F6',
   },
-  incompleteButton: {
-    backgroundColor: '#666666',
-  },
   completionButtonText: {
     fontSize: 16,
     fontWeight: '600',
@@ -2398,15 +2431,13 @@ const styles = StyleSheet.create({
     color: '#4064F6',
     marginBottom: 4,
   },
-  streakTimerText: {
+  streakHelperText: {
     fontSize: 12,
-    color: '#F56C6C',
+    color: '#666666',  // Changed from warning red to neutral gray
     fontWeight: '500',
-  },
-  streakCompletedText: {
-    fontSize: 12,
-    color: '#99E86C',
-    fontWeight: '500',
+    marginTop: 8,
+    paddingRight: 4,
+    lineHeight: 16,
   },
   // Add styles for past days
   pastDayContainer: {
