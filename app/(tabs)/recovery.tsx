@@ -3,7 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect, useRef } from 'react';
 import Slider from '@react-native-community/slider';
-import { format, addDays, startOfWeek, differenceInHours, differenceInMinutes, isYesterday, parseISO, isSameDay, subDays } from 'date-fns';
+import { format, differenceInHours, differenceInMinutes, parseISO, isSameDay, subDays, differenceInCalendarDays } from 'date-fns';
 import { doc, getDoc, setDoc, collection, Timestamp, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
@@ -735,46 +735,64 @@ IMPORTANT USAGE GUIDELINES:
       
       console.log(`Found ${plansSnapshot.size} completed plans in total`);
       
-      let mostRecentCompletedDate = null;
-      
-      if (!plansSnapshot.empty) {
-        // Convert to array of plans with dates
-        const completedPlans = plansSnapshot.docs
-          .map(doc => ({
-            id: doc.id,
-            date: parseISO(doc.id),
-            ...doc.data()
-          }))
-          .sort((a, b) => b.date.getTime() - a.date.getTime()); // Sort by date desc
+      // REFINEMENT 1: If no completed plans exist, reset streak to zero
+      if (plansSnapshot.empty) {
+        console.log('No completed plans found, resetting streak to 0');
         
-        // Get the most recent completed plan date
-        if (completedPlans.length > 0) {
-          mostRecentCompletedDate = completedPlans[0].date;
-          console.log(`Most recent completed plan: ${format(mostRecentCompletedDate, 'yyyy-MM-dd')}`);
-        }
-      } else {
-        console.log('No completed plans found in database');
-      }
-      
-      // If no completed plans or the most recent is from today, no days missed
-      if (!mostRecentCompletedDate) {
-        console.log('No completed plans found, no days missed');
-        
-        // Still update lastCheckedDate to avoid checking again today
+        // Reset streak to zero
         await setDoc(streakRef, {
-          count: currentStreak,
+          count: 0,
           lastCheckedDate: todayStr,
           updatedAt: new Date().toISOString()
-        }, { merge: true });
+        });
         
-        console.log('Updated lastCheckedDate to today, keeping streak at:', currentStreak);
+        // Update local state
+        setStreakCount(0);
+        console.log('Streak reset to 0');
+        console.log('==== FINISHED CHECKING FOR MISSED DAYS ====');
         return;
       }
       
+      // If plans exist, find the most recent one
+      let mostRecentCompletedDate = null;
+      
+      // Convert to array of plans with dates
+      const completedPlans = plansSnapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          date: parseISO(doc.id),
+          ...doc.data()
+        }))
+        .sort((a, b) => b.date.getTime() - a.date.getTime()); // Sort by date desc
+      
+      // Get the most recent completed plan date
+      if (completedPlans.length > 0) {
+        mostRecentCompletedDate = completedPlans[0].date;
+        console.log(`Most recent completed plan: ${format(mostRecentCompletedDate, 'yyyy-MM-dd')}`);
+      } else {
+        // This shouldn't happen since we already checked for empty plans, but just in case
+        console.log('No completed plans found after processing');
+        
+        // Reset streak to zero
+        await setDoc(streakRef, {
+          count: 0,
+          lastCheckedDate: todayStr,
+          updatedAt: new Date().toISOString()
+        });
+        
+        // Update local state
+        setStreakCount(0);
+        console.log('Streak reset to 0');
+        console.log('==== FINISHED CHECKING FOR MISSED DAYS ====');
+        return;
+      }
+      
+      // If most recent plan is from today, no days missed
+      // At this point mostRecentCompletedDate is guaranteed to be non-null
       if (isSameDay(mostRecentCompletedDate, today)) {
         console.log('Most recent completion is today, no days missed');
         
-        // Still update lastCheckedDate to avoid checking again today
+        // Update lastCheckedDate to avoid checking again today
         await setDoc(streakRef, {
           count: currentStreak,
           lastCheckedDate: todayStr,
@@ -782,47 +800,24 @@ IMPORTANT USAGE GUIDELINES:
         }, { merge: true });
         
         console.log('Updated lastCheckedDate to today, keeping streak at:', currentStreak);
+        console.log('==== FINISHED CHECKING FOR MISSED DAYS ====');
         return;
       }
       
-      // Calculate days between most recent completed plan and yesterday
+      // Calculate days missed
       let daysMissed = 0;
       
-      // If most recent plan is before yesterday, calculate days missed
+      // REFINEMENT 2: Use date difference instead of per-day Firestore checks
+      // At this point mostRecentCompletedDate is guaranteed to be non-null
       if (mostRecentCompletedDate.getTime() < yesterday.getTime()) {
-        console.log('Most recent plan is before yesterday, checking missed days...');
-        
-        // Add one day to most recent completion to start counting from day after
-        const startDate = addDays(mostRecentCompletedDate, 1);
-        console.log(`Checking days from ${format(startDate, 'yyyy-MM-dd')} to ${yesterdayStr}`);
-        
-        // Calculate missed days up to yesterday (inclusive)
-        let currentDate = startDate;
-        while (currentDate.getTime() <= yesterday.getTime()) {
-          // Check if there's a completed plan for this date
-          const dateStr = format(currentDate, 'yyyy-MM-dd');
-          const planRef = doc(db, 'users', user.uid, 'recoveryPlans', dateStr);
-          const planDoc = await getDoc(planRef);
-          
-          // If no plan or not completed for this date, count as missed
-          if (!planDoc.exists()) {
-            daysMissed++;
-            console.log(`Missed day: ${dateStr} (no plan exists)`);
-          } else if (!planDoc.data().completed) {
-            daysMissed++;
-            console.log(`Missed day: ${dateStr} (plan exists but not completed)`);
-          } else {
-            console.log(`Day has completed plan: ${dateStr}`);
-          }
-          
-          // Move to next day
-          currentDate = addDays(currentDate, 1);
-        }
+        // Calculate days between most recent completion and yesterday
+        daysMissed = differenceInCalendarDays(yesterday, mostRecentCompletedDate);
+        console.log(`Last completion was ${daysMissed} days ago (${format(mostRecentCompletedDate, 'yyyy-MM-dd')} to ${yesterdayStr})`);
       } else {
-        console.log(`Most recent plan is yesterday, no days missed`);
+        console.log('Most recent plan was yesterday, no days missed');
       }
       
-      // If days were missed, update the streak
+      // Update streak if days were missed
       if (daysMissed > 0) {
         console.log(`Total days missed: ${daysMissed}`);
         
