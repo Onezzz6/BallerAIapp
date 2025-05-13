@@ -10,8 +10,8 @@ interface AuthContextType {
   signOut: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
+const AuthContext = createContext<AuthContextType>({ 
+  user: null, 
   isLoading: true,
   signOut: async () => {},
 });

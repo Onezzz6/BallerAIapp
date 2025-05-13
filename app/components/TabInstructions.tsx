@@ -196,22 +196,30 @@ const TabInstructions: React.FC<TabInstructionsProps> = ({
         {/* Blurred background */}
         {renderOverlay()}
         
-        {/* Highlight current element if position is provided */}
         {currentStep.position && (
-          <View
-            style={[
-              styles.highlight,
-              {
-                left: currentStep.position.x - 10,
-                top: currentStep.position.y - 10,
-                width: currentStep.position.width + 20,
-                height: currentStep.position.height + 20,
-              },
-            ]}
-          >
-            {/* Clear inner area for better visibility */}
-            <View style={styles.clearArea} />
-          </View>
+          (() => {
+            let highlightX = currentStep.position.x - 10;
+            let highlightY = currentStep.position.y - 10;
+            let highlightW = currentStep.position.width + 20;
+            let highlightH = currentStep.position.height + 20;
+
+            console.log(`TabInstructions - Highlighting step: ${currentStep.id}, Final Highlight Style Props: left:${highlightX}, top:${highlightY}, width:${highlightW}, height:${highlightH}`);
+            return (
+              <View
+                style={[
+                  styles.highlight,
+                  {
+                    left: highlightX,
+                    top: highlightY,
+                    width: highlightW,
+                    height: highlightH,
+                  },
+                ]}
+              >
+                <View style={styles.clearArea} />
+              </View>
+            );
+          })()
         )}
         
         {/* Tooltip */}

@@ -13,7 +13,7 @@ import WeeklyOverview from '../components/WeeklyOverview';
 import Constants from 'expo-constants';
 import Animated, { FadeIn, FadeInDown, PinwheelIn } from 'react-native-reanimated';
 import analytics from '@react-native-firebase/analytics';
-import RecoveryInstructions from '../components/RecoveryInstructions';
+import RecoveryInstructions, { RecoveryInstructionsRef } from '../components/RecoveryInstructions';
 import { markInstructionsAsShown, INSTRUCTION_KEYS } from '../utils/instructionManager';
 
 // Add this line to get the API key from Constants.expoConfig.extra
@@ -74,6 +74,7 @@ export default function RecoveryScreen() {
   const recoveryTimeRef = useRef<View>(null);
   const generateButtonRef = useRef<View>(null);
   const planHolderRef = useRef<View>(null);
+  const recoveryInstructionsRef = useRef<RecoveryInstructionsRef>(null);
 
   // Fetch recovery data for selected date
   useEffect(() => {
@@ -876,8 +877,15 @@ IMPORTANT USAGE GUIDELINES:
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={true}
         bounces={true}
-          overScrollMode="never"
-        >
+        overScrollMode="never"
+        onScroll={(event) => {
+          // Call the handleScroll method on the RecoveryInstructions component
+          if (recoveryInstructionsRef.current) {
+            recoveryInstructionsRef.current.handleScroll(event);
+          }
+        }}
+        scrollEventThrottle={16} // Update scroll position at ~60fps
+      >
           {/* Header - Scrolls with content */}
           <View style={{
             paddingTop: 48,
@@ -1508,7 +1516,7 @@ IMPORTANT USAGE GUIDELINES:
             <View 
               ref={planHolderRef}
               style={{
-                marginHorizontal: 24,
+              marginHorizontal: 24,
               }}
             >
               <View style={[
@@ -1631,10 +1639,9 @@ IMPORTANT USAGE GUIDELINES:
         recoveryQueryRef={recoveryQueryRef}
         recoveryToolsRef={recoveryToolsRef}
         recoveryTimeRef={recoveryTimeRef}
-        generateButtonRef={generateButtonRef}
-        planHolderRef={planHolderRef}
         scrollViewRef={scrollViewRef}
         onComplete={() => markInstructionsAsShown(INSTRUCTION_KEYS.RECOVERY)}
+        ref={recoveryInstructionsRef}
       />
     </>
   );

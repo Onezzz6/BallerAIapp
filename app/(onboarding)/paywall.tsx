@@ -94,7 +94,7 @@ export async function checkSubscriptionOnForeground(
   } else {
     console.log("⚠️ No current path provided - continuing with subscription check");
   }
-  
+
   try {
     // 1. Identify the user to ensure we're checking the right account
     console.log(`STEP 1: Identifying user with RevenueCat: ${userId}`);
@@ -163,7 +163,7 @@ export async function checkSubscriptionOnForeground(
         // Success - navigate to home
         console.log("Purchase/restore successful - navigating to home");
         navigateToHome();
-      } else {
+          } else {
         // Cancelled - navigate to welcome screen to sign in again
         console.log("Paywall cancelled - navigating to welcome screen");
         navigateToWelcome();
@@ -233,7 +233,7 @@ export async function runPostLoginSequence(
       if (typeof Purchases.invalidateCustomerInfoCache === 'function') {
         await Purchases.invalidateCustomerInfoCache();
         console.log("Cache successfully invalidated");
-      } else {
+          } else {
         console.log("Cache invalidation method not available, using alternate approach");
       }
     } catch (cacheError) {
@@ -263,7 +263,7 @@ export async function runPostLoginSequence(
       if (entitlement.unsubscribeDetectedAt) {
         console.log("⚠️ Unsubscribe Detected At:", entitlement.unsubscribeDetectedAt);
       }
-    } else {
+          } else {
       console.log("❌ No active BallerAISubscriptionGroup entitlement found");
       console.log("\n📊 All entitlements:");
       console.log(JSON.stringify(customerInfo.entitlements, null, 2));

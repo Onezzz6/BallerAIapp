@@ -1,50 +1,64 @@
-import React, { useEffect, useState } from 'react';
-import { View, Dimensions, ScrollView, findNodeHandle } from 'react-native';
+import React, { useEffect, useState, useRef, forwardRef, useImperativeHandle } from 'react';
+import { View, Dimensions, ScrollView, findNodeHandle, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { InstructionStep } from './TabInstructions';
 import TabInstructions from './TabInstructions';
 import { hasShownInstructions, INSTRUCTION_KEYS } from '../utils/instructionManager';
 import { BackHandler } from 'react-native';
 
+export type RecoveryInstructionsRef = {
+  handleScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+};
+
 type RecoveryInstructionsProps = {
   recoveryQueryRef: React.RefObject<View>;
   recoveryToolsRef: React.RefObject<View>;
   recoveryTimeRef: React.RefObject<View>;
-  planHolderRef: React.RefObject<View>;
-  scrollViewRef: React.RefObject<ScrollView>;
+  scrollViewRef: React.RefObject<ScrollView>; // This is the ScrollView from the parent
   onComplete: () => void;
 };
 
-// Get screen dimensions
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
-const RecoveryInstructions: React.FC<RecoveryInstructionsProps> = ({
-  recoveryQueryRef,
-  recoveryToolsRef,
-  recoveryTimeRef,
-  planHolderRef,
-  scrollViewRef,
-  onComplete
-}) => {
+const RecoveryInstructions = forwardRef<RecoveryInstructionsRef, RecoveryInstructionsProps>((
+  {
+    recoveryQueryRef,
+    recoveryToolsRef,
+    recoveryTimeRef,
+    scrollViewRef,
+    onComplete
+  },
+  ref
+) => {
   const [showInstructions, setShowInstructions] = useState(false);
   const [elementPositions, setElementPositions] = useState<Record<string, any>>({});
   const [measureRetries, setMeasureRetries] = useState(0);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const MAX_RETRIES = 3;
   const [dummyTrigger, setDummyTrigger] = useState(false);
+  const scrollPositionRef = useRef(0); // Use a ref to store scroll position to avoid re-renders from onScroll
 
-  // Updated measureElement to ensure state update AND trigger dummy state
-  const measureElement = (ref: React.RefObject<View>, key: string) => {
-    if (ref.current) {
-      ref.current.measureInWindow((x, y, width, height) => {
+  // Expose handleScroll to be called by parent
+  useImperativeHandle(ref, () => ({
+    handleScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      scrollPositionRef.current = event.nativeEvent.contentOffset.y;
+    }
+  }));
+
+  const measureElement = (refValue: React.RefObject<View>, key: string) => {
+    if (refValue.current) {
+      refValue.current.measureInWindow((x, y, width, height) => {
+        let finalY = y;
+        if (y < 0 && key === 'recoveryTime') { // Only clamp for recoveryTime if it goes negative after scroll
+          console.log(`Clamping negative y for ${key}. Original y: ${y}`);
+          finalY = 0; 
+        }
+        console.log(`Measurement for ${key} (measureInWindow): x:${x}, finalY:${finalY}, w:${width}, h:${height}`);
         if (width > 0 && height > 0) {
-          setElementPositions(prev => ({
-            ...prev,
-            [key]: { x, y, width, height }
-          }));
-          console.log(`Measurement SUCCESS for ${key}:`, { x, y, width, height });
+          setElementPositions(prev => ({ ...prev, [key]: { x, y: finalY, width, height } }));
+          console.log(`Measurement SUCCESS for ${key}:`, { x, y: finalY, width, height });
+          setDummyTrigger(prev => !prev);
         } else {
-          console.log(`Measurement FAILED for ${key}:`, { x, y, width, height });
+          console.log(`Measurement FAILED for ${key}:`, { x, y: finalY, width, height });
         }
       });
     } else {
@@ -52,53 +66,38 @@ const RecoveryInstructions: React.FC<RecoveryInstructionsProps> = ({
     }
   };
 
-  // Updated measureElements (added recoveryTimeRef)
   const measureElements = () => {
     measureElement(recoveryQueryRef, 'recoveryQuery');
     measureElement(recoveryToolsRef, 'recoveryTools');
     measureElement(recoveryTimeRef, 'recoveryTime');
   };
 
-  // Updated getRecoveryQueryPosition (ensure it returns valid or null)
   const getRecoveryQueryPosition = () => elementPositions['recoveryQuery'] || null;
-  
-  // Updated getRecoveryToolsPosition (ensure it returns valid or null)
   const getRecoveryToolsPosition = () => elementPositions['recoveryTools'] || null;
-  
-  // Updated getRecoveryTimePosition (ensure it returns valid or null)
   const getRecoveryTimePosition = () => elementPositions['recoveryTime'] || null;
-  
-  // Updated scrollToElement (no changes needed, kept for reference)
-  const scrollToElement = (ref: React.RefObject<View>) => {
-    if (scrollViewRef.current && ref.current) {
-      const node = findNodeHandle(ref.current);
-      if (node) {
-        ref.current.measureInWindow((x, y, width, height) => {
-          if (y > SCREEN_HEIGHT - 200 || y + height > SCREEN_HEIGHT - 100) {
-            scrollViewRef.current?.scrollTo({
-              y: y - 200, 
-              animated: true
-            });
-            setTimeout(() => {
-              measureElements();
-            }, 300);
-          }
-        });
-      }
+
+  const scrollToElement = (targetRefElement: React.RefObject<View>, isLastItem: boolean = false) => {
+    if (scrollViewRef.current && targetRefElement.current) {
+      targetRefElement.current.measureInWindow((x, currentElementWindowY, width, height) => { 
+        const currentOffset = scrollPositionRef.current;
+        console.log(`scrollToElement for ${isLastItem ? 'last item' : 'item'}. Element windowY: ${currentElementWindowY}, ScrollView offset: ${currentOffset}`);
+        console.log(`CurrentScrollOffset: ${scrollPositionRef.current}`);
+        
+        const desiredScreenOffset = isLastItem ? SCREEN_HEIGHT * 0.35 : 150; // Target Y for element top from window top
+                                                                      // For last item, aim for ~35% down the screen.
+        
+        const scrollTarget = currentOffset + (currentElementWindowY - desiredScreenOffset);
+
+        console.log(`Attempting to scroll. Target scroll content offset Y: ${Math.max(0, scrollTarget)}`);
+        scrollViewRef.current?.scrollTo({ y: Math.max(0, scrollTarget), animated: true });
+        
+        // Update scrollPositionRef.current to reflect the new scroll position
+        scrollPositionRef.current = Math.max(0, scrollTarget);
+        console.log(`Updated CurrentScrollOffset: ${scrollPositionRef.current}`);
+      });
     }
   };
   
-  // Updated areElementsValidlyMeasured (added recoveryTime)
-  const areElementsValidlyMeasured = () => {
-    const requiredElements = ['recoveryQuery', 'recoveryTools', 'recoveryTime'];
-    return requiredElements.every(key => {
-      const pos = elementPositions[key];
-      return pos && pos.width > 0 && pos.height > 0 && 
-             pos.x >= 0 && pos.x < SCREEN_WIDTH;
-    });
-  };
-  
-  // Updated useEffect for initial measurement
   useEffect(() => {
     const checkInstructionState = async () => {
       const instructionsShown = await hasShownInstructions(INSTRUCTION_KEYS.RECOVERY);
@@ -110,7 +109,6 @@ const RecoveryInstructions: React.FC<RecoveryInstructionsProps> = ({
       }
     };
     checkInstructionState();
-
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
       if (showInstructions) return true;
       return false;
@@ -118,18 +116,18 @@ const RecoveryInstructions: React.FC<RecoveryInstructionsProps> = ({
     return () => backHandler.remove();
   }, []);
   
-  // Updated useEffect for measurement retries (added recoveryTime)
+  const MAX_RETRIES = 3;
   useEffect(() => {
     if (showInstructions && measureRetries < MAX_RETRIES) {
       const requiredKeys = ['recoveryQuery', 'recoveryTools', 'recoveryTime'];
-      const allMeasured = requiredKeys.every(key => {
+      const anyMissing = requiredKeys.some(key => {
         const pos = elementPositions[key];
-        return pos && pos.width > 0 && pos.height > 0;
+        return !pos || pos.width <= 0 || pos.height <= 0;
       });
 
-      if (!allMeasured) {
+      if (anyMissing) {
         const retryTimer = setTimeout(() => {
-          console.log(`Retrying element measurement (${measureRetries + 1}/${MAX_RETRIES})`);
+          console.log(`Retrying element measurement (${measureRetries + 1}/${MAX_RETRIES}) for missing elements.`);
           measureElements();
           setMeasureRetries(measureRetries + 1);
         }, 500 * (measureRetries + 1));
@@ -138,44 +136,38 @@ const RecoveryInstructions: React.FC<RecoveryInstructionsProps> = ({
     }
   }, [showInstructions, elementPositions, measureRetries]);
 
-  // Updated useEffect for step changes (Targeted dummyTrigger)
   useEffect(() => {
     if (showInstructions) {
-      let targetRef: React.RefObject<View> | null = null;
-      let targetKey: string | null = null;
-      let isRecoveryTimeStep = false;
+      let targetRefToScroll: React.RefObject<View> | null = null;
+      let targetKeyForMeasure: string | null = null;
+      let isItTheLastItem = false;
 
       if (currentStepIndex === 1) { 
-        targetRef = recoveryQueryRef;
-        targetKey = 'recoveryQuery';
+        targetRefToScroll = recoveryQueryRef;
+        targetKeyForMeasure = 'recoveryQuery';
       } else if (currentStepIndex === 2) { 
-        targetRef = recoveryToolsRef;
-        targetKey = 'recoveryTools';
+        targetRefToScroll = recoveryToolsRef;
+        targetKeyForMeasure = 'recoveryTools';
       } else if (currentStepIndex === 3) { 
-        targetRef = recoveryTimeRef;
-        targetKey = 'recoveryTime';
-        isRecoveryTimeStep = true; 
+        targetRefToScroll = recoveryTimeRef;
+        targetKeyForMeasure = 'recoveryTime';
+        isItTheLastItem = true; 
       } 
 
-      if (targetRef && targetKey) {
-        scrollToElement(targetRef);
+      if (targetRefToScroll && targetKeyForMeasure) {
+        console.log(`Step change to ${targetKeyForMeasure}. Is last item: ${isItTheLastItem}. CurrentScrollOffset from ref: ${scrollPositionRef.current}`);
+        scrollToElement(targetRefToScroll, isItTheLastItem);
         
-        const remeasureDelay = isRecoveryTimeStep ? 800 : 400; 
-        console.log(`Scheduling measure check for ${targetKey} in ${remeasureDelay}ms`);
+        const remeasureDelay = isItTheLastItem ? 1200 : 400; 
+        console.log(`Scheduling measureElement for ${targetKeyForMeasure} in ${remeasureDelay}ms after scroll attempt`);
         setTimeout(() => {
-          console.log(`Executing measure check for ${targetKey}`);
-          measureElement(targetRef!, targetKey!);
-          // Only trigger dummy state for the recoveryTime step after its measurement
-          if (isRecoveryTimeStep) {
-            console.log("Forcing re-render via dummyTrigger for recoveryTime step");
-            setDummyTrigger(prev => !prev);
-          }
+          console.log(`Executing measureElement for ${targetKeyForMeasure} (Step index: ${currentStepIndex}), CurrentScrollOffset: ${scrollPositionRef.current}`);
+          measureElement(targetRefToScroll!, targetKeyForMeasure!);
         }, remeasureDelay); 
       }
     }
   }, [currentStepIndex, showInstructions]);
 
-  // Updated instruction steps (revert position assignment)
   const steps: InstructionStep[] = [
     {
       id: 'welcome',
@@ -200,31 +192,33 @@ const RecoveryInstructions: React.FC<RecoveryInstructionsProps> = ({
       id: 'recoveryTime',
       title: 'Available Time',
       description: 'Finally, tell us how much time you have available today so the recovery plan fits your schedule.',
-      position: getRecoveryTimePosition(), // Reverted to simple null check
+      position: getRecoveryTimePosition(), 
     }
   ];
 
-  // Kept handleInstructionsComplete
   const handleInstructionsComplete = () => {
     setShowInstructions(false);
     onComplete();
   };
 
-  // Kept handleStepChange
   const handleStepChange = (index: number) => {
     setCurrentStepIndex(index);
   };
 
   return (
-    <TabInstructions
-      steps={steps}
-      storageKey={INSTRUCTION_KEYS.RECOVERY}
-      visible={showInstructions}
-      onComplete={handleInstructionsComplete}
-      onStepChange={handleStepChange}
-      currentStepIndex={currentStepIndex}
-    />
+    <>
+      {showInstructions && (
+        <TabInstructions
+          steps={steps}
+          storageKey={INSTRUCTION_KEYS.RECOVERY}
+          visible={true} 
+          onComplete={handleInstructionsComplete}
+          onStepChange={handleStepChange}
+          currentStepIndex={currentStepIndex}
+        />
+      )}
+    </>
   );
-};
+});
 
 export default RecoveryInstructions; 

@@ -68,7 +68,7 @@ export default function HomeScreen() {
   
   // State to track whether the instructions are shown
   const [instructionsComplete, setInstructionsComplete] = useState(false);
-  
+
   const showInfoAlertReadiness = () => {
     Alert.alert(
       "Readiness Score",
@@ -1666,10 +1666,10 @@ export default function HomeScreen() {
           <View 
             ref={weeklyProgressRef}
             style={{ 
-              alignItems: 'center',
-              paddingVertical: 16,
-              borderBottomWidth: 1,
-              borderBottomColor: '#E5E5E5',
+            alignItems: 'center',
+            paddingVertical: 16,
+            borderBottomWidth: 1,
+            borderBottomColor: '#E5E5E5',
             }}
           >
             <Text style={{ 
@@ -1909,19 +1909,19 @@ export default function HomeScreen() {
           <View 
             ref={askBallzyRef}
             style={{
-              backgroundColor: '#4064F6',
-              borderRadius: 24,
-              padding: 24,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              shadowColor: '#000000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.3,
-              shadowRadius: 4,
-              elevation: 4,
-              borderWidth: 1,
-              borderColor: '#E5E5E5',
+            backgroundColor: '#4064F6',
+            borderRadius: 24,
+            padding: 24,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            shadowColor: '#000000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.3,
+            shadowRadius: 4,
+            elevation: 4,
+            borderWidth: 1,
+            borderColor: '#E5E5E5',
             }}
           >
             <View style={{ flex: 1 }}>
