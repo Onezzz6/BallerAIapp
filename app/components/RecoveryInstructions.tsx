@@ -54,11 +54,30 @@ const RecoveryInstructions = forwardRef<RecoveryInstructionsRef, RecoveryInstruc
         }
         console.log(`Measurement for ${key} (measureInWindow): x:${x}, finalY:${finalY}, w:${width}, h:${height}`);
         if (width > 0 && height > 0) {
+          // Store the position and trigger update immediately
           setElementPositions(prev => ({ ...prev, [key]: { x, y: finalY, width, height } }));
           console.log(`Measurement SUCCESS for ${key}:`, { x, y: finalY, width, height });
+          
+          // Force immediate update to avoid flicker
           setDummyTrigger(prev => !prev);
         } else {
           console.log(`Measurement FAILED for ${key}:`, { x, y: finalY, width, height });
+          
+          // If measurement failed, retry once immediately (might be offscreen)
+          setTimeout(() => {
+            console.log(`Retrying measurement for ${key} after failure`);
+            if (refValue.current) {
+              refValue.current.measureInWindow((retryX, retryY, retryWidth, retryHeight) => {
+                if (retryWidth > 0 && retryHeight > 0) {
+                  setElementPositions(prev => ({ 
+                    ...prev, 
+                    [key]: { x: retryX, y: retryY, width: retryWidth, height: retryHeight } 
+                  }));
+                  setDummyTrigger(prev => !prev);
+                }
+              });
+            }
+          }, 50);
         }
       });
     } else {
@@ -83,13 +102,18 @@ const RecoveryInstructions = forwardRef<RecoveryInstructionsRef, RecoveryInstruc
         console.log(`scrollToElement for ${isLastItem ? 'last item' : 'item'}. Element windowY: ${currentElementWindowY}, ScrollView offset: ${currentOffset}`);
         console.log(`CurrentScrollOffset: ${scrollPositionRef.current}`);
         
-        const desiredScreenOffset = isLastItem ? SCREEN_HEIGHT * 0.35 : 150; // Target Y for element top from window top
-                                                                      // For last item, aim for ~35% down the screen.
+        // For better positioning: 
+        // - Regular items at 150px from top
+        // - Last item at 30% down screen for better visibility
+        const desiredScreenOffset = isLastItem ? SCREEN_HEIGHT * 0.3 : 150;
         
         const scrollTarget = currentOffset + (currentElementWindowY - desiredScreenOffset);
 
         console.log(`Attempting to scroll. Target scroll content offset Y: ${Math.max(0, scrollTarget)}`);
-        scrollViewRef.current?.scrollTo({ y: Math.max(0, scrollTarget), animated: true });
+        scrollViewRef.current?.scrollTo({ 
+          y: Math.max(0, scrollTarget), 
+          animated: true
+        });
         
         // Update scrollPositionRef.current to reflect the new scroll position
         scrollPositionRef.current = Math.max(0, scrollTarget);
@@ -105,7 +129,7 @@ const RecoveryInstructions = forwardRef<RecoveryInstructionsRef, RecoveryInstruc
         setTimeout(() => {
           measureElements();
           setShowInstructions(true);
-        }, 700);
+        }, 600); // Slightly faster initial display
       }
     };
     checkInstructionState();
@@ -116,7 +140,7 @@ const RecoveryInstructions = forwardRef<RecoveryInstructionsRef, RecoveryInstruc
     return () => backHandler.remove();
   }, []);
   
-  const MAX_RETRIES = 3;
+  const MAX_RETRIES = 2;
   useEffect(() => {
     if (showInstructions && measureRetries < MAX_RETRIES) {
       const requiredKeys = ['recoveryQuery', 'recoveryTools', 'recoveryTime'];
@@ -130,7 +154,7 @@ const RecoveryInstructions = forwardRef<RecoveryInstructionsRef, RecoveryInstruc
           console.log(`Retrying element measurement (${measureRetries + 1}/${MAX_RETRIES}) for missing elements.`);
           measureElements();
           setMeasureRetries(measureRetries + 1);
-        }, 500 * (measureRetries + 1));
+        }, 300 * (measureRetries + 1)); // Progressively slower retries
         return () => clearTimeout(retryTimer);
       }
     }
@@ -158,7 +182,8 @@ const RecoveryInstructions = forwardRef<RecoveryInstructionsRef, RecoveryInstruc
         console.log(`Step change to ${targetKeyForMeasure}. Is last item: ${isItTheLastItem}. CurrentScrollOffset from ref: ${scrollPositionRef.current}`);
         scrollToElement(targetRefToScroll, isItTheLastItem);
         
-        const remeasureDelay = isItTheLastItem ? 1200 : 400; 
+        // Optimize measurement delays for a snappier feel
+        const remeasureDelay = isItTheLastItem ? 700 : 350; 
         console.log(`Scheduling measureElement for ${targetKeyForMeasure} in ${remeasureDelay}ms after scroll attempt`);
         setTimeout(() => {
           console.log(`Executing measureElement for ${targetKeyForMeasure} (Step index: ${currentStepIndex}), CurrentScrollOffset: ${scrollPositionRef.current}`);
