@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Modal, Alert, ActivityIndicator, Pressable, useWindowDimensions, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Modal, Alert, ActivityIndicator, Pressable, useWindowDimensions, KeyboardAvoidingView, Platform, Keyboard, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, Link } from 'expo-router';
 import Svg, { Circle, Path, Text as SvgText } from 'react-native-svg';
@@ -22,6 +22,7 @@ import { calculateNutritionGoals } from '../utils/nutritionCalculations';
 import * as imageAnalysis from '../services/imageAnalysis';
 import WeeklyOverview from '../components/WeeklyOverview';
 import analytics from '@react-native-firebase/analytics';
+import NutritionInstructions from '../components/NutritionInstructions';
 
 // Type definition for food analysis result
 type FoodAnalysisResult = {
@@ -578,12 +579,16 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal, isPhotoAna
   );
 }
 
-function LoggedMeals({ meals, onDelete }: { meals: any[]; onDelete: (mealId: string) => Promise<void> }) {
+function LoggedMeals({ meals, onDelete, mealItemRef }: { meals: any[]; onDelete: (mealId: string) => Promise<void>; mealItemRef: React.RefObject<View> }) {
   return (
     <View style={styles.loggedMealsContainer}>
       <Text style={styles.loggedMealsTitle}>Today's Meals</Text>
-      {meals.map((meal) => (
-        <View key={meal.id} style={styles.mealItem}>
+      {meals.map((meal, index) => (
+        <View 
+          key={meal.id} 
+          style={styles.mealItem}
+          ref={index === 0 ? mealItemRef : undefined}
+        >
           <View style={styles.mealInfo}>
             {/* Show all food items instead of just the first one */}
             {meal.items && meal.items.length > 0 ? (
@@ -1456,6 +1461,16 @@ export default function NutritionScreen() {
   const [weeklyData, setWeeklyData] = useState<DailyMacros[]>([]);
   const [isLoadingWeek, setIsLoadingWeek] = useState(true);
   const [isUpdatingFromLoad, setIsUpdatingFromLoad] = useState(false);
+  const [instructionsComplete, setInstructionsComplete] = useState(false);
+  
+  // Add refs for the guided tour
+  const scrollViewRef = useRef<ScrollView>(null);
+  const weekPickerRef = useRef<View>(null);
+  const calorieCardRef = useRef<View>(null);
+  const macroProgressRef = useRef<View>(null);
+  const adherenceBoxRef = useRef<View>(null);
+  const logMealButtonRef = useRef<View>(null);
+  const mealItemRef = useRef<View>(null);
 
   // Track the time until midnight (when analysis limit resets)
   useEffect(() => {
@@ -2294,6 +2309,7 @@ export default function NutritionScreen() {
   return (
     <>
       <ScrollView 
+        ref={scrollViewRef}
         style={styles.container}
         contentContainerStyle={{
           flexGrow: 1,
@@ -2359,18 +2375,22 @@ export default function NutritionScreen() {
         </View>
 
         {/* Weekly Overview */}
-        <WeeklyOverview 
-          selectedDate={selectedDate}
-          onDateSelect={setSelectedDate}
-        />
+        <View ref={weekPickerRef}>
+          <WeeklyOverview 
+            selectedDate={selectedDate}
+            onDateSelect={setSelectedDate}
+          />
+        </View>
 
-        <CalorieProgress 
-          eaten={macros.calories.current}
-          burned={0}
-          goal={macros.calories.goal}
-        />
+        <View ref={calorieCardRef}>
+          <CalorieProgress 
+            eaten={macros.calories.current}
+            burned={0}
+            goal={macros.calories.goal}
+          />
+        </View>
 
-        <View style={styles.macrosCard}>
+        <View ref={macroProgressRef} style={styles.macrosCard}>
           <MacroProgress
             type="Protein"
             current={macros.protein.current}
@@ -2390,7 +2410,7 @@ export default function NutritionScreen() {
             color="#FFD93D"
           />
           
-          <View style={styles.adherenceContainer}>
+          <View ref={adherenceBoxRef} style={styles.adherenceContainer}>
             <Text style={styles.adherenceTitle}>Nutrition Adherence</Text>
             <Text style={styles.adherenceSubtitle}>Today's Progress</Text>
             <Text style={styles.adherencePercentage}>{calculateTodayAdherence()}%</Text>
@@ -2399,6 +2419,7 @@ export default function NutritionScreen() {
 
         <View style={styles.mealsSection}>
           <Pressable  
+            ref={logMealButtonRef}
             style={({ pressed }) => [
               styles.logMealButton,
               !canLogMeal() && styles.disabledButton,
@@ -2421,24 +2442,27 @@ export default function NutritionScreen() {
           )}
         </View>
 
-        <LoggedMeals 
-          meals={loggedMeals} 
-          onDelete={async (mealId: string) => {
-            try {
-              setIsLoading(true);
-              await deleteMeal(mealId);
-              // Show success message
-              Alert.alert('Success', 'Meal deleted successfully.');
-              // Refresh weekly data to update the overview
-              await loadSelectedDayData();
-            } catch (error) {
-              console.error('Error deleting meal:', error);
-              Alert.alert('Error', 'Failed to delete meal. Please try again.');
-            } finally {
-              setIsLoading(false);
-            }
-          }} 
-        />
+        <View>
+          <LoggedMeals 
+            meals={loggedMeals} 
+            onDelete={async (mealId: string) => {
+              try {
+                setIsLoading(true);
+                await deleteMeal(mealId);
+                // Show success message
+                Alert.alert('Success', 'Meal deleted successfully.');
+                // Refresh weekly data to update the overview
+                await loadSelectedDayData();
+              } catch (error) {
+                console.error('Error deleting meal:', error);
+                Alert.alert('Error', 'Failed to delete meal. Please try again.');
+              } finally {
+                setIsLoading(false);
+              }
+            }}
+            mealItemRef={mealItemRef}
+          /> 
+        </View>
 
         <LogMealModal
           visible={isLogMealModalVisible}
@@ -2527,6 +2551,18 @@ export default function NutritionScreen() {
           </Animated.View>
         </Animated.View>
       )}
+
+      {/* Add NutritionInstructions component */}
+      <NutritionInstructions
+        weekPickerRef={weekPickerRef}
+        calorieCardRef={calorieCardRef}
+        macroProgressRef={macroProgressRef}
+        adherenceBoxRef={adherenceBoxRef}
+        logMealButtonRef={logMealButtonRef}
+        mealItemRef={mealItemRef}
+        scrollViewRef={scrollViewRef}
+        onComplete={() => setInstructionsComplete(true)}
+      />
     </>
   );
 } 

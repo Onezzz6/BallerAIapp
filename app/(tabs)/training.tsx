@@ -10,6 +10,7 @@ import Animated, { FadeIn, FadeInDown, PinwheelIn } from 'react-native-reanimate
 import { Ionicons } from '@expo/vector-icons';
 import { startOfWeek, endOfWeek, differenceInMilliseconds, format, isSunday, subWeeks, isAfter, parseISO, addDays, getWeek } from 'date-fns';
 import analytics from '@react-native-firebase/analytics';
+import TrainingInstructions from '../components/TrainingInstructions';
 
 type FocusArea = 'technique' | 'strength' | 'endurance' | 'speed' | 'overall';
 type GymAccess = 'yes' | 'no';
@@ -349,9 +350,17 @@ export default function TrainingScreen() {
   const [canGeneratePlan, setCanGeneratePlan] = useState(true);
   const [lastGeneratedDate, setLastGeneratedDate] = useState<Date | null>(null);
   const [timeUntilNextSunday, setTimeUntilNextSunday] = useState<{ days: number; hours: number; minutes: number }>({ days: 0, hours: 0, minutes: 0 });
+  const [instructionsComplete, setInstructionsComplete] = useState(false);
   
   // Reference to the main ScrollView
   const scrollViewRef = useRef<ScrollView>(null);
+  
+  // Refs for the guided tour
+  const focusAreaRef = useRef<View>(null);
+  const gymAccessRef = useRef<View>(null);
+  const scheduleRef = useRef<View>(null);
+  const generateButtonRef = useRef<View>(null);
+  
   // Get the fromTraining param to check if returning from training plans
   const { fromTraining } = useLocalSearchParams<{ fromTraining: string }>();
 
@@ -815,7 +824,7 @@ Focus on recovery today`;
           </View>
 
           <View style={styles.content}>
-            <View style={[styles.sectionBackgroundGray, { backgroundColor: '#DCF4F5' }]}>
+            <View ref={focusAreaRef} style={[styles.sectionBackgroundGray, { backgroundColor: '#DCF4F5' }]}>
               <Text style={[styles.sectionTitle, { color: canGeneratePlan ? '#000000' : '#666666' }]}>Focus Area</Text>
               <Text style={styles.subtitle}>Select your training focus to get a personalized plan</Text>
               
@@ -842,7 +851,7 @@ Focus on recovery today`;
               </View>
             </View>
 
-            <View style={[styles.sectionBackgroundGray, { backgroundColor: '#DCF4F5' }]}>
+            <View ref={gymAccessRef} style={[styles.sectionBackgroundGray, { backgroundColor: '#DCF4F5' }]}>
               <Text style={[styles.sectionTitle, { color: canGeneratePlan ? '#000000' : '#666666' }]}>Gym Access</Text>
               <Text style={styles.subtitle}>Do you have access to a gym?</Text>
               <View style={styles.optionsContainer}>
@@ -868,7 +877,7 @@ Focus on recovery today`;
               </View>
             </View>
 
-            <View style={[styles.sectionBackgroundGray, { backgroundColor: '#DCF4F5' }, scheduleConfirmed && { opacity: 0.8 }]}>
+            <View ref={scheduleRef} style={[styles.sectionBackgroundGray, { backgroundColor: '#DCF4F5' }, scheduleConfirmed && { opacity: 0.8 }]}>
               <View style={{ 
                 flexDirection: 'row', 
                 justifyContent: 'space-between', 
@@ -968,6 +977,7 @@ Focus on recovery today`;
 
             <View style={styles.buttonContainer}>
               <Pressable
+                ref={generateButtonRef}
                 style={({ pressed }) => [
                   styles.generateButton,
                   (loading || !scheduleConfirmed || !selectedFocus || !gymAccess || !canGeneratePlan) && styles.generateButtonDisabled,
@@ -1045,6 +1055,16 @@ Focus on recovery today`;
           </Animated.View>
         </Animated.View>
       )}
+
+      {/* Add TrainingInstructions component */}
+      <TrainingInstructions
+        focusAreaRef={focusAreaRef}
+        gymAccessRef={gymAccessRef}
+        scheduleRef={scheduleRef}
+        generateButtonRef={generateButtonRef}
+        scrollViewRef={scrollViewRef}
+        onComplete={() => setInstructionsComplete(true)}
+      />
     </>
   );
 }
