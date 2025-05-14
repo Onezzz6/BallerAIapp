@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, Modal, Dimensions, Platform, SafeAreaView, StatusBar } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, Pressable, StyleSheet, Modal, Dimensions, Platform, SafeAreaView, StatusBar, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { markInstructionsAsShown } from '../utils/instructionManager';
@@ -45,6 +45,10 @@ const TabInstructions: React.FC<TabInstructionsProps> = ({
   currentStepIndex: externalStepIndex,
 }) => {
   const [internalStepIndex, setInternalStepIndex] = useState(0);
+  // Animated value for tooltip opacity
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  // Keep track of the step we're fading to
+  const [fadingToStep, setFadingToStep] = useState<number | null>(null);
   
   // Use either external step index (if provided) or internal state
   const currentStepIndex = externalStepIndex !== undefined ? externalStepIndex : internalStepIndex;
@@ -53,21 +57,56 @@ const TabInstructions: React.FC<TabInstructionsProps> = ({
   // Add a check to ensure currentStep is defined before proceeding
   if (!currentStep) {
     console.error("Current instruction step is undefined for index:", currentStepIndex);
-    // Optionally, handle this case gracefully, e.g., by not rendering the modal or showing an error
-    // For now, returning null might prevent a crash during render, but might hide the component.
-    // A better approach might be to prevent the index from going out of bounds upstream.
-    return null; // Or render a fallback/loading state
+    return null;
   }
   
-  // Update step index - if external control is used, call the callback
-  const updateStepIndex = (newIndex: number) => {
-    if (externalStepIndex !== undefined && onStepChange) {
-      // External control - call the provided callback
-      onStepChange(newIndex);
-    } else {
-      // Internal control - update our own state
-      setInternalStepIndex(newIndex);
+  // Reset animations when modal becomes visible
+  useEffect(() => {
+    if (visible) {
+      // Reset the fade animation to fully visible
+      fadeAnim.setValue(1);
+      // Reset the fading state
+      setFadingToStep(null);
     }
+  }, [visible]);
+
+  // Handle animation when step changes
+  useEffect(() => {
+    // If we're in the middle of a fade transition and we reached the target step
+    if (fadingToStep !== null && fadingToStep === currentStepIndex) {
+      // Add a slight delay before fading in
+      setTimeout(() => {
+        // Fade in the new step (slower)
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 450, // Increased from 300ms for slower fade-in
+          useNativeDriver: true,
+        }).start(() => {
+          // Reset fading state when complete
+          setFadingToStep(null);
+        });
+      }, 300); // 300ms delay before starting fade-in (increased from 100ms)
+    }
+  }, [currentStepIndex, fadingToStep]);
+  
+  // Update step index with animation - if external control is used, call the callback
+  const updateStepIndex = (newIndex: number) => {
+    // Start by fading out (quicker)
+    setFadingToStep(newIndex);
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 150, // Reduced from 250ms for quicker fade-out
+      useNativeDriver: true,
+    }).start(() => {
+      // After fade out completes, change the step
+      if (externalStepIndex !== undefined && onStepChange) {
+        // External control - call the provided callback
+        onStepChange(newIndex);
+      } else {
+        // Internal control - update our own state
+        setInternalStepIndex(newIndex);
+      }
+    });
   };
   
   // Calculate tooltip position based on the highlighted element
@@ -137,7 +176,9 @@ const TabInstructions: React.FC<TabInstructionsProps> = ({
     onComplete();
     
     // Reset step index for next time
-    updateStepIndex(0);
+    if (externalStepIndex === undefined) {
+      setInternalStepIndex(0);
+    }
   };
 
   // Render custom mask with a cutout for the highlighted element
@@ -271,13 +312,14 @@ const TabInstructions: React.FC<TabInstructionsProps> = ({
           })()
         )}
         
-        {/* Tooltip */}
-        <View 
+        {/* Tooltip - with fade animation */}
+        <Animated.View 
           style={[
             styles.tooltip, 
             { 
               left: tooltipPosition.left,
               top: tooltipPosition.top,
+              opacity: fadeAnim,
             }
           ]}
         >
@@ -309,7 +351,7 @@ const TabInstructions: React.FC<TabInstructionsProps> = ({
               )}
             </Pressable>
           </View>
-        </View>
+        </Animated.View>
       </SafeAreaView>
     </Modal>
   );
