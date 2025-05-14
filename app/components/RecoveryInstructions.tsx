@@ -249,6 +249,7 @@ const RecoveryInstructions = forwardRef<RecoveryInstructionsRef, RecoveryInstruc
       title: 'Recovery Tools',
       description: 'Select the recovery tools you have available. This helps create a recovery plan that uses equipment you actually have access to.',
       position: getRecoveryToolsPosition(),
+      tooltipPosition: 'bottom', // Force the tooltip to appear below the element
     },
     { 
       id: 'recoveryTime',

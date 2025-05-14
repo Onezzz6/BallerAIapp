@@ -12,8 +12,8 @@ export const TRAINING_INSTRUCTIONS_KEY = INSTRUCTION_KEYS.TRAINING;
 export const TRAINING_INSTRUCTION_STEPS: Array<Omit<InstructionStep, 'position'> & { position: null }> = [
   {
     id: 'welcome',
-    title: 'Welcome to the Training Tab',
-    description: "Let's explore how to get personalized training plans. We'll guide you through the key features of this tab.",
+    title: 'Training Center',
+    description: "Let's explore how to get personalized training plans. We'll guide you through the key features of this section.",
     position: null
   },
   {
@@ -21,27 +21,27 @@ export const TRAINING_INSTRUCTION_STEPS: Array<Omit<InstructionStep, 'position'>
     title: 'Training Focus',
     description: "Select what you want to focus on this week for personalized training recommendations.",
     position: null,
-    positionStyles: { borderRadius: 16 }
+    tooltipPosition: 'bottom'
   },
   {
     id: 'gymAccess',
     title: 'Gym Access',
     description: "Tell us if you have access to a gym so we can tailor your training plan accordingly.",
     position: null,
-    tooltipPosition: 'top'
+    tooltipPosition: 'bottom'
   },
   {
     id: 'schedule',
     title: 'Team Schedule',
-    description: "Enter your team training and game schedule so Ballzy can take it in to account when creating your training plan.",
+    description: "Enter your team training and game schedule so Ballzy can take it into account when creating your training plan.",
     position: null,
-    tooltipPosition: 'bottom',
+    tooltipPosition: 'top',
     positionStyles: { borderRadius: 16 }
   },
   {
     id: 'generateButton',
     title: 'Generate Plan',
-    description: "Once you've filled in your preferences, tap here to create your personalized weekly training plan.",
+    description: "Once you've filled in your preferences, tap here to create your personalized training plan for the week.",
     position: null,
     tooltipPosition: 'top',
     positionStyles: { borderRadius: 24 }

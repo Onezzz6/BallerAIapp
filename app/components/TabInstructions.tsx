@@ -145,7 +145,7 @@ const TabInstructions: React.FC<TabInstructionsProps> = ({
     if (!currentStep.position) {
       return (
         <BlurView
-          intensity={Platform.OS === 'ios' ? 45 : 90}
+          intensity={Platform.OS === 'ios' ? 25 : 90}
           tint="dark"
           style={StyleSheet.absoluteFillObject}
         />
@@ -155,7 +155,7 @@ const TabInstructions: React.FC<TabInstructionsProps> = ({
     const { x, y, width, height } = currentStep.position;
     
     // Use a stronger blur for all elements to make them pop out more
-    const blurIntensity = Platform.OS === 'ios' ? 45 : 90;
+    const blurIntensity = Platform.OS === 'ios' ? 25 : 90;
     
     // Create a semi-transparent overlay with a cutout for the highlighted element
     // Use the enhanced padding for all elements
@@ -289,17 +289,20 @@ const TabInstructions: React.FC<TabInstructionsProps> = ({
           </View>
           
           {/* Title and description */}
-          <Text style={styles.title}>{currentStep.title}</Text>
-          <Text style={styles.description}>{currentStep.description}</Text>
+          <Text style={styles.title} allowFontScaling={false}>{currentStep.title}</Text>
+          <Text style={styles.description} allowFontScaling={false}>{currentStep.description}</Text>
           
           {/* Navigation buttons */}
           <View style={styles.buttons}>
             <Pressable 
-              style={styles.button} 
+              style={({ pressed }) => [
+                styles.button,
+                { opacity: pressed ? 0.7 : 1 }
+              ]} 
               onPress={handleNext}
             >
-              <Text style={styles.buttonText}>
-                {currentStepIndex < steps.length - 1 ? 'Next' : 'Got it'}
+              <Text style={styles.buttonText} allowFontScaling={false}>
+                {currentStepIndex < steps.length - 1 ? 'Next' : 'Got It'}
               </Text>
               {currentStepIndex < steps.length - 1 && (
                 <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
@@ -320,9 +323,10 @@ const styles = StyleSheet.create({
   tooltip: {
     position: 'absolute',
     width: TOOLTIP_WIDTH,
-    backgroundColor: 'rgba(64, 100, 246, 0.95)',
+    backgroundColor: 'rgba(64, 100, 246, 0.92)',
     borderRadius: 16,
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -334,7 +338,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -10,
     right: -10,
-    backgroundColor: '#000000',
+    backgroundColor: '#293585',
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 5,
@@ -353,7 +357,6 @@ const styles = StyleSheet.create({
   description: {
     color: '#FFFFFF',
     fontSize: 14,
-    lineHeight: 22,
     marginBottom: 16,
   },
   buttons: {
@@ -363,7 +366,7 @@ const styles = StyleSheet.create({
   button: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
     borderRadius: 20,
     paddingVertical: 8,
     paddingHorizontal: 16,
@@ -372,7 +375,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
-    marginRight: 4,
   },
   highlight: {
     position: 'absolute',

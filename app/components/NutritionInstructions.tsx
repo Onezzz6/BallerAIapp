@@ -12,14 +12,14 @@ export const NUTRITION_INSTRUCTIONS_KEY = INSTRUCTION_KEYS.NUTRITION;
 export const NUTRITION_INSTRUCTION_STEPS: Array<Omit<InstructionStep, 'position'> & { position: null }> = [
   {
     id: 'welcome',
-    title: 'Welcome to Nutrition',
-    description: "Let's explore how to track and manage your nutrition for optimal performance. We'll guide you through the key features of this tab.",
+    title: 'Nutrition Center',
+    description: "Let's explore how to track and manage your nutrition for optimal performance. We'll guide you through the key features of this section.",
     position: null
   },
   {
     id: 'weekPicker',
     title: 'Nutrition Calendar',
-    description: "Navigate between different dates and see your nutrition history.",
+    description: "Use the weekly calendar to navigate through your nutrition history.",
     position: null,
     positionStyles: { borderRadius: 16 }
   },

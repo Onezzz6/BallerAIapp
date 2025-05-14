@@ -91,9 +91,10 @@ const HomeInstructions: React.FC<HomeInstructionsProps> = ({
         setElementPositions({});
         
         ref.current.measureInWindow((x, y, width, height) => {
-          // If element is below the screen or only partially visible
-          if (y > SCREEN_HEIGHT - 200 || y + height > SCREEN_HEIGHT - 100) {
+          if (y + height > SCREEN_HEIGHT - 100) {
             // Calculate a good scroll position to show the element
+            console.log('scrollToElement: y: ', y);
+
             scrollViewRef.current?.scrollTo({
               y: y - 200, // Position element with some space at the top
               animated: true
@@ -267,15 +268,17 @@ const HomeInstructions: React.FC<HomeInstructionsProps> = ({
   const getAskBallzyPosition = () => {
     const position = elementPositions['askBallzy'];
     if (position && position.y < SCREEN_HEIGHT - 150 && position.y > 100) {
+      console.log('getAskBallzyPosition: normal: ', position);
       return position;
     }
     
     // Fallback position in case askBallzy is too low or unmeasurable
+    console.log('getAskBallzyPosition: fallback: ', position);
     return {
       x: SCREEN_WIDTH / 2 - 150,
-      y: SCREEN_HEIGHT - 350,
+      y: SCREEN_HEIGHT - 100,
       width: 300,
-      height: 100
+      height: 200
     };
   };
 
@@ -290,13 +293,13 @@ const HomeInstructions: React.FC<HomeInstructionsProps> = ({
     {
       id: 'calories',
       title: 'Daily Calories',
-      description: 'Track your daily calorie intake and progress. Tap on it to see more details.',
+      description: 'Track your daily calorie intake and progress. Tap the card for more details.',
       position: elementPositions['calorieCard'] || null,
     },
     {
       id: 'readiness',
       title: 'Readiness Score',
-      description: 'This shows how ready your body is for training today based on your recovery data.',
+      description: 'This card shows how ready your body is for training based on your recovery data.',
       position: elementPositions['readinessCard'] || null,
     },
     {
@@ -308,13 +311,13 @@ const HomeInstructions: React.FC<HomeInstructionsProps> = ({
     {
       id: 'nutrition',
       title: 'Nutrition Score',
-      description: "This shows how closely you've followed your macro goals in the last week.",
+      description: "This card shows how closely you've followed your macro goals in the last week.",
       position: elementPositions['nutritionCard'] || null,
     },
     {
       id: 'recovery',
       title: 'Recovery Score',
-      description: "See how well you've been maintaining your recovery habits over the past week.",
+      description: "See how well you've maintained your recovery habits over the past week.",
       position: elementPositions['recoveryCard'] || null,
     },
     {
