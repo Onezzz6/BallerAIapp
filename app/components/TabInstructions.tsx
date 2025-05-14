@@ -49,6 +49,8 @@ const TabInstructions: React.FC<TabInstructionsProps> = ({
   const fadeAnim = useRef(new Animated.Value(1)).current;
   // Keep track of the step we're fading to
   const [fadingToStep, setFadingToStep] = useState<number | null>(null);
+  // State to control highlight visibility during transitions
+  const [highlightVisible, setHighlightVisible] = useState(true);
   
   // Use either external step index (if provided) or internal state
   const currentStepIndex = externalStepIndex !== undefined ? externalStepIndex : internalStepIndex;
@@ -67,6 +69,8 @@ const TabInstructions: React.FC<TabInstructionsProps> = ({
       fadeAnim.setValue(1);
       // Reset the fading state
       setFadingToStep(null);
+      // Make sure highlight is visible
+      setHighlightVisible(true);
     }
   }, [visible]);
 
@@ -74,31 +78,46 @@ const TabInstructions: React.FC<TabInstructionsProps> = ({
   useEffect(() => {
     // If we're in the middle of a fade transition and we reached the target step
     if (fadingToStep !== null && fadingToStep === currentStepIndex) {
+      // Keep highlight hidden for a moment
+      setHighlightVisible(false);
+      
       // Add a slight delay before fading in
       setTimeout(() => {
-        // Fade in the new step (slower)
+        // Define the fade duration for easy reference
+        const fadeInDuration = 250; // Reduced from 450ms for quicker fade-in
+        
+        // Show highlight halfway through the fade-in
+        setTimeout(() => {
+          setHighlightVisible(true);
+        }, fadeInDuration / 2);
+        
+        // Fade in the new step (quicker)
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 450, // Increased from 300ms for slower fade-in
+          duration: fadeInDuration,
           useNativeDriver: true,
         }).start(() => {
           // Reset fading state when complete
           setFadingToStep(null);
         });
-      }, 300); // 300ms delay before starting fade-in (increased from 100ms)
+      }, 600); // 600ms delay before starting fade-in
     }
   }, [currentStepIndex, fadingToStep]);
   
   // Update step index with animation - if external control is used, call the callback
   const updateStepIndex = (newIndex: number) => {
-    // Start by fading out (quicker)
+    // Hide highlight immediately when starting transition
+    setHighlightVisible(false);
+    
+    // Immediately hide the tooltip (no animation) to prevent position jumping during fade
+    fadeAnim.setValue(0);
+    
+    // Set fading state and change step after a tiny delay
     setFadingToStep(newIndex);
-    Animated.timing(fadeAnim, {
-      toValue: 0,
-      duration: 150, // Reduced from 250ms for quicker fade-out
-      useNativeDriver: true,
-    }).start(() => {
-      // After fade out completes, change the step
+    
+    // Use setTimeout to allow the tooltip to disappear before changing position
+    setTimeout(() => {
+      // After tooltip is hidden, change the step
       if (externalStepIndex !== undefined && onStepChange) {
         // External control - call the provided callback
         onStepChange(newIndex);
@@ -106,7 +125,7 @@ const TabInstructions: React.FC<TabInstructionsProps> = ({
         // Internal control - update our own state
         setInternalStepIndex(newIndex);
       }
-    });
+    }, 50); // Tiny delay to ensure tooltip is hidden
   };
   
   // Calculate tooltip position based on the highlighted element
@@ -258,7 +277,8 @@ const TabInstructions: React.FC<TabInstructionsProps> = ({
         {/* Blurred background */}
         {renderOverlay()}
         
-        {currentStep.position && (
+        {/* Only render highlight when it should be visible */}
+        {currentStep.position && highlightVisible && (
           (() => {
             // Use the enhanced padding for all elements
             const padding = 20;
