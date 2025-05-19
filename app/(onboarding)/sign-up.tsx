@@ -13,6 +13,7 @@ import { db } from '../config/firebase';
 import { runPostLoginSequence, markAuthenticationComplete } from './paywall';
 import { PAYWALL_RESULT } from 'react-native-purchases-ui';
 import { usePathname } from 'expo-router';
+import ScrollIfNeeded from '../components/ScrollIfNeeded';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -176,126 +177,129 @@ export default function SignUpScreen() {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <Animated.View 
-        entering={FadeIn.duration(500)}
+      <ScrollIfNeeded 
         style={{
-          flex: 1,
           backgroundColor: '#ffffff',
         }}
       >
-
-      <View style={styles.container}>
-
-        <View style={{
-            justifyContent: 'center',
-            alignItems: 'center',
-            gap: 12,
-            paddingTop: 128,
-          }}>
-
-        <Image
-          source={require('../../assets/images/BallerAILogo.png')}
+        <Animated.View 
+          entering={FadeIn.duration(500)}
           style={{
-            width: 120,
-            height: 120,
-            resizeMode: 'contain',
-            marginBottom: 0,
+            flex: 1,
           }}
-        />
-            
-        <Text style={{
-          fontSize: 32,
-          color: '#000000',
-          fontWeight: '600',
-          textAlign: 'center',
-          marginBottom: 0,
-        }} allowFontScaling={false}>
-          Create Your Account
-        </Text>
-        </View>
+        >
+          <View style={styles.container}>
+            <View style={{
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: 12,
+              paddingTop: 128,
+            }}>
 
-        <View style={styles.inputContainer}>
-          <View style={styles.inputWrapper}>
-            <TextInput
-              style={styles.input}
-              placeholder="Email"
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              editable={!isLoading}
-              placeholderTextColor="#666666"
-            />
-          </View>
-          
-          <View style={styles.passwordWrapper}>
-            <TextInput
-              style={styles.passwordInput}
-              placeholder="Password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              editable={!isLoading}
-              placeholderTextColor="#666666"
-            />
-            <Pressable
-              onPress={() => setShowPassword(!showPassword)}
-              style={styles.eyeIcon}
-              disabled={isLoading}
-            >
-              <Ionicons
-                name={showPassword ? 'eye-off' : 'eye'}
-                size={24}
-                color="#666666"
-              />
-            </Pressable>
-          </View>
-        </View>
-
-        <CustomButton
-          title={isLoading ? "Creating Account..." : "Continue"}
-          onPress={handleSubmit}
-          disabled={isLoading}
-          buttonStyle={{
-            backgroundColor: '#4064F6',
-            borderRadius: 36,
-          }}
-          textStyle={{
-            color: '#FFFFFF',
-            fontSize: 18,
-            fontWeight: '600',
-          }}
-        />
-
-        {/* Apple Sign In */}
-        {isAppleAvailable && (
-          <View style={{ 
-            opacity: isLoading ? 0.5 : 1,
-            width: '100%',
-            marginTop: 24,
-          }}>
-            {isLoading ? (
-              <View
+              <Image
+                source={require('../../assets/images/BallerAILogo.png')}
                 style={{
-                  width: '100%',
-                  height: 55,
-                  backgroundColor: 'black',
-                  borderRadius: 36,
+                  width: 120,
+                  height: 120,
+                  resizeMode: 'contain',
+                  marginBottom: 0,
                 }}
               />
-            ) : (
-          <AppleAuthentication.AppleAuthenticationButton
-            buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
-            buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-            cornerRadius={36}
-            style={styles.appleButton}
-            onPress={handleAppleSignUp}
-          />
+                  
+              <Text style={{
+                fontSize: 32,
+                color: '#000000',
+                fontWeight: '600',
+                textAlign: 'center',
+                marginBottom: 0,
+              }} allowFontScaling={false}>
+                Create Your Account
+              </Text>
+            </View>
+
+            <View style={styles.inputContainer}>
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Email"
+                  value={email}
+                  onChangeText={setEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  editable={!isLoading}
+                  placeholderTextColor="#666666"
+                />
+              </View>
+              
+              <View style={styles.passwordWrapper}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="Password"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  editable={!isLoading}
+                  placeholderTextColor="#666666"
+                />
+                <Pressable
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.eyeIcon}
+                  disabled={isLoading}
+                >
+                  <Ionicons
+                    name={showPassword ? 'eye-off' : 'eye'}
+                    size={24}
+                    color="#666666"
+                  />
+                </Pressable>
+              </View>
+            </View>
+
+            <CustomButton
+              title={isLoading ? "Creating Account..." : "Continue"}
+              onPress={handleSubmit}
+              disabled={isLoading}
+              buttonStyle={{
+                backgroundColor: '#4064F6',
+                borderRadius: 36,
+              }}
+              textStyle={{
+                color: '#FFFFFF',
+                fontSize: 18,
+                fontWeight: '600',
+              }}
+            />
+
+            {/* Apple Sign In */}
+            {isAppleAvailable && (
+              <View style={{ 
+                opacity: isLoading ? 0.5 : 1,
+                width: '100%',
+                marginTop: 24,
+              }}>
+                {isLoading ? (
+                  <View
+                    style={{
+                      width: '100%',
+                      height: 55,
+                      backgroundColor: 'black',
+                      borderRadius: 36,
+                    }}
+                  />
+                ) : (
+                  <AppleAuthentication.AppleAuthenticationButton
+                    buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+                    buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                    cornerRadius={36}
+                    style={styles.appleButton}
+                    onPress={handleAppleSignUp}
+                  />
+                )}
+              </View>
             )}
           </View>
-        )}
-      </View>
-      </Animated.View>
+        </Animated.View>
+      </ScrollIfNeeded>
     </TouchableWithoutFeedback>
   );
 }

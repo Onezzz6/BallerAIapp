@@ -4,66 +4,71 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import Button from '../components/Button';
 import BackButton from '../components/BackButton';
 import analytics from '@react-native-firebase/analytics';
+import ScrollIfNeeded from '../components/ScrollIfNeeded';
 
 export default function AmbitionTransitionScreen() {
   const router = useRouter();
 
   return (
-    <Animated.View 
-      entering={FadeIn.duration(500)}
+    <ScrollIfNeeded
       style={{
-        flex: 1,
         backgroundColor: '#ffffff',
         padding: 24,
       }}
     >
- 
-      {/* Mascot */}
-      <View style={{
-       flex: 1,
-       justifyContent: 'center',
-       alignItems: 'center',
-       gap: 32,
-      }}>
-        <Image 
-          source={require('../../assets/images/mascot.png')}
-          style={{
-            width: 200,
-            height: 200,
-            resizeMode: 'contain',
-            marginBottom: 20,
-          }}
-          resizeMode="contain"
-        />
- 
-        <Text style={{
-          fontSize: 28,
-          color: '#000000',
-          fontWeight: '600',
-          textAlign: 'center',
+      <Animated.View 
+        entering={FadeIn.duration(500)}
+        style={{
+          flex: 1,
+        }}
+      >
+        {/* Mascot */}
+        <View style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: 32,
         }}>
-          Great! You clearly show ambition!
-        </Text>
+          <Image 
+            source={require('../../assets/images/mascot.png')}
+            style={{
+              width: 200,
+              height: 200,
+              resizeMode: 'contain',
+              marginBottom: 20,
+            }}
+            resizeMode="contain"
+          />
+   
+          <Text style={{
+            fontSize: 28,
+            color: '#000000',
+            fontWeight: '600',
+            textAlign: 'center',
+          }}>
+            Great! You clearly show ambition!
+          </Text>
 
-        <Text style={{
-          fontSize: 18,
-          color: '#666666',
-          textAlign: 'center',
-        }}>
-          Last questions to understand your current situation!
-        </Text>
+          <Text style={{
+            fontSize: 18,
+            color: '#666666',
+            textAlign: 'center',
+          }}>
+            Last questions to understand your current situation!
+          </Text>
 
-        <Button 
-          title="Continue" 
-          onPress={async () => {
-            await analytics().logEvent('onboarding_ambition_transition_continue');
-            router.push('/training-frequency');
-          }}
-          buttonStyle={{
-            backgroundColor: '#4064F6',
-          }}
-        />
-      </View>
-    </Animated.View>
+          <Button 
+            title="Continue" 
+            onPress={async () => {
+              await analytics().logEvent('onboarding_ambition_transition_continue');
+              router.push('/training-frequency');
+            }}
+            buttonStyle={{
+              backgroundColor: '#4064F6',
+            }}
+          />
+        </View>
+      </Animated.View>
+    </ScrollIfNeeded>
   );
 } 

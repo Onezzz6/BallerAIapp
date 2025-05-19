@@ -6,6 +6,7 @@ import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
 import { Picker } from '@react-native-picker/picker';
+import ScrollIfNeeded from '../components/ScrollIfNeeded';
 
 export default function AgeScreen() {
   const router = useRouter();
@@ -13,16 +14,15 @@ export default function AgeScreen() {
   const [age, setAge] = useState(onboardingData.age || '18');
 
   return (
-    <View 
-    style={{
-      flex: 1,
-      backgroundColor: '#ffffff',
-    }}
-  >
-    <OnboardingHeader 
-      currentStep={3}
-      totalSteps={5}
-    />
+    <ScrollIfNeeded 
+      style={{
+        backgroundColor: '#ffffff',
+      }}
+    >
+      <OnboardingHeader 
+        currentStep={3}
+        totalSteps={5}
+      />
 
       <Animated.View 
         entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}
@@ -88,6 +88,6 @@ export default function AgeScreen() {
         />
       </View>
       </Animated.View>
-    </View>
+    </ScrollIfNeeded>
   );
 } 

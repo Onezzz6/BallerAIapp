@@ -1,10 +1,11 @@
-import { View, Text, TextInput, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, ScrollView } from 'react-native';
+import { View, Text, TextInput, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
+import ScrollIfNeeded from '../components/ScrollIfNeeded';
 
 export default function MeasurementsScreen() {
   const router = useRouter();
@@ -18,17 +19,15 @@ export default function MeasurementsScreen() {
       style={{ flex: 1 }}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View 
+        <ScrollIfNeeded 
           style={{
-            flex: 1,
             backgroundColor: '#ffffff',
           }}
         >
-
-        <OnboardingHeader 
-          currentStep={4}
-          totalSteps={5}
-        />
+          <OnboardingHeader 
+            currentStep={4}
+            totalSteps={5}
+          />
 
           <Animated.View 
             entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}
@@ -36,13 +35,6 @@ export default function MeasurementsScreen() {
               flex: 1,
               backgroundColor: '#ffffff',
             }}
-          >
-
-          <ScrollView 
-            contentContainerStyle={{
-              flexGrow: 1,
-            }}
-            keyboardShouldPersistTaps="handled"
           >
             <View style={{
               flex: 1,
@@ -133,9 +125,8 @@ export default function MeasurementsScreen() {
                 disabled={!height || !weight}
               />
             </View>
-          </ScrollView>
           </Animated.View>
-        </View>
+        </ScrollIfNeeded>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );

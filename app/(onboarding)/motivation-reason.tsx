@@ -1,10 +1,11 @@
-import { View, Text, TextInput, TouchableWithoutFeedback, Keyboard, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState, useEffect } from 'react';
+import ScrollIfNeeded from '../components/ScrollIfNeeded';
 
 export default function MotivationReasonScreen() {
   const router = useRouter();
@@ -26,9 +27,8 @@ export default function MotivationReasonScreen() {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View 
+      <ScrollIfNeeded 
         style={{
-          flex: 1,
           backgroundColor: '#ffffff',
         }}
       >
@@ -43,13 +43,6 @@ export default function MotivationReasonScreen() {
             flex: 1,
             backgroundColor: '#ffffff',
           }}
-        >
-
-        <ScrollView 
-          contentContainerStyle={{
-            flexGrow: 1,
-          }}
-          keyboardShouldPersistTaps="handled"
         >
           <View style={{
             flex: 1,
@@ -121,9 +114,8 @@ export default function MotivationReasonScreen() {
               />
             </View>
           </View>
-          </ScrollView>
         </Animated.View>
-      </View>
+      </ScrollIfNeeded>
     </TouchableWithoutFeedback>
   );
 } 

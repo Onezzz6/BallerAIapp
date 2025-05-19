@@ -5,6 +5,7 @@ import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
+import ScrollIfNeeded from '../components/ScrollIfNeeded';
 
 export default function UsernameScreen() {
   const router = useRouter();
@@ -17,9 +18,8 @@ export default function UsernameScreen() {
 
   return (
     <TouchableWithoutFeedback onPress={dismissKeyboard}>
-      <View 
+      <ScrollIfNeeded 
         style={{
-          flex: 1,
           backgroundColor: '#ffffff',
         }}
       >
@@ -84,7 +84,7 @@ export default function UsernameScreen() {
           />
         </View>
         </Animated.View>
-      </View>
+      </ScrollIfNeeded>
     </TouchableWithoutFeedback>
   );
 } 

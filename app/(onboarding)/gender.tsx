@@ -5,6 +5,7 @@ import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
+import ScrollIfNeeded from '../components/ScrollIfNeeded';
 
 export default function GenderScreen() {
   const router = useRouter();
@@ -12,16 +13,15 @@ export default function GenderScreen() {
   const [selectedGender, setSelectedGender] = useState(onboardingData.gender || '');
 
   return (
-    <View 
-    style={{
-      flex: 1,
-      backgroundColor: '#ffffff',
-    }}
-  >
-    <OnboardingHeader 
-      currentStep={2}
-      totalSteps={5}
-    />
+    <ScrollIfNeeded 
+      style={{
+        backgroundColor: '#ffffff',
+      }}
+    >
+      <OnboardingHeader 
+        currentStep={2}
+        totalSteps={5}
+      />
 
       <Animated.View 
         entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}
@@ -96,6 +96,6 @@ export default function GenderScreen() {
         />
       </View>
       </Animated.View>
-    </View>
+    </ScrollIfNeeded>
   );
 } 

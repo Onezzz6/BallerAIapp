@@ -5,8 +5,7 @@ import {
   KeyboardAvoidingView, 
   Platform, 
   TouchableWithoutFeedback,
-  Keyboard,
-  ScrollView
+  Keyboard
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInRight } from 'react-native-reanimated';
@@ -15,6 +14,7 @@ import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
 import analytics from '@react-native-firebase/analytics';
+import ScrollIfNeeded from '../components/ScrollIfNeeded';
 
 export default function InjuryHistoryScreen() {
   const router = useRouter();
@@ -28,9 +28,8 @@ export default function InjuryHistoryScreen() {
       style={{ flex: 1 }}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View 
+        <ScrollIfNeeded 
           style={{
-            flex: 1,
             backgroundColor: '#ffffff',
           }}
         >
@@ -45,13 +44,6 @@ export default function InjuryHistoryScreen() {
               flex: 1,
               backgroundColor: '#ffffff',
             }}
-          >
-
-          <ScrollView 
-            contentContainerStyle={{
-              flexGrow: 1,
-            }}
-            keyboardShouldPersistTaps="handled"
           >
             <View style={{
               flex: 1,
@@ -117,9 +109,8 @@ export default function InjuryHistoryScreen() {
                 disabled={!injuryHistory.trim()}
               />
             </View>
-          </ScrollView>
-        </Animated.View>
-        </View>
+          </Animated.View>
+        </ScrollIfNeeded>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
