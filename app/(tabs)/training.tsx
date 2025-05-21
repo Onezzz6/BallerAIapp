@@ -976,6 +976,23 @@ Focus on recovery today`;
             </View>
 
             <View style={styles.buttonContainer}>
+
+              {/* Add countdown timer just before the generate button when plan is already generated */}
+              {!canGeneratePlan && lastGeneratedDate && (
+                <View style={styles.timerContainer}>
+                  <Text style={styles.timerText}>
+                    Next weekly plan available on Sunday, {format(startOfWeek(addDays(new Date(), 7), { weekStartsOn: 1 }), 'MMMM d')}
+                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, justifyContent: 'center', gap: 5 }}>
+                    <Ionicons name="time-outline" size={18} color="#4064F6" />
+                    <Text style={styles.countdownText}>
+                      {timeUntilNextSunday.days > 0 && `${timeUntilNextSunday.days} day${timeUntilNextSunday.days !== 1 ? 's' : ''}, `}
+                      {timeUntilNextSunday.hours} hour{timeUntilNextSunday.hours !== 1 ? 's' : ''}, {timeUntilNextSunday.minutes} min
+                    </Text>
+                  </View>
+                </View>
+              )}
+              
               <Pressable
                 ref={generateButtonRef}
                 style={({ pressed }) => [
@@ -995,22 +1012,6 @@ Focus on recovery today`;
                 </Text>
                 <Ionicons name="football" size={20} color="#FFFFFF" />
               </Pressable>
-
-              {/* Add the countdown timer */}
-              {!canGeneratePlan && lastGeneratedDate && (
-                <View style={styles.timerContainer}>
-                  <Text style={styles.timerText}>
-                    New plan available on Sunday
-                  </Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, justifyContent: 'center', gap: 5 }}>
-                    <Ionicons name="time-outline" size={18} color="#4064F6" />
-                    <Text style={styles.countdownText}>
-                      {timeUntilNextSunday.days > 0 && `${timeUntilNextSunday.days} day${timeUntilNextSunday.days !== 1 ? 's' : ''}, `}
-                      {timeUntilNextSunday.hours} hour{timeUntilNextSunday.hours !== 1 ? 's' : ''}, {timeUntilNextSunday.minutes} min
-                    </Text>
-                  </View>
-                </View>
-              )}
 
               <Pressable
                 style={({ pressed }) =>   [
