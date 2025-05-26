@@ -1077,20 +1077,54 @@ Focus on recovery today`;
   };
 
   const handleStartNewPlan = () => {
-    // Reset all selections when starting a new plan
-    setSelectedFocus(null);
-    setGymAccess(null);
-    setSchedule({
-      monday: { type: 'off', duration: '' },
-      tuesday: { type: 'off', duration: '' },
-      wednesday: { type: 'off', duration: '' },
-      thursday: { type: 'off', duration: '' },
-      friday: { type: 'off', duration: '' },
-      saturday: { type: 'off', duration: '' },
-      sunday: { type: 'off', duration: '' },
-    });
-    setScheduleConfirmed(false);
-    setCurrentStep('focus');
+    // Check if user already has 2 plans
+    if (plans.length >= 2) {
+      Alert.alert(
+        'Plan Limit Reached',
+        'You can only have 2 active training plans. If you continue, your oldest plan will be automatically deleted.\n\nMake sure to save or screenshot any information you want to keep before proceeding.',
+        [
+          {
+            text: 'Back',
+            style: 'cancel',
+          },
+          {
+            text: 'Continue',
+            onPress: () => {
+              // Reset all selections when starting a new plan
+              setSelectedFocus(null);
+              setGymAccess(null);
+              setSchedule({
+                monday: { type: 'off', duration: '' },
+                tuesday: { type: 'off', duration: '' },
+                wednesday: { type: 'off', duration: '' },
+                thursday: { type: 'off', duration: '' },
+                friday: { type: 'off', duration: '' },
+                saturday: { type: 'off', duration: '' },
+                sunday: { type: 'off', duration: '' },
+              });
+              setScheduleConfirmed(false);
+              setCurrentStep('focus');
+            },
+          },
+        ],
+        { cancelable: true }
+      );
+    } else {
+      // If less than 2 plans, proceed directly
+      setSelectedFocus(null);
+      setGymAccess(null);
+      setSchedule({
+        monday: { type: 'off', duration: '' },
+        tuesday: { type: 'off', duration: '' },
+        wednesday: { type: 'off', duration: '' },
+        thursday: { type: 'off', duration: '' },
+        friday: { type: 'off', duration: '' },
+        saturday: { type: 'off', duration: '' },
+        sunday: { type: 'off', duration: '' },
+      });
+      setScheduleConfirmed(false);
+      setCurrentStep('focus');
+    }
   };
 
   const DAYS_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
