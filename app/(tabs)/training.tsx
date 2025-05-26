@@ -6,11 +6,12 @@ import { useTraining } from '../context/TrainingContext';
 import { doc, getDoc, setDoc, collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import Constants from 'expo-constants';
-import Animated, { FadeIn, FadeInDown, PinwheelIn } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown, PinwheelIn, SlideInRight, SlideOutLeft } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { startOfWeek, endOfWeek, differenceInMilliseconds, format, isSunday, subWeeks, isAfter, parseISO, addDays, getWeek } from 'date-fns';
 import analytics from '@react-native-firebase/analytics';
 import TrainingInstructions from '../components/TrainingInstructions';
+import Accordion from '../components/Accordion';
 
 type FocusArea = 'technique' | 'strength' | 'endurance' | 'speed' | 'overall';
 type GymAccess = 'yes' | 'no';
@@ -25,6 +26,8 @@ type DaySchedule = {
 type Schedule = {
   [key: string]: DaySchedule;
 };
+
+type WorkflowStep = 'welcome' | 'focus' | 'gym' | 'schedule' | 'summary' | 'plans';
 
 // Add these lines to access the API keys from Constants
 const OPENAI_API_KEY = Constants.expoConfig?.extra?.openaiApiKey;
@@ -328,6 +331,264 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textAlign: 'center',
   },
+  // New styles for welcome screen and workflow
+  welcomeContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  welcomeTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#000000',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  welcomeText: {
+    fontSize: 18,
+    color: '#666666',
+    textAlign: 'center',
+    marginBottom: 48,
+    lineHeight: 26,
+  },
+  getStartedButton: {
+    backgroundColor: '#4064F6',
+    borderRadius: 100,
+    paddingVertical: 16,
+    paddingHorizontal: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  getStartedButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  navigationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+    gap: 4,
+  },
+  backButtonText: {
+    fontSize: 16,
+    color: '#4064F6',
+    fontWeight: '500',
+  },
+  nextButton: {
+    backgroundColor: '#4064F6',
+    borderRadius: 100,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  nextButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  nextButtonDisabled: {
+    opacity: 0.5,
+  },
+  summaryContainer: {
+    backgroundColor: '#DCF4F5',
+    borderRadius: 24,
+    padding: 24,
+    marginBottom: 24,
+    alignItems: 'center',
+  },
+  summaryTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#000000',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  summaryText: {
+    fontSize: 16,
+    color: '#666666',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 24,
+  },
+  summaryButtons: {
+    gap: 12,
+    width: '100%',
+  },
+  editAnswersButton: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 100,
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#4064F6',
+  },
+  editAnswersButtonText: {
+    color: '#4064F6',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // New styles for plans view
+  plansViewContainer: {
+    flex: 1,
+    padding: 24,
+  },
+  currentPlanCard: {
+    backgroundColor: '#DCF4F5',
+    borderRadius: 24,
+    padding: 24,
+    marginBottom: 24,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  currentPlanTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#000000',
+    marginBottom: 16,
+  },
+  viewPlanButton: {
+    backgroundColor: '#4064F6',
+    borderRadius: 100,
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 16,
+  },
+  viewPlanButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  createNewPlanButton: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 100,
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#4064F6',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  createNewPlanButtonText: {
+    color: '#4064F6',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  planInfoText: {
+    fontSize: 16,
+    color: '#666666',
+    lineHeight: 24,
+  },
+  plansButtonContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 16,
+    gap: 8,
+  },
+  planButton: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 100,
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#000022',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 4,
+    minWidth: 140,
+    flexGrow: 1,
+    flexDirection: 'row',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    marginVertical: 10,
+  },
+  selectedPlanButton: {
+    backgroundColor: '#4064F6',
+    borderColor: '#4064F6',
+  },
+  planButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+    textAlign: 'center',
+  },
+  selectedPlanButtonText: {
+    color: '#FFFFFF',
+  },
+  planDetailsContainer: {
+    backgroundColor: '#DCF4F5',
+    padding: 16,
+    marginBottom: 16,
+    borderRadius: 24,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+  },
+  planContent: {
+    padding: 16,
+    backgroundColor: '#F8F8F8',
+  },
+  planText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#333333',
+  },
+  infoContainer: {
+    backgroundColor: '#F8F8F8',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 8,
+    marginBottom: 32,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+  },
+  infoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  infoTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4064F6',
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#333333',
+    marginBottom: 8,
+    lineHeight: 20,
+  },
 });
 
 export default function TrainingScreen() {
@@ -351,6 +612,9 @@ export default function TrainingScreen() {
   const [lastGeneratedDate, setLastGeneratedDate] = useState<Date | null>(null);
   const [timeUntilNextSunday, setTimeUntilNextSunday] = useState<{ days: number; hours: number; minutes: number }>({ days: 0, hours: 0, minutes: 0 });
   const [instructionsComplete, setInstructionsComplete] = useState(false);
+  const [currentStep, setCurrentStep] = useState<WorkflowStep>('welcome');
+  const [hasCheckedPlans, setHasCheckedPlans] = useState(false);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   
   // Reference to the main ScrollView
   const scrollViewRef = useRef<ScrollView>(null);
@@ -363,6 +627,13 @@ export default function TrainingScreen() {
   
   // Get the fromTraining param to check if returning from training plans
   const { fromTraining } = useLocalSearchParams<{ fromTraining: string }>();
+
+  // Auto-select the first plan if none is selected and plans are available
+  useEffect(() => {
+    if (plans.length > 0 && !selectedPlanId) {
+      setSelectedPlanId(plans[0].id);
+    }
+  }, [plans, selectedPlanId]);
 
   // Function to calculate time until next Sunday
   const calculateTimeUntilNextSunday = () => {
@@ -458,28 +729,29 @@ export default function TrainingScreen() {
     checkPlanGenerationStatus();
   }, [user]);
 
-  // Clean up old plans
+  // Clean up old plans - only when we have more than 2
   useEffect(() => {
     const cleanUpOldPlans = async () => {
       if (!user) return;
 
       try {
-        // Calculate the date 2 weeks ago
-        const twoWeeksAgo = subWeeks(new Date(), 2);
-        
-        // Check for plans older than 2 weeks and remove them
-        const oldPlans = plans.filter(plan => {
-          const planDate = plan.createdAt instanceof Date ? 
-            plan.createdAt : 
-            (typeof plan.createdAt === 'string' ? parseISO(plan.createdAt) : new Date(plan.createdAt));
-          
-          return isAfter(twoWeeksAgo, planDate);
-        });
+        // Only clean up if we have more than 2 plans
+        if (plans.length > 2) {
+          // Sort plans by date (newest first)
+          const sortedPlans = [...plans].sort((a, b) => {
+            const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+            const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+            return dateB.getTime() - dateA.getTime();
+          });
 
-        // Remove old plans
-        for (const plan of oldPlans) {
-          if (plan.id) {
-            await removePlanById(plan.id);
+          // Keep only the 2 most recent plans
+          const plansToDelete = sortedPlans.slice(2);
+
+          // Delete the older plans
+          for (const plan of plansToDelete) {
+            if (plan.id) {
+              await removePlanById(plan.id);
+            }
           }
         }
       } catch (error) {
@@ -489,6 +761,21 @@ export default function TrainingScreen() {
 
     cleanUpOldPlans();
   }, [user, plans, removePlanById]);
+
+  // Add effect to check if user has plans and set initial step accordingly
+  useEffect(() => {
+    if (user && !hasCheckedPlans) {
+      // Small delay to ensure plans are loaded from context
+      setTimeout(() => {
+        if (plans.length > 0) {
+          setCurrentStep('plans');
+        } else {
+          setCurrentStep('welcome');
+        }
+        setHasCheckedPlans(true);
+      }, 100);
+    }
+  }, [user, plans, hasCheckedPlans]);
 
   const focusOptions: FocusArea[] = ['technique', 'strength', 'endurance', 'speed', 'overall'];
   const gymOptions: GymAccess[] = ['yes', 'no'];
@@ -703,6 +990,7 @@ Focus on recovery today`;
     }
     
     setScheduleConfirmed(true);
+    setCurrentStep('summary');
   };
 
   const editSchedule = () => {
@@ -750,6 +1038,517 @@ Focus on recovery today`;
     });
   };
 
+  const handleNext = () => {
+    switch (currentStep) {
+      case 'focus':
+        if (selectedFocus) setCurrentStep('gym');
+        break;
+      case 'gym':
+        if (gymAccess) setCurrentStep('schedule');
+        break;
+      case 'schedule':
+        // This is handled by confirmSchedule
+        break;
+    }
+  };
+
+  const handleBack = () => {
+    switch (currentStep) {
+      case 'focus':
+        // If user has plans, go back to plans view, otherwise welcome
+        setCurrentStep(plans.length > 0 ? 'plans' : 'welcome');
+        break;
+      case 'gym':
+        setCurrentStep('focus');
+        break;
+      case 'schedule':
+        setCurrentStep('gym');
+        break;
+      case 'summary':
+        setCurrentStep('schedule');
+        setScheduleConfirmed(false);
+        break;
+    }
+  };
+
+  const handleEditAnswers = () => {
+    setCurrentStep('schedule');
+    setScheduleConfirmed(false);
+  };
+
+  const handleStartNewPlan = () => {
+    // Reset all selections when starting a new plan
+    setSelectedFocus(null);
+    setGymAccess(null);
+    setSchedule({
+      monday: { type: 'off', duration: '' },
+      tuesday: { type: 'off', duration: '' },
+      wednesday: { type: 'off', duration: '' },
+      thursday: { type: 'off', duration: '' },
+      friday: { type: 'off', duration: '' },
+      saturday: { type: 'off', duration: '' },
+      sunday: { type: 'off', duration: '' },
+    });
+    setScheduleConfirmed(false);
+    setCurrentStep('focus');
+  };
+
+  const DAYS_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+
+  // Helper function to safely format day headers
+  const formatDayHeader = (day: string): string => {
+    if (!day) return '';
+    return day.toUpperCase();
+  };
+  
+  // Helper function to safely get plan content
+  const getDayContent = (plan: { id: string; name: string; createdAt: Date; schedule: { [key: string]: string } }, day: string): string => {
+    if (!plan.schedule || !plan.schedule[day]) {
+      return "No content available for this day.";
+    }
+    return plan.schedule[day];
+  };
+
+  const renderContent = () => {
+    switch (currentStep) {
+      case 'plans':
+        // Find the selected plan
+        const selectedPlan = plans.find(p => p.id === selectedPlanId);
+        
+        return (
+          <ScrollView 
+            style={styles.content}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{
+              paddingBottom: 100, // Add padding to ensure bottom content is visible
+            }}
+          >
+            {/* Plan selection buttons */}
+            <View style={styles.plansButtonContainer}>
+              {plans.map((plan) => (
+                <Pressable
+                  key={plan.id}
+                  style={({ pressed }) => [
+                    styles.planButton,
+                    selectedPlanId === plan.id && styles.selectedPlanButton,
+                    pressed && { opacity: 0.8 }
+                  ]}
+                  onPress={() => setSelectedPlanId(plan.id)}
+                >
+                  <Text 
+                    style={[
+                      styles.planButtonText, 
+                      selectedPlanId === plan.id && styles.selectedPlanButtonText
+                    ]}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {plan.name}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            {/* Selected plan details section */}
+            {selectedPlan && (
+              <View style={styles.planDetailsContainer}>
+                {/* Days of the week */}
+                {DAYS_ORDER.map((day) => (
+                  <Accordion 
+                    key={day}
+                    title={formatDayHeader(day)}
+                    expanded={false}
+                  >
+                    <View style={styles.planContent}>
+                      <ScrollView style={{ maxHeight: 400 }}>
+                        <Text style={styles.planText}>{getDayContent(selectedPlan, day)}</Text>
+                      </ScrollView>
+                    </View>
+                  </Accordion>
+                ))}
+              </View>
+            )}
+
+            {/* Show create new plan button or timer */}
+            <View style={{ marginTop: 24, marginBottom: 32 }}>
+              {!canGeneratePlan && lastGeneratedDate ? (
+                <View style={styles.timerContainer}>
+                  <Text style={styles.timerText}>
+                    Next weekly plan available on Sunday, {format(startOfWeek(addDays(new Date(), 7), { weekStartsOn: 1 }), 'MMMM d')}
+                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, justifyContent: 'center', gap: 5 }}>
+                    <Ionicons name="time-outline" size={18} color="#4064F6" />
+                    <Text style={styles.countdownText}>
+                      {timeUntilNextSunday.days > 0 && `${timeUntilNextSunday.days} day${timeUntilNextSunday.days !== 1 ? 's' : ''}, `}
+                      {timeUntilNextSunday.hours} hour{timeUntilNextSunday.hours !== 1 ? 's' : ''}, {timeUntilNextSunday.minutes} min
+                    </Text>
+                  </View>
+                </View>
+              ) : (
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.getStartedButton,
+                    pressed && { opacity: 0.8 }
+                  ]}
+                  onPress={handleStartNewPlan}
+                >
+                  <Text style={styles.getStartedButtonText}>Get Started Generating a New Plan</Text>
+                </Pressable>
+              )}
+            </View>
+          </ScrollView>
+        );
+
+      case 'welcome':
+        return (
+          <Animated.View 
+            style={styles.welcomeContainer}
+            entering={FadeIn.duration(500)}
+          >
+            <Text style={styles.welcomeTitle}>Welcome to Training</Text>
+            <Text style={styles.welcomeText}>
+              We'll generate customized training plans for you based on your load and preferences. Let's get started!
+            </Text>
+            <Pressable
+              style={({ pressed }) => [
+                styles.getStartedButton,
+                pressed && { opacity: 0.8 }
+              ]}
+              onPress={() => setCurrentStep('focus')}
+            >
+              <Text style={styles.getStartedButtonText}>Get Started</Text>
+            </Pressable>
+          </Animated.View>
+        );
+
+      case 'focus':
+        return (
+          <Animated.View 
+            style={{ flex: 1 }}
+            entering={SlideInRight.duration(300)}
+          >
+            <View style={styles.navigationContainer}>
+              <Pressable 
+                style={({ pressed }) => [
+                  styles.backButton,
+                  pressed && { opacity: 0.8 }
+                ]}
+                onPress={handleBack}
+              >
+                <Ionicons name="chevron-back" size={24} color="#4064F6" />
+                <Text style={styles.backButtonText}>Back</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.nextButton,
+                  !selectedFocus && styles.nextButtonDisabled,
+                  pressed && { opacity: 0.8 }
+                ]}
+                onPress={handleNext}
+                disabled={!selectedFocus}
+              >
+                <Text style={styles.nextButtonText}>Next</Text>
+                <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
+              </Pressable>
+            </View>
+
+            <View style={styles.content}>
+              <View ref={focusAreaRef} style={[styles.sectionBackgroundGray, { backgroundColor: '#DCF4F5' }]}>
+                <Text style={[styles.sectionTitle, { color: canGeneratePlan ? '#000000' : '#666666' }]}>Focus Area</Text>
+                <Text style={styles.subtitle}>Select your training focus to get a personalized plan</Text>
+                
+                <View style={styles.optionsContainer}>
+                  {focusOptions.map((focus) => (
+                    <Pressable  
+                      key={focus}
+                      style={({ pressed }) => [
+                        styles.option,
+                        selectedFocus === focus && styles.selectedOption,
+                        pressed && { opacity: 0.8 }
+                      ]}
+                      onPress={() => setSelectedFocus(focus)}
+                      disabled={!canGeneratePlan}
+                    >
+                      <Text style={[
+                        styles.optionText,
+                        selectedFocus === focus && styles.selectedOptionText
+                      ]}>
+                        {focus.charAt(0).toUpperCase() + focus.slice(1)}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            </View>
+          </Animated.View>
+        );
+
+      case 'gym':
+        return (
+          <Animated.View 
+            style={{ flex: 1 }}
+            entering={SlideInRight.duration(300)}
+          >
+            <View style={styles.navigationContainer}>
+              <Pressable 
+                style={({ pressed }) => [
+                  styles.backButton,
+                  pressed && { opacity: 0.8 }
+                ]}
+                onPress={handleBack}
+              >
+                <Ionicons name="chevron-back" size={24} color="#4064F6" />
+                <Text style={styles.backButtonText}>Back</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.nextButton,
+                  !gymAccess && styles.nextButtonDisabled,
+                  pressed && { opacity: 0.8 }
+                ]}
+                onPress={handleNext}
+                disabled={!gymAccess}
+              >
+                <Text style={styles.nextButtonText}>Next</Text>
+                <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
+              </Pressable>
+            </View>
+
+            <View style={styles.content}>
+              <View ref={gymAccessRef} style={[styles.sectionBackgroundGray, { backgroundColor: '#DCF4F5' }]}>
+                <Text style={[styles.sectionTitle, { color: canGeneratePlan ? '#000000' : '#666666' }]}>Gym Access</Text>
+                <Text style={styles.subtitle}>Do you have access to a gym?</Text>
+                <View style={styles.optionsContainer}>
+                  {gymOptions.map((option) => (
+                    <Pressable  
+                      key={option}
+                      style={({ pressed }) => [
+                        styles.option,
+                        gymAccess === option && styles.selectedOption,
+                        pressed && { opacity: 0.8 }
+                      ]}
+                      onPress={() => setGymAccess(option)}
+                      disabled={!canGeneratePlan}
+                    >
+                      <Text style={[
+                        styles.optionText,
+                        gymAccess === option && styles.selectedOptionText
+                      ]}>
+                        {option === 'yes' ? 'Yes' : 'No'}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            </View>
+          </Animated.View>
+        );
+
+      case 'schedule':
+        return (
+          <Animated.View 
+            style={{ flex: 1 }}
+            entering={SlideInRight.duration(300)}
+          >
+            <View style={styles.navigationContainer}>
+              <Pressable 
+                style={({ pressed }) => [
+                  styles.backButton,
+                  pressed && { opacity: 0.8 }
+                ]}
+                onPress={handleBack}
+              >
+                <Ionicons name="chevron-back" size={24} color="#4064F6" />
+                <Text style={styles.backButtonText}>Back</Text>
+              </Pressable>
+            </View>
+
+            <ScrollView 
+              style={styles.scrollView} 
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{
+                paddingBottom: 100, // Add padding to ensure confirm button is visible
+              }}
+            >
+              <View style={styles.content}>
+                <View ref={scheduleRef} style={[styles.sectionBackgroundGray, { backgroundColor: '#DCF4F5' }, scheduleConfirmed && { opacity: 0.8 }]}>
+                  <Text style={[styles.sectionTitle, { color: canGeneratePlan ? '#000000' : '#666666' }]}>Team Training <Text style={styles.subtitleInline}>(mins/day)</Text></Text>
+
+                  {Object.entries(schedule).map(([day, daySchedule]) => (
+                    <View key={day} style={[styles.dayContainer, scheduleConfirmed && styles.disabledContainer]}>
+                      <Text style={[styles.dayTitle, { color: canGeneratePlan ? '#000000' : '#666666' }]}>{day.toUpperCase()}</Text>
+                      <View style={styles.dayOptions}>
+                        <Pressable
+                          style={({ pressed }) => [
+                            styles.dayOption,
+                            daySchedule.type === 'off' && styles.selectedDayOption,
+                            scheduleConfirmed && styles.disabledOption,
+                            pressed && { opacity: 0.8 }
+                          ]}
+                          onPress={() => updateSchedule(day, 'off')}
+                          disabled={scheduleConfirmed || !canGeneratePlan}
+                        >
+                          <Text style={[styles.dayOptionText, { color: canGeneratePlan ? '#000000' : '#666666' }]}>Off</Text>
+                        </Pressable>
+                        <Pressable
+                          style={({ pressed }) => [
+                            styles.dayOption,
+                            daySchedule.type === 'game' && styles.selectedGameOption,
+                            scheduleConfirmed && styles.disabledOption,
+                            pressed && { opacity: 0.8 }
+                          ]}
+                          onPress={() => updateSchedule(day, 'game')}
+                          disabled={scheduleConfirmed || !canGeneratePlan}
+                        >
+                          <Text style={[styles.dayOptionText, { color: canGeneratePlan ? '#000000' : '#666666' }]}>Game</Text>
+                        </Pressable>
+                        <Pressable
+                          style={({ pressed }) => [
+                            styles.dayOption,
+                            daySchedule.type === 'training' && styles.selectedTrainingOption,
+                            scheduleConfirmed && styles.disabledOption,
+                            pressed && { opacity: 0.8 }
+                          ]}
+                          onPress={() => updateSchedule(day, 'training')}
+                          disabled={scheduleConfirmed || !canGeneratePlan}
+                        >
+                          <Text style={[styles.dayOptionText, { color: canGeneratePlan ? '#000000' : '#666666' }]}>Training</Text>
+                        </Pressable>
+                      </View>
+                      {(daySchedule.type === 'training') && (
+                        <View style={styles.timeInputContainer}>
+                          <Ionicons 
+                            name="time-outline" 
+                            size={20} 
+                            color="#666666" 
+                            style={styles.clockIcon}
+                          />
+                          <TextInput
+                            style={[styles.timeInput, scheduleConfirmed && styles.disabledInput]}
+                            placeholder={`Enter ${daySchedule.type} time`}
+                            value={daySchedule.duration}
+                            onChangeText={(text) => updateDuration(day, text)}
+                            keyboardType="numeric"
+                            editable={!scheduleConfirmed && canGeneratePlan}
+                          />
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                  
+                  {canGeneratePlan && !scheduleConfirmed && (
+                    <Pressable 
+                      style={styles.confirmButton}
+                      onPress={confirmSchedule}
+                    >
+                      <Text style={styles.confirmButtonText}>Confirm Schedule</Text>
+                      <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                    </Pressable>
+                  )}
+                </View>
+              </View>
+            </ScrollView>
+          </Animated.View>
+        );
+
+      case 'summary':
+        return (
+          <Animated.View 
+            style={{ flex: 1 }}
+            entering={SlideInRight.duration(300)}
+          >
+            <View style={styles.navigationContainer}>
+              <Pressable 
+                style={({ pressed }) => [
+                  styles.backButton,
+                  pressed && { opacity: 0.8 }
+                ]}
+                onPress={handleBack}
+              >
+                <Ionicons name="chevron-back" size={24} color="#4064F6" />
+                <Text style={styles.backButtonText}>Back</Text>
+              </Pressable>
+            </View>
+
+            <View style={styles.content}>
+              <View style={styles.summaryContainer}>
+                <Ionicons name="checkmark-circle" size={64} color="#4064F6" />
+                <Text style={styles.summaryTitle}>All Set!</Text>
+                <Text style={styles.summaryText}>
+                  You have filled in all the information Ballzy needs to generate the optimal training plan for you.
+                </Text>
+                
+                <View style={styles.summaryButtons}>
+                  {/* Add countdown timer if plan already generated */}
+                  {!canGeneratePlan && lastGeneratedDate && (
+                    <View style={styles.timerContainer}>
+                      <Text style={styles.timerText}>
+                        Next weekly plan available on Sunday, {format(startOfWeek(addDays(new Date(), 7), { weekStartsOn: 1 }), 'MMMM d')}
+                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, justifyContent: 'center', gap: 5 }}>
+                        <Ionicons name="time-outline" size={18} color="#4064F6" />
+                        <Text style={styles.countdownText}>
+                          {timeUntilNextSunday.days > 0 && `${timeUntilNextSunday.days} day${timeUntilNextSunday.days !== 1 ? 's' : ''}, `}
+                          {timeUntilNextSunday.hours} hour{timeUntilNextSunday.hours !== 1 ? 's' : ''}, {timeUntilNextSunday.minutes} min
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+                  
+                  <Pressable
+                    ref={generateButtonRef}
+                    style={({ pressed }) => [
+                      styles.generateButton,
+                      (loading || !canGeneratePlan) && styles.generateButtonDisabled,
+                      pressed && { opacity: 0.8 }
+                    ]}
+                    onPress={handleGeneratePlan}
+                    disabled={loading || !canGeneratePlan}
+                  >
+                    <Text style={styles.generateButtonText}>
+                      {loading 
+                        ? 'Generating Plan...' 
+                        : !canGeneratePlan 
+                          ? 'Weekly Plan Already Generated' 
+                          : 'Generate Training Plan'}
+                    </Text>
+                    <Ionicons name="football" size={20} color="#FFFFFF" />
+                  </Pressable>
+
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.editAnswersButton,
+                      pressed && { opacity: 0.8 }
+                    ]}
+                    onPress={handleEditAnswers}
+                  >
+                    <Text style={styles.editAnswersButtonText}>Edit Answers</Text>
+                  </Pressable>
+                </View>
+              </View>
+
+              <Pressable
+                style={({ pressed }) =>   [
+                  styles.plansButton,
+                  !plans.length && styles.plansButtonDisabled,
+                  pressed && { opacity: 0.6 }
+                ]}
+                onPress={() => plans.length > 0 && handleGoToPlans()}
+                disabled={!plans.length}
+              >
+                <Text style={[
+                  styles.plansButtonText,
+                  !plans.length && styles.plansButtonTextDisabled
+                ]}>
+                  Your Training Plans
+                </Text>
+              </Pressable>
+            </View>
+          </Animated.View>
+        );
+    }
+  };
+
   return (
     <>
       <KeyboardAvoidingView
@@ -757,19 +1556,8 @@ Focus on recovery today`;
         style={{ flex: 1 }}
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
-      <ScrollView
-        ref={scrollViewRef}
-        style={styles.container}
-        contentContainerStyle={{
-          flexGrow: 1,
-          paddingBottom: 120,
-        }}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={true}
-        bounces={true}
-        overScrollMode="never"
-        >
-          {/* Header - Scrolls with content */}
+        <View style={styles.container}>
+          {/* Header - Fixed at top */}
           <View style={{
             paddingTop: 48,
             paddingHorizontal: 24,
@@ -823,215 +1611,9 @@ Focus on recovery today`;
             </View>
           </View>
 
-          <View style={styles.content}>
-            <View ref={focusAreaRef} style={[styles.sectionBackgroundGray, { backgroundColor: '#DCF4F5' }]}>
-              <Text style={[styles.sectionTitle, { color: canGeneratePlan ? '#000000' : '#666666' }]}>Focus Area</Text>
-              <Text style={styles.subtitle}>Select your training focus to get a personalized plan</Text>
-              
-              <View style={styles.optionsContainer}>
-                {focusOptions.map((focus) => (
-                  <Pressable  
-                    key={focus}
-                    style={({ pressed }) => [
-                      styles.option,
-                      selectedFocus === focus && styles.selectedOption,
-                      pressed && { opacity: 0.8 }
-                    ]}
-                    onPress={() => setSelectedFocus(focus)}
-                    disabled={!canGeneratePlan}
-                    >
-                    <Text style={[
-                      styles.optionText,
-                      selectedFocus === focus && styles.selectedOptionText
-                    ]}>
-                      {focus.charAt(0).toUpperCase() + focus.slice(1)}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-
-            <View ref={gymAccessRef} style={[styles.sectionBackgroundGray, { backgroundColor: '#DCF4F5' }]}>
-              <Text style={[styles.sectionTitle, { color: canGeneratePlan ? '#000000' : '#666666' }]}>Gym Access</Text>
-              <Text style={styles.subtitle}>Do you have access to a gym?</Text>
-              <View style={styles.optionsContainer}>
-                {gymOptions.map((option) => (
-                  <Pressable  
-                    key={option}
-                    style={({ pressed }) => [
-                      styles.option,
-                      gymAccess === option && styles.selectedOption,
-                      pressed && { opacity: 0.8 }
-                    ]}
-                    onPress={() => setGymAccess(option)}
-                    disabled={!canGeneratePlan}
-                  >
-                    <Text style={[
-                      styles.optionText,
-                      gymAccess === option && styles.selectedOptionText
-                    ]}>
-                      {option === 'yes' ? 'Yes' : 'No'}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-
-            <View ref={scheduleRef} style={[styles.sectionBackgroundGray, { backgroundColor: '#DCF4F5' }, scheduleConfirmed && { opacity: 0.8 }]}>
-              <View style={{ 
-                flexDirection: 'row', 
-                justifyContent: 'space-between', 
-                alignItems: 'center', 
-                marginBottom: 8,
-                flexWrap: 'wrap',
-                gap: 8
-              }}>
-                <Text style={[styles.sectionTitle, { flex: 1 }, { color: canGeneratePlan ? '#000000' : '#666666' }]}>Team Training <Text style={styles.subtitleInline}>(mins/day)</Text></Text>
-                {canGeneratePlan && scheduleConfirmed && (
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.editButton,
-                      pressed && { opacity: 0.8 }
-                    ]}
-                    onPress={editSchedule}
-                  >
-                    <Ionicons name="create-outline" size={18} color="#FFFFFF" />
-                    <Text style={styles.editButtonText}>Edit</Text>
-                  </Pressable>
-                )}
-              </View>
-              <Text style={styles.subtitle}>Fill in your team training schedule, so BallerAI can take this into consideration when creating your personalized training plan.</Text>
-
-              {Object.entries(schedule).map(([day, daySchedule]) => (
-                <View key={day} style={[styles.dayContainer, scheduleConfirmed && styles.disabledContainer]}>
-                  <Text style={[styles.dayTitle, { color: canGeneratePlan ? '#000000' : '#666666' }]}>{day.toUpperCase()}</Text>
-                  <View style={styles.dayOptions}>
-                    <Pressable
-                      style={({ pressed }) => [
-                        styles.dayOption,
-                        daySchedule.type === 'off' && styles.selectedDayOption,
-                        scheduleConfirmed && styles.disabledOption,
-                        pressed && { opacity: 0.8 }
-                      ]}
-                      onPress={() => updateSchedule(day, 'off')}
-                      disabled={scheduleConfirmed || !canGeneratePlan}
-                    >
-                      <Text style={[styles.dayOptionText, { color: canGeneratePlan ? '#000000' : '#666666' }]}>Off</Text>
-                    </Pressable>
-                    <Pressable
-                      style={({ pressed }) => [
-                        styles.dayOption,
-                        daySchedule.type === 'game' && styles.selectedGameOption,
-                        scheduleConfirmed && styles.disabledOption,
-                        pressed && { opacity: 0.8 }
-                      ]}
-                      onPress={() => updateSchedule(day, 'game')}
-                      disabled={scheduleConfirmed || !canGeneratePlan}
-                    >
-                      <Text style={[styles.dayOptionText, { color: canGeneratePlan ? '#000000' : '#666666' }]}>Game</Text>
-                    </Pressable>
-                    <Pressable
-                      style={({ pressed }) => [
-                        styles.dayOption,
-                        daySchedule.type === 'training' && styles.selectedTrainingOption,
-                        scheduleConfirmed && styles.disabledOption,
-                        pressed && { opacity: 0.8 }
-                      ]}
-                      onPress={() => updateSchedule(day, 'training')}
-                      disabled={scheduleConfirmed || !canGeneratePlan}
-                    >
-                      <Text style={[styles.dayOptionText, { color: canGeneratePlan ? '#000000' : '#666666' }]}>Training</Text>
-                    </Pressable>
-                  </View>
-                  {(daySchedule.type === 'training') && (
-                    <View style={styles.timeInputContainer}>
-                      <Ionicons 
-                        name="time-outline" 
-                        size={20} 
-                        color="#666666" 
-                        style={styles.clockIcon}
-                      />
-                      <TextInput
-                        style={[styles.timeInput, scheduleConfirmed && styles.disabledInput]}
-                        placeholder={`Enter ${daySchedule.type} time`}
-                        value={daySchedule.duration}
-                        onChangeText={(text) => updateDuration(day, text)}
-                        keyboardType="numeric"
-                        editable={!scheduleConfirmed && canGeneratePlan}
-                      />
-                    </View>
-                  )}
-                </View>
-              ))}
-              
-              {canGeneratePlan && !scheduleConfirmed && (
-                <Pressable 
-                  style={styles.confirmButton}
-                  onPress={confirmSchedule}
-                >
-                  <Text style={styles.confirmButtonText}>Confirm Schedule</Text>
-                  <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-                </Pressable>
-              )}
-            </View>
-
-            <View style={styles.buttonContainer}>
-
-              {/* Add countdown timer just before the generate button when plan is already generated */}
-              {!canGeneratePlan && lastGeneratedDate && (
-                <View style={styles.timerContainer}>
-                  <Text style={styles.timerText}>
-                    Next weekly plan available on Sunday, {format(startOfWeek(addDays(new Date(), 7), { weekStartsOn: 1 }), 'MMMM d')}
-                  </Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, justifyContent: 'center', gap: 5 }}>
-                    <Ionicons name="time-outline" size={18} color="#4064F6" />
-                    <Text style={styles.countdownText}>
-                      {timeUntilNextSunday.days > 0 && `${timeUntilNextSunday.days} day${timeUntilNextSunday.days !== 1 ? 's' : ''}, `}
-                      {timeUntilNextSunday.hours} hour{timeUntilNextSunday.hours !== 1 ? 's' : ''}, {timeUntilNextSunday.minutes} min
-                    </Text>
-                  </View>
-                </View>
-              )}
-              
-              <Pressable
-                ref={generateButtonRef}
-                style={({ pressed }) => [
-                  styles.generateButton,
-                  (loading || !scheduleConfirmed || !selectedFocus || !gymAccess || !canGeneratePlan) && styles.generateButtonDisabled,
-                  pressed && { opacity: 0.8 }
-                ]}
-                onPress={handleGeneratePlan}
-                disabled={loading || !scheduleConfirmed || !selectedFocus || !gymAccess || !canGeneratePlan}
-              >
-                <Text style={styles.generateButtonText}>
-                  {loading 
-                    ? 'Generating Plan...' 
-                    : !canGeneratePlan 
-                      ? 'Weekly Plan Already Generated' 
-                      : 'Generate Training Plan'}
-                </Text>
-                <Ionicons name="football" size={20} color="#FFFFFF" />
-              </Pressable>
-
-              <Pressable
-                style={({ pressed }) =>   [
-                  styles.plansButton,
-                  !plans.length && styles.plansButtonDisabled,
-                  pressed && { opacity: 0.6 }
-                ]}
-                onPress={() => plans.length > 0 && handleGoToPlans()}
-                disabled={!plans.length}
-              >
-                <Text style={[
-                  styles.plansButtonText,
-                  !plans.length && styles.plansButtonTextDisabled
-                ]}>
-                  Your Training Plans
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-      </ScrollView>
+          {/* Content */}
+          {renderContent()}
+        </View>
       </KeyboardAvoidingView>
       
       {loading && (
@@ -1056,16 +1638,6 @@ Focus on recovery today`;
           </Animated.View>
         </Animated.View>
       )}
-
-      {/* Add TrainingInstructions component */}
-      <TrainingInstructions
-        focusAreaRef={focusAreaRef}
-        gymAccessRef={gymAccessRef}
-        scheduleRef={scheduleRef}
-        generateButtonRef={generateButtonRef}
-        scrollViewRef={scrollViewRef}
-        onComplete={() => setInstructionsComplete(true)}
-      />
     </>
   );
 }
