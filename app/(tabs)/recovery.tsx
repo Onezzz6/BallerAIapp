@@ -1444,7 +1444,14 @@ IMPORTANT USAGE GUIDELINES:
                           styles.editButton,
                           pressed && { opacity: 0.8 }
                         ]}
-                        onPress={() => setIsEditing(true)}
+                        onPress={() => {
+                          setIsEditing(true);
+                          // Mark data as not submitted when editing
+                          setRecoveryData(prev => ({
+                            ...prev,
+                            submitted: false
+                          }));
+                        }}
                       >
                         <Ionicons name="create-outline" size={24} color="#FFFFFF" />
                         <Text style={styles.editButtonText}>Edit</Text>
