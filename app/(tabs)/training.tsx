@@ -335,8 +335,15 @@ const styles = StyleSheet.create({
   welcomeContainer: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     paddingHorizontal: 24,
+    paddingTop: 80,
+    backgroundColor: '#FFFFFF',
+  },
+  welcomeMascot: {
+    width: 120,
+    height: 120,
+    marginBottom: 32,
   },
   welcomeTitle: {
     fontSize: 28,
@@ -359,11 +366,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 48,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   getStartedButtonText: {
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '600',
+  },
+  welcomeCard: {
+    backgroundColor: '#DCF4F5',
+    borderRadius: 24,
+    padding: 40,
+    alignItems: 'center',
+    marginBottom: 32,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+    width: '100%',
+    maxWidth: 380,
   },
   navigationContainer: {
     flexDirection: 'row',
@@ -970,7 +999,8 @@ Focus on recovery today`;
       setCanGeneratePlan(false);
       setLastGeneratedDate(now);
 
-      router.push('/training-plans');
+      // Navigate back to training tab plans view instead of training-plans page
+      setCurrentStep('plans');
     } catch (error) {
       console.error('Error generating plan:', error);
       Alert.alert('Error', 'Failed to generate a training plan. Please try again.');
@@ -1239,10 +1269,18 @@ Focus on recovery today`;
             style={styles.welcomeContainer}
             entering={FadeIn.duration(500)}
           >
-            <Text style={styles.welcomeTitle}>Welcome to Training</Text>
-            <Text style={styles.welcomeText}>
-              We'll generate customized training plans for you based on your load and preferences. Let's get started!
-            </Text>
+            <View style={styles.welcomeCard}>
+              <Animated.Image 
+                source={require('../../assets/images/mascot.png')}
+                style={styles.welcomeMascot}
+                resizeMode="contain"
+                entering={FadeIn.duration(600).delay(200)}
+              />
+              <Text style={styles.welcomeTitle}>Welcome to Training</Text>
+              <Text style={styles.welcomeText}>
+                I'll generate customized training plans for you based on your load and preferences. Let's get started!
+              </Text>
+            </View>
             <Pressable
               style={({ pressed }) => [
                 styles.getStartedButton,
@@ -1506,10 +1544,15 @@ Focus on recovery today`;
 
             <View style={styles.content}>
               <View style={styles.summaryContainer}>
-                <Ionicons name="checkmark-circle" size={64} color="#4064F6" />
-                <Text style={styles.summaryTitle}>All Set!</Text>
+                <Animated.Image 
+                  source={require('../../assets/images/mascot.png')}
+                  style={styles.welcomeMascot}
+                  resizeMode="contain"
+                  entering={FadeIn.duration(600).delay(200)}
+                />
+                <Text style={styles.summaryTitle}>Perfect!</Text>
                 <Text style={styles.summaryText}>
-                  You have filled in all the information Ballzy needs to generate the optimal training plan for you.
+                  I have everything I need to generate an optimal training plan for you.
                 </Text>
                 
                 <View style={styles.summaryButtons}>
@@ -1666,7 +1709,7 @@ Focus on recovery today`;
             />
             <Text style={styles.loadingTitle}>Generating Plan</Text>
             <Text style={styles.loadingText}>
-              Please don't close the app while we generate a training plan for you.
+              Please don't close the app while I generate a training plan for you.
             </Text>
             <ActivityIndicator size="large" color="#4064F6" />
           </Animated.View>
