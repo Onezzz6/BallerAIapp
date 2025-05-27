@@ -11,7 +11,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import WeeklyOverview from '../components/WeeklyOverview';
 import Constants from 'expo-constants';
-import Animated, { FadeIn, FadeInDown, PinwheelIn } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown, PinwheelIn, SlideInRight } from 'react-native-reanimated';
 import analytics from '@react-native-firebase/analytics';
 import RecoveryInstructions, { RecoveryInstructionsRef } from '../components/RecoveryInstructions';
 import { markInstructionsAsShown, INSTRUCTION_KEYS } from '../utils/instructionManager';
@@ -32,6 +32,8 @@ type RecoveryData = {
 type RecoveryTool = 'Cold Exposure' | 'Foam Roller' | 'Cycling' | 'Swimming' | 'Compression' | 'Massage Gun' | 'Sauna' | 'Resistance Bands' | 'None';
 
 type TimeOption = '15 mins' | '30 mins' | '45 mins' | '1h+';
+
+type WorkflowStep = 'welcome' | 'tools' | 'time' | 'summary' | 'completed';
 
 export default function RecoveryScreen() {
   const { user } = useAuth();
@@ -61,11 +63,11 @@ export default function RecoveryScreen() {
   const [isToday, setIsToday] = useState(true);
   const [planExists, setPlanExists] = useState(false);
   const [streakCount, setStreakCount] = useState(0);
-  const [hoursLeft, setHoursLeft] = useState(0);
-  const [minutesLeft, setMinutesLeft] = useState(0);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [hasTodayCompletedPlan, setHasTodayCompletedPlan] = useState(false);
   const [isLoadingStreak, setIsLoadingStreak] = useState(true);
+  const [currentStep, setCurrentStep] = useState<WorkflowStep>('welcome');
+  const [showWorkflow, setShowWorkflow] = useState(false);
+  const [hasEverGeneratedPlan, setHasEverGeneratedPlan] = useState(false);
   
   // References for tutorial instructions
   const scrollViewRef = useRef<ScrollView>(null);
@@ -215,7 +217,6 @@ export default function RecoveryScreen() {
       
       setIsEditing(false);
       
-      // Do NOT modify toolsConfirmed or timeConfirmed state here
     } catch (error) {
       console.error('Error saving recovery data:', error);
       Alert.alert('Error', 'Failed to save data. Please try again.');
@@ -437,6 +438,7 @@ IMPORTANT USAGE GUIDELINES:
       }
 
       setPlanExists(true);
+      setHasEverGeneratedPlan(true);
       console.log(`Recovery plan saved to Firebase for ${dateStr}`);
 
     } catch (error) {
@@ -616,47 +618,25 @@ IMPORTANT USAGE GUIDELINES:
         checkForMissedDays();
       });
       
-      // Start the timer to show time until midnight
-      startStreakTimer();
+      // Check if user has ever generated a plan
+      checkIfHasEverGeneratedPlan();
     }
-
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
   }, [user]);
   
-  // Calculate and update time until midnight
-  const startStreakTimer = () => {
-    // Update immediately
-    updateTimeUntilMidnight();
+  // Check if user has ever generated a recovery plan
+  const checkIfHasEverGeneratedPlan = async () => {
+    if (!user) return;
     
-    // Then update every minute
-    timerRef.current = setInterval(() => {
-      updateTimeUntilMidnight();
+    try {
+      const plansRef = collection(db, 'users', user.uid, 'recoveryPlans');
+      const plansSnapshot = await getDocs(plansRef);
       
-      // Check if it's a new day, and if so, perform the daily check
-      const now = new Date();
-      if (now.getHours() === 0 && now.getMinutes() === 0) {
-        setHasTodayCompletedPlan(false);
-        // Check for missed days and update streak if needed
-        checkForMissedDays();
+      if (!plansSnapshot.empty) {
+        setHasEverGeneratedPlan(true);
       }
-    }, 60000); // Update every minute
-  };
-
-  const updateTimeUntilMidnight = () => {
-    const now = new Date();
-    const midnight = new Date(now);
-    midnight.setHours(24, 0, 0, 0);
-    
-    const hours = differenceInHours(midnight, now);
-    const minutesTotal = differenceInMinutes(midnight, now);
-    const minutes = minutesTotal % 60;
-    
-    setHoursLeft(hours);
-    setMinutesLeft(minutes);
+    } catch (error) {
+      console.error('Error checking for existing plans:', error);
+    }
   };
 
   // Update Streak Card with timer logic and loading state
@@ -683,7 +663,7 @@ IMPORTANT USAGE GUIDELINES:
               <Text style={styles.streakCount}>{streakCount} {streakCount === 1 ? 'day' : 'days'}</Text>
             )}
             <Text style={styles.streakHelperText}>
-            Each recovery plan you mark as completed adds one to your streak. If you miss a day, the streak drops by one.
+                Each recovery plan you mark as completed adds one to your streak. If you miss a day, the streak drops by one.
             </Text>
           </View>
         </View>
@@ -959,7 +939,404 @@ IMPORTANT USAGE GUIDELINES:
       setIsLoadingStreak(false);
     }
   };
-  
+
+  // Check if today's plan exists and set workflow visibility
+  useEffect(() => {
+    if (isToday && !planExists) {
+      setShowWorkflow(true);
+      setCurrentStep('welcome');
+    } else {
+      setShowWorkflow(false);
+    }
+  }, [isToday, planExists]);
+
+  const handleStartWorkflow = () => {
+    // Check if recovery data has been submitted
+    if (!recoveryData.submitted) {
+      Alert.alert(
+        'Submit Recovery Data First',
+        'Please submit your recovery query data above before creating a recovery plan.',
+        [
+          {
+            text: 'OK',
+            style: 'default'
+          }
+        ]
+      );
+      return;
+    }
+    
+    // Check if user already has a plan for today
+    if (planExists) {
+      Alert.alert(
+        'Plan Already Exists',
+        'Yesterday\'s plan will be automatically deleted when you generate a new one. Are you sure you want to continue?',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel'
+          },
+          {
+            text: 'Continue',
+            onPress: () => {
+              setCurrentStep('tools');
+              setSelectedTools([]);
+              setToolsConfirmed(false);
+              setSelectedTime(null);
+              setTimeConfirmed(false);
+            }
+          }
+        ]
+      );
+    } else {
+      setCurrentStep('tools');
+    }
+  };
+
+  const handleNext = () => {
+    switch (currentStep) {
+      case 'tools':
+        if (selectedTools.length > 0) {
+          setToolsConfirmed(true);
+          setCurrentStep('time');
+        } else {
+          Alert.alert('Error', 'Please select at least one recovery tool or select "None"');
+        }
+        break;
+      case 'time':
+        if (selectedTime) {
+          setTimeConfirmed(true);
+          setCurrentStep('summary');
+        } else {
+          Alert.alert('Error', 'Please select the time available');
+        }
+        break;
+    }
+  };
+
+  const handleBack = () => {
+    switch (currentStep) {
+      case 'tools':
+        setCurrentStep('welcome');
+        break;
+      case 'time':
+        setCurrentStep('tools');
+        break;
+      case 'summary':
+        setCurrentStep('time');
+        break;
+    }
+  };
+
+  const handleGeneratePlanFromSummary = async () => {
+    // Save tools and time data first
+    if (!user) return;
+    
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    const recoveryRef = doc(db, 'users', user.uid, 'recovery', dateStr);
+    
+    try {
+      // Get current data first to avoid overwriting other fields
+      const docSnap = await getDoc(recoveryRef);
+      let currentData = {};
+      if (docSnap.exists()) {
+        currentData = docSnap.data();
+      }
+      
+      const updatedData = {
+        ...currentData,
+        tools: selectedTools,
+        timeAvailable: selectedTime,
+        lastUpdated: new Date().toISOString(),
+      };
+      
+      await setDoc(recoveryRef, updatedData, { merge: true });
+      
+      // Now generate the plan
+      await generatePlan();
+      
+      // After successful generation, hide workflow and show the plan
+      setShowWorkflow(false);
+      setCurrentStep('completed');
+    } catch (error) {
+      console.error('Error saving data and generating plan:', error);
+      Alert.alert('Error', 'Failed to generate plan. Please try again.');
+    }
+  };
+
+  const renderWorkflowContent = () => {
+    switch (currentStep) {
+      case 'welcome':
+        return (
+          <Animated.View 
+            entering={FadeIn.duration(300)}
+            style={styles.workflowCard}
+          >
+            <Image 
+              source={require('../../assets/images/mascot.png')}
+              style={styles.workflowMascot}
+              resizeMode="contain"
+            />
+            <Text style={styles.workflowTitle}>Let's Make a Recovery Plan!</Text>
+            <Text style={styles.workflowText}>
+              I'll create a personalized recovery plan for today based on your needs and available tools.
+            </Text>
+            <Pressable
+              style={({ pressed }) => [
+                styles.getStartedButton,
+                pressed && { opacity: 0.8 }
+              ]}
+              onPress={handleStartWorkflow}
+            >
+              <Text style={styles.getStartedButtonText}>Get Started</Text>
+            </Pressable>
+          </Animated.View>
+        );
+
+      case 'tools':
+        return (
+          <Animated.View 
+            entering={SlideInRight.duration(300)}
+            style={styles.workflowCard}
+          >
+            <View style={styles.navigationContainer}>
+              <Pressable 
+                style={({ pressed }) => [
+                  styles.backButton,
+                  pressed && { opacity: 0.8 }
+                ]}
+                onPress={handleBack}
+              >
+                <Ionicons name="chevron-back" size={24} color="#4064F6" />
+                <Text style={styles.backButtonText}>Back</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.nextButton,
+                  selectedTools.length === 0 && styles.nextButtonDisabled,
+                  pressed && { opacity: 0.8 }
+                ]}
+                onPress={handleNext}
+                disabled={selectedTools.length === 0}
+              >
+                <Text style={styles.nextButtonText}>Next</Text>
+                <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
+              </Pressable>
+            </View>
+
+            <Text style={styles.stepTitle}>Recovery Tools</Text>
+            <Text style={styles.stepSubtitle}>Select the recovery tools you have access to.</Text>
+            
+            <View style={styles.toolsGrid}>
+              <RecoveryToolButton 
+                icon="snow-outline" 
+                label="Cold Exposure" 
+                selected={selectedTools.includes("Cold Exposure")}
+                onPress={() => toggleTool("Cold Exposure")} 
+              />
+              <RecoveryToolButton 
+                icon="heart-outline" 
+                label="Foam Roller" 
+                selected={selectedTools.includes("Foam Roller")}
+                onPress={() => toggleTool("Foam Roller")} 
+              />
+              <RecoveryToolButton 
+                icon="bicycle-outline" 
+                label="Cycling" 
+                selected={selectedTools.includes("Cycling")}
+                onPress={() => toggleTool("Cycling")} 
+              />
+              <RecoveryToolButton 
+                icon="water-outline" 
+                label="Swimming" 
+                selected={selectedTools.includes("Swimming")}
+                onPress={() => toggleTool("Swimming")} 
+              />
+              <RecoveryToolButton 
+                icon="pulse-outline" 
+                label="Compression" 
+                selected={selectedTools.includes("Compression")}
+                onPress={() => toggleTool("Compression")} 
+              />
+              <RecoveryToolButton 
+                icon="flash-outline" 
+                label="Massage Gun" 
+                selected={selectedTools.includes("Massage Gun")}
+                onPress={() => toggleTool("Massage Gun")} 
+              />
+              <RecoveryToolButton 
+                icon="flame-outline" 
+                label="Sauna" 
+                selected={selectedTools.includes("Sauna")}
+                onPress={() => toggleTool("Sauna")} 
+              />
+              <RecoveryToolButton 
+                icon="barbell-outline" 
+                label="Resistance Bands" 
+                selected={selectedTools.includes("Resistance Bands")}
+                onPress={() => toggleTool("Resistance Bands")} 
+              />
+            </View>
+            <View style={styles.noneToolContainer}>
+              <RecoveryToolButton 
+                icon="close-circle-outline" 
+                label="None" 
+                selected={selectedTools.includes("None")}
+                onPress={() => toggleTool("None")} 
+              />
+            </View>
+          </Animated.View>
+        );
+
+      case 'time':
+        return (
+          <Animated.View 
+            entering={SlideInRight.duration(300)}
+            style={styles.workflowCard}
+          >
+            <View style={styles.navigationContainer}>
+              <Pressable 
+                style={({ pressed }) => [
+                  styles.backButton,
+                  pressed && { opacity: 0.8 }
+                ]}
+                onPress={handleBack}
+              >
+                <Ionicons name="chevron-back" size={24} color="#4064F6" />
+                <Text style={styles.backButtonText}>Back</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.nextButton,
+                  !selectedTime && styles.nextButtonDisabled,
+                  pressed && { opacity: 0.8 }
+                ]}
+                onPress={handleNext}
+                disabled={!selectedTime}
+              >
+                <Text style={styles.nextButtonText}>Next</Text>
+                <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
+              </Pressable>
+            </View>
+
+            <Text style={styles.stepTitle}>Recovery Time</Text>
+            <Text style={styles.stepSubtitle}>How much time do you have for today's recovery plan?</Text>
+            
+            <View style={styles.timeOptionsContainer}>
+              <View style={styles.timeOptionsRow}>
+                <Pressable 
+                  style={({ pressed }) => [
+                    styles.timeOptionButton,
+                    selectedTime === '15 mins' && styles.timeOptionSelected,
+                    pressed && { opacity: 0.8 }
+                  ]}
+                  onPress={() => setSelectedTime('15 mins')}
+                >
+                  <Ionicons name="time-outline" size={24} color={selectedTime === '15 mins' ? "#FFFFFF" : "#666666"} />
+                  <Text style={[styles.timeOptionText, selectedTime === '15 mins' && styles.timeOptionTextSelected]}>
+                    15 mins
+                  </Text>
+                </Pressable>
+                
+                <Pressable 
+                  style={({ pressed }) => [
+                    styles.timeOptionButton,
+                    selectedTime === '30 mins' && styles.timeOptionSelected,
+                    pressed && { opacity: 0.8 }
+                  ]}
+                  onPress={() => setSelectedTime('30 mins')}
+                >
+                  <Ionicons name="time-outline" size={24} color={selectedTime === '30 mins' ? "#FFFFFF" : "#666666"} />
+                  <Text style={[styles.timeOptionText, selectedTime === '30 mins' && styles.timeOptionTextSelected]}>
+                    30 mins
+                  </Text>
+                </Pressable>
+              </View>
+              
+              <View style={styles.timeOptionsRow}>
+                <Pressable 
+                  style={({ pressed }) => [
+                    styles.timeOptionButton,
+                    selectedTime === '45 mins' && styles.timeOptionSelected,
+                    pressed && { opacity: 0.8 }
+                  ]}
+                  onPress={() => setSelectedTime('45 mins')}
+                >
+                  <Ionicons name="time-outline" size={24} color={selectedTime === '45 mins' ? "#FFFFFF" : "#666666"} />
+                  <Text style={[styles.timeOptionText, selectedTime === '45 mins' && styles.timeOptionTextSelected]}>
+                    45 mins
+                  </Text>
+                </Pressable>
+                
+                <Pressable 
+                  style={({ pressed }) => [
+                    styles.timeOptionButton,
+                    selectedTime === '1h+' && styles.timeOptionSelected,
+                    pressed && { opacity: 0.8 }
+                  ]}
+                  onPress={() => setSelectedTime('1h+')}
+                >
+                  <Ionicons name="time-outline" size={24} color={selectedTime === '1h+' ? "#FFFFFF" : "#666666"} />
+                  <Text style={[styles.timeOptionText, selectedTime === '1h+' && styles.timeOptionTextSelected]}>
+                    1h+
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          </Animated.View>
+        );
+
+      case 'summary':
+        return (
+          <Animated.View 
+            entering={SlideInRight.duration(300)}
+            style={styles.workflowCard}
+          >
+            <View style={styles.navigationContainer}>
+              <Pressable 
+                style={({ pressed }) => [
+                  styles.backButton,
+                  pressed && { opacity: 0.8 }
+                ]}
+                onPress={handleBack}
+              >
+                <Ionicons name="chevron-back" size={24} color="#4064F6" />
+                <Text style={styles.backButtonText}>Back</Text>
+              </Pressable>
+            </View>
+
+            <Image 
+              source={require('../../assets/images/mascot.png')}
+              style={styles.workflowMascot}
+              resizeMode="contain"
+            />
+            <Text style={styles.workflowTitle}>Perfect!</Text>
+            <Text style={styles.workflowText}>
+              I have all the info I need to make an optimal recovery plan for today.
+            </Text>
+            
+            <Pressable
+              style={({ pressed }) => [
+                styles.generateButton,
+                loading && styles.generateButtonDisabled,
+                pressed && { opacity: 0.8 }
+              ]}
+              onPress={handleGeneratePlanFromSummary}
+              disabled={loading}
+            >
+              <Text style={styles.generateButtonText}>
+                {loading ? 'Generating Plan...' : 'Generate Recovery Plan'}
+              </Text>
+              <Ionicons name="fitness" size={20} color="#FFFFFF" />
+            </Pressable>
+          </Animated.View>
+        );
+
+      default:
+        return null;
+    }
+  };
+
   return (
     <>
       <KeyboardAvoidingView
@@ -1190,526 +1567,525 @@ IMPORTANT USAGE GUIDELINES:
               ) : null}
             </Animated.View>
 
-            {/* Recovery Tools Selection Card - Disabled for past days */}
-            <Animated.View 
-              ref={recoveryToolsRef}
-              entering={FadeIn.duration(300)}
-              style={[
-                styles.inputsContainer, 
-                planExists && styles.disabledContainer,
-                (toolsConfirmed && !planExists) && styles.confirmedContainer,
-                !isToday && styles.pastDayContainer
-              ]}
-            >
-              <View style={{alignItems: 'center'}}>
-                <Text style={[
-                  styles.loadText,
-                  planExists && {color: '#999999'},
-                  (toolsConfirmed && !planExists) && {color: '#4064F6'},
-                  !isToday && {color: '#999999'}
-                ]}>Recovery Tools</Text>
-              </View>
-              
-              {toolsConfirmed && !planExists && isToday ? (
-                // Show confirmed header with edit button - only for today
-                <View style={styles.submittedHeader}>
-                  <Text style={styles.submittedText}>Confirmed</Text>
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.editButton,
-                      pressed && { opacity: 0.8 }
+            {/* Show workflow or old cards based on state */}
+            {showWorkflow && isToday && !planExists ? (
+              renderWorkflowContent()
+            ) : (
+              <>
+                {/* Recovery Tools Selection Card - Hidden when workflow is active or plan exists or not today */}
+                {!showWorkflow && !planExists && isToday && (
+                  <Animated.View 
+                    ref={recoveryToolsRef}
+                    entering={FadeIn.duration(300)}
+                    style={[
+                      styles.inputsContainer, 
+                      planExists && styles.disabledContainer,
+                      (toolsConfirmed && !planExists) && styles.confirmedContainer,
+                      !isToday && styles.pastDayContainer
                     ]}
-                    onPress={() => setToolsConfirmed(false)}
                   >
-                    <Ionicons name="create-outline" size={24} color="#FFFFFF" />
-                    <Text style={styles.editButtonText}>Edit</Text>
-                  </Pressable>
-                </View>
-              ) : (
-                <Text style={[
-                  styles.toolsSelectionText,
-                  planExists && {color: '#999999'},
-                  (toolsConfirmed && !planExists) && {color: '#999999'},
-                  !isToday && {color: '#999999'}
-                ]}>
-                  Select the recovery tools you have access to.
-                </Text>
-              )}
-              
-              <View style={styles.toolsGrid}>
-                <RecoveryToolButton 
-                  icon="snow-outline" 
-                  label="Cold Exposure" 
-                  selected={selectedTools.includes("Cold Exposure")}
-                  onPress={() => toggleTool("Cold Exposure")} 
-                  disabled={planExists || (toolsConfirmed && !isEditing) || !isToday}
-                />
-                <RecoveryToolButton 
-                  icon="heart-outline" 
-                  label="Foam Roller" 
-                  selected={selectedTools.includes("Foam Roller")}
-                  onPress={() => toggleTool("Foam Roller")} 
-                  disabled={planExists || (toolsConfirmed && !isEditing) || !isToday}
-                />
-                <RecoveryToolButton 
-                  icon="bicycle-outline" 
-                  label="Cycling" 
-                  selected={selectedTools.includes("Cycling")}
-                  onPress={() => toggleTool("Cycling")} 
-                  disabled={planExists || (toolsConfirmed && !isEditing) || !isToday}
-                />
-                <RecoveryToolButton 
-                  icon="water-outline" 
-                  label="Swimming" 
-                  selected={selectedTools.includes("Swimming")}
-                  onPress={() => toggleTool("Swimming")} 
-                  disabled={planExists || (toolsConfirmed && !isEditing) || !isToday}
-                />
-                <RecoveryToolButton 
-                  icon="pulse-outline" 
-                  label="Compression" 
-                  selected={selectedTools.includes("Compression")}
-                  onPress={() => toggleTool("Compression")} 
-                  disabled={planExists || (toolsConfirmed && !isEditing) || !isToday}
-                />
-                <RecoveryToolButton 
-                  icon="flash-outline" 
-                  label="Massage Gun" 
-                  selected={selectedTools.includes("Massage Gun")}
-                  onPress={() => toggleTool("Massage Gun")} 
-                  disabled={planExists || (toolsConfirmed && !isEditing) || !isToday}
-                />
-                <RecoveryToolButton 
-                  icon="flame-outline" 
-                  label="Sauna" 
-                  selected={selectedTools.includes("Sauna")}
-                  onPress={() => toggleTool("Sauna")} 
-                  disabled={planExists || (toolsConfirmed && !isEditing) || !isToday}
-                />
-                <RecoveryToolButton 
-                  icon="barbell-outline" 
-                  label="Resistance Bands" 
-                  selected={selectedTools.includes("Resistance Bands")}
-                  onPress={() => toggleTool("Resistance Bands")} 
-                  disabled={planExists || (toolsConfirmed && !isEditing) || !isToday}
-                />
-              </View>
-              <View style={styles.noneToolContainer}>
-                <RecoveryToolButton 
-                  icon="close-circle-outline" 
-                  label="None" 
-                  selected={selectedTools.includes("None")}
-                  onPress={() => toggleTool("None")} 
-                  disabled={planExists || (toolsConfirmed && !isEditing) || !isToday}
-                />
-              </View>
-              
-              {!planExists && !toolsConfirmed && isToday && (
-                <Pressable 
-                style={({ pressed }) => [
-                  styles.submitButton,
-                  pressed && { opacity: 0.8 }
-                ]}
-              onPress={handleConfirmTools}
-                >
-                  <Text style={styles.submitButtonText}>
-                    Confirm Tools
-                  </Text>
-                  <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-                </Pressable>
-              )}
-              
-              {toolsConfirmed && !planExists && isToday && (
-                <Text style={[styles.toolsConfirmedText]}>
-                  Your selection has been saved
-                </Text>
-              )}
-              
-              {!toolsConfirmed && !planExists && selectedTools.length === 0 && isToday && (
-                <Text style={styles.toolsHelperText}>
-                  Please select at least one option
-                </Text>
-              )}
-              
-              {planExists && (
-                <Text style={[styles.toolsHelperText, {color: '#999999'}]}>
-                  Recovery plan already generated
-                </Text>
-              )}
-            </Animated.View>
-
-            {/* Recovery Time Card - Disabled for past days */}
-            <Animated.View 
-              ref={recoveryTimeRef}
-              entering={FadeIn.duration(300)}
-              style={[
-                styles.inputsContainer, 
-                planExists && styles.disabledContainer,
-                (timeConfirmed && !planExists) && styles.confirmedContainer,
-                !isToday && styles.pastDayContainer
-              ]}
-            >
-              <View style={{alignItems: 'center'}}>
-                <Text style={[
-                  styles.loadText,
-                  planExists && {color: '#999999'},
-                  (timeConfirmed && !planExists) && {color: '#4064F6'},
-                  !isToday && {color: '#999999'}
-                ]}>Recovery Time</Text>
-              </View>
-              
-              {timeConfirmed && !planExists && isToday ? (
-                // Show confirmed header with edit button - only for today
-                <View style={styles.submittedHeader}>
-                  <Text style={styles.submittedText}>Confirmed</Text>
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.editButton,
-                      pressed && { opacity: 0.8 }
-                    ]}
-                    onPress={() => setTimeConfirmed(false)}
-                  >
-                    <Ionicons name="create-outline" size={24} color="#FFFFFF" />
-                    <Text style={styles.editButtonText}>Edit</Text>
-                  </Pressable>
-                </View>
-              ) : (
-                <Text style={[
-                  styles.toolsSelectionText,
-                  planExists && {color: '#999999'},
-                  (timeConfirmed && !planExists) && {color: '#999999'},
-                  !isToday && {color: '#999999'}
-                ]}>
-                  How much time do you have for today's recovery plan?
-                </Text>
-              )}
-              
-              {/* Time Options */}
-              <View style={styles.timeOptionsContainer}>
-                <View style={styles.timeOptionsRow}>
-                  <Pressable 
-                    style={({ pressed }) => [
-                      styles.timeOptionButton,
-                      selectedTime === '15 mins' && styles.timeOptionSelected,
-                      (planExists || (timeConfirmed && !isToday) || !isToday) && styles.timeOptionDisabled,
-                      pressed && { opacity: 0.8 }
-                    ]}
-                    onPress={() => isToday ? setSelectedTime('15 mins') : null}
-                    disabled={planExists || (timeConfirmed && !isEditing) || !isToday}
-                  >
-                    <Ionicons 
-                      name="time-outline" 
-                      size={24} 
-                      color={
-                        planExists || (timeConfirmed && !isEditing) || !isToday
-                          ? "#BBBBBB" 
-                          : selectedTime === '15 mins'
-                            ? "#FFFFFF" 
-                            : "#666666"
-                      } 
-                    />
-                    <Text 
-                      style={[
-                        styles.timeOptionText,
-                        selectedTime === '15 mins' && styles.timeOptionTextSelected,
-                        (planExists || (timeConfirmed && !isEditing) || !isToday) && styles.timeOptionTextDisabled
-                      ]}
-                    >
-                      15 mins
-                    </Text>
-                  </Pressable>
-                  
-                  <Pressable 
-                    style={({ pressed }) => [
-                      styles.timeOptionButton,
-                      selectedTime === '30 mins' && styles.timeOptionSelected,
-                      (planExists || (timeConfirmed && !isToday) || !isToday) && styles.timeOptionDisabled,
-                      pressed && { opacity: 0.8 }
-                    ]}
-                    onPress={() => isToday ? setSelectedTime('30 mins') : null}
-                    disabled={planExists || (timeConfirmed && !isEditing) || !isToday}
-                  >
-                    <Ionicons 
-                      name="time-outline" 
-                      size={24} 
-                      color={
-                        planExists || (timeConfirmed && !isEditing) || !isToday
-                          ? "#BBBBBB" 
-                          : selectedTime === '30 mins'
-                            ? "#FFFFFF" 
-                            : "#666666"
-                      } 
-                    />
-                    <Text 
-                      style={[
-                        styles.timeOptionText,
-                        selectedTime === '30 mins' && styles.timeOptionTextSelected,
-                        (planExists || (timeConfirmed && !isEditing) || !isToday) && styles.timeOptionTextDisabled
-                      ]}
-                    >
-                      30 mins
-                    </Text>
-                  </Pressable>
-                </View>
-                
-                <View style={styles.timeOptionsRow}>
-                  <Pressable 
-                    style={({ pressed }) => [
-                      styles.timeOptionButton,
-                      selectedTime === '45 mins' && styles.timeOptionSelected,
-                      (planExists || (timeConfirmed && !isToday) || !isToday) && styles.timeOptionDisabled,
-                      pressed && { opacity: 0.8 }
-                    ]}
-                    onPress={() => isToday ? setSelectedTime('45 mins') : null}
-                    disabled={planExists || (timeConfirmed && !isEditing) || !isToday}
-                  >
-                    <Ionicons 
-                      name="time-outline" 
-                      size={24} 
-                      color={
-                        planExists || (timeConfirmed && !isEditing) || !isToday
-                          ? "#BBBBBB" 
-                          : selectedTime === '45 mins'
-                            ? "#FFFFFF" 
-                            : "#666666"
-                      } 
-                    />
-                    <Text 
-                      style={[
-                        styles.timeOptionText,
-                        selectedTime === '45 mins' && styles.timeOptionTextSelected,
-                        (planExists || (timeConfirmed && !isEditing) || !isToday) && styles.timeOptionTextDisabled
-                      ]}
-                    >
-                      45 mins
-                    </Text>
-                  </Pressable>
-                  
-                  <Pressable 
-                    style={({ pressed }) => [
-                      styles.timeOptionButton,
-                      selectedTime === '1h+' && styles.timeOptionSelected,
-                      (planExists || (timeConfirmed && !isToday) || !isToday) && styles.timeOptionDisabled,
-                      pressed && { opacity: 0.8 }
-                    ]}
-                    onPress={() => isToday ? setSelectedTime('1h+') : null}
-                    disabled={planExists || (timeConfirmed && !isEditing) || !isToday}
-                  >
-                    <Ionicons 
-                      name="time-outline" 
-                      size={24} 
-                      color={
-                        planExists || (timeConfirmed && !isEditing) || !isToday
-                          ? "#BBBBBB" 
-                          : selectedTime === '1h+'
-                            ? "#FFFFFF" 
-                            : "#666666"
-                      } 
-                    />
-                    <Text 
-                      style={[
-                        styles.timeOptionText,
-                        selectedTime === '1h+' && styles.timeOptionTextSelected,
-                        (planExists || (timeConfirmed && !isEditing) || !isToday) && styles.timeOptionTextDisabled
-                      ]}
-                    >
-                      1h+
-                    </Text>
-                  </Pressable>
-                </View>
-              </View>
-              
-              {!planExists && !timeConfirmed && isToday && (
-                <Pressable 
-                  style={({ pressed }) => [
-                    styles.submitButton,
-                    !selectedTime && styles.submitButtonDisabled,
-                    pressed && { opacity: 0.8 }
-                  ]}
-                  onPress={handleConfirmTime}
-                  disabled={!selectedTime}
-                >
-                  <Text style={styles.submitButtonText}>
-                    Confirm Time
-                  </Text>
-                  <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-                </Pressable>
-              )}
-              
-              {timeConfirmed && !planExists && isToday && (
-                <Text style={[styles.toolsConfirmedText]}>
-                  Your selection has been saved
-                </Text>
-              )}
-              
-              {!timeConfirmed && !planExists && isToday && (
-                <Text style={styles.toolsHelperText}>
-                  Please select how much time you have
-                </Text>
-              )}
-              
-              {planExists && (
-                <Text style={[styles.toolsHelperText, {color: '#999999'}]}>
-                  Recovery plan already generated
-                </Text>
-              )}
-            </Animated.View>
-
-            {/* Generate Plan Button or Status */}
-            <Animated.View 
-              entering={FadeIn.duration(300)}
-            >
-              {!planExists ? (
-                <>
-                  <Pressable
-                    ref={generateButtonRef}
-                    style={({ pressed }) => [
-                      styles.generateButton, 
-                      (loading || !recoveryData.submitted || !toolsConfirmed || !timeConfirmed || !isToday) && styles.generateButtonDisabled
-                    ]}
-                    onPress={handleGeneratePlan}
-                    disabled={loading || !recoveryData.submitted || !toolsConfirmed || !timeConfirmed || !isToday}
-                  >
-                    <Text style={styles.generateButtonText}>
-                      {loading ? 'Generating Plan...' : 'Generate Recovery Plan'}
-                    </Text>
-                    <Ionicons name="fitness" size={20} color="#FFFFFF" />
-                  </Pressable>
-                  
-                  {(!recoveryData.submitted || !toolsConfirmed || !timeConfirmed) && isToday ? (
-                    <View style={styles.infoMessageContainer}>
-                      <Text style={styles.infoMessageText}>
-                        {!recoveryData.submitted && !toolsConfirmed && !timeConfirmed
-                          ? 'Submit your recovery data, confirm your tools, and select available time to generate a plan'
-                          : !recoveryData.submitted 
-                            ? 'Submit your recovery data to generate a plan'
-                            : !toolsConfirmed
-                              ? 'Confirm your recovery tools to generate a plan'
-                              : 'Confirm your available time to generate a plan'}
-                      </Text>
+                    <View style={{alignItems: 'center'}}>
+                      <Text style={[
+                        styles.loadText,
+                        planExists && {color: '#999999'},
+                        (toolsConfirmed && !planExists) && {color: '#4064F6'},
+                        !isToday && {color: '#999999'}
+                      ]}>Recovery Tools</Text>
                     </View>
-                  ) : !isToday ? (
-                    <View style={styles.infoMessageContainer}>
-                      <Text style={styles.infoMessageText}>
-                        You can only generate recovery plans for today
+                    
+                    {toolsConfirmed && !planExists && isToday ? (
+                      // Show confirmed header with edit button - only for today
+                      <View style={styles.submittedHeader}>
+                        <Text style={styles.submittedText}>Confirmed</Text>
+                        <Pressable
+                          style={({ pressed }) => [
+                            styles.editButton,
+                            pressed && { opacity: 0.8 }
+                          ]}
+                          onPress={() => setToolsConfirmed(false)}
+                        >
+                          <Ionicons name="create-outline" size={24} color="#FFFFFF" />
+                          <Text style={styles.editButtonText}>Edit</Text>
+                        </Pressable>
+                      </View>
+                    ) : (
+                      <Text style={[
+                        styles.toolsSelectionText,
+                        planExists && {color: '#999999'},
+                        (toolsConfirmed && !planExists) && {color: '#999999'},
+                        !isToday && {color: '#999999'}
+                      ]}>
+                        Select the recovery tools you have access to.
                       </Text>
+                    )}
+                    
+                    <View style={styles.toolsGrid}>
+                      <RecoveryToolButton 
+                        icon="snow-outline" 
+                        label="Cold Exposure" 
+                        selected={selectedTools.includes("Cold Exposure")}
+                        onPress={() => toggleTool("Cold Exposure")} 
+                        disabled={planExists || (toolsConfirmed && !isEditing) || !isToday}
+                      />
+                      <RecoveryToolButton 
+                        icon="heart-outline" 
+                        label="Foam Roller" 
+                        selected={selectedTools.includes("Foam Roller")}
+                        onPress={() => toggleTool("Foam Roller")} 
+                        disabled={planExists || (toolsConfirmed && !isEditing) || !isToday}
+                      />
+                      <RecoveryToolButton 
+                        icon="bicycle-outline" 
+                        label="Cycling" 
+                        selected={selectedTools.includes("Cycling")}
+                        onPress={() => toggleTool("Cycling")} 
+                        disabled={planExists || (toolsConfirmed && !isEditing) || !isToday}
+                      />
+                      <RecoveryToolButton 
+                        icon="water-outline" 
+                        label="Swimming" 
+                        selected={selectedTools.includes("Swimming")}
+                        onPress={() => toggleTool("Swimming")} 
+                        disabled={planExists || (toolsConfirmed && !isEditing) || !isToday}
+                      />
+                      <RecoveryToolButton 
+                        icon="pulse-outline" 
+                        label="Compression" 
+                        selected={selectedTools.includes("Compression")}
+                        onPress={() => toggleTool("Compression")} 
+                        disabled={planExists || (toolsConfirmed && !isEditing) || !isToday}
+                      />
+                      <RecoveryToolButton 
+                        icon="flash-outline" 
+                        label="Massage Gun" 
+                        selected={selectedTools.includes("Massage Gun")}
+                        onPress={() => toggleTool("Massage Gun")} 
+                        disabled={planExists || (toolsConfirmed && !isEditing) || !isToday}
+                      />
+                      <RecoveryToolButton 
+                        icon="flame-outline" 
+                        label="Sauna" 
+                        selected={selectedTools.includes("Sauna")}
+                        onPress={() => toggleTool("Sauna")} 
+                        disabled={planExists || (toolsConfirmed && !isEditing) || !isToday}
+                      />
+                      <RecoveryToolButton 
+                        icon="barbell-outline" 
+                        label="Resistance Bands" 
+                        selected={selectedTools.includes("Resistance Bands")}
+                        onPress={() => toggleTool("Resistance Bands")} 
+                        disabled={planExists || (toolsConfirmed && !isEditing) || !isToday}
+                      />
                     </View>
-                  ) : null}
-                </>
-              ) : (
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.generateButton, 
-                    styles.generateButtonDisabled
-                  ]}
-                  disabled={true}
-                >
-                  <Text style={styles.generateButtonText}>
-                    Plan Already Generated
-                  </Text>
-                  <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-                </Pressable>
-              )}
-            </Animated.View>
-
-            {/* Plan Holder - Always visible with different states */}
-            <View 
-              ref={planHolderRef}
-              style={{
-              marginHorizontal: 24,
-              }}
-            >
-              <View style={[
-                styles.planHolderContainer,
-                !todaysPlan && !planLoading && styles.planHolderEmpty
-              ]}>
-                <View style={styles.planHolderHeader}>
-                  <Text style={styles.planHolderTitle} allowFontScaling={false}>
-                    {isToday ? 'Your Plan for Today' : `Plan For ${format(selectedDate, 'MMM d')}`}
-                  </Text>
-                  {todaysPlan && (
-                    <View style={[
-                      styles.planStatusBadge,
-                      !isToday && styles.historicalBadge
-                    ]}>
-                      <Text style={styles.planStatusText}>
-                        {isToday ? 'Active' : 'Historical'}
+                    <View style={styles.noneToolContainer}>
+                      <RecoveryToolButton 
+                        icon="close-circle-outline" 
+                        label="None" 
+                        selected={selectedTools.includes("None")}
+                        onPress={() => toggleTool("None")} 
+                        disabled={planExists || (toolsConfirmed && !isEditing) || !isToday}
+                      />
+                    </View>
+                    
+                    {!planExists && !toolsConfirmed && isToday && (
+                      <Pressable 
+                      style={({ pressed }) => [
+                        styles.submitButton,
+                        pressed && { opacity: 0.8 }
+                      ]}
+                    onPress={handleConfirmTools}
+                      >
+                        <Text style={styles.submitButtonText}>
+                          Confirm Tools
+                        </Text>
+                        <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                      </Pressable>
+                    )}
+                    
+                    {toolsConfirmed && !planExists && isToday && (
+                      <Text style={[styles.toolsConfirmedText]}>
+                        Your selection has been saved
                       </Text>
+                    )}
+                    
+                    {!toolsConfirmed && !planExists && selectedTools.length === 0 && isToday && (
+                      <Text style={styles.toolsHelperText}>
+                        Please select at least one option
+                      </Text>
+                    )}
+                    
+                    {planExists && (
+                      <Text style={[styles.toolsHelperText, {color: '#999999'}]}>
+                        Recovery plan already generated
+                      </Text>
+                    )}
+                  </Animated.View>
+                )}
+
+                {/* Recovery Time Card - Hidden when workflow is active or plan exists or not today */}
+                {!showWorkflow && !planExists && isToday && (
+                  <Animated.View 
+                    ref={recoveryTimeRef}
+                    entering={FadeIn.duration(300)}
+                    style={[
+                      styles.inputsContainer, 
+                      planExists && styles.disabledContainer,
+                      (timeConfirmed && !planExists) && styles.confirmedContainer,
+                      !isToday && styles.pastDayContainer
+                    ]}
+                  >
+                    <View style={{alignItems: 'center'}}>
+                      <Text style={[
+                        styles.loadText,
+                        planExists && {color: '#999999'},
+                        (timeConfirmed && !planExists) && {color: '#4064F6'},
+                        !isToday && {color: '#999999'}
+                      ]}>Recovery Time</Text>
+                    </View>
+                    
+                    {timeConfirmed && !planExists && isToday ? (
+                      // Show confirmed header with edit button - only for today
+                      <View style={styles.submittedHeader}>
+                        <Text style={styles.submittedText}>Confirmed</Text>
+                        <Pressable
+                          style={({ pressed }) => [
+                            styles.editButton,
+                            pressed && { opacity: 0.8 }
+                          ]}
+                          onPress={() => setTimeConfirmed(false)}
+                        >
+                          <Ionicons name="create-outline" size={24} color="#FFFFFF" />
+                          <Text style={styles.editButtonText}>Edit</Text>
+                        </Pressable>
+                      </View>
+                    ) : (
+                      <Text style={[
+                        styles.toolsSelectionText,
+                        planExists && {color: '#999999'},
+                        (timeConfirmed && !planExists) && {color: '#999999'},
+                        !isToday && {color: '#999999'}
+                      ]}>
+                        How much time do you have for today's recovery plan?
+                      </Text>
+                    )}
+                    
+                    {/* Time Options */}
+                    <View style={styles.timeOptionsContainer}>
+                      <View style={styles.timeOptionsRow}>
+                        <Pressable 
+                          style={({ pressed }) => [
+                            styles.timeOptionButton,
+                            selectedTime === '15 mins' && styles.timeOptionSelected,
+                            (planExists || (timeConfirmed && !isToday) || !isToday) && styles.timeOptionDisabled,
+                            pressed && { opacity: 0.8 }
+                          ]}
+                          onPress={() => isToday ? setSelectedTime('15 mins') : null}
+                          disabled={planExists || (timeConfirmed && !isEditing) || !isToday}
+                        >
+                          <Ionicons 
+                            name="time-outline" 
+                            size={24} 
+                            color={
+                              planExists || (timeConfirmed && !isEditing) || !isToday
+                                ? "#BBBBBB" 
+                                : selectedTime === '15 mins'
+                                  ? "#FFFFFF" 
+                                  : "#666666"
+                            } 
+                          />
+                          <Text 
+                            style={[
+                              styles.timeOptionText,
+                              selectedTime === '15 mins' && styles.timeOptionTextSelected,
+                              (planExists || (timeConfirmed && !isEditing) || !isToday) && styles.timeOptionTextDisabled
+                            ]}
+                          >
+                            15 mins
+                          </Text>
+                        </Pressable>
+                        
+                        <Pressable 
+                          style={({ pressed }) => [
+                            styles.timeOptionButton,
+                            selectedTime === '30 mins' && styles.timeOptionSelected,
+                            (planExists || (timeConfirmed && !isToday) || !isToday) && styles.timeOptionDisabled,
+                            pressed && { opacity: 0.8 }
+                          ]}
+                          onPress={() => isToday ? setSelectedTime('30 mins') : null}
+                          disabled={planExists || (timeConfirmed && !isEditing) || !isToday}
+                        >
+                          <Ionicons 
+                            name="time-outline" 
+                            size={24} 
+                            color={
+                              planExists || (timeConfirmed && !isEditing) || !isToday
+                                ? "#BBBBBB" 
+                                : selectedTime === '30 mins'
+                                  ? "#FFFFFF" 
+                                  : "#666666"
+                            } 
+                          />
+                          <Text 
+                            style={[
+                              styles.timeOptionText,
+                              selectedTime === '30 mins' && styles.timeOptionTextSelected,
+                              (planExists || (timeConfirmed && !isEditing) || !isToday) && styles.timeOptionTextDisabled
+                            ]}
+                          >
+                            30 mins
+                          </Text>
+                        </Pressable>
+                      </View>
+                      
+                      <View style={styles.timeOptionsRow}>
+                        <Pressable 
+                          style={({ pressed }) => [
+                            styles.timeOptionButton,
+                            selectedTime === '45 mins' && styles.timeOptionSelected,
+                            (planExists || (timeConfirmed && !isToday) || !isToday) && styles.timeOptionDisabled,
+                            pressed && { opacity: 0.8 }
+                          ]}
+                          onPress={() => isToday ? setSelectedTime('45 mins') : null}
+                          disabled={planExists || (timeConfirmed && !isEditing) || !isToday}
+                        >
+                          <Ionicons 
+                            name="time-outline" 
+                            size={24} 
+                            color={
+                              planExists || (timeConfirmed && !isEditing) || !isToday
+                                ? "#BBBBBB" 
+                                : selectedTime === '45 mins'
+                                  ? "#FFFFFF" 
+                                  : "#666666"
+                            } 
+                          />
+                          <Text 
+                            style={[
+                              styles.timeOptionText,
+                              selectedTime === '45 mins' && styles.timeOptionTextSelected,
+                              (planExists || (timeConfirmed && !isEditing) || !isToday) && styles.timeOptionTextDisabled
+                            ]}
+                          >
+                            45 mins
+                          </Text>
+                        </Pressable>
+                        
+                        <Pressable 
+                          style={({ pressed }) => [
+                            styles.timeOptionButton,
+                            selectedTime === '1h+' && styles.timeOptionSelected,
+                            (planExists || (timeConfirmed && !isToday) || !isToday) && styles.timeOptionDisabled,
+                            pressed && { opacity: 0.8 }
+                          ]}
+                          onPress={() => isToday ? setSelectedTime('1h+') : null}
+                          disabled={planExists || (timeConfirmed && !isEditing) || !isToday}
+                        >
+                          <Ionicons 
+                            name="time-outline" 
+                            size={24} 
+                            color={
+                              planExists || (timeConfirmed && !isEditing) || !isToday
+                                ? "#BBBBBB" 
+                                : selectedTime === '1h+'
+                                  ? "#FFFFFF" 
+                                  : "#666666"
+                            } 
+                          />
+                          <Text 
+                            style={[
+                              styles.timeOptionText,
+                              selectedTime === '1h+' && styles.timeOptionTextSelected,
+                              (planExists || (timeConfirmed && !isEditing) || !isToday) && styles.timeOptionTextDisabled
+                            ]}
+                          >
+                            1h+
+                          </Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                    
+                    {!planExists && !timeConfirmed && isToday && (
+                      <Pressable 
+                        style={({ pressed }) => [
+                          styles.submitButton,
+                          !selectedTime && styles.submitButtonDisabled,
+                          pressed && { opacity: 0.8 }
+                        ]}
+                        onPress={handleConfirmTime}
+                        disabled={!selectedTime}
+                      >
+                        <Text style={styles.submitButtonText}>
+                          Confirm Time
+                        </Text>
+                        <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                      </Pressable>
+                    )}
+                    
+                    {timeConfirmed && !planExists && isToday && (
+                      <Text style={[styles.toolsConfirmedText]}>
+                        Your selection has been saved
+                      </Text>
+                    )}
+                    
+                    {!timeConfirmed && !planExists && isToday && (
+                      <Text style={styles.toolsHelperText}>
+                        Please select how much time you have
+                      </Text>
+                    )}
+                    
+                    {planExists && (
+                      <Text style={[styles.toolsHelperText, {color: '#999999'}]}>
+                        Recovery plan already generated
+                      </Text>
+                    )}
+                  </Animated.View>
+                )}
+
+                {/* Generate Plan Button or Status - Hidden when workflow is active or plan exists or not today */}
+                {!showWorkflow && !planExists && isToday && (
+                  <Animated.View 
+                    entering={FadeIn.duration(300)}
+                  >
+                    <Pressable
+                      ref={generateButtonRef}
+                      style={({ pressed }) => [
+                        styles.generateButton, 
+                        (loading || !recoveryData.submitted || !toolsConfirmed || !timeConfirmed || !isToday) && styles.generateButtonDisabled
+                      ]}
+                      onPress={handleGeneratePlan}
+                      disabled={loading || !recoveryData.submitted || !toolsConfirmed || !timeConfirmed || !isToday}
+                    >
+                      <Text style={styles.generateButtonText}>
+                        {loading ? 'Generating Plan...' : 'Generate Recovery Plan'}
+                      </Text>
+                      <Ionicons name="fitness" size={20} color="#FFFFFF" />
+                    </Pressable>
+                    
+                    {(!recoveryData.submitted || !toolsConfirmed || !timeConfirmed) && isToday ? (
+                      <View style={styles.infoMessageContainer}>
+                        <Text style={styles.infoMessageText}>
+                          {!recoveryData.submitted && !toolsConfirmed && !timeConfirmed
+                            ? 'Submit your recovery data, confirm your tools, and select available time to generate a plan'
+                            : !recoveryData.submitted 
+                              ? 'Submit your recovery data to generate a plan'
+                              : !toolsConfirmed
+                                ? 'Confirm your recovery tools to generate a plan'
+                                : 'Confirm your available time to generate a plan'}
+                        </Text>
+                      </View>
+                    ) : !isToday ? (
+                      <View style={styles.infoMessageContainer}>
+                        <Text style={styles.infoMessageText}>
+                          You can only generate recovery plans for today
+                        </Text>
+                      </View>
+                    ) : null}
+                  </Animated.View>
+                )}
+              </>
+            )}
+
+            {/* Plan Holder - Always visible for past days, or when plan exists for today */}
+            {(planExists || !isToday) && (
+              <View 
+                ref={planHolderRef}
+                style={{
+                marginHorizontal: 24,
+                }}
+              >
+                <View style={[
+                  styles.planHolderContainer,
+                  !todaysPlan && !planLoading && styles.planHolderEmpty
+                ]}>
+                  <View style={styles.planHolderHeader}>
+                    <Text style={styles.planHolderTitle} allowFontScaling={false}>
+                      {isToday ? 'Your Plan for Today' : `Plan For ${format(selectedDate, 'MMM d')}`}
+                    </Text>
+                    {todaysPlan && (
+                      <View style={[
+                        styles.planStatusBadge,
+                        !isToday && styles.historicalBadge
+                      ]}>
+                        <Text style={styles.planStatusText}>
+                          {isToday ? 'Active' : 'Historical'}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  
+                  {planLoading ? (
+                    <View style={styles.planLoadingContainer}>
+                      <Ionicons name="hourglass-outline" size={24} color="#999999" />
+                      <Text style={styles.planLoadingText}>Loading plan...</Text>
+                    </View>
+                  ) : todaysPlan ? (
+                    <View style={styles.planContentContainer}>
+                      <Text style={styles.planText}>{todaysPlan}</Text>
+                      <Text style={styles.planDateText}>
+                        Generated on {format(selectedDate, 'MMMM d, yyyy')}
+                      </Text>
+                      
+                      {/* Completion status and button */}
+                      {planCompleted && (
+                        <View style={styles.completedBadgeContainer}>
+                          <View style={styles.completedBadge}>
+                            <Ionicons name="checkmark-outline" size={16} color="#FFFFFF" />
+                            <Text style={styles.completedBadgeText}>Completed</Text>
+                          </View>
+                        </View>
+                      )}
+                      
+                      {/* Only show the button if the plan is not completed */}
+                      {!planCompleted && (
+                        <Pressable
+                          style={({ pressed }) => [
+                            styles.completionButton,
+                            styles.completeButton,
+                            pressed && { opacity: 0.8 }
+                          ]}
+                          onPress={togglePlanCompletion}
+                        >
+                          <Text style={styles.completionButtonText}>
+                            Mark as Completed
+                          </Text>
+                          <Ionicons 
+                            name="checkmark-circle"
+                            size={20} 
+                            color="#FFFFFF" 
+                          />
+                        </Pressable>
+                      )}
+                    </View>
+                  ) : (
+                    <View style={styles.emptyPlanContainer}>
+                      <Ionicons name="fitness-outline" size={32} color="#CCCCCC" />
+                      <Text style={styles.emptyPlanText}>
+                        {recoveryData.submitted 
+                          ? 'No plan generated yet'
+                          : 'Submit recovery data first'}
+                      </Text>
+                      {recoveryData.submitted ? (
+                        <Text style={styles.emptyPlanSubtext}>
+                          {isToday 
+                            ? 'Click the generate button to create your recovery plan'
+                            : 'No recovery plan was created for this day'}
+                        </Text>
+                      ) : (
+                        <Text style={styles.emptyPlanSubtext}>
+                          {isToday
+                            ? 'Submit your recovery data using the form above'
+                            : 'No recovery data was submitted for this day'}
+                        </Text>
+                      )}
                     </View>
                   )}
                 </View>
-                
-                {planLoading ? (
-                  <View style={styles.planLoadingContainer}>
-                    <Ionicons name="hourglass-outline" size={24} color="#999999" />
-                    <Text style={styles.planLoadingText}>Loading plan...</Text>
-                  </View>
-                ) : todaysPlan ? (
-                  <View style={styles.planContentContainer}>
-                    <Text style={styles.planText}>{todaysPlan}</Text>
-                    <Text style={styles.planDateText}>
-                      Generated on {format(selectedDate, 'MMMM d, yyyy')}
-                    </Text>
-                    
-                    {/* Completion status and button */}
-                    {planCompleted && (
-                      <View style={styles.completedBadgeContainer}>
-                        <View style={styles.completedBadge}>
-                          <Ionicons name="checkmark-outline" size={16} color="#FFFFFF" />
-                          <Text style={styles.completedBadgeText}>Completed</Text>
-                        </View>
-                      </View>
-                    )}
-                    
-                    {/* Only show the button if the plan is not completed */}
-                    {!planCompleted && (
-                      <Pressable
-                        style={({ pressed }) => [
-                          styles.completionButton,
-                          styles.completeButton,
-                          pressed && { opacity: 0.8 }
-                        ]}
-                        onPress={togglePlanCompletion}
-                      >
-                        <Text style={styles.completionButtonText}>
-                          Mark as Completed
-                        </Text>
-                        <Ionicons 
-                          name="checkmark-circle"
-                          size={20} 
-                          color="#FFFFFF" 
-                        />
-                      </Pressable>
-                    )}
-                  </View>
-                ) : (
-                  <View style={styles.emptyPlanContainer}>
-                    <Ionicons name="fitness-outline" size={32} color="#CCCCCC" />
-                    <Text style={styles.emptyPlanText}>
-                      {recoveryData.submitted 
-                        ? 'No plan generated yet'
-                        : 'Submit recovery data first'}
-                    </Text>
-                    {recoveryData.submitted ? (
-                      <Text style={styles.emptyPlanSubtext}>
-                        {isToday 
-                          ? 'Click the generate button to create your recovery plan'
-                          : 'No recovery plan was created for this day'}
-                      </Text>
-                    ) : (
-                      <Text style={styles.emptyPlanSubtext}>
-                        {isToday
-                          ? 'Submit your recovery data using the form above'
-                          : 'No recovery data was submitted for this day'}
-                      </Text>
-                    )}
-                  </View>
-                )}
               </View>
-            </View>
+            )}
+
             
-            {/* Streak Card - Added at the bottom */}
-            {renderStreakCard()}
+            {/* Streak Card - Only show after first plan has been generated and only for today */}
+            {hasEverGeneratedPlan && isToday && renderStreakCard()}
           </View>
       </ScrollView>
       </KeyboardAvoidingView>
@@ -1730,7 +2106,7 @@ IMPORTANT USAGE GUIDELINES:
             />
             <Text style={styles.loadingTitle}>Generating Plan</Text>
             <Text style={styles.loadingText}>
-              Please don't close the app while we generate a recovery plan for you.
+              Please don't close the app while I generate a recovery plan for you.
             </Text>
             <ActivityIndicator size="large" color="#4064F6" />
           </Animated.View>
@@ -2299,7 +2675,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginTop: 16,
+    marginTop: 8,
+    marginBottom: 8,
   },
   toolButton: {
     alignItems: 'center',
@@ -2308,7 +2685,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
-    marginBottom: 16,
+    marginBottom: 12,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -2317,6 +2694,9 @@ const styles = StyleSheet.create({
   },
   toolButtonSelected: {
     backgroundColor: '#99E86C',
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
   },
   toolButtonText: {
     fontSize: 14,
@@ -2335,7 +2715,8 @@ const styles = StyleSheet.create({
   },
   noneToolContainer: {
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 0,
+    marginBottom: 8,
   },
   toolsHelperText: {
     fontSize: 14,
@@ -2392,6 +2773,9 @@ const styles = StyleSheet.create({
   },
   timeOptionSelected: {
     backgroundColor: '#99E86C',
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
   },
   timeOptionDisabled: {
     backgroundColor: '#F5F5F5',
@@ -2524,5 +2908,94 @@ const styles = StyleSheet.create({
     color: '#4064F6',
     fontStyle: 'italic',
     marginTop: 4,
+  },
+  workflowCard: {
+    backgroundColor: '#DCF4F5',
+    borderRadius: 24,
+    padding: 32,
+    marginHorizontal: 24,
+    marginVertical: 16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+  },
+  workflowMascot: {
+    width: 80,
+    height: 80,
+    marginBottom: 24,
+    alignSelf: 'center',
+  },
+  workflowTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#000000',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  workflowText: {
+    fontSize: 16,
+    color: '#666666',
+    textAlign: 'center',
+    marginBottom: 32,
+    lineHeight: 22,
+  },
+  getStartedButton: {
+    backgroundColor: '#4064F6',
+    paddingVertical: 16,
+    paddingHorizontal: 40,
+    borderRadius: 32,
+    alignItems: 'center',
+    alignSelf: 'center',
+  },
+  getStartedButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  navigationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4064F6',
+  },
+  nextButton: {
+    backgroundColor: '#4064F6',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 32,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  nextButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  nextButtonDisabled: {
+    backgroundColor: '#CCCCCC',
+  },
+  stepTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#000000',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  stepSubtitle: {
+    fontSize: 16,
+    color: '#666666',
+    textAlign: 'center',
+    marginBottom: 32,
+    lineHeight: 22,
   },
 }); 
