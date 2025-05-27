@@ -2067,22 +2067,22 @@ IMPORTANT USAGE GUIDELINES:
                     <View style={styles.emptyPlanContainer}>
                       <Ionicons name="fitness-outline" size={32} color="#CCCCCC" />
                       <Text style={styles.emptyPlanText}>
-                        {recoveryData.submitted 
-                          ? 'No plan generated yet'
-                          : 'Submit recovery data first'}
+                        {!isToday 
+                          ? 'No plan generated for this day'
+                          : recoveryData.submitted 
+                            ? 'No plan generated yet'
+                            : 'Submit recovery data first'}
                       </Text>
-                      {recoveryData.submitted ? (
-                        <Text style={styles.emptyPlanSubtext}>
-                          {isToday 
-                            ? 'Click the generate button to create your recovery plan'
-                            : 'No recovery plan was created for this day'}
-                        </Text>
-                      ) : (
-                        <Text style={styles.emptyPlanSubtext}>
-                          {isToday
-                            ? 'Submit your recovery data using the form above'
-                            : 'No recovery data was submitted for this day'}
-                        </Text>
+                      {isToday && (
+                        recoveryData.submitted ? (
+                          <Text style={styles.emptyPlanSubtext}>
+                            Click the generate button to create your recovery plan
+                          </Text>
+                        ) : (
+                          <Text style={styles.emptyPlanSubtext}>
+                            Submit your recovery data using the form above
+                          </Text>
+                        )
                       )}
                     </View>
                   )}
