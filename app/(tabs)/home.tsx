@@ -25,7 +25,6 @@ import { askOpenAI } from '../utils/openai';
 import Svg, { Circle } from 'react-native-svg';
 import Animated, { PinwheelIn } from 'react-native-reanimated';
 import analytics from '@react-native-firebase/analytics'; // Add analytics import
-import HomeInstructions from '../components/HomeInstructions';
 
 export default function HomeScreen() {
   const { user } = useAuth();
@@ -68,30 +67,6 @@ export default function HomeScreen() {
   
   // State to track whether the instructions are shown
   const [instructionsComplete, setInstructionsComplete] = useState(false);
-
-  const showInfoAlertReadiness = () => {
-    Alert.alert(
-      "Readiness Score",
-      "Your readiness score indicates how prepared your body is for training today.\n\nThis score is calculated based on the physical load your body has endured recently and represents your approximate recovery level for the day. The readiness score helps you visualize your body's current state and can guide you in taking preventive measures to manage your training load if needed.\n\nListen to your body - a lower score might suggest you need more recovery time before intense training.",
-      [{ text: "OK" }]
-    );
-  };  
-
-  const showInfoAlertNutrition = () => {
-    Alert.alert(
-      "Nutrition Score",
-      "Your nutrition score is a percentage that shows how closely you've followed your macro goals in the last week.\n\nThis score is meant to give you an idea of how consistent you've been with your nutrition recently, helping you identify patterns and make adjustments if needed.\n\nThe score is calculated from your past 7 days of nutrition data (excluding today). Higher scores indicate better adherence to your macro goals.",
-      [{ text: "OK" }]
-    );
-  };  
-
-  const showInfoAlertRecovery = () => {
-    Alert.alert(
-      "Recovery Score",
-      "Your recovery score shows how consistently and well you're performing recovery habits like quality sleep, good nutrition, and completing your recovery plans.\n\nThis score helps you visualize your overall consistency with recovery practices and identify areas where you might have room to improve.\n\nImportant: This score doesn't represent your training readiness, as it doesn't take into account your training load. It simply reflects your recovery habits over the past 7 days.",
-      [{ text: "OK" }]
-    );
-  };  
 
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -1441,6 +1416,30 @@ export default function HomeScreen() {
     }
   }, [user, calculateRecoveryAdherence]);
 
+  const showInfoAlertReadiness = () => {
+    Alert.alert(
+      "Readiness Score",
+      "Your readiness score indicates how prepared your body is for training today.\n\nThis score is calculated based on the physical load your body has endured recently and represents your approximate recovery level for the day. The readiness score helps you visualize your body's current state and can guide you in taking preventive measures to manage your training load if needed.\n\nListen to your body - a lower score might suggest you need more recovery time before intense training.",
+      [{ text: "OK" }]
+    );
+  };  
+
+  const showInfoAlertNutrition = () => {
+    Alert.alert(
+      "Nutrition Score",
+      "Your nutrition score is a percentage that shows how closely you've followed your macro goals in the last week.\n\nThis score is meant to give you an idea of how consistent you've been with your nutrition recently, helping you identify patterns and make adjustments if needed.\n\nThe score is calculated from your past 7 days of nutrition data (excluding today). Higher scores indicate better adherence to your macro goals.",
+      [{ text: "OK" }]
+    );
+  };  
+
+  const showInfoAlertRecovery = () => {
+    Alert.alert(
+      "Recovery Score",
+      "Your recovery score shows how consistently and well you're performing recovery habits like quality sleep, good nutrition, and completing your recovery plans.\n\nThis score helps you visualize your overall consistency with recovery practices and identify areas where you might have room to improve.\n\nImportant: This score doesn't represent your training readiness, as it doesn't take into account your training load. It simply reflects your recovery habits over the past 7 days.",
+      [{ text: "OK" }]
+    );
+  };  
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -1541,7 +1540,6 @@ export default function HomeScreen() {
           }}>
             {/* Daily Calories Card - Now using CalorieProgress component */}
             <Pressable
-              ref={calorieCardRef}
               onPress={showCalorieInfoAlert}
               style={({ pressed }) => ({
                 width: '49%', // Slightly less than 50% to account for the gap
@@ -1555,7 +1553,6 @@ export default function HomeScreen() {
 
             {/* Readiness Card */}
             <Pressable 
-              ref={readinessCardRef}
               onPress={showInfoAlertReadiness}
               style={({ pressed }) => ({
                 width: '49%', // Slightly less than 50% to account for the gap
@@ -1690,7 +1687,6 @@ export default function HomeScreen() {
           }}>
             {/* Nutrition Adherence Card */}
             <Pressable
-              ref={nutritionCardRef}
               onPress={showInfoAlertNutrition}
               style={({ pressed }) => ({
                 width: '49%', // Slightly less than 50% to account for the gap
@@ -1798,7 +1794,6 @@ export default function HomeScreen() {
             
             {/* Recovery Card */}
             <Pressable
-              ref={recoveryCardRef}
               onPress={showInfoAlertRecovery}
               style={({ pressed }) => ({
                 width: '49%', // Slightly less than 50% to account for the gap
@@ -2451,18 +2446,6 @@ export default function HomeScreen() {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
-
-      {/* Add HomeInstructions component */}
-      <HomeInstructions
-        calorieCardRef={calorieCardRef}
-        readinessCardRef={readinessCardRef}
-        weeklyProgressRef={weeklyProgressRef}
-        nutritionCardRef={nutritionCardRef}
-        recoveryCardRef={recoveryCardRef}
-        askBallzyRef={askBallzyRef}
-        scrollViewRef={scrollViewRef}
-        onComplete={() => setInstructionsComplete(true)}
-      />
     </KeyboardAvoidingView>
   );
 }

@@ -1256,7 +1256,7 @@ Focus on recovery today`;
                   ]}
                   onPress={handleStartNewPlan}
                 >
-                  <Text style={styles.getStartedButtonText}>Get Started Generating a New Plan</Text>
+                  <Text style={styles.getStartedButtonText}>Generate a New Plan for This Week</Text>
                 </Pressable>
               )}
             </View>
@@ -1603,23 +1603,6 @@ Focus on recovery today`;
                   </Pressable>
                 </View>
               </View>
-
-              <Pressable
-                style={({ pressed }) =>   [
-                  styles.plansButton,
-                  !plans.length && styles.plansButtonDisabled,
-                  pressed && { opacity: 0.6 }
-                ]}
-                onPress={() => plans.length > 0 && handleGoToPlans()}
-                disabled={!plans.length}
-              >
-                <Text style={[
-                  styles.plansButtonText,
-                  !plans.length && styles.plansButtonTextDisabled
-                ]}>
-                  Your Training Plans
-                </Text>
-              </Pressable>
             </View>
           </Animated.View>
         );

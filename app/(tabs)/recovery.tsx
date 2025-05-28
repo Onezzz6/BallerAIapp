@@ -13,8 +13,6 @@ import WeeklyOverview from '../components/WeeklyOverview';
 import Constants from 'expo-constants';
 import Animated, { FadeIn, FadeInDown, PinwheelIn, SlideInRight } from 'react-native-reanimated';
 import analytics from '@react-native-firebase/analytics';
-import RecoveryInstructions, { RecoveryInstructionsRef } from '../components/RecoveryInstructions';
-import { markInstructionsAsShown, INSTRUCTION_KEYS } from '../utils/instructionManager';
 
 // Add this line to get the API key from Constants.expoConfig.extra
 const OPENAI_API_KEY = Constants.expoConfig?.extra?.openaiApiKey;
@@ -68,15 +66,13 @@ export default function RecoveryScreen() {
   const [currentStep, setCurrentStep] = useState<WorkflowStep>('welcome');
   const [showWorkflow, setShowWorkflow] = useState(false);
   const [hasEverGeneratedPlan, setHasEverGeneratedPlan] = useState(false);
+  const [headerOpacity, setHeaderOpacity] = useState(0);
   
-  // References for tutorial instructions
+  // Add back the missing refs
   const scrollViewRef = useRef<ScrollView>(null);
-  const recoveryQueryRef = useRef<View>(null);
-  const recoveryToolsRef = useRef<View>(null);
   const recoveryTimeRef = useRef<View>(null);
   const generateButtonRef = useRef<View>(null);
   const planHolderRef = useRef<View>(null);
-  const recoveryInstructionsRef = useRef<RecoveryInstructionsRef>(null);
 
   // Fetch recovery data for selected date
   useEffect(() => {
@@ -1337,6 +1333,14 @@ IMPORTANT USAGE GUIDELINES:
     }
   };
 
+  const handleScroll = (event: any) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    
+    // Update header opacity based on scroll position
+    const newOpacity = Math.min(offsetY / 100, 1);
+    setHeaderOpacity(newOpacity);
+  };
+
   return (
     <>
       <KeyboardAvoidingView
@@ -1355,12 +1359,6 @@ IMPORTANT USAGE GUIDELINES:
         showsVerticalScrollIndicator={true}
         bounces={true}
         overScrollMode="never"
-        onScroll={(event) => {
-          // Call the handleScroll method on the RecoveryInstructions component
-          if (recoveryInstructionsRef.current) {
-            recoveryInstructionsRef.current.handleScroll(event);
-          }
-        }}
         scrollEventThrottle={16} // Update scroll position at ~60fps
       >
           {/* Header - Scrolls with content */}
@@ -1426,7 +1424,6 @@ IMPORTANT USAGE GUIDELINES:
 
             {/* Recovery Inputs - Always accessible for all days */}
             <Animated.View 
-              ref={recoveryQueryRef}
               entering={FadeIn.duration(300)}
               style={styles.inputsContainer}
             >
@@ -1582,7 +1579,6 @@ IMPORTANT USAGE GUIDELINES:
                 {/* Recovery Tools Selection Card - Hidden when workflow is active or plan exists or not today */}
                 {!showWorkflow && !planExists && isToday && (
                   <Animated.View 
-                    ref={recoveryToolsRef}
                     entering={FadeIn.duration(300)}
                     style={[
                       styles.inputsContainer, 
@@ -2120,16 +2116,6 @@ IMPORTANT USAGE GUIDELINES:
         </Animated.View>
       )}
 
-      {/* Recovery Instructions */}
-      <RecoveryInstructions
-        recoveryQueryRef={recoveryQueryRef}
-        recoveryToolsRef={recoveryToolsRef}
-        recoveryTimeRef={recoveryTimeRef}
-        generateButtonRef={generateButtonRef}
-        scrollViewRef={scrollViewRef}
-        onComplete={() => markInstructionsAsShown(INSTRUCTION_KEYS.RECOVERY)}
-        ref={recoveryInstructionsRef}
-      />
     </>
   );
 }

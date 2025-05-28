@@ -22,7 +22,6 @@ import { calculateNutritionGoals } from '../utils/nutritionCalculations';
 import * as imageAnalysis from '../services/imageAnalysis';
 import WeeklyOverview from '../components/WeeklyOverview';
 import analytics from '@react-native-firebase/analytics';
-import NutritionInstructions from '../components/NutritionInstructions';
 
 // Type definition for food analysis result
 type FoodAnalysisResult = {
@@ -579,7 +578,7 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal, isPhotoAna
   );
 }
 
-function LoggedMeals({ meals, onDelete, mealItemRef }: { meals: any[]; onDelete: (mealId: string) => Promise<void>; mealItemRef: React.RefObject<View> }) {
+function LoggedMeals({ meals, onDelete }: { meals: any[]; onDelete: (mealId: string) => Promise<void> }) {
   return (
     <View style={styles.loggedMealsContainer}>
       <Text style={styles.loggedMealsTitle}>Today's Meals</Text>
@@ -587,7 +586,6 @@ function LoggedMeals({ meals, onDelete, mealItemRef }: { meals: any[]; onDelete:
         <View 
           key={meal.id} 
           style={styles.mealItem}
-          ref={index === 0 ? mealItemRef : undefined}
         >
           <View style={styles.mealInfo}>
             {/* Show all food items instead of just the first one */}
@@ -1461,15 +1459,6 @@ export default function NutritionScreen() {
   const [weeklyData, setWeeklyData] = useState<DailyMacros[]>([]);
   const [isLoadingWeek, setIsLoadingWeek] = useState(true);
   const [isUpdatingFromLoad, setIsUpdatingFromLoad] = useState(false);
-  const [instructionsComplete, setInstructionsComplete] = useState(false);
-  
-  // Add refs for the guided tour
-  const scrollViewRef = useRef<ScrollView>(null);
-  const weekPickerRef = useRef<View>(null);
-  const calorieCardRef = useRef<View>(null);
-  const macroProgressRef = useRef<View>(null);
-  const adherenceBoxRef = useRef<View>(null);
-  const logMealButtonRef = useRef<View>(null);
   const mealItemRef = useRef<View>(null);
 
   // Track the time until midnight (when analysis limit resets)
@@ -2306,6 +2295,9 @@ export default function NutritionScreen() {
     }
   };
 
+  // Add back the scrollViewRef that's still needed
+  const scrollViewRef = useRef<ScrollView>(null);
+
   return (
     <>
       <ScrollView 
@@ -2375,14 +2367,14 @@ export default function NutritionScreen() {
         </View>
 
         {/* Weekly Overview */}
-        <View ref={weekPickerRef}>
+        <View>
           <WeeklyOverview 
             selectedDate={selectedDate}
             onDateSelect={setSelectedDate}
           />
         </View>
 
-        <View ref={calorieCardRef}>
+        <View>
           <CalorieProgress 
             eaten={macros.calories.current}
             burned={0}
@@ -2390,7 +2382,7 @@ export default function NutritionScreen() {
           />
         </View>
 
-        <View ref={macroProgressRef} style={styles.macrosCard}>
+        <View style={styles.macrosCard}>
           <MacroProgress
             type="Protein"
             current={macros.protein.current}
@@ -2410,7 +2402,7 @@ export default function NutritionScreen() {
             color="#FFD93D"
           />
           
-          <View ref={adherenceBoxRef} style={styles.adherenceContainer}>
+          <View style={styles.adherenceContainer}>
             <Text style={styles.adherenceTitle}>Nutrition Adherence</Text>
             <Text style={styles.adherenceSubtitle}>Today's Progress</Text>
             <Text style={styles.adherencePercentage}>{calculateTodayAdherence()}%</Text>
@@ -2419,7 +2411,6 @@ export default function NutritionScreen() {
 
         <View style={styles.mealsSection}>
           <Pressable  
-            ref={logMealButtonRef}
             style={({ pressed }) => [
               styles.logMealButton,
               !canLogMeal() && styles.disabledButton,
@@ -2460,7 +2451,6 @@ export default function NutritionScreen() {
                 setIsLoading(false);
               }
             }}
-            mealItemRef={mealItemRef}
           /> 
         </View>
 
@@ -2551,18 +2541,6 @@ export default function NutritionScreen() {
           </Animated.View>
         </Animated.View>
       )}
-
-      {/* Add NutritionInstructions component */}
-      <NutritionInstructions
-        weekPickerRef={weekPickerRef}
-        calorieCardRef={calorieCardRef}
-        macroProgressRef={macroProgressRef}
-        adherenceBoxRef={adherenceBoxRef}
-        logMealButtonRef={logMealButtonRef}
-        mealItemRef={mealItemRef}
-        scrollViewRef={scrollViewRef}
-        onComplete={() => setInstructionsComplete(true)}
-      />
     </>
   );
-} 
+}
