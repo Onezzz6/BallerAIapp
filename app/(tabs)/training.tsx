@@ -583,13 +583,84 @@ const styles = StyleSheet.create({
     borderColor: '#E5E5E5',
   },
   planContent: {
-    padding: 16,
     backgroundColor: '#F8F8F8',
   },
   planText: {
     fontSize: 14,
     lineHeight: 22,
     color: '#333333',
+  },
+  drillRow: {
+    flexDirection: 'row',
+    marginBottom: 12,
+    alignItems: 'flex-start',
+  },
+  drillIndex: {
+    width: 30,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4064F6',
+    marginRight: 12,
+  },
+  drillText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 22,
+    color: '#333333',
+  },
+  drillTextCompleted: {
+    textDecorationLine: 'line-through',
+    opacity: 0.5,
+  },
+  dayHeaderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  dayHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  durationBadge: {
+    backgroundColor: '#E8F0FF',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  durationText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#4064F6',
+  },
+  typeChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  gymChip: {
+    backgroundColor: '#FFE8E8',
+  },
+  fieldChip: {
+    backgroundColor: '#E8FFE8',
+  },
+  homeChip: {
+    backgroundColor: '#FFF8E8',
+  },
+  chipText: {
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  gymChipText: {
+    color: '#FF4444',
+  },
+  fieldChipText: {
+    color: '#44AA44',
+  },
+  homeChipText: {
+    color: '#FFAA00',
   },
   infoContainer: {
     backgroundColor: '#F8F8F8',
@@ -644,6 +715,7 @@ export default function TrainingScreen() {
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [lastPlanText, setLastPlanText] = useState<string>('');
+  const [completedDrills, setCompletedDrills] = useState<{ [key: string]: boolean }>({});
   
   // Reference to the main ScrollView
   const scrollViewRef = useRef<ScrollView>(null);
@@ -1275,6 +1347,65 @@ Focus on recovery today`;
     return plan.schedule[day];
   };
 
+  // Parse drills from plan text
+  const parseDrills = (content: string): { index: number; text: string }[] => {
+    // Try to match numbered lines (e.g., "1. drill text")
+    const numberedLineRegex = /^(\d+)\.\s+(.+)$/gm;
+    const matches = Array.from(content.matchAll(numberedLineRegex));
+    
+    if (matches.length > 0) {
+      return matches.map((match, idx) => ({
+        index: parseInt(match[1]),
+        text: match[2].trim()
+      }));
+    }
+    
+    // Fallback to simple line split if no numbered format found
+    return content.split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0)
+      .map((line, idx) => ({
+        index: idx + 1,
+        text: line
+      }));
+  };
+
+  // Calculate total duration from drills
+  const calculateTotalDuration = (drills: { text: string }[]): number => {
+    let totalMinutes = 0;
+    const durationRegex = /(\d+)\s*min/i;
+    
+    drills.forEach(drill => {
+      const match = drill.text.match(durationRegex);
+      if (match) {
+        totalMinutes += parseInt(match[1]);
+      }
+    });
+    
+    return totalMinutes;
+  };
+
+  // Determine if it's a gym day
+  const isGymDay = (drills: { text: string }[]): boolean => {
+    if (drills.length === 0) return false;
+    return drills[0].text.toLowerCase().includes('gym session');
+  };
+
+  // Determine if it's a recovery day
+  const isRecoveryDay = (drills: { text: string }[]): boolean => {
+    if (drills.length === 0) return false;
+    return drills[0].text.toLowerCase().includes('focus on recovery');
+  };
+
+  // Toggle drill completion
+  const toggleDrillCompletion = (day: string, drillIndex: number) => {
+    const key = `${day}-${drillIndex}`;
+    setCompletedDrills(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
   const renderContent = () => {
     switch (currentStep) {
       case 'plans':
@@ -1361,34 +1492,68 @@ Focus on recovery today`;
                 exiting={FadeOut.duration(100)}
               >
                 {/* Days of the week */}
-                {DAYS_ORDER.map((day) => (
-                  <Accordion 
-                    key={day}
-                    title={formatDayHeader(day)}
-                    expanded={false}
-                  >
-                    <View style={styles.planContent}>
-                      <ScrollView style={{ maxHeight: 400 }}>
-                        {getDayContent(selectedPlan, day).split('\n').map((line, index) => {
-                          const trimmedLine = line.trim();
-                          if (!trimmedLine) return null; // Skip empty lines
-                          
-                          return (
-                            <Text 
-                              key={index} 
-                              style={[
-                                styles.planText,
-                                { marginBottom: index < getDayContent(selectedPlan, day).split('\n').length - 1 ? 8 : 0 }
-                              ]}
-                            >
-                              {trimmedLine}
+                {DAYS_ORDER.map((day) => {
+                  const dayContent = getDayContent(selectedPlan, day);
+                  const drills = parseDrills(dayContent);
+                  const totalDuration = calculateTotalDuration(drills);
+                  const isGym = isGymDay(drills);
+                  const isRecovery = isRecoveryDay(drills);
+                  
+                  return (
+                    <Accordion 
+                      key={day}
+                      title={formatDayHeader(day)}
+                      expanded={false}
+                    >
+                      <View style={styles.planContent}>
+                        {/* Day info badges */}
+                        <View style={[styles.dayHeaderContainer, { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 }]}>
+                          <View style={styles.dayHeaderLeft}>
+                            {totalDuration > 0 && (
+                              <View style={styles.durationBadge}>
+                                <Text style={styles.durationText}>{totalDuration} min</Text>
+                              </View>
+                            )}
+                          </View>
+                          <View style={[
+                            styles.typeChip, 
+                            isRecovery ? styles.homeChip : (isGym ? styles.gymChip : styles.fieldChip)
+                          ]}>
+                            <Text style={[
+                              styles.chipText, 
+                              isRecovery ? styles.homeChipText : (isGym ? styles.gymChipText : styles.fieldChipText)
+                            ]}>
+                              {isRecovery ? 'HOME' : (isGym ? 'GYM' : 'FIELD')}
                             </Text>
-                          );
-                        })}
-                      </ScrollView>
-                    </View>
-                  </Accordion>
-                ))}
+                          </View>
+                        </View>
+                        
+                        {/* Drills list */}
+                        <ScrollView style={{ maxHeight: 400, paddingHorizontal: 16, paddingBottom: 16 }}>
+                          {drills.map((drill, index) => {
+                            const isCompleted = completedDrills[`${day}-${index}`];
+                            
+                            return (
+                              <Pressable
+                                key={index}
+                                style={styles.drillRow}
+                                onPress={() => toggleDrillCompletion(day, index)}
+                              >
+                                <Text style={styles.drillIndex}>{drill.index}.</Text>
+                                <Text style={[
+                                  styles.drillText,
+                                  isCompleted && styles.drillTextCompleted
+                                ]}>
+                                  {drill.text}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </ScrollView>
+                      </View>
+                    </Accordion>
+                  );
+                })}
               </Animated.View>
             )}
 
