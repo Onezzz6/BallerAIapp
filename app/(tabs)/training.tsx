@@ -588,7 +588,7 @@ const styles = StyleSheet.create({
   },
   planText: {
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 22,
     color: '#333333',
   },
   infoContainer: {
@@ -724,7 +724,7 @@ export default function TrainingScreen() {
 
       // TODO: Remove debug code before production
       // DEBUG: Uncomment one of these lines to test different scenarios:
-      // setCanGeneratePlan(true); return; // Force allow plan generation (simulate Sunday or no previous plan)
+      setCanGeneratePlan(true); return; // Force allow plan generation (simulate Sunday or no previous plan)
       // setCanGeneratePlan(false); setLastGeneratedDate(new Date()); return; // Force show timer
 
       try {
@@ -909,6 +909,7 @@ IMPORTANT FORMAT INSTRUCTIONS:
 3. Separate each day's plan with a line break
 4. The plan should be in simple text format, no markdown, bold, or fancy formatting
 5. Start with MONDAY and include all 7 days of the week in order
+6. PUT EACH SEPARATE DRILL OR ACTIVITY ON ITS OWN LINE. DO NOT USE *, -, •, NUMBERS, OR ANY OTHER BULLET SYMBOLS — ONLY A PLAIN LINE BREAK.
 
 Example of correct format:
 MONDAY
@@ -949,7 +950,8 @@ Focus on recovery today`;
             role: "user",
             content: prompt
           }],
-          max_tokens: 8000
+          max_tokens: 8000,
+          temperature: 0.3
         }),
       });
 
@@ -991,7 +993,7 @@ Focus on recovery today`;
             .replace(/bodyweight only as user is under \d+/gi, '')
             .replace(/\(bodyweight exercises? only\)/gi, '')
             .replace(/\*\*/g, '') // Remove markdown formatting
-            .replace(/\s{2,}/g, ' ') // Remove extra spaces
+            .replace(/[ \t]{2,}/g, ' ') // Remove extra spaces (but preserve newlines)
             .trim();
           
           dailyPlans[day] = cleanedText;
@@ -1297,7 +1299,22 @@ Focus on recovery today`;
                   >
                     <View style={styles.planContent}>
                       <ScrollView style={{ maxHeight: 400 }}>
-                        <Text style={styles.planText}>{getDayContent(selectedPlan, day)}</Text>
+                        {getDayContent(selectedPlan, day).split('\n').map((line, index) => {
+                          const trimmedLine = line.trim();
+                          if (!trimmedLine) return null; // Skip empty lines
+                          
+                          return (
+                            <Text 
+                              key={index} 
+                              style={[
+                                styles.planText,
+                                { marginBottom: index < getDayContent(selectedPlan, day).split('\n').length - 1 ? 8 : 0 }
+                              ]}
+                            >
+                              {trimmedLine}
+                            </Text>
+                          );
+                        })}
                       </ScrollView>
                     </View>
                   </Accordion>
