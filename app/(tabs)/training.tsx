@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 import { useTraining } from '../context/TrainingContext';
-import { doc, getDoc, setDoc, collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, query, where, getDocs, deleteDoc, orderBy, limit } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import Constants from 'expo-constants';
 import Animated, { FadeIn, FadeInDown, PinwheelIn, SlideInRight, SlideOutLeft, FadeOut } from 'react-native-reanimated';
@@ -643,6 +643,7 @@ export default function TrainingScreen() {
   const [hasCheckedPlans, setHasCheckedPlans] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [lastPlanText, setLastPlanText] = useState<string>('');
   
   // Reference to the main ScrollView
   const scrollViewRef = useRef<ScrollView>(null);
@@ -837,6 +838,42 @@ export default function TrainingScreen() {
     }, 150); // 150ms - quick but noticeable
   };
 
+  // Load the most recent plan text from Firestore
+  const loadLastPlanText = async () => {
+    if (!user) return '';
+    
+    try {
+      // Query the plans collection to get the most recent plan
+      const plansRef = collection(db, 'users', user.uid, 'plans');
+      const q = query(plansRef, orderBy('createdAt', 'desc'), limit(1));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        const lastPlanDoc = querySnapshot.docs[0];
+        const planData = lastPlanDoc.data();
+        
+        // Reconstruct the full plan text from the schedule
+        if (planData.schedule) {
+          const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+          let fullPlanText = '';
+          
+          days.forEach(day => {
+            if (planData.schedule[day]) {
+              fullPlanText += `${day.toUpperCase()}\n${planData.schedule[day]}\n\n`;
+            }
+          });
+          
+          return fullPlanText.trim();
+        }
+      }
+      
+      return '';
+    } catch (error) {
+      console.error('Error loading last plan:', error);
+      return '';
+    }
+  };
+
   const handleGeneratePlan = async () => {
     if (!user || !selectedFocus || !gymAccess || !scheduleConfirmed) {
       Alert.alert('Cannot Generate Plan', 
@@ -860,6 +897,9 @@ export default function TrainingScreen() {
     setLoading(true);
 
     try {
+      // Load the last plan text before generating new one
+      const lastPlan = await loadLastPlanText();
+      
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       const userData = userDoc.data();
 
@@ -888,6 +928,16 @@ ${Object.entries(schedule)
   .map(([day, data]) => ` ${day} ${data.type === 'off' ? '0' : data.type === 'game' ? 'GAME' : data.duration} mins`)
   .join('\n')}
 
+${lastPlan ? `Here is the full plan the user followed last week:
+===
+${lastPlan}
+===
+
+When writing the new week:
+• make sure not to change the whole structure if the users situation is very similar and optimal plan would be similar.
+• DO adjust at least one or two drills per day (exercise type, duration, intensity, order) so the text is not a verbatim copy.
+• Do NOT make arbitrary changes that would reduce training quality. Think progression, variation, or subtle shift in focus—not randomness.` : ''}
+
 IMPORTANT: If the user is 14 years old or younger, do not suggest any weight training exercises. Only use bodyweight exercises for strength training.
 
 IMPORTANT SCHEDULE INTERPRETATION: Only consider a day as a game day if explicitly marked as "GAME" in the schedule. If a day is marked as "0" or has no game specified, assume there is no game on that day. Do not assume or hallucinate any games that aren't explicitly marked in the schedule.
@@ -898,35 +948,47 @@ don't copy that, just take the detail and style of the training as a guideline f
 Keep the plan simple focus on the amount thats good for the player not so much on specific advice in terms of technique since its not correct from you. also remember if user chooses a focusd area it still dosent mean only that hes always a football player first so maximum 2 trainings unrelated to football per week.
 
 VERY IMPORTANT TRAINING GUIDELINES:
-1. For any recovery days, simply tell the user to "Focus on recovery today" without providing specific recovery exercises. The app has a separate recovery page with dedicated recovery instructions.
+1. IF A DAY IS FOR RECOVERY, WRITE ONLY THIS SINGLE LINE AS THE DAY'S CONTENT:
+"Focus on recovery today"
+DO NOT ADD DRILLS, NOTES, BULLETS, NUMBERS, OR ANY EXTRA TEXT.
 2. If the user has a game scheduled on any day, make the 2 days BEFORE that game much lighter in intensity. The day immediately before a game should be extremely light (technical work only) or recovery.
 3. If you include a gym session on any day, that should be the ONLY training for that day. Never mix gym and field work on the same day as users typically don't have access to both facilities at once.
-4. Only suggest gym-based training if the user has explicitly stated they have gym access.
+4. When a day is a pure gym session:
+   • List each lift on its own numbered line and include exact sets × reps, e.g. "Squats – 3 × 8", "Romanian deadlift – 3 × 10 each leg".
+   • Do not hide reps in parentheses or cram multiple lifts into one sentence.
+5. Only suggest gym-based training if the user has explicitly stated they have gym access.
+6. IF THE USER HAS AN INJURY HISTORY, ADJUST OR SUBSTITUTE EXERCISES AS NEEDED, BUT DO NOT KEEP REMINDING THEM OF THE INJURY INSIDE EVERY DRILL.  
+   • Only mention the injury when you are explicitly prescribing a rehab/pre-hab segment (e.g. "Ankle stability series – inversion / eversion with band").  
+   • Ordinary drills like passing or dribbling should NOT contain phrases such as "protect ACL" or "watch ankle".
 
 IMPORTANT FORMAT INSTRUCTIONS:
-1. Format each day in FULL CAPS (example: "MONDAY")
+1. Format each day in FULL CAPS (example: "MONDAY"). Only the day header (MONDAY, TUESDAY…) must be in FULL CAPS. All drill text underneath should be normal sentence case (capitalise just the first letter; no shouting).
 2. Write the plan for that day directly below it
 3. Separate each day's plan with a line break
 4. The plan should be in simple text format, no markdown, bold, or fancy formatting
 5. Start with MONDAY and include all 7 days of the week in order
-6. PUT EACH SEPARATE DRILL OR ACTIVITY ON ITS OWN LINE. DO NOT USE *, -, •, NUMBERS, OR ANY OTHER BULLET SYMBOLS — ONLY A PLAIN LINE BREAK.
+6. WRITE EACH DRILL ON ITS OWN LINE AND NUMBER THEM SEQUENTIALLY:
+   "1. 15 min warm-up – light jog …"
+   "2. 20 min passing drills …"
+   No asterisks, dashes, or circles—just plain numbers and periods.
+   EXCEPTION: Do NOT number a recovery day; it must contain only the line above.
 
 Example of correct format:
 MONDAY
-10 min warm up - light jog and stretching
-15 min passing drills - wall passes varying distance
-15 min dribbling - cone drills focusing on control
-5 min cool down
+1. 10 min warm up - light jog and stretching
+2. 15 min passing drills - wall passes varying distance
+3. 15 min dribbling - cone drills focusing on control
+4. 5 min cool down
 
 TUESDAY
-Gym session: 45 minutes of strength training focused on lower body
+1. Gym session: 45 minutes of strength training focused on lower body
 
 WEDNESDAY
 Focus on recovery today
 
 THURSDAY (Light training - game in 2 days)
-20 min very light technical work - focus on ball control
-10 min stretching
+1. 20 min very light technical work - focus on ball control
+2. 10 min stretching
 
 FRIDAY (Pre-game day)
 Focus on recovery today
@@ -951,7 +1013,8 @@ Focus on recovery today`;
             content: prompt
           }],
           max_tokens: 8000,
-          temperature: 0.3
+          temperature: 0.3,
+          top_p: 0.9
         }),
       });
 
@@ -1018,6 +1081,13 @@ Focus on recovery today`;
         name: `Plan for Week ${weekNumber}`,
         createdAt: now,
         schedule: dailyPlans,
+      });
+
+      // Save the raw plan text to Firestore for future reference
+      const planDate = format(now, 'yyyy-MM-dd');
+      await setDoc(doc(db, 'users', user.uid, 'plans', planDate), {
+        planText: planText,
+        createdAt: now
       });
 
       // Update lastPlanGenerated in user document
