@@ -6,7 +6,7 @@ import { useTraining } from '../context/TrainingContext';
 import { doc, getDoc, setDoc, collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import Constants from 'expo-constants';
-import Animated, { FadeIn, FadeInDown, PinwheelIn, SlideInRight, SlideOutLeft } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown, PinwheelIn, SlideInRight, SlideOutLeft, FadeOut } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { startOfWeek, endOfWeek, differenceInMilliseconds, format, isSunday, subWeeks, isAfter, parseISO, addDays, getWeek } from 'date-fns';
 import analytics from '@react-native-firebase/analytics';
@@ -642,6 +642,7 @@ export default function TrainingScreen() {
   const [currentStep, setCurrentStep] = useState<WorkflowStep>('welcome');
   const [hasCheckedPlans, setHasCheckedPlans] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   
   // Reference to the main ScrollView
   const scrollViewRef = useRef<ScrollView>(null);
@@ -656,9 +657,26 @@ export default function TrainingScreen() {
     }
   }, [plans, selectedPlanId]);
 
+  // Auto-select newly generated plan when plans array updates
+  useEffect(() => {
+    if (plans.length > 0) {
+      // If we just generated a plan and returned to plans view, select the newest one
+      if (currentStep === 'plans') {
+        const newestPlan = plans[0]; // Plans are sorted newest first
+        if (selectedPlanId !== newestPlan.id) {
+          setSelectedPlanId(newestPlan.id);
+        }
+      }
+    }
+  }, [plans.length, currentStep]);
+
   // Function to calculate time until next Sunday
   const calculateTimeUntilNextSunday = () => {
     const now = new Date();
+    
+    // TODO: Remove debug code before production
+    // DEBUG: Uncomment the line below to simulate timer expiring (force generate button to show)
+    // return { days: 0, hours: 0, minutes: 0 }; // Force timer to show as expired
     
     // If today is Sunday and they've already generated a plan, they need to wait until next Sunday
     const daysUntilSunday = now.getDay() === 0 ? 7 : 7 - now.getDay();
@@ -703,6 +721,11 @@ export default function TrainingScreen() {
   useEffect(() => {
     const checkPlanGenerationStatus = async () => {
       if (!user) return;
+
+      // TODO: Remove debug code before production
+      // DEBUG: Uncomment one of these lines to test different scenarios:
+      // setCanGeneratePlan(true); return; // Force allow plan generation (simulate Sunday or no previous plan)
+      // setCanGeneratePlan(false); setLastGeneratedDate(new Date()); return; // Force show timer
 
       try {
         // Get the user document to check when they last generated a plan
@@ -800,6 +823,19 @@ export default function TrainingScreen() {
 
   const focusOptions: FocusArea[] = ['technique', 'strength', 'endurance', 'speed', 'overall'];
   const gymOptions: GymAccess[] = ['yes', 'no'];
+
+  // Handle plan selection with smooth transition
+  const handlePlanSelection = (planId: string) => {
+    if (planId === selectedPlanId) return; // Don't animate if same plan
+    
+    setIsTransitioning(true);
+    
+    // Short delay to show transition feedback
+    setTimeout(() => {
+      setSelectedPlanId(planId);
+      setIsTransitioning(false);
+    }, 150); // 150ms - quick but noticeable
+  };
 
   const handleGeneratePlan = async () => {
     if (!user || !selectedFocus || !gymAccess || !scheduleConfirmed) {
@@ -991,8 +1027,10 @@ Focus on recovery today`;
       setCanGeneratePlan(false);
       setLastGeneratedDate(now);
 
-      // Navigate back to training tab plans view instead of training-plans page
+      // Navigate back to training tab plans view
       setCurrentStep('plans');
+      
+      // The useEffect will automatically select the newly generated plan
     } catch (error) {
       console.error('Error generating plan:', error);
       Alert.alert('Error', 'Failed to generate a training plan. Please try again.');
@@ -1179,58 +1217,12 @@ Focus on recovery today`;
               paddingBottom: 100, // Add padding to ensure bottom content is visible
             }}
           >
-            {/* Plan selection buttons */}
-            <View style={styles.plansButtonContainer}>
-              {plans.map((plan) => (
-                <Pressable
-                  key={plan.id}
-                  style={({ pressed }) => [
-                    styles.planButton,
-                    selectedPlanId === plan.id && styles.selectedPlanButton,
-                    pressed && { opacity: 0.8 }
-                  ]}
-                  onPress={() => setSelectedPlanId(plan.id)}
-                >
-                  <Text 
-                    style={[
-                      styles.planButtonText, 
-                      selectedPlanId === plan.id && styles.selectedPlanButtonText
-                    ]}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    {plan.name}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-
-            {/* Selected plan details section */}
-            {selectedPlan && (
-              <View style={styles.planDetailsContainer}>
-                {/* Days of the week */}
-                {DAYS_ORDER.map((day) => (
-                  <Accordion 
-                    key={day}
-                    title={formatDayHeader(day)}
-                    expanded={false}
-                  >
-                    <View style={styles.planContent}>
-                      <ScrollView style={{ maxHeight: 400 }}>
-                        <Text style={styles.planText}>{getDayContent(selectedPlan, day)}</Text>
-                      </ScrollView>
-                    </View>
-                  </Accordion>
-                ))}
-              </View>
-            )}
-
-            {/* Show create new plan button or timer */}
-            <View style={{ marginTop: 24, marginBottom: 32 }}>
+            {/* Timer or Generate New Plan Button at the top */}
+            <View style={{ marginBottom: 24 }}>
               {!canGeneratePlan && lastGeneratedDate ? (
                 <View style={styles.timerContainer}>
                   <Text style={styles.timerText}>
-                    Next weekly plan available on Sunday, {format(startOfWeek(addDays(new Date(), 7), { weekStartsOn: 1 }), 'MMMM d')}
+                    Next week's plan available on Sunday, {format(startOfWeek(addDays(new Date(), 7), { weekStartsOn: 1 }), 'MMMM d')}
                   </Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, justifyContent: 'center', gap: 5 }}>
                     <Ionicons name="time-outline" size={18} color="#4064F6" />
@@ -1252,6 +1244,77 @@ Focus on recovery today`;
                 </Pressable>
               )}
             </View>
+
+            {/* Plan selection buttons */}
+            <View style={styles.plansButtonContainer}>
+              {plans.map((plan) => (
+                <Pressable
+                  key={plan.id}
+                  style={({ pressed }) => [
+                    styles.planButton,
+                    selectedPlanId === plan.id && styles.selectedPlanButton,
+                    pressed && { opacity: 0.8 },
+                    isTransitioning && { opacity: 0.7 }
+                  ]}
+                  onPress={() => handlePlanSelection(plan.id)}
+                  disabled={isTransitioning}
+                >
+                  <Text 
+                    style={[
+                      styles.planButtonText, 
+                      selectedPlanId === plan.id && styles.selectedPlanButtonText
+                    ]}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {plan.name}
+                  </Text>
+                  {isTransitioning && selectedPlanId === plan.id && (
+                    <ActivityIndicator 
+                      size="small" 
+                      color={selectedPlanId === plan.id ? "#FFFFFF" : "#4064F6"} 
+                      style={{ marginLeft: 8 }}
+                    />
+                  )}
+                </Pressable>
+              ))}
+            </View>
+
+            {/* Selected plan details section */}
+            {selectedPlan && !isTransitioning && (
+              <Animated.View 
+                key={selectedPlanId} 
+                style={styles.planDetailsContainer}
+                entering={FadeIn.duration(200)}
+                exiting={FadeOut.duration(100)}
+              >
+                {/* Days of the week */}
+                {DAYS_ORDER.map((day) => (
+                  <Accordion 
+                    key={day}
+                    title={formatDayHeader(day)}
+                    expanded={false}
+                  >
+                    <View style={styles.planContent}>
+                      <ScrollView style={{ maxHeight: 400 }}>
+                        <Text style={styles.planText}>{getDayContent(selectedPlan, day)}</Text>
+                      </ScrollView>
+                    </View>
+                  </Accordion>
+                ))}
+              </Animated.View>
+            )}
+
+            {/* Transition loading state */}
+            {isTransitioning && (
+              <Animated.View 
+                style={[styles.planDetailsContainer, { justifyContent: 'center', alignItems: 'center', minHeight: 200 }]}
+                entering={FadeIn.duration(100)}
+              >
+                <ActivityIndicator size="large" color="#4064F6" />
+                <Text style={{ marginTop: 12, color: '#666666', fontSize: 16 }}>Loading plan...</Text>
+              </Animated.View>
+            )}
           </ScrollView>
         );
 
@@ -1552,7 +1615,7 @@ Focus on recovery today`;
                   {!canGeneratePlan && lastGeneratedDate && (
                     <View style={styles.timerContainer}>
                       <Text style={styles.timerText}>
-                        Next weekly plan available on Sunday, {format(startOfWeek(addDays(new Date(), 7), { weekStartsOn: 1 }), 'MMMM d')}
+                        Next week's plan available on Sunday, {format(startOfWeek(addDays(new Date(), 7), { weekStartsOn: 1 }), 'MMMM d')}
                       </Text>
                       <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, justifyContent: 'center', gap: 5 }}>
                         <Ionicons name="time-outline" size={18} color="#4064F6" />
