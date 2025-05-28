@@ -612,6 +612,55 @@ const styles = StyleSheet.create({
     textDecorationLine: 'line-through',
     opacity: 0.5,
   },
+  subItemRow: {
+    flexDirection: 'row',
+    marginBottom: 8,
+    marginLeft: 30,
+    alignItems: 'flex-start',
+  },
+  subItemBullet: {
+    fontSize: 14,
+    color: '#666666',
+    marginRight: 8,
+  },
+  subItemText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 22,
+    color: '#666666',
+  },
+  subItemTextCompleted: {
+    textDecorationLine: 'line-through',
+    opacity: 0.5,
+  },
+  sessionHeader: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#000000',
+    textAlign: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  recoveryText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#000000',
+    textAlign: 'center',
+    paddingVertical: 24,
+    paddingHorizontal: 16,
+  },
+  summaryNote: {
+    fontSize: 14,
+    lineHeight: 22,
+    color: '#333333',
+    marginBottom: 8,
+    paddingHorizontal: 16,
+  },
+  summaryBullet: {
+    fontSize: 14,
+    color: '#666666',
+    marginRight: 8,
+  },
   dayHeaderContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -648,6 +697,9 @@ const styles = StyleSheet.create({
   homeChip: {
     backgroundColor: '#FFF8E8',
   },
+  gameChip: {
+    backgroundColor: '#F0E8FF',
+  },
   chipText: {
     fontSize: 11,
     fontWeight: '600',
@@ -661,6 +713,9 @@ const styles = StyleSheet.create({
   },
   homeChipText: {
     color: '#FFAA00',
+  },
+  gameChipText: {
+    color: '#8844FF',
   },
   infoContainer: {
     backgroundColor: '#F8F8F8',
@@ -797,7 +852,7 @@ export default function TrainingScreen() {
 
       // TODO: Remove debug code before production
       // DEBUG: Uncomment one of these lines to test different scenarios:
-      setCanGeneratePlan(true); return; // Force allow plan generation (simulate Sunday or no previous plan)
+      // setCanGeneratePlan(true); return; // Force allow plan generation (simulate Sunday or no previous plan)
       // setCanGeneratePlan(false); setLastGeneratedDate(new Date()); return; // Force show timer
 
       try {
@@ -1033,6 +1088,16 @@ DO NOT ADD DRILLS, NOTES, BULLETS, NUMBERS, OR ANY EXTRA TEXT.
    • Only mention the injury when you are explicitly prescribing a rehab/pre-hab segment (e.g. "Ankle stability series – inversion / eversion with band").  
    • Ordinary drills like passing or dribbling should NOT contain phrases such as "protect ACL" or "watch ankle".
 
+WHEN A DAY IS A PURE GYM SESSION
+• Do not pre-face the lifts with any header such as "Gym session", "Strength block", "Lower-body focus", etc.
+• Simply begin the list of lifts at 1. and continue:
+ 1. Back squats – 4 × 6
+ 2. Romanian deadlifts – 3 × 8 each leg
+ …
+• Every lift must show exact sets × reps with the multiplication symbol (×) or the letter "x".
+• Do not mention ACL/ankle safety, "protect", "pre-hab", or similar inside the lift text. or anything else related to users injury history. take it into account but dont write it out
+• Treat the entire block as 60 min by default – you do not need to repeat the duration inside the text.
+
 IMPORTANT FORMAT INSTRUCTIONS:
 1. Format each day in FULL CAPS (example: "MONDAY"). Only the day header (MONDAY, TUESDAY…) must be in FULL CAPS. All drill text underneath should be normal sentence case (capitalise just the first letter; no shouting).
 2. Write the plan for that day directly below it
@@ -1070,7 +1135,9 @@ SATURDAY
 Game day
 
 SUNDAY
-Focus on recovery today`;
+Focus on recovery today
+
+IMPORTANT: After the last day (Sunday), write a short summary section titled "NOTES:" that explains the weekly plan structure and why certain types of training were scheduled on specific days. This helps users understand the reasoning behind their training program.`;
 
       const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
         method: 'POST',
@@ -1348,53 +1415,241 @@ Focus on recovery today`;
   };
 
   // Parse drills from plan text
-  const parseDrills = (content: string): { index: number; text: string }[] => {
-    // Try to match numbered lines (e.g., "1. drill text")
-    const numberedLineRegex = /^(\d+)\.\s+(.+)$/gm;
-    const matches = Array.from(content.matchAll(numberedLineRegex));
+  const parseDrills = (content: string): { header?: string; drills: { index: number; text: string; subs: string[] }[]; isRecovery?: boolean; isGame?: boolean; isGymDay?: boolean; summaryNotes?: string[] } => {
+    const lines = content.split('\n');
+    const drills: { index: number; text: string; subs: string[] }[] = [];
+    let currentDrill: { index: number; text: string; subs: string[] } | null = null;
+    let sessionHeader: string | undefined = undefined;
+    let drillIndex = 1;
+    let isRecovery = false;
+    let isGame = false;
+    const summaryNotes: string[] = [];
+    let inSummarySection = false;
+    let isGymDay = false;
     
-    if (matches.length > 0) {
-      return matches.map((match, idx) => ({
-        index: parseInt(match[1]),
-        text: match[2].trim()
-      }));
+    // Check if this is a recovery day first
+    const firstNonEmptyLine = lines.find(line => line.trim());
+    if (firstNonEmptyLine && firstNonEmptyLine.toLowerCase().includes('focus on recovery')) {
+      return {
+        drills: [],
+        isRecovery: true,
+        header: firstNonEmptyLine.trim()
+      };
     }
     
-    // Fallback to simple line split if no numbered format found
-    return content.split('\n')
-      .map(line => line.trim())
-      .filter(line => line.length > 0)
-      .map((line, idx) => ({
-        index: idx + 1,
-        text: line
-      }));
+    // Check if this is a game day
+    if (firstNonEmptyLine && firstNonEmptyLine.toLowerCase().includes('game day')) {
+      return {
+        drills: [],
+        isGame: true,
+        header: 'Game day'
+      };
+    }
+    
+    // Check if this is a gym day by looking at the first few lines
+    const firstFewLines = lines.slice(0, 3).join(' ').toLowerCase();
+    if (firstFewLines.includes('gym session')) {
+      isGymDay = true;
+    }
+    
+    // Patterns for different line types
+    const gymSessionRegex = /^\s*(?:\d+\.\s*)?gym\s+session.*$/i;
+    const summaryStartRegex = /^\s*(?:notes|summary|week\s+summary)[:\s]*$/i;
+    const topLevelNumberRegex = /^(?:\s{0,1})(\d+)\.\s+(.+)$/;
+    const indentedNumberRegex = /^\s{2,}\d+\.\s+(.+)$/;
+    const dashBulletRegex = /^\s*[-–•]\s+(.+)$/;
+    
+    // Regex to detect sets × reps patterns (e.g., 3×8, 4 x 10, 2 × 12)
+    const SET_REP_REGEX = /\d+\s*[×xX]\s*\d+/;
+    
+    // Helper function to strip injury callouts
+    const stripInjuryCallouts = (text: string): string => {
+      // Remove parenthetical injury mentions
+      text = text.replace(/\s*\([^)]*(?:ACL|ankle|injury|prevention|stability|protect)[^)]*\)/gi, '');
+      // Remove dash-separated injury mentions at the end
+      text = text.replace(/\s*[-–]\s*(?:for\s+)?(?:ACL|ankle|injury|prevention|stability|protect).*$/gi, '');
+      return text.trim();
+    };
+    
+    // Track if we find sets × reps in the first drill
+    let firstDrillHasSetsReps = false;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmedLine = line.trim();
+      
+      // Check for summary section start
+      if (summaryStartRegex.test(trimmedLine)) {
+        inSummarySection = true;
+        continue;
+      }
+      
+      // If in summary section, collect all non-empty lines
+      if (inSummarySection) {
+        if (trimmedLine) {
+          // Remove leading bullets or dashes if present
+          const cleanedLine = trimmedLine.replace(/^[-–•]\s*/, '');
+          summaryNotes.push(cleanedLine);
+        }
+        continue;
+      }
+      
+      // Check for gym session header and skip it
+      if (gymSessionRegex.test(trimmedLine)) {
+        // Skip this line entirely - don't store as header or drill
+        drillIndex = 1; // Reset numbering for subsequent drills
+        continue;
+      }
+      
+      const topLevelMatch = line.match(topLevelNumberRegex);
+      const indentedMatch = line.match(indentedNumberRegex);
+      const dashMatch = line.match(dashBulletRegex);
+      
+      if (topLevelMatch) {
+        // This is a new top-level drill
+        if (currentDrill) {
+          // Apply injury stripping before pushing
+          if (isGymDay) {
+            currentDrill.text = stripInjuryCallouts(currentDrill.text);
+          }
+          drills.push(currentDrill);
+        }
+        
+        const drillText = topLevelMatch[2].trim();
+        
+        // Check if this is the first drill and contains sets × reps
+        if (drills.length === 0 && !currentDrill && SET_REP_REGEX.test(drillText)) {
+          firstDrillHasSetsReps = true;
+          isGymDay = true;
+        }
+        
+        currentDrill = {
+          index: drillIndex++,
+          text: drillText,
+          subs: []
+        };
+      } else if (indentedMatch) {
+        // This is an indented numbered item
+        if (!currentDrill && sessionHeader) {
+          // First drill after session header
+          currentDrill = {
+            index: drillIndex++,
+            text: indentedMatch[1].trim(),
+            subs: []
+          };
+        } else if (currentDrill) {
+          // Sub-item of current drill
+          currentDrill.subs.push(indentedMatch[1].trim());
+        }
+      } else if (dashMatch) {
+        // This is a dash/bullet item
+        if (isGymDay && currentDrill) {
+          // For gym days, flatten dash items into the current drill's text
+          const dashText = dashMatch[1].trim();
+          currentDrill.text += ` – ${dashText}`;
+        } else if (currentDrill) {
+          // For non-gym days, treat as sub-item
+          currentDrill.subs.push(dashMatch[1].trim());
+        } else if (!currentDrill && sessionHeader) {
+          // First drill after session header (shouldn't happen, but handle gracefully)
+          currentDrill = {
+            index: drillIndex++,
+            text: dashMatch[1].trim(),
+            subs: []
+          };
+        }
+      } else if (trimmedLine && !currentDrill && !sessionHeader) {
+        // Non-empty line with no current drill or header - start a new one
+        drills.push({
+          index: drillIndex++,
+          text: trimmedLine,
+          subs: []
+        });
+      }
+    }
+    
+    // Don't forget the last drill
+    if (currentDrill) {
+      // Apply injury stripping before pushing
+      if (isGymDay) {
+        currentDrill.text = stripInjuryCallouts(currentDrill.text);
+      }
+      drills.push(currentDrill);
+    }
+    
+    // If no drills were parsed, fallback to simple line split
+    if (drills.length === 0 && !sessionHeader && !isRecovery && !isGame) {
+      const fallbackDrills = content.split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .map((line, idx) => ({
+          index: idx + 1,
+          text: line,
+          subs: []
+        }));
+      return { drills: fallbackDrills, summaryNotes: summaryNotes.length > 0 ? summaryNotes : undefined };
+    }
+    
+    return { 
+      header: sessionHeader, 
+      drills, 
+      isRecovery,
+      isGame,
+      isGymDay,
+      summaryNotes: summaryNotes.length > 0 ? summaryNotes : undefined
+    };
   };
 
   // Calculate total duration from drills
-  const calculateTotalDuration = (drills: { text: string }[]): number => {
+  const calculateTotalDuration = (parsedContent: { header?: string; drills: { text: string; subs: string[] }[]; isRecovery?: boolean; isGame?: boolean; isGymDay?: boolean }): number => {
+    // No duration for recovery days or game days
+    if (parsedContent.isRecovery || parsedContent.isGame) {
+      return 0;
+    }
+    
+    // Short-circuit for gym days - always 60 minutes
+    if (isGymDay(parsedContent)) {
+      return 60;
+    }
+    
     let totalMinutes = 0;
     const durationRegex = /(\d+)\s*min/i;
     
-    drills.forEach(drill => {
+    parsedContent.drills.forEach(drill => {
+      // Check main drill text
       const match = drill.text.match(durationRegex);
       if (match) {
         totalMinutes += parseInt(match[1]);
       }
+      
+      // Also check sub-items
+      drill.subs.forEach(sub => {
+        const subMatch = sub.match(durationRegex);
+        if (subMatch) {
+          totalMinutes += parseInt(subMatch[1]);
+        }
+      });
     });
     
     return totalMinutes;
   };
 
   // Determine if it's a gym day
-  const isGymDay = (drills: { text: string }[]): boolean => {
-    if (drills.length === 0) return false;
-    return drills[0].text.toLowerCase().includes('gym session');
+  const isGymDay = (parsedContent: { header?: string; drills: { text: string; subs: string[] }[]; isGymDay?: boolean }): boolean => {
+    // Check the flag set during parsing (either from "gym session" header or sets × reps pattern)
+    return parsedContent.isGymDay === true;
   };
 
   // Determine if it's a recovery day
-  const isRecoveryDay = (drills: { text: string }[]): boolean => {
+  const isRecoveryDay = (drills: { text: string; subs: string[] }[]): boolean => {
     if (drills.length === 0) return false;
     return drills[0].text.toLowerCase().includes('focus on recovery');
+  };
+
+  // Determine if it's a game day
+  const isGameDay = (drills: { text: string; subs: string[] }[]): boolean => {
+    if (drills.length === 0) return false;
+    return drills[0].text.toLowerCase().includes('game day');
   };
 
   // Toggle drill completion
@@ -1492,68 +1747,157 @@ Focus on recovery today`;
                 exiting={FadeOut.duration(100)}
               >
                 {/* Days of the week */}
-                {DAYS_ORDER.map((day) => {
-                  const dayContent = getDayContent(selectedPlan, day);
-                  const drills = parseDrills(dayContent);
-                  const totalDuration = calculateTotalDuration(drills);
-                  const isGym = isGymDay(drills);
-                  const isRecovery = isRecoveryDay(drills);
+                {(() => {
+                  let allSummaryNotes: string[] = [];
+                  
+                  const dayAccordions = DAYS_ORDER.map((day) => {
+                    const dayContent = getDayContent(selectedPlan, day);
+                    const parsed = parseDrills(dayContent);
+                    
+                    // Collect summary notes from each day
+                    if (parsed.summaryNotes) {
+                      allSummaryNotes = [...allSummaryNotes, ...parsed.summaryNotes];
+                    }
+                    
+                    const totalDuration = calculateTotalDuration(parsed);
+                    const isGym = isGymDay(parsed);
+                    const isRecovery = parsed.isRecovery || isRecoveryDay(parsed.drills);
+                    const isGame = parsed.isGame || isGameDay(parsed.drills);
+                    
+                    return (
+                      <Accordion 
+                        key={day}
+                        title={formatDayHeader(day)}
+                        expanded={false}
+                      >
+                        <View style={styles.planContent}>
+                          {/* Day info badges */}
+                          {!isRecovery && !isGame && (
+                            <View style={[styles.dayHeaderContainer, { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 }]}>
+                              <View style={styles.dayHeaderLeft}>
+                                {totalDuration > 0 && (
+                                  <View style={styles.durationBadge}>
+                                    <Text style={styles.durationText}>{totalDuration} min</Text>
+                                  </View>
+                                )}
+                              </View>
+                              <View style={[
+                                styles.typeChip, 
+                                isGym ? styles.gymChip : styles.fieldChip
+                              ]}>
+                                <Text style={[
+                                  styles.chipText, 
+                                  isGym ? styles.gymChipText : styles.fieldChipText
+                                ]}>
+                                  {isGym ? 'GYM' : 'FIELD'}
+                                </Text>
+                              </View>
+                            </View>
+                          )}
+                          
+                          {/* Recovery day special rendering */}
+                          {isRecovery ? (
+                            <>
+                              {/* HOME chip for recovery days */}
+                              <View style={[styles.dayHeaderContainer, { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 0 }]}>
+                                <View style={styles.dayHeaderLeft}>
+                                  {/* Empty left side for alignment */}
+                                </View>
+                                <View style={[styles.typeChip, styles.homeChip]}>
+                                  <Text style={[styles.chipText, styles.homeChipText]}>HOME</Text>
+                                </View>
+                              </View>
+                              <Text style={styles.recoveryText}>{parsed.header || 'Focus on recovery today'}</Text>
+                            </>
+                          ) : isGame ? (
+                            <>
+                              {/* GAME chip for game days */}
+                              <View style={[styles.dayHeaderContainer, { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 0 }]}>
+                                <View style={styles.dayHeaderLeft}>
+                                  {/* Empty left side for alignment */}
+                                </View>
+                                <View style={[styles.typeChip, styles.gameChip]}>
+                                  <Text style={[styles.chipText, styles.gameChipText]}>GAME</Text>
+                                </View>
+                              </View>
+                              <Text style={styles.recoveryText}>{parsed.header || 'Game day'}</Text>
+                            </>
+                          ) : (
+                            <>
+                              {/* Regular drills list */}
+                              <ScrollView style={{ maxHeight: 400, paddingHorizontal: 16, paddingBottom: 16 }}>
+                                {/* Drill items */}
+                                {parsed.drills.map((drill, index) => {
+                                  const isCompleted = completedDrills[`${day}-${index}`];
+                                  
+                                  return (
+                                    <View key={index}>
+                                      <Pressable
+                                        style={styles.drillRow}
+                                        onPress={() => toggleDrillCompletion(day, index)}
+                                      >
+                                        <Text style={styles.drillIndex}>{drill.index}.</Text>
+                                        <Text style={[
+                                          styles.drillText,
+                                          isCompleted && styles.drillTextCompleted
+                                        ]}>
+                                          {drill.text}
+                                        </Text>
+                                      </Pressable>
+                                      
+                                      {/* Render sub-items if any */}
+                                      {drill.subs.map((sub, subIndex) => (
+                                        <Pressable
+                                          key={`sub-${subIndex}`}
+                                          style={styles.subItemRow}
+                                          onPress={() => toggleDrillCompletion(day, index)}
+                                        >
+                                          <Text style={styles.subItemBullet}>•</Text>
+                                          <Text style={[
+                                            styles.subItemText,
+                                            isCompleted && styles.subItemTextCompleted
+                                          ]}>
+                                            {sub}
+                                          </Text>
+                                        </Pressable>
+                                      ))}
+                                    </View>
+                                  );
+                                })}
+                              </ScrollView>
+                            </>
+                          )}
+                        </View>
+                      </Accordion>
+                    );
+                  });
                   
                   return (
-                    <Accordion 
-                      key={day}
-                      title={formatDayHeader(day)}
-                      expanded={false}
-                    >
-                      <View style={styles.planContent}>
-                        {/* Day info badges */}
-                        <View style={[styles.dayHeaderContainer, { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 }]}>
-                          <View style={styles.dayHeaderLeft}>
-                            {totalDuration > 0 && (
-                              <View style={styles.durationBadge}>
-                                <Text style={styles.durationText}>{totalDuration} min</Text>
-                              </View>
-                            )}
+                    <>
+                      {dayAccordions}
+                      
+                      {/* Summary accordion if notes exist */}
+                      {allSummaryNotes.length > 0 && (
+                        <Accordion 
+                          key="summary"
+                          title="SUMMARY"
+                          expanded={false}
+                        >
+                          <View style={styles.planContent}>
+                            <View style={{ paddingVertical: 16 }}>
+                              {allSummaryNotes.map((note, index) => (
+                                <View key={index} style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                                  <Text style={styles.summaryBullet}>•</Text>
+                                  <Text style={[styles.summaryNote, { flex: 1 }]}>{note}</Text>
+                                </View>
+                              ))}
+                            </View>
                           </View>
-                          <View style={[
-                            styles.typeChip, 
-                            isRecovery ? styles.homeChip : (isGym ? styles.gymChip : styles.fieldChip)
-                          ]}>
-                            <Text style={[
-                              styles.chipText, 
-                              isRecovery ? styles.homeChipText : (isGym ? styles.gymChipText : styles.fieldChipText)
-                            ]}>
-                              {isRecovery ? 'HOME' : (isGym ? 'GYM' : 'FIELD')}
-                            </Text>
-                          </View>
-                        </View>
-                        
-                        {/* Drills list */}
-                        <ScrollView style={{ maxHeight: 400, paddingHorizontal: 16, paddingBottom: 16 }}>
-                          {drills.map((drill, index) => {
-                            const isCompleted = completedDrills[`${day}-${index}`];
-                            
-                            return (
-                              <Pressable
-                                key={index}
-                                style={styles.drillRow}
-                                onPress={() => toggleDrillCompletion(day, index)}
-                              >
-                                <Text style={styles.drillIndex}>{drill.index}.</Text>
-                                <Text style={[
-                                  styles.drillText,
-                                  isCompleted && styles.drillTextCompleted
-                                ]}>
-                                  {drill.text}
-                                </Text>
-                              </Pressable>
-                            );
-                          })}
-                        </ScrollView>
-                      </View>
-                    </Accordion>
+                        </Accordion>
+                      )}
+                    </>
                   );
-                })}
+                })()}
               </Animated.View>
             )}
 
