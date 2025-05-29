@@ -19,8 +19,8 @@ export default function GenderScreen() {
       }}
     >
       <OnboardingHeader 
-        currentStep={2}
-        totalSteps={5}
+        currentStep={3}
+        totalSteps={26}
       />
 
       <Animated.View 

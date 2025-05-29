@@ -38,8 +38,8 @@ export default function TrainingSurfaceScreen() {
       }}
     >
       <OnboardingHeader 
-        currentStep={10}
-        totalSteps={5}
+        currentStep={11}
+        totalSteps={26}
       />
 
       <Animated.View 

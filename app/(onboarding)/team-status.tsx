@@ -19,8 +19,8 @@ export default function TeamStatusScreen() {
       }}
     >
       <OnboardingHeader 
-        currentStep={9}
-        totalSteps={5}
+        currentStep={10}
+        totalSteps={26}
       />
 
       <Animated.View 

@@ -38,8 +38,8 @@ export default function PositionScreen() {
       }}
     >
       <OnboardingHeader 
-        currentStep={8}
-        totalSteps={5}
+        currentStep={9}
+        totalSteps={26}
       />
 
       <Animated.View 

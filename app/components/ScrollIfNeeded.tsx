@@ -4,9 +4,10 @@ import { ScrollView, StyleSheet, LayoutChangeEvent, ViewStyle } from 'react-nati
 interface ScrollIfNeededProps {
   children: React.ReactNode;
   style?: ViewStyle;
+  bounces?: boolean;
 }
 
-export default function ScrollIfNeeded({ children, style }: ScrollIfNeededProps) {
+export default function ScrollIfNeeded({ children, style, bounces = false }: ScrollIfNeededProps) {
   const [viewportHeight, setViewportHeight] = useState(0);
   const [contentHeight, setContentHeight] = useState(0);
   const shouldScroll = contentHeight > viewportHeight && viewportHeight > 0;
@@ -26,7 +27,7 @@ export default function ScrollIfNeeded({ children, style }: ScrollIfNeededProps)
       contentContainerStyle={styles.contentContainer}
       scrollEnabled={shouldScroll}
       showsVerticalScrollIndicator={false}
-      bounces={false}
+      bounces={bounces}
       onLayout={handleLayout}
       onContentSizeChange={handleContentSizeChange}
     >

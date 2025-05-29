@@ -38,8 +38,8 @@ export default function FitnessLevelScreen() {
       }}
     >
       <OnboardingHeader 
-        currentStep={11}
-        totalSteps={5}
+        currentStep={14}
+        totalSteps={26}
       />
 
       <Animated.View 

@@ -42,8 +42,8 @@ export default function ImprovementFocusScreen() {
       }}
     >
       <OnboardingHeader 
-        currentStep={17}
-        totalSteps={5}
+        currentStep={20}
+        totalSteps={26}
       />
 
       <Animated.View 

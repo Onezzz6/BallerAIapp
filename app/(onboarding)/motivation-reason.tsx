@@ -33,8 +33,8 @@ export default function MotivationReasonScreen() {
         }}
       >
         <OnboardingHeader 
-          currentStep={20}
-          totalSteps={5}
+          currentStep={25}
+          totalSteps={26}
         />
 
         <Animated.View 

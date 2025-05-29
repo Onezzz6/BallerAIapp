@@ -45,8 +45,8 @@ export default function TrainingFrequencyScreen() {
       }}
     >
       <OnboardingHeader 
-        currentStep={18}
-        totalSteps={5}
+        currentStep={22}
+        totalSteps={26}
       />
 
       <Animated.View 

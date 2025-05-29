@@ -45,8 +45,8 @@ export default function FootballGoalScreen() {
       }}
     >
       <OnboardingHeader 
-        currentStep={16}
-        totalSteps={5}
+        currentStep={19}
+        totalSteps={26}
       />
 
       <Animated.View 

@@ -20,8 +20,8 @@ export default function AgeScreen() {
       }}
     >
       <OnboardingHeader 
-        currentStep={3}
-        totalSteps={5}
+        currentStep={4}
+        totalSteps={26}
       />
 
       <Animated.View 

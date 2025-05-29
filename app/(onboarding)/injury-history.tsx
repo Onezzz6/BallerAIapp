@@ -34,8 +34,8 @@ export default function InjuryHistoryScreen() {
           }}
         >
           <OnboardingHeader 
-            currentStep={6}
-            totalSteps={5}
+            currentStep={7}
+            totalSteps={26}
           />
 
           <Animated.View 

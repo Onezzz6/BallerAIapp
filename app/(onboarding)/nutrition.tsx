@@ -19,8 +19,8 @@ export default function NutritionScreen() {
       }}
     >
       <OnboardingHeader 
-        currentStep={14}
-        totalSteps={5}
+        currentStep={17}
+        totalSteps={26}
       />
 
       <Animated.View 

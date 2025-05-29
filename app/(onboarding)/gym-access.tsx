@@ -15,7 +15,7 @@ export default function GymAccessScreen() {
   const handleContinue = async () => {
     if (selected !== null) {
       await updateOnboardingData({ hasGymAccess: selected });
-      router.push('/motivation-reason');
+      router.push('/social-proof');
     }
   };
 
@@ -26,8 +26,8 @@ export default function GymAccessScreen() {
       }}
     >
       <OnboardingHeader 
-        currentStep={19}
-        totalSteps={5}
+        currentStep={23}
+        totalSteps={26}
       />
 
       <Animated.View 

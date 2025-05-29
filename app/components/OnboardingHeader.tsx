@@ -6,13 +6,13 @@ import Animated, { FadeIn, FadeOut, PinwheelIn } from 'react-native-reanimated';
 type Props = {
   currentStep: number;
   totalSteps: number;
+  customBackPath?: string;
 }
 
-export default function OnboardingHeader({ currentStep, totalSteps }: Props) {
+export default function OnboardingHeader({ currentStep, totalSteps, customBackPath }: Props) {
   const router = useRouter();
-  // We have 20 total steps in the onboarding flow
-  const TOTAL_ONBOARDING_STEPS = 20;
-  const progress = (currentStep / TOTAL_ONBOARDING_STEPS) * 100;
+  // Calculate progress based on the totalSteps prop
+  const progress = Math.min((currentStep / totalSteps) * 100, 100);
 
   return (
     <View style={{ 
@@ -27,7 +27,7 @@ export default function OnboardingHeader({ currentStep, totalSteps }: Props) {
         justifyContent: 'space-between',
         height: 92, // Fixed height for consistency
       }}>
-        <BackButton />
+        <BackButton customBackPath={customBackPath} />
         
         <View style={{
           flexDirection: 'row',

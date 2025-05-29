@@ -24,8 +24,8 @@ export default function UsernameScreen() {
         }}
       >
         <OnboardingHeader 
-          currentStep={1}
-          totalSteps={5}
+          currentStep={2}
+          totalSteps={26}
         />
 
         <Animated.View 

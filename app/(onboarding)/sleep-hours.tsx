@@ -20,8 +20,8 @@ export default function SleepHoursScreen() {
       }}
     >
       <OnboardingHeader 
-        currentStep={13}
-        totalSteps={5}
+        currentStep={16}
+        totalSteps={26}
       />
 
       <Animated.View  

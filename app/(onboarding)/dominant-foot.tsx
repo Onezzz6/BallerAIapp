@@ -19,8 +19,8 @@ export default function DominantFootScreen() {
       }}
     >
       <OnboardingHeader 
-        currentStep={5}
-        totalSteps={5}
+        currentStep={6}
+        totalSteps={26}
       />
 
       <Animated.View 

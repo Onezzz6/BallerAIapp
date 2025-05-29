@@ -47,8 +47,8 @@ export default function ActivityLevelScreen() {
       }}
     >
       <OnboardingHeader 
-        currentStep={12}
-        totalSteps={5}
+        currentStep={15}
+        totalSteps={26}
       />
 
       <Animated.View 

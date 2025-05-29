@@ -37,8 +37,8 @@ export default function SkillLevelScreen() {
       }}
     >
       <OnboardingHeader 
-        currentStep={7}
-        totalSteps={5}
+        currentStep={8}
+        totalSteps={26}
       />
 
       <Animated.View 

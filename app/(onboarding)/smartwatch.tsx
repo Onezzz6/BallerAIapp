@@ -26,8 +26,8 @@ export default function SmartwatchScreen() {
       }}
     >
       <OnboardingHeader 
-        currentStep={15}
-        totalSteps={5}
+        currentStep={18}
+        totalSteps={26}
       />
 
       <Animated.View 

@@ -25,8 +25,8 @@ export default function MeasurementsScreen() {
           }}
         >
           <OnboardingHeader 
-            currentStep={4}
-            totalSteps={5}
+            currentStep={5}
+            totalSteps={26}
           />
 
           <Animated.View 

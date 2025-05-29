@@ -5,6 +5,7 @@ import Button from '../components/Button';
 import BackButton from '../components/BackButton';
 import analytics from '@react-native-firebase/analytics';
 import ScrollIfNeeded from '../components/ScrollIfNeeded';
+import OnboardingHeader from '../components/OnboardingHeader';
 
 export default function AmbitionTransitionScreen() {
   const router = useRouter();
@@ -13,13 +14,18 @@ export default function AmbitionTransitionScreen() {
     <ScrollIfNeeded
       style={{
         backgroundColor: '#ffffff',
-        padding: 24,
       }}
     >
+      <OnboardingHeader 
+        currentStep={21}
+        totalSteps={26}
+      />
+
       <Animated.View 
         entering={FadeIn.duration(500)}
         style={{
           flex: 1,
+          backgroundColor: '#ffffff',
         }}
       >
         {/* Mascot */}
@@ -28,7 +34,8 @@ export default function AmbitionTransitionScreen() {
           justifyContent: 'center',
           alignItems: 'center',
           gap: 32,
-        }}>
+          paddingHorizontal: 24,
+          }}>
           <Image 
             source={require('../../assets/images/mascot.png')}
             style={{
