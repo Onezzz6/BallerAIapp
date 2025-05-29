@@ -4,10 +4,31 @@ import Animated, { FadeInRight, FadeIn, FadeInUp } from 'react-native-reanimated
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import ScrollIfNeeded from '../components/ScrollIfNeeded';
-import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
 
 export default function SocialProofScreen() {
   const router = useRouter();
+  const [currentPage, setCurrentPage] = useState(0);
+
+  const handleScroll = (event: any) => {
+    const scrollPosition = event.nativeEvent.contentOffset.x;
+    // Define the snap positions that correspond to each image being centered
+    const snapPositions = [0, 320, 640, 960];
+    
+    // Find the closest snap position to determine the current page
+    let closestIndex = 0;
+    let minDistance = Math.abs(scrollPosition - snapPositions[0]);
+    
+    for (let i = 1; i < snapPositions.length; i++) {
+      const distance = Math.abs(scrollPosition - snapPositions[i]);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestIndex = i;
+      }
+    }
+    
+    setCurrentPage(closestIndex);
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
@@ -49,130 +70,119 @@ export default function SocialProofScreen() {
               textAlign: 'center',
               lineHeight: 22,
             }} allowFontScaling={false}>
-              See what they're saying about it
+              Swipe to see what they're saying →
             </Text>
           </Animated.View>
 
-          {/* Instagram DM Screenshots Container */}
+          {/* Instagram DM Screenshots Carousel */}
           <View style={{
-            paddingHorizontal: 24,
             marginBottom: 32,
           }}>
-            {/* First Row - DM1 and DM2 */}
-            <View style={{
-              flexDirection: 'row',
-              gap: 16,
-              marginBottom: 16,
-            }}>
+            <ScrollView
+              horizontal
+              pagingEnabled={false}
+              showsHorizontalScrollIndicator={false}
+              style={{
+                height: 400,
+              }}
+              contentContainerStyle={{
+                paddingHorizontal: 60,
+              }}
+              snapToOffsets={[0, 320, 640, 960]}
+              snapToAlignment="center"
+              decelerationRate="fast"
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
+            >
               <Animated.View
                 entering={FadeInUp.duration(400).delay(100)}
                 style={{
-                  flex: 1,
-                  borderRadius: 16,
+                  width: 300,
+                  height: 400,
+                  borderRadius: 20,
                   overflow: 'hidden',
+                  marginHorizontal: 10,
                   shadowColor: '#000',
                   shadowOffset: {
                     width: 0,
-                    height: 4,
+                    height: 6,
                   },
-                  shadowOpacity: 0.15,
-                  shadowRadius: 12,
-                  elevation: 5,
+                  shadowOpacity: 0.2,
+                  shadowRadius: 15,
+                  elevation: 8,
                   backgroundColor: '#FFFFFF',
                   borderWidth: 1,
                   borderColor: '#E5E5E5',
-                  height: 200,
                 }}
               >
                 <Image 
                   source={require('../../assets/images/dm1.png')}
                   style={{
                     width: '100%',
-                    height: 200,
-                    resizeMode: 'cover',
+                    height: '100%',
+                    resizeMode: 'contain',
                   }}
                 />
-                <View style={{
-                  position: 'absolute',
-                  top: 8,
-                  right: 8,
-                  backgroundColor: '#99E86C',
-                  paddingHorizontal: 10,
-                  paddingVertical: 4,
-                  borderRadius: 16,
-                }}>
-                  <Text style={{
-                    fontSize: 11,
-                    fontWeight: '600',
-                    color: '#FFFFFF',
-                  }}>
-                    Verified
-                  </Text>
-                </View>
               </Animated.View>
 
               <Animated.View
                 entering={FadeInUp.duration(400).delay(200)}
                 style={{
-                  flex: 1,
-                  borderRadius: 16,
+                  width: 300,
+                  height: 400,
+                  borderRadius: 20,
                   overflow: 'hidden',
+                  marginHorizontal: 10,
                   shadowColor: '#000',
                   shadowOffset: {
                     width: 0,
-                    height: 4,
+                    height: 6,
                   },
-                  shadowOpacity: 0.15,
-                  shadowRadius: 12,
-                  elevation: 5,
+                  shadowOpacity: 0.2,
+                  shadowRadius: 15,
+                  elevation: 8,
                   backgroundColor: '#FFFFFF',
                   borderWidth: 1,
                   borderColor: '#E5E5E5',
-                  height: 200,
                 }}
               >
                 <Image 
                   source={require('../../assets/images/dm2.png')}
                   style={{
                     width: '100%',
-                    height: 200,
-                    resizeMode: 'cover',
+                    height: '100%',
+                    resizeMode: 'contain',
                   }}
                 />
               </Animated.View>
-            </View>
 
-            {/* Second Row - DM3 and DM4 */}
-            <View style={{
-              flexDirection: 'row',
-              gap: 16,
-            }}>
               <Animated.View
                 entering={FadeInUp.duration(400).delay(300)}
                 style={{
-                  flex: 1,
-                  borderRadius: 16,
+                  width: 300,
+                  height: 400,
+                  borderRadius: 20,
                   overflow: 'hidden',
+                  marginHorizontal: 10,
                   shadowColor: '#000',
                   shadowOffset: {
                     width: 0,
-                    height: 4,
+                    height: 6,
                   },
-                  shadowOpacity: 0.15,
-                  shadowRadius: 12,
-                  elevation: 5,
+                  shadowOpacity: 0.2,
+                  shadowRadius: 15,
+                  elevation: 8,
                   backgroundColor: '#FFFFFF',
                   borderWidth: 1,
                   borderColor: '#E5E5E5',
-                  height: 200,
                 }}
               >
                 <Image 
                   source={require('../../assets/images/dm3.png')}
                   style={{
                     width: '100%',
-                    height: 200,
-                    resizeMode: 'cover',
+                    height: '100%',
+                    resizeMode: 'contain',
                   }}
                 />
               </Animated.View>
@@ -180,162 +190,56 @@ export default function SocialProofScreen() {
               <Animated.View
                 entering={FadeInUp.duration(400).delay(400)}
                 style={{
-                  flex: 1,
-                  borderRadius: 16,
+                  width: 300,
+                  height: 400,
+                  borderRadius: 20,
                   overflow: 'hidden',
+                  marginHorizontal: 10,
                   shadowColor: '#000',
                   shadowOffset: {
                     width: 0,
-                    height: 4,
+                    height: 6,
                   },
-                  shadowOpacity: 0.15,
-                  shadowRadius: 12,
-                  elevation: 5,
+                  shadowOpacity: 0.2,
+                  shadowRadius: 15,
+                  elevation: 8,
                   backgroundColor: '#FFFFFF',
                   borderWidth: 1,
                   borderColor: '#E5E5E5',
-                  height: 200,
                 }}
               >
                 <Image 
                   source={require('../../assets/images/dm4.png')}
                   style={{
                     width: '100%',
-                    height: 200,
+                    height: '100%',
                     resizeMode: 'contain',
-                    backgroundColor: '#FFFFFF',
                   }}
                 />
               </Animated.View>
+            </ScrollView>
+
+            {/* Pagination Dots */}
+            <View style={{
+              flexDirection: 'row',
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginTop: 20,
+              gap: 12,
+            }}>
+              {[0, 1, 2, 3].map((index) => (
+                <Animated.View
+                  key={index}
+                  style={{
+                    width: index === currentPage ? 16 : 12,
+                    height: index === currentPage ? 16 : 12,
+                    borderRadius: index === currentPage ? 8 : 6,
+                    backgroundColor: index === currentPage ? '#4064F6' : '#E5E5E5',
+                  }}
+                />
+              ))}
             </View>
           </View>
-
-          {/* Key Highlights */}
-          <Animated.View
-            entering={FadeIn.duration(400).delay(400)}
-            style={{
-              paddingHorizontal: 24,
-              marginBottom: 32,
-            }}
-          >
-            <View style={{
-              backgroundColor: '#F8F8F8',
-              borderRadius: 16,
-              padding: 20,
-            }}>
-              <Text style={{
-                fontSize: 18,
-                fontWeight: '600',
-                color: '#000000',
-                marginBottom: 16,
-                textAlign: 'center',
-              }}>
-                What Players Are Saying
-              </Text>
-              
-              <View style={{ gap: 12 }}>
-                <View style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 12,
-                }}>
-                  <View style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 20,
-                    backgroundColor: '#DCF4F5',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}>
-                    <Ionicons name="fitness" size={20} color="#4064F6" />
-                  </View>
-                  <Text style={{
-                    flex: 1,
-                    fontSize: 15,
-                    color: '#333333',
-                    lineHeight: 20,
-                  }}>
-                    "Like having a mini physio and nutritionist"
-                  </Text>
-                </View>
-
-                <View style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 12,
-                }}>
-                  <View style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 20,
-                    backgroundColor: '#FFE8E8',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}>
-                    <Ionicons name="trophy" size={20} color="#FF6B6B" />
-                  </View>
-                  <Text style={{
-                    flex: 1,
-                    fontSize: 15,
-                    color: '#333333',
-                    lineHeight: 20,
-                  }}>
-                    "Got named in the starting 11"
-                  </Text>
-                </View>
-
-                <View style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 12,
-                }}>
-                  <View style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 20,
-                    backgroundColor: '#E8FFE8',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}>
-                    <Ionicons name="trending-up" size={20} color="#99E86C" />
-                  </View>
-                  <Text style={{
-                    flex: 1,
-                    fontSize: 15,
-                    color: '#333333',
-                    lineHeight: 20,
-                  }}>
-                    "Improving fast but legs still fresh on game days"
-                  </Text>
-                </View>
-
-                <View style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 12,
-                }}>
-                  <View style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 20,
-                    backgroundColor: '#E8F0FF',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}>
-                    <Ionicons name="heart" size={20} color="#4064F6" />
-                  </View>
-                  <Text style={{
-                    flex: 1,
-                    fontSize: 15,
-                    color: '#333333',
-                    lineHeight: 20,
-                  }}>
-                    "Recovery is made so easy that its kinda fun"
-                  </Text>
-                </View>
-              </View>
-            </View>
-          </Animated.View>
 
           {/* Continue Button */}
           <View style={{
