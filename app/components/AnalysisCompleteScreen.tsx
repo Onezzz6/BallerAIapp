@@ -66,7 +66,7 @@ export default function AnalysisCompleteScreen() {
           </Text>
 
           <Button 
-            title="Let's Continue" 
+            title="Continue" 
             onPress={async () => {
               await analytics().logEvent('onboarding_analysis_complete_continue');
               router.push('/fitness-level');
