@@ -604,8 +604,8 @@ const styles = StyleSheet.create({
   },
   drillText: {
     flex: 1,
-    fontSize: 14,
-    lineHeight: 22,
+    fontSize: 16,
+    lineHeight: 24,
     color: '#333333',
   },
   drillTextCompleted: {
@@ -625,7 +625,7 @@ const styles = StyleSheet.create({
   },
   subItemText: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 15,
     lineHeight: 22,
     color: '#666666',
   },

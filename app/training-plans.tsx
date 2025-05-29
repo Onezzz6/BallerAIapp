@@ -287,8 +287,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8F8F8',
   },
   planText: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 16,
+    lineHeight: 24,
     color: '#333333',
   },
   loadingContainer: {
