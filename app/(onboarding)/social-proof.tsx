@@ -13,7 +13,7 @@ export default function SocialProofScreen() {
   const handleScroll = (event: any) => {
     const scrollPosition = event.nativeEvent.contentOffset.x;
     // Define the snap positions that correspond to each image being centered
-    const snapPositions = [0, 320, 640, 960];
+    const snapPositions = [0, 320, 640, 960, 1280];
     
     // Find the closest snap position to determine the current page
     let closestIndex = 0;
@@ -62,7 +62,7 @@ export default function SocialProofScreen() {
               textAlign: 'center',
               marginBottom: 12,
             }} allowFontScaling={false}>
-              Players Are Already Using the Newest Tech
+              Players Are Already Using BallerAI
             </Text>
             <Text style={{
               fontSize: 16,
@@ -70,7 +70,7 @@ export default function SocialProofScreen() {
               textAlign: 'center',
               lineHeight: 22,
             }} allowFontScaling={false}>
-              Swipe to see what they're saying →
+              See what they're saying about the newest tech →
             </Text>
           </Animated.View>
 
@@ -88,7 +88,7 @@ export default function SocialProofScreen() {
               contentContainerStyle={{
                 paddingHorizontal: 60,
               }}
-              snapToOffsets={[0, 320, 640, 960]}
+              snapToOffsets={[0, 320, 640, 960, 1280]}
               snapToAlignment="center"
               decelerationRate="fast"
               onScroll={handleScroll}
@@ -147,7 +147,7 @@ export default function SocialProofScreen() {
                 }}
               >
                 <Image 
-                  source={require('../../assets/images/dm2.png')}
+                  source={require('../../assets/images/dm5.png')}
                   style={{
                     width: '100%',
                     height: '100%',
@@ -178,7 +178,7 @@ export default function SocialProofScreen() {
                 }}
               >
                 <Image 
-                  source={require('../../assets/images/dm3.png')}
+                  source={require('../../assets/images/dm2.png')}
                   style={{
                     width: '100%',
                     height: '100%',
@@ -217,6 +217,37 @@ export default function SocialProofScreen() {
                   }}
                 />
               </Animated.View>
+
+              <Animated.View
+                entering={FadeInUp.duration(400).delay(500)}
+                style={{
+                  width: 300,
+                  height: 400,
+                  borderRadius: 20,
+                  overflow: 'hidden',
+                  marginHorizontal: 10,
+                  shadowColor: '#000',
+                  shadowOffset: {
+                    width: 0,
+                    height: 6,
+                  },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 15,
+                  elevation: 8,
+                  backgroundColor: '#FFFFFF',
+                  borderWidth: 1,
+                  borderColor: '#E5E5E5',
+                }}
+              >
+                <Image 
+                  source={require('../../assets/images/dm3.png')}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    resizeMode: 'contain',
+                  }}
+                />
+              </Animated.View>
             </ScrollView>
 
             {/* Pagination Dots */}
@@ -227,7 +258,7 @@ export default function SocialProofScreen() {
               marginTop: 20,
               gap: 12,
             }}>
-              {[0, 1, 2, 3].map((index) => (
+              {[0, 1, 2, 3, 4].map((index) => (
                 <Animated.View
                   key={index}
                   style={{
