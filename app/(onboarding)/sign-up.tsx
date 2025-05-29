@@ -14,6 +14,7 @@ import { runPostLoginSequence, markAuthenticationComplete } from './paywall';
 import { PAYWALL_RESULT } from 'react-native-purchases-ui';
 import { usePathname } from 'expo-router';
 import ScrollIfNeeded from '../components/ScrollIfNeeded';
+import * as StoreReview from 'expo-store-review';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -33,6 +34,30 @@ export default function SignUpScreen() {
     };
     
     checkAppleAuthAvailability();
+  }, []);
+
+  // Request app review when user reaches sign-up page
+  useEffect(() => {
+    const requestReview = async () => {
+      try {
+        // Check if review is available on this platform
+        const isAvailable = await StoreReview.isAvailableAsync();
+        
+        if (isAvailable) {
+          // Small delay to ensure the UI is fully rendered
+          setTimeout(async () => {
+            await StoreReview.requestReview();
+            
+            // Log analytics event for review request
+            await analytics().logEvent('review_requested_onboarding');
+          }, 1000);
+        }
+      } catch (error) {
+        console.log('Error requesting review:', error);
+      }
+    };
+
+    requestReview();
   }, []);
 
   const handleSubmit = async () => {
