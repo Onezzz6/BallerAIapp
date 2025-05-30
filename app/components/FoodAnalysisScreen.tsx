@@ -1,15 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, StyleSheet, StatusBar } from 'react-native';
+import { View, Text, Image, StyleSheet, StatusBar, Dimensions, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { 
   FadeIn, 
   FadeInDown, 
   useSharedValue, 
   useAnimatedStyle, 
-  withRepeat, 
   withTiming,
-  Easing
+  Easing,
+  useAnimatedProps,
+  interpolate,
+  withRepeat,
+  withSequence
 } from 'react-native-reanimated';
+import Svg, { Circle } from 'react-native-svg';
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+const { width: screenWidth } = Dimensions.get('window');
 
 interface FoodAnalysisScreenProps {
   visible: boolean;
@@ -17,73 +24,137 @@ interface FoodAnalysisScreenProps {
   onAnalysisComplete?: () => void;
 }
 
-const analysisMessages = [
-  "Analyzing your meal...",
-  "Identifying ingredients...",
-  "Comparing with our database...",
-  "Calculating nutrition values...",
-  "Gathering all ingredients...",
-  "Finalizing your meal profile...",
-  "Almost there..."
+const analysisSteps = [
+  { text: "Identifying items...", duration: 2000 },
+  { text: "Comparing to our database...", duration: 2500 },
+  { text: "Calculating nutrition values...", duration: 2000 },
+  { text: "Finalizing results...", duration: 1500 }
 ];
 
 export default function FoodAnalysisScreen({ visible, imageUri, onAnalysisComplete }: FoodAnalysisScreenProps) {
-  const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
+  const [currentStep, setCurrentStep] = useState(0);
+  const progress = useSharedValue(0);
   
-  // Animation values
-  const rotation = useSharedValue(0);
-  const scale = useSharedValue(1);
-  const opacity = useSharedValue(0.3);
+  // Animation values for placeholder lines
+  const shimmerPosition = useSharedValue(0);
+  const lineWidth1 = useSharedValue(0.7);
+  const lineWidth2 = useSharedValue(0.5);
+  const lineWidth3 = useSharedValue(0.6);
+  
+  // Total duration for all steps
+  const totalDuration = analysisSteps.reduce((sum, step) => sum + step.duration, 0);
 
   useEffect(() => {
     if (visible) {
-      // Start rotation animation
-      rotation.value = withRepeat(
-        withTiming(360, { duration: 3000, easing: Easing.linear }),
+      // Reset values
+      setCurrentStep(0);
+      progress.value = 0;
+      
+      // Start shimmer animation
+      shimmerPosition.value = withRepeat(
+        withTiming(1, { duration: 1500, easing: Easing.linear }),
         -1,
         false
       );
-
-      // Start pulsing animation
-      scale.value = withRepeat(
-        withTiming(1.1, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+      
+      // Animate line widths
+      lineWidth1.value = withRepeat(
+        withSequence(
+          withTiming(0.9, { duration: 1000 }),
+          withTiming(0.6, { duration: 1000 })
+        ),
         -1,
         true
       );
-
-      opacity.value = withRepeat(
-        withTiming(0.8, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+      
+      lineWidth2.value = withRepeat(
+        withSequence(
+          withTiming(0.8, { duration: 1200 }),
+          withTiming(0.4, { duration: 1200 })
+        ),
         -1,
         true
       );
-
-      // Cycle through messages
-      const messageInterval = setInterval(() => {
-        setCurrentMessageIndex((prev) => {
-          if (prev === analysisMessages.length - 1) {
-            return 0;
-          }
-          return prev + 1;
-        });
-      }, 2000);
-
+      
+      lineWidth3.value = withRepeat(
+        withSequence(
+          withTiming(0.7, { duration: 800 }),
+          withTiming(0.5, { duration: 800 })
+        ),
+        -1,
+        true
+      );
+      
+      // Animate progress from 0 to 1
+      progress.value = withTiming(1, {
+        duration: totalDuration,
+        easing: Easing.linear
+      });
+      
+      // Cycle through steps
+      let currentTime = 0;
+      const timeouts: NodeJS.Timeout[] = [];
+      
+      analysisSteps.forEach((step, index) => {
+        const timeout = setTimeout(() => {
+          setCurrentStep(index);
+        }, currentTime);
+        timeouts.push(timeout);
+        currentTime += step.duration;
+      });
+      
+      // Call completion callback if provided
+      if (onAnalysisComplete) {
+        const completionTimeout = setTimeout(() => {
+          onAnalysisComplete();
+        }, totalDuration);
+        timeouts.push(completionTimeout);
+      }
+      
       return () => {
-        clearInterval(messageInterval);
+        timeouts.forEach(timeout => clearTimeout(timeout));
       };
     }
   }, [visible]);
 
-  const animatedRingStyle = useAnimatedStyle(() => {
+  const animatedCircleProps = useAnimatedProps(() => {
+    const strokeDashoffset = interpolate(
+      progress.value,
+      [0, 1],
+      [2 * Math.PI * 40, 0]
+    );
+    
     return {
-      transform: [{ rotate: `${rotation.value}deg` }, { scale: scale.value }],
-      opacity: opacity.value,
+      strokeDashoffset
     };
   });
 
-  const animatedInnerRingStyle = useAnimatedStyle(() => {
+  const percentageStyle = useAnimatedStyle(() => {
+    const percentage = Math.round(progress.value * 100);
     return {
-      transform: [{ rotate: `${-rotation.value * 0.7}deg` }],
-      opacity: opacity.value * 0.6,
+      opacity: 1
+    };
+  });
+  
+  // Animated styles for placeholder lines
+  const animatedLine1Style = useAnimatedStyle(() => {
+    return {
+      width: `${lineWidth1.value * 100}%`,
+      opacity: interpolate(shimmerPosition.value, [0, 0.5, 1], [0.5, 1, 0.5])
+    };
+  });
+  
+  const animatedLine2Style = useAnimatedStyle(() => {
+    return {
+      width: lineWidth2.value * 120,
+      opacity: interpolate(shimmerPosition.value, [0, 0.5, 1], [0.7, 0.5, 0.7])
+    };
+  });
+  
+  const animatedLine3Style = useAnimatedStyle(() => {
+    return {
+      width: lineWidth3.value * 100,
+      opacity: interpolate(shimmerPosition.value, [0, 0.5, 1], [0.6, 0.8, 0.6])
     };
   });
 
@@ -93,151 +164,136 @@ export default function FoodAnalysisScreen({ visible, imageUri, onAnalysisComple
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
       
-      <LinearGradient
-        colors={['#FFFFFF', '#F0F8FF']}
-        style={styles.gradient}
+      {/* Position in the logged meals area */}
+      <ScrollView 
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
+        {/* Logged Today header */}
+        <Text style={styles.loggedTodayTitle}>Logged Today</Text>
+        
+        {/* Analysis card positioned where meals get logged */}
         <Animated.View 
-          style={styles.header}
-          entering={FadeInDown.duration(400)}
+          style={styles.analysisCard}
+          entering={FadeIn.duration(400)}
         >
-          <Text style={styles.title}>Analyzing Your Meal</Text>
-          <Text style={styles.subtitle}>Please wait while we process your photo</Text>
-        </Animated.View>
-
-        {/* Photo Preview with Animation */}
-        <Animated.View 
-          style={styles.photoContainer}
-          entering={FadeIn.duration(600).delay(200)}
-        >
-          {/* Outer animated ring */}
-          <Animated.View style={[styles.outerRing, animatedRingStyle]} />
-          
-          {/* Inner animated ring */}
-          <Animated.View style={[styles.innerRing, animatedInnerRingStyle]} />
-          
-          {/* Photo */}
-          <View style={styles.photoWrapper}>
+          {/* Left side - Greyed out photo with progress */}
+          <View style={styles.photoSection}>
             <Image source={{ uri: imageUri }} style={styles.photo} />
             <View style={styles.photoOverlay} />
+            
+            {/* Circular progress over the photo */}
+            <View style={styles.progressContainer}>
+              <Svg width={90} height={90} style={styles.progressSvg}>
+                {/* Background circle */}
+                <Circle
+                  cx={45}
+                  cy={45}
+                  r={40}
+                  stroke="rgba(255, 255, 255, 0.2)"
+                  strokeWidth={6}
+                  fill="transparent"
+                />
+                {/* Progress circle */}
+                <AnimatedCircle
+                  cx={45}
+                  cy={45}
+                  r={40}
+                  stroke="#FFFFFF"
+                  strokeWidth={6}
+                  fill="transparent"
+                  strokeLinecap="round"
+                  strokeDasharray={`${2 * Math.PI * 40}`}
+                  animatedProps={animatedCircleProps}
+                  transform="rotate(-90 45 45)"
+                />
+              </Svg>
+              <Animated.Text style={[styles.percentageText, percentageStyle]}>
+                {`${Math.round(progress.value * 100)}%`}
+              </Animated.Text>
+            </View>
+          </View>
+
+          {/* Right side - Content with animated placeholders */}
+          <View style={styles.contentSection}>
+            {/* Step text */}
+            <Animated.Text 
+              key={currentStep}
+              style={styles.stepText}
+              entering={FadeIn.duration(300)}
+            >
+              {analysisSteps[currentStep]?.text || "Processing..."}
+            </Animated.Text>
+            
+            {/* Animated placeholder lines */}
+            <View style={styles.placeholderContainer}>
+              <Animated.View style={[styles.placeholderLine, animatedLine1Style]} />
+              <Animated.View style={[styles.placeholderLine, styles.secondLine, animatedLine2Style]} />
+            </View>
+
+            {/* Animated macro placeholders */}
+            <View style={styles.macrosRow}>
+              <View style={styles.macroPlaceholder}>
+                <View style={styles.macroIcon} />
+                <Animated.View style={[styles.placeholderLine, styles.macroLine, animatedLine3Style]} />
+              </View>
+              <View style={styles.macroPlaceholder}>
+                <View style={styles.macroIcon} />
+                <Animated.View style={[styles.placeholderLine, styles.macroLine, animatedLine2Style]} />
+              </View>
+              <View style={styles.macroPlaceholder}>
+                <View style={styles.macroIcon} />
+                <Animated.View style={[styles.placeholderLine, styles.macroLine, animatedLine1Style]} />
+              </View>
+            </View>
           </View>
         </Animated.View>
-
-        {/* Analysis Status */}
-        <Animated.View 
-          style={styles.statusContainer}
-          entering={FadeInDown.duration(400).delay(400)}
-        >
-          <View style={styles.mascotContainer}>
-            <Image 
-              source={require('../../assets/images/mascot.png')}
-              style={styles.mascot}
-              resizeMode="contain"
-            />
-          </View>
-          
-          <Animated.Text 
-            key={currentMessageIndex}
-            style={styles.analysisMessage}
-            entering={FadeIn.duration(300)}
-          >
-            {analysisMessages[currentMessageIndex]}
-          </Animated.Text>
-
-          {/* Progress dots */}
-          <View style={styles.progressDots}>
-            {analysisMessages.map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.dot,
-                  index === currentMessageIndex && styles.activeDot
-                ]}
-              />
-            ))}
-          </View>
-        </Animated.View>
-
-        {/* Bottom tip */}
-        <Animated.View 
-          style={styles.tipContainer}
-          entering={FadeInDown.duration(400).delay(600)}
-        >
-          <Text style={styles.tipText}>
-            💡 For best results, ensure your food is well-lit and clearly visible
-          </Text>
-        </Animated.View>
-      </LinearGradient>
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+    zIndex: 1000,
   },
-  gradient: {
+  scrollContainer: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingTop: 340, // Position below the nutrition header and stats
     paddingHorizontal: 24,
+    paddingBottom: 100,
   },
-  header: {
-    alignItems: 'center',
-    paddingTop: 80,
-    marginBottom: 40,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
+  loggedTodayTitle: {
+    fontSize: 20,
+    fontWeight: '600',
     color: '#000000',
-    textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#666666',
-    textAlign: 'center',
-  },
-  photoContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 50,
-    position: 'relative',
-  },
-  outerRing: {
-    position: 'absolute',
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    borderWidth: 3,
-    borderColor: '#4064F6',
-    borderTopColor: 'transparent',
-    borderRightColor: 'transparent',
-  },
-  innerRing: {
-    position: 'absolute',
-    width: 240,
-    height: 240,
-    borderRadius: 120,
-    borderWidth: 2,
-    borderColor: '#FFD93D',
-    borderBottomColor: 'transparent',
-    borderLeftColor: 'transparent',
-  },
-  photoWrapper: {
-    width: 200,
-    height: 200,
-    borderRadius: 20,
+  analysisCard: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    minHeight: 140,
+  },
+  photoSection: {
+    width: 140,
+    height: 140,
+    position: 'relative',
   },
   photo: {
     width: '100%',
@@ -250,58 +306,64 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(64, 100, 246, 0.1)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
-  statusContainer: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  mascotContainer: {
-    marginBottom: 20,
-  },
-  mascot: {
-    width: 60,
-    height: 60,
-  },
-  analysisMessage: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000000',
-    textAlign: 'center',
-    marginBottom: 20,
-    minHeight: 22,
-  },
-  progressDots: {
-    flexDirection: 'row',
+  progressContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
   },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#E5E5E5',
-  },
-  activeDot: {
-    backgroundColor: '#4064F6',
-    transform: [{ scale: 1.3 }],
-  },
-  tipContainer: {
+  progressSvg: {
     position: 'absolute',
-    bottom: 60,
-    left: 24,
-    right: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
   },
-  tipText: {
+  percentageText: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  contentSection: {
+    flex: 1,
+    padding: 16,
+    justifyContent: 'center',
+  },
+  stepText: {
     fontSize: 14,
-    color: '#666666',
-    textAlign: 'center',
-    lineHeight: 20,
+    color: '#4064F6',
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  placeholderContainer: {
+    marginBottom: 16,
+  },
+  placeholderLine: {
+    height: 12,
+    backgroundColor: '#E8E8E8',
+    borderRadius: 6,
+  },
+  secondLine: {
+    marginTop: 8,
+    height: 10,
+  },
+  macrosRow: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  macroPlaceholder: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  macroIcon: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#E8E8E8',
+  },
+  macroLine: {
+    height: 10,
   },
 }); 

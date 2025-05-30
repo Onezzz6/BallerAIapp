@@ -56,40 +56,12 @@ export default function MealEditModal({ visible, meal, onClose, onSave }: MealEd
     }
   }, [meal]);
 
-  const updateItemMacro = (itemIndex: number, macroType: keyof MealItem['macros'], value: string) => {
+  const updateTotalMacro = (macroType: keyof Meal['totalMacros'], value: string) => {
     if (!editedMeal) return;
 
     const numValue = parseFloat(value) || 0;
     const updatedMeal = { ...editedMeal };
-    updatedMeal.items[itemIndex].macros[macroType] = numValue;
-
-    // Recalculate total macros
-    updatedMeal.totalMacros = updatedMeal.items.reduce(
-      (total, item) => ({
-        calories: total.calories + item.macros.calories,
-        protein: total.protein + item.macros.protein,
-        carbs: total.carbs + item.macros.carbs,
-        fats: total.fats + item.macros.fats,
-      }),
-      { calories: 0, protein: 0, carbs: 0, fats: 0 }
-    );
-
-    setEditedMeal(updatedMeal);
-  };
-
-  const updateItemName = (itemIndex: number, name: string) => {
-    if (!editedMeal) return;
-
-    const updatedMeal = { ...editedMeal };
-    updatedMeal.items[itemIndex].name = name;
-    setEditedMeal(updatedMeal);
-  };
-
-  const updateItemPortion = (itemIndex: number, portion: string) => {
-    if (!editedMeal) return;
-
-    const updatedMeal = { ...editedMeal };
-    updatedMeal.items[itemIndex].portion = portion;
+    updatedMeal.totalMacros[macroType] = numValue;
     setEditedMeal(updatedMeal);
   };
 
@@ -150,36 +122,61 @@ export default function MealEditModal({ visible, meal, onClose, onSave }: MealEd
           </View>
 
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-            {/* Meal Info */}
+            {/* Total Section */}
             <Animated.View 
-              style={styles.mealInfoSection}
+              style={styles.totalSection}
               entering={FadeIn.duration(400).delay(200)}
             >
-              <View style={styles.mealHeader}>
-                {editedMeal.photoUri && (
-                  <Image source={{ uri: editedMeal.photoUri }} style={styles.mealPhoto} />
-                )}
-                <View style={styles.mealDetails}>
-                  <Text style={styles.mealTime}>{formatTime(editedMeal.timestamp)}</Text>
-                  <Text style={styles.totalCalories}>
-                    {Math.round(editedMeal.totalMacros.calories)} kcal total
-                  </Text>
+              <Text style={styles.totalTitle}>Total</Text>
+              
+              {/* Editable Total Macros */}
+              <View style={styles.editableTotalMacros}>
+                <View style={styles.totalMacroItem}>
+                  <Text style={styles.totalMacroEmoji}>🔥</Text>
+                  <TextInput
+                    style={styles.totalMacroInput}
+                    value={Math.round(editedMeal.totalMacros.calories).toString()}
+                    onChangeText={(text) => updateTotalMacro('calories', text)}
+                    keyboardType="numeric"
+                    placeholder="0"
+                  />
+                  <Text style={styles.totalMacroUnit}>kcal</Text>
                 </View>
-              </View>
 
-              {/* Total Macros Summary */}
-              <View style={styles.macrosSummary}>
-                <View style={styles.macroSummaryItem}>
-                  <Text style={styles.macroLabel}>Protein</Text>
-                  <Text style={styles.macroValue}>{Math.round(editedMeal.totalMacros.protein)}g</Text>
+                <View style={styles.totalMacroItem}>
+                  <Text style={styles.totalMacroEmoji}>🥩</Text>
+                  <TextInput
+                    style={styles.totalMacroInput}
+                    value={Math.round(editedMeal.totalMacros.protein).toString()}
+                    onChangeText={(text) => updateTotalMacro('protein', text)}
+                    keyboardType="numeric"
+                    placeholder="0"
+                  />
+                  <Text style={styles.totalMacroUnit}>g</Text>
                 </View>
-                <View style={styles.macroSummaryItem}>
-                  <Text style={styles.macroLabel}>Carbs</Text>
-                  <Text style={styles.macroValue}>{Math.round(editedMeal.totalMacros.carbs)}g</Text>
+
+                <View style={styles.totalMacroItem}>
+                  <Text style={styles.totalMacroEmoji}>🌾</Text>
+                  <TextInput
+                    style={styles.totalMacroInput}
+                    value={Math.round(editedMeal.totalMacros.carbs).toString()}
+                    onChangeText={(text) => updateTotalMacro('carbs', text)}
+                    keyboardType="numeric"
+                    placeholder="0"
+                  />
+                  <Text style={styles.totalMacroUnit}>g</Text>
                 </View>
-                <View style={styles.macroSummaryItem}>
-                  <Text style={styles.macroLabel}>Fats</Text>
-                  <Text style={styles.macroValue}>{Math.round(editedMeal.totalMacros.fats)}g</Text>
+
+                <View style={styles.totalMacroItem}>
+                  <Text style={styles.totalMacroEmoji}>🧈</Text>
+                  <TextInput
+                    style={styles.totalMacroInput}
+                    value={Math.round(editedMeal.totalMacros.fats).toString()}
+                    onChangeText={(text) => updateTotalMacro('fats', text)}
+                    keyboardType="numeric"
+                    placeholder="0"
+                  />
+                  <Text style={styles.totalMacroUnit}>g</Text>
                 </View>
               </View>
             </Animated.View>
@@ -193,63 +190,34 @@ export default function MealEditModal({ visible, meal, onClose, onSave }: MealEd
                 entering={FadeIn.duration(400).delay(300 + index * 100)}
               >
                 <View style={styles.foodItemHeader}>
-                  <TextInput
-                    style={styles.foodNameInput}
-                    value={item.name}
-                    onChangeText={(text) => updateItemName(index, text)}
-                    placeholder="Food name"
-                  />
-                  <TextInput
-                    style={styles.portionInput}
-                    value={item.portion}
-                    onChangeText={(text) => updateItemPortion(index, text)}
-                    placeholder="Portion"
-                  />
+                  <View style={styles.foodNameDisplay}>
+                    <Text style={styles.foodNameText}>{item.name}</Text>
+                  </View>
+                  <View style={styles.portionDisplay}>
+                    <Text style={styles.portionText}>{item.portion}</Text>
+                  </View>
                 </View>
 
-                <View style={styles.macroInputs}>
-                  <View style={styles.macroInputGroup}>
-                    <Text style={styles.macroInputLabel}>Calories</Text>
-                    <TextInput
-                      style={styles.macroInput}
-                      value={item.macros.calories.toString()}
-                      onChangeText={(text) => updateItemMacro(index, 'calories', text)}
-                      keyboardType="numeric"
-                      placeholder="0"
-                    />
+                {/* Non-editable macro values */}
+                <View style={styles.macroDisplay}>
+                  <View style={styles.macroDisplayItem}>
+                    <Text style={styles.macroDisplayLabel}>Calories</Text>
+                    <Text style={styles.macroDisplayValue}>{Math.round(item.macros.calories)}</Text>
                   </View>
 
-                  <View style={styles.macroInputGroup}>
-                    <Text style={styles.macroInputLabel}>Protein</Text>
-                    <TextInput
-                      style={styles.macroInput}
-                      value={item.macros.protein.toString()}
-                      onChangeText={(text) => updateItemMacro(index, 'protein', text)}
-                      keyboardType="numeric"
-                      placeholder="0"
-                    />
+                  <View style={styles.macroDisplayItem}>
+                    <Text style={styles.macroDisplayLabel}>Protein</Text>
+                    <Text style={styles.macroDisplayValue}>{Math.round(item.macros.protein)}</Text>
                   </View>
 
-                  <View style={styles.macroInputGroup}>
-                    <Text style={styles.macroInputLabel}>Carbs</Text>
-                    <TextInput
-                      style={styles.macroInput}
-                      value={item.macros.carbs.toString()}
-                      onChangeText={(text) => updateItemMacro(index, 'carbs', text)}
-                      keyboardType="numeric"
-                      placeholder="0"
-                    />
+                  <View style={styles.macroDisplayItem}>
+                    <Text style={styles.macroDisplayLabel}>Carbs</Text>
+                    <Text style={styles.macroDisplayValue}>{Math.round(item.macros.carbs)}</Text>
                   </View>
 
-                  <View style={styles.macroInputGroup}>
-                    <Text style={styles.macroInputLabel}>Fats</Text>
-                    <TextInput
-                      style={styles.macroInput}
-                      value={item.macros.fats.toString()}
-                      onChangeText={(text) => updateItemMacro(index, 'fats', text)}
-                      keyboardType="numeric"
-                      placeholder="0"
-                    />
+                  <View style={styles.macroDisplayItem}>
+                    <Text style={styles.macroDisplayLabel}>Fats</Text>
+                    <Text style={styles.macroDisplayValue}>{Math.round(item.macros.fats)}</Text>
                   </View>
                 </View>
               </Animated.View>
@@ -315,52 +283,44 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
   },
-  mealInfoSection: {
+  totalSection: {
     marginBottom: 24,
   },
-  mealHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  totalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#000000',
     marginBottom: 16,
   },
-  mealPhoto: {
-    width: 60,
-    height: 60,
-    borderRadius: 12,
-    marginRight: 16,
-  },
-  mealDetails: {
-    flex: 1,
-  },
-  mealTime: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
-    marginBottom: 4,
-  },
-  totalCalories: {
-    fontSize: 14,
-    color: '#666666',
-  },
-  macrosSummary: {
-    flexDirection: 'row',
+  editableTotalMacros: {
     backgroundColor: '#F8F9FA',
     borderRadius: 12,
     padding: 16,
+    gap: 12,
   },
-  macroSummaryItem: {
-    flex: 1,
+  totalMacroItem: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
   },
-  macroLabel: {
-    fontSize: 12,
-    color: '#666666',
-    marginBottom: 4,
+  totalMacroEmoji: {
+    fontSize: 20,
+    width: 28,
   },
-  macroValue: {
+  totalMacroInput: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
     fontSize: 16,
     fontWeight: '600',
-    color: '#000000',
+  },
+  totalMacroUnit: {
+    fontSize: 16,
+    color: '#666666',
+    width: 40,
   },
   sectionTitle: {
     fontSize: 18,
@@ -376,47 +336,52 @@ const styles = StyleSheet.create({
   },
   foodItemHeader: {
     flexDirection: 'row',
-    marginBottom: 16,
+    marginBottom: 12,
     gap: 12,
   },
-  foodNameInput: {
+  foodNameDisplay: {
     flex: 2,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#E5E5E5',
     padding: 12,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
-    fontSize: 16,
   },
-  portionInput: {
+  foodNameText: {
+    fontSize: 16,
+    color: '#000000',
+    fontWeight: '500',
+  },
+  portionDisplay: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#E5E5E5',
     padding: 12,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
-    fontSize: 16,
   },
-  macroInputs: {
+  portionText: {
+    fontSize: 16,
+    color: '#000000',
+    fontWeight: '500',
+  },
+  macroDisplay: {
     flexDirection: 'row',
     gap: 8,
   },
-  macroInputGroup: {
+  macroDisplayItem: {
     flex: 1,
+    alignItems: 'center',
   },
-  macroInputLabel: {
+  macroDisplayLabel: {
     fontSize: 12,
     color: '#666666',
     marginBottom: 4,
-    textAlign: 'center',
   },
-  macroInput: {
-    backgroundColor: '#FFFFFF',
-    padding: 10,
+  macroDisplayValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+    backgroundColor: '#E5E5E5',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
-    textAlign: 'center',
-    fontSize: 14,
+    overflow: 'hidden',
   },
 }); 

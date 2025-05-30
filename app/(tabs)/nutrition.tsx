@@ -584,28 +584,28 @@ function LoggedMeals({ meals, onDelete, onEdit, onRetry }: {
           activeOpacity={0.7}
           disabled={meal.failed}
         >
-          {/* Photo Thumbnail */}
+          {/* Photo Thumbnail - Larger size */}
           <View style={styles.mealPhotoContainer}>
             {meal.photoUri ? (
               <Image source={{ uri: meal.photoUri }} style={styles.mealPhoto} />
             ) : (
               <View style={styles.mealPhotoPlaceholder}>
-                <Ionicons name="restaurant" size={24} color="#CCCCCC" />
+                <Ionicons name="restaurant" size={32} color="#CCCCCC" />
               </View>
             )}
           </View>
 
           <View style={styles.mealContent}>
             {meal.failed ? (
-              // Failed attempt UI
-              <View style={styles.failedAttemptContent}>
-                <View style={styles.failedHeader}>
-                  <Text style={styles.failedTitle}>No food detected</Text>
-                  <Text style={styles.failedTime}>
-                    {format(new Date(meal.timestamp), 'h:mm a')}
-                  </Text>
+              // Failed attempt UI - simplified without explanation card
+              <View style={styles.failedMealContent}>
+                <View style={styles.mealNameContainer}>
+                  <Text style={styles.failedMealName}>No food detected</Text>
+                  <Text style={styles.failedMealSubtitle}>Try a different angle</Text>
                 </View>
-                <Text style={styles.failedSubtitle}>Try a different angle</Text>
+                <Text style={styles.mealTime}>
+                  {format(new Date(meal.timestamp), 'h:mm a')}
+                </Text>
                 {onRetry && (
                   <TouchableOpacity
                     style={styles.retryButton}
@@ -614,7 +614,7 @@ function LoggedMeals({ meals, onDelete, onEdit, onRetry }: {
                       onRetry(meal);
                     }}
                   >
-                    <Text style={styles.retryButtonText}>Tap to retry</Text>
+                    <Text style={styles.retryButtonText}>Tap to try again</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -1193,7 +1193,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     backgroundColor: '#FFFFFF',
-    padding: 20,
+    padding: 16,
     borderRadius: 16,
     marginBottom: 12,
     shadowColor: '#000000',
@@ -1201,12 +1201,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
-    minHeight: 120,
+    minHeight: 140,
   },
   mealItemFailed: {
-    backgroundColor: '#FFF5F5',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#FFE5E5',
+    borderColor: '#E5E5E5',
   },
   mealContent: {
     flex: 1,
@@ -1229,8 +1229,8 @@ const styles = StyleSheet.create({
     color: '#000000',
   },
   mealPhotoContainer: {
-    width: 60,
-    height: 60,
+    width: 140,
+    height: 140,
     borderRadius: 12,
     marginRight: 16,
     overflow: 'hidden',
@@ -1476,8 +1476,8 @@ const styles = StyleSheet.create({
   deleteButton: {
     padding: 8,
     position: 'absolute',
-    top: 16,
-    right: 16,
+    top: 8,
+    right: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
     borderRadius: 12,
   },
@@ -1718,7 +1718,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 8,
-    marginTop: 8,
+    marginTop: 12,
   },
   retryButtonText: {
     color: '#FFFFFF',
@@ -1751,6 +1751,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 16,
   },
+  failedMealContent: {
+    flex: 1,
+    paddingVertical: 8,
+  },
+  failedMealName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666666',
+    marginBottom: 4,
+  },
+  failedMealSubtitle: {
+    fontSize: 14,
+    color: '#999999',
+    marginBottom: 4,
+  },
 });
 
 export default function NutritionScreen() {
@@ -1758,7 +1773,6 @@ export default function NutritionScreen() {
   const [loggedMeals, setLoggedMeals] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isLoggingMeal, setIsLoggingMeal] = useState(false);
   const { user } = useAuth();
   const [isLogMealModalVisible, setIsLogMealModalVisible] = useState(false);
   const [selectedLoggingMethod, setSelectedLoggingMethod] = useState<'manual' | 'photo' | null>(null);
@@ -1792,8 +1806,20 @@ export default function NutritionScreen() {
   };
 
   // Handle photo taken from camera
-  const handlePhotoTaken = (imageUri: string) => {
+  const handlePhotoTaken = async (imageUri: string) => {
     setShowCamera(false);
+    
+    if (retryingMealId) {
+      // If we're retrying a failed meal, delete the old one first
+      try {
+        await deleteMeal(retryingMealId);
+        setRetryingMealId(null);
+      } catch (error) {
+        console.error('Error deleting failed meal:', error);
+      }
+    }
+    
+    // Proceed with normal photo analysis
     handlePhotoAnalysis(imageUri);
   };
 
@@ -2034,7 +2060,6 @@ export default function NutritionScreen() {
     }
 
     try {
-      setIsLoggingMeal(true);
       console.log('Logging meal to Firestore:', JSON.stringify(items));
       
       // Handle both the new format with multiple items and the old format
@@ -2135,7 +2160,6 @@ export default function NutritionScreen() {
       Alert.alert('Error', 'Failed to log a meal. Please try again.');
     } finally {
       setIsLoading(false);
-      setIsLoggingMeal(false);
     }
   };
 
@@ -2686,21 +2710,16 @@ export default function NutritionScreen() {
     }
   };
 
-  // Handle retry for failed attempts
-  const handleRetryAnalysis = (meal: any) => {
-    if (meal.photoUri) {
-      handlePhotoAnalysis(meal.photoUri);
-    } else {
-      // If no photo URI, open camera
-      setShowCamera(true);
-    }
+  // Handle retry for failed attempts - open camera for new photo
+  const handleRetryAnalysis = async (meal: any) => {
+    // Store the meal ID we're retrying so we can update it later
+    setRetryingMealId(meal.id);
+    // Open camera to take a new photo
+    setShowCamera(true);
   };
 
-  // Add useEffect to call loadSelectedDayData
-  useEffect(() => {
-    if (!user) return;
-    loadSelectedDayData();
-  }, [user, selectedDate]);
+  // Add state to track which meal we're retrying
+  const [retryingMealId, setRetryingMealId] = useState<string | null>(null);
 
   // Add this function to calculate today's adherence
   const calculateTodayAdherence = () => {
@@ -2965,7 +2984,6 @@ export default function NutritionScreen() {
               Alert.alert('Error', 'Failed to log meal. Please check your network connection and try again.');
             } finally {
               setIsLoading(false);
-              setIsLoggingMeal(false);
             }
           }}
           onOpenCamera={handleOpenCamera}
@@ -2994,30 +3012,6 @@ export default function NutritionScreen() {
             <Text style={styles.loadingTitle}>Analyzing Image</Text>
             <Text style={styles.loadingText}>
               Please don't close the app while we analyze your meal.
-            </Text>
-            <ActivityIndicator size="large" color="#4064F6" />
-          </Animated.View>
-        </Animated.View>
-      )}
-
-      {/* Manual Meal Logging Overlay - Now outside ScrollView */}
-      {isLoggingMeal && (
-        <Animated.View 
-          style={styles.loadingOverlay}
-          entering={FadeIn.duration(300)}
-        >
-          <Animated.View 
-            style={styles.loadingContent}
-            entering={FadeInDown.duration(400).springify()}
-          >
-            <Image 
-              source={require('../../assets/images/mascot.png')}
-              style={styles.loadingMascot}
-              resizeMode="contain"
-            />
-            <Text style={styles.loadingTitle}>Logging Meal</Text>
-            <Text style={styles.loadingText}>
-              Please don't close the app while we log your meal.
             </Text>
             <ActivityIndicator size="large" color="#4064F6" />
           </Animated.View>
