@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Modal, Alert, ActivityIndicator, Pressable, useWindowDimensions, KeyboardAvoidingView, Platform, Keyboard, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Modal, Alert, ActivityIndicator, Pressable, useWindowDimensions, KeyboardAvoidingView, Platform, Keyboard, StatusBar, Animated as RNAnimated, PanResponder, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, Link } from 'expo-router';
 import Svg, { Circle, Path, Text as SvgText } from 'react-native-svg';
@@ -15,7 +15,7 @@ import { db } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
 import { useNutrition } from '../context/NutritionContext';
 import { useNutritionDate } from './_layout';
-import Animated, { FadeIn, FadeInDown, PinwheelIn } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown, PinwheelIn, FadeOut } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import CustomButton from '../components/CustomButton';
 import { calculateNutritionGoals } from '../utils/nutritionCalculations';
@@ -25,6 +25,7 @@ import analytics from '@react-native-firebase/analytics';
 import FoodCamera from '../components/FoodCamera';
 import FoodAnalysisScreen from '../components/FoodAnalysisScreen';
 import MealEditModal from '../components/MealEditModal';
+import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
 
 // Type definition for food analysis result
 type FoodAnalysisResult = {
@@ -570,121 +571,164 @@ function LoggedMeals({ meals, onDelete, onEdit, onRetry }: {
   onEdit: (meal: any) => void;
   onRetry?: (meal: any) => void;
 }) {
+  const swipeableRefs = useRef<{ [key: string]: Swipeable | null }>({});
+
+  const renderRightActions = (progress: any, dragX: any) => {
+    return (
+      <View style={{
+        flex: 1,
+        backgroundColor: '#000000',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 12,
+        borderRadius: 16,
+      }}>
+        <View style={{
+          alignItems: 'center',
+        }}>
+          <Ionicons name="trash-outline" size={24} color="#FFFFFF" />
+          <Text style={{
+            color: '#FFFFFF',
+            fontSize: 14,
+            fontWeight: '600',
+            marginTop: 4,
+          }}>
+            Delete
+          </Text>
+        </View>
+      </View>
+    );
+  };
+
+  const handleSwipeableOpen = async (mealId: string, direction: 'left' | 'right') => {
+    console.log(`handleSwipeableOpen called: direction=${direction}, mealId=${mealId}`);
+    if (direction === 'right') {  // Changed from 'left' to 'right'
+      // Delete immediately
+      try {
+        console.log(`Attempting to delete meal: ${mealId}`);
+        await onDelete(mealId);
+        console.log(`Successfully deleted meal: ${mealId}`);
+      } catch (error) {
+        console.error('Error deleting meal:', error);
+        // If deletion fails, close the swipeable
+        if (swipeableRefs.current[mealId]) {
+          swipeableRefs.current[mealId]?.close();
+        }
+      }
+    }
+  };
+
   return (
     <View style={styles.loggedMealsContainer}>
       <Text style={styles.loggedMealsTitle}>Logged Today</Text>
-      {meals.map((meal, index) => (
-        <TouchableOpacity
-          key={meal.id} 
-          style={[
-            styles.mealItem,
-            meal.failed && styles.mealItemFailed
-          ]}
-          onPress={() => !meal.failed && onEdit(meal)}
-          activeOpacity={0.7}
-          disabled={meal.failed}
+      {meals.map((meal) => (
+        <Swipeable
+          key={meal.id}
+          ref={(ref) => { swipeableRefs.current[meal.id] = ref; }}
+          renderRightActions={renderRightActions}
+          onSwipeableWillOpen={(direction) => {
+            console.log(`Swipeable will open: ${direction}, meal: ${meal.id}`);
+            handleSwipeableOpen(meal.id, direction);
+          }}
+          rightThreshold={80}  // Changed from 150 to 80
+          overshootRight={false}
+          friction={1}
+          useNativeAnimations={true}
+          shouldCancelWhenOutside={true}
         >
-          {/* Photo Thumbnail - Larger size */}
-          <View style={styles.mealPhotoContainer}>
-            {meal.photoUri ? (
-              <Image source={{ uri: meal.photoUri }} style={styles.mealPhoto} />
-            ) : (
-              <View style={styles.mealPhotoPlaceholder}>
-                <Ionicons name="restaurant" size={32} color="#CCCCCC" />
-              </View>
-            )}
-          </View>
-
-          <View style={styles.mealContent}>
-            {meal.failed ? (
-              // Failed attempt UI - simplified without explanation card
-              <View style={styles.failedMealContent}>
-                <View style={styles.mealNameContainer}>
-                  <Text style={styles.failedMealName}>No food detected</Text>
-                  <Text style={styles.failedMealSubtitle}>Try a different angle</Text>
+          <Pressable
+            style={({ pressed }) => [
+              styles.mealItem,
+              meal.failed && styles.mealItemFailed,
+              pressed && { opacity: 0.95 }
+            ]}
+            onPress={() => !meal.failed && onEdit(meal)}
+            disabled={meal.failed}
+          >
+            {/* Photo Thumbnail - Larger size */}
+            <View style={styles.mealPhotoContainer}>
+              {meal.photoUri ? (
+                <Image source={{ uri: meal.photoUri }} style={styles.mealPhoto} />
+              ) : (
+                <View style={styles.mealPhotoPlaceholder}>
+                  <Ionicons name="restaurant" size={32} color="#CCCCCC" />
                 </View>
-                <Text style={styles.mealTime}>
-                  {format(new Date(meal.timestamp), 'h:mm a')}
-                </Text>
-                {onRetry && (
-                  <TouchableOpacity
-                    style={styles.retryButton}
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      onRetry(meal);
-                    }}
-                  >
-                    <Text style={styles.retryButtonText}>Tap to try again</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            ) : (
-              // Successful meal UI
-              <View style={styles.successfulMealContent}>
-                <View style={styles.mealTopSection}>
+              )}
+            </View>
+
+            <View style={styles.mealContent}>
+              {meal.failed ? (
+                // Failed attempt UI - simplified without explanation card
+                <View style={styles.failedMealContent}>
                   <View style={styles.mealNameContainer}>
-                    {/* Show all food items instead of just the first one */}
-                    {meal.items && meal.items.length > 0 ? (
-                      <>
-                        <Text style={styles.mealName}>
-                          {meal.items.map((item: any, index: number) => (
-                            index === meal.items.length - 1 
-                              ? item.name 
-                              : `${item.name}, `
-                          ))}
-                        </Text>
-                        {meal.items.length > 1 && (
-                          <Text style={styles.itemCount}>
-                            {meal.items.length} items
-                          </Text>
-                        )}
-                      </>
-                    ) : (
-                      <Text style={styles.mealName}>Unnamed meal</Text>
-                    )}
+                    <Text style={styles.failedMealName}>No food detected</Text>
+                    <Text style={styles.failedMealSubtitle}>Try a different angle</Text>
                   </View>
                   <Text style={styles.mealTime}>
                     {format(new Date(meal.timestamp), 'h:mm a')}
                   </Text>
+                  {onRetry && (
+                    <TouchableOpacity
+                      style={styles.retryButton}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        onRetry(meal);
+                      }}
+                    >
+                      <Text style={styles.retryButtonText}>Tap to try again</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
+              ) : (
+                // Successful meal UI
+                <View style={styles.successfulMealContent}>
+                  <View style={styles.mealTopSection}>
+                    <View style={styles.mealNameContainer}>
+                      {/* Show combined name or first item name */}
+                      {meal.items && meal.items.length > 0 ? (
+                        <>
+                          <Text style={styles.mealName}>
+                            {meal.combinedName || meal.items[0].name}
+                          </Text>
+                          {meal.items.length > 1 && (
+                            <Text style={styles.itemCount}>
+                              {meal.items.length} items
+                            </Text>
+                          )}
+                        </>
+                      ) : (
+                        <Text style={styles.mealName}>Unnamed meal</Text>
+                      )}
+                    </View>
+                    <Text style={styles.mealTime}>
+                      {format(new Date(meal.timestamp), 'h:mm a')}
+                    </Text>
+                  </View>
 
-                <View style={styles.mealCaloriesSection}>
-                  <Text style={styles.macroEmoji}>🔥</Text>
-                  <Text style={styles.mealCaloriesLarge}>{meal.totalMacros.calories} calories</Text>
+                  <View style={styles.mealCaloriesSection}>
+                    <Text style={styles.macroEmoji}>🔥</Text>
+                    <Text style={styles.mealCaloriesLarge}>{meal.totalMacros.calories} calories</Text>
+                  </View>
+
+                  <View style={styles.macroDetailsRow}>
+                    <View style={styles.macroItem}>
+                      <Text style={styles.macroEmoji}>🥩</Text>
+                      <Text style={styles.macroDetail}>{meal.totalMacros.protein}g</Text>
+                    </View>
+                    <View style={styles.macroItem}>
+                      <Text style={styles.macroEmoji}>🌾</Text>
+                      <Text style={styles.macroDetail}>{meal.totalMacros.carbs}g</Text>
+                    </View>
+                    <View style={styles.macroItem}>
+                      <Text style={styles.macroEmoji}>🧈</Text>
+                      <Text style={styles.macroDetail}>{meal.totalMacros.fats}g</Text>
+                    </View>
+                  </View>
                 </View>
-
-                <View style={styles.macroDetailsRow}>
-                  <View style={styles.macroItem}>
-                    <Text style={styles.macroEmoji}>🥩</Text>
-                    <Text style={styles.macroDetail}>{meal.totalMacros.protein}g</Text>
-                  </View>
-                  <View style={styles.macroItem}>
-                    <Text style={styles.macroEmoji}>🌾</Text>
-                    <Text style={styles.macroDetail}>{meal.totalMacros.carbs}g</Text>
-                  </View>
-                  <View style={styles.macroItem}>
-                    <Text style={styles.macroEmoji}>🧈</Text>
-                    <Text style={styles.macroDetail}>{meal.totalMacros.fats}g</Text>
-                  </View>
-                </View>
-              </View>
-            )}
-          </View>
-
-          {/* Delete Button */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.deleteButton,
-              pressed && { opacity: 0.8 }
-            ]}
-            onPress={(e) => {
-              e.stopPropagation();
-              onDelete(meal.id);
-            }}
-          >
-            <Ionicons name="close" size={16} color="#FF6B6B" />
+              )}
+            </View>
           </Pressable>
-        </TouchableOpacity>
+        </Swipeable>
       ))}
     </View>
   );
@@ -1189,13 +1233,16 @@ const styles = StyleSheet.create({
     color: '#000000',
     marginBottom: 12,
   },
+  swipeableWrapper: {
+    marginBottom: 12,
+    borderRadius: 16,
+  },
   mealItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#E2E8FE',
     padding: 16,
     borderRadius: 16,
-    marginBottom: 12,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -1204,9 +1251,9 @@ const styles = StyleSheet.create({
     minHeight: 140,
   },
   mealItemFailed: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFE5E5',
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: '#FF6B6B',
   },
   mealContent: {
     flex: 1,
@@ -2793,8 +2840,8 @@ export default function NutritionScreen() {
   };
 
   return (
-    <>
-      <ScrollView 
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ScrollView
         ref={scrollViewRef}
         style={styles.container}
         contentContainerStyle={{
@@ -2805,6 +2852,8 @@ export default function NutritionScreen() {
         showsVerticalScrollIndicator={true}
         bounces={true}
         overScrollMode="never"
+        directionalLockEnabled={true}
+        horizontal={false}
       >
         {/* Header - Fixed at top when scrolling */}
         <View style={{
@@ -3037,6 +3086,6 @@ export default function NutritionScreen() {
         meal={editingMeal}
         onSave={handleSaveMealEdit}
       />
-    </>
+    </GestureHandlerRootView>
   );
 }
