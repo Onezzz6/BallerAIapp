@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Modal, Alert, ActivityIndicator, Pressable, useWindowDimensions, KeyboardAvoidingView, Platform, Keyboard, StatusBar, Animated as RNAnimated, PanResponder, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Modal, Alert, ActivityIndicator, Pressable, useWindowDimensions, KeyboardAvoidingView, Platform, Keyboard, StatusBar, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, Link } from 'expo-router';
 import Svg, { Circle, Path, Text as SvgText } from 'react-native-svg';
@@ -25,7 +25,7 @@ import analytics from '@react-native-firebase/analytics';
 import FoodCamera from '../components/FoodCamera';
 import FoodAnalysisScreen from '../components/FoodAnalysisScreen';
 import MealEditModal from '../components/MealEditModal';
-import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // Type definition for food analysis result
 type FoodAnalysisResult = {
@@ -269,7 +269,7 @@ function MacroProgress({ type, current, goal, color }: {
   };
 
   return (
-    <View style={styles.macroItem}>
+    <View style={styles.macroProgressItem}>
       <View style={styles.macroHeader}>
         <Text style={styles.macroTitle}>{getEmojiForType(type)} {type}</Text>
         <Text style={styles.macroValue}>
@@ -571,52 +571,25 @@ function LoggedMeals({ meals, onDelete, onEdit, onRetry }: {
   onEdit: (meal: any) => void;
   onRetry?: (meal: any) => void;
 }) {
-  const swipeableRefs = useRef<{ [key: string]: Swipeable | null }>({});
+  const screenWidth = Dimensions.get('window').width;
+  const cardWidth = screenWidth - 48; // Screen width minus horizontal padding (24 * 2)
 
-  const renderRightActions = (progress: any, dragX: any) => {
-    return (
-      <View style={{
-        flex: 1,
-        backgroundColor: '#000000',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 12,
-        borderRadius: 16,
-      }}>
-        <View style={{
-          alignItems: 'center',
-        }}>
-          <Ionicons name="trash-outline" size={24} color="#FFFFFF" />
-          <Text style={{
-            color: '#FFFFFF',
-            fontSize: 14,
-            fontWeight: '600',
-            marginTop: 4,
-          }}>
-            Delete
-          </Text>
-        </View>
-      </View>
-    );
-  };
-
-  const handleSwipeableOpen = async (mealId: string, direction: 'left' | 'right') => {
-    console.log(`handleSwipeableOpen called: direction=${direction}, mealId=${mealId}`);
-    if (direction === 'right') {  // Changed from 'left' to 'right'
-      // Delete immediately
-      try {
-        console.log(`Attempting to delete meal: ${mealId}`);
-        await onDelete(mealId);
-        console.log(`Successfully deleted meal: ${mealId}`);
-      } catch (error) {
-        console.error('Error deleting meal:', error);
-        // If deletion fails, close the swipeable
-        if (swipeableRefs.current[mealId]) {
-          swipeableRefs.current[mealId]?.close();
-        }
-      }
+  const getNutrientColor = (type: string) => {
+    switch (type) {
+      case 'protein': return '#E74C3C';
+      case 'carbs': return '#3498DB';
+      case 'fats': return '#F39C12';
+      default: return '#555';
     }
   };
+
+  if (meals.length === 0) {
+    return (
+      <View style={styles.noMealsText}>
+        <Text style={styles.noMealsText}>No meals logged yet.</Text>
+      </View>
+    );
+  }
 
   return (
     <Animated.View 
@@ -624,121 +597,111 @@ function LoggedMeals({ meals, onDelete, onEdit, onRetry }: {
       layout={FadeInDown.duration(300)}
     >
       <Text style={styles.loggedMealsTitle}>Logged Today</Text>
-      {meals.map((meal) => (
-        <Animated.View
-          key={meal.id}
-          entering={FadeInDown.duration(300)}
-          exiting={FadeOut.duration(200)}
-          layout={FadeInDown.duration(300).springify()}
-        >
-          <Swipeable
-            ref={(ref) => { swipeableRefs.current[meal.id] = ref; }}
-            renderRightActions={renderRightActions}
-            onSwipeableWillOpen={(direction) => {
-              console.log(`Swipeable will open: ${direction}, meal: ${meal.id}`);
-              handleSwipeableOpen(meal.id, direction);
-            }}
-            rightThreshold={80}  // Changed from 150 to 80
-            overshootRight={false}
-            friction={1}
-            useNativeAnimations={true}
-            shouldCancelWhenOutside={true}
+      <View style={{ flex: 1 }}>
+        {meals.map((meal) => (
+          <Pressable
+            key={meal.id}
+            style={({ pressed }) => [
+              styles.mealItem,
+              meal.failed && styles.failedMealItem,
+              pressed && { opacity: 0.95 },
+              { width: cardWidth, marginBottom: 12 }
+            ]}
+            onPress={() => !meal.failed && onEdit(meal)}
+            disabled={meal.failed}
           >
-            <Pressable
-              style={({ pressed }) => [
-                styles.mealItem,
-                meal.failed && styles.mealItemFailed,
-                pressed && { opacity: 0.95 }
-              ]}
-              onPress={() => !meal.failed && onEdit(meal)}
-              disabled={meal.failed}
+            {/* Trash button */}
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={(e) => {
+                e.stopPropagation();
+                onDelete(meal.id);
+              }}
             >
-              {/* Photo Thumbnail - Larger size */}
-              <View style={styles.mealPhotoContainer}>
-                {meal.photoUri ? (
-                  <Image source={{ uri: meal.photoUri }} style={styles.mealPhoto} />
-                ) : (
-                  <View style={styles.mealPhotoPlaceholder}>
-                    <Ionicons name="restaurant" size={32} color="#CCCCCC" />
-                  </View>
-                )}
-              </View>
+              <Ionicons name="trash-outline" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
 
-              <View style={styles.mealContent}>
-                {meal.failed ? (
-                  // Failed attempt UI - simplified without explanation card
-                  <View style={styles.failedMealContent}>
+            {/* Photo Thumbnail - Only show if photoUri exists */}
+            {meal.photoUri && (
+              <View style={styles.mealPhotoContainer}>
+                <Image source={{ uri: meal.photoUri }} style={styles.mealPhoto} />
+              </View>
+            )}
+
+            <View style={[styles.mealContent, !meal.photoUri && { paddingLeft: 16 }]}>
+              {meal.failed ? (
+                // Failed attempt UI - simplified without explanation card
+                <View style={styles.failedMealContent}>
+                  <View style={styles.mealNameContainer}>
+                    <Text style={styles.failedMealName}>No food detected</Text>
+                    <Text style={styles.failedMealSubtitle}>Try a different angle</Text>
+                  </View>
+                  <Text style={styles.mealTime}>
+                    {format(new Date(meal.timestamp), 'h:mm a')}
+                  </Text>
+                  {onRetry && (
+                    <TouchableOpacity
+                      style={styles.retryButton}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        onRetry(meal);
+                      }}
+                    >
+                      <Text style={styles.retryButtonText}>Tap to try again</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ) : (
+                // Successful meal UI
+                <View style={styles.successfulMealContent}>
+                  <View style={styles.mealTopSection}>
                     <View style={styles.mealNameContainer}>
-                      <Text style={styles.failedMealName}>No food detected</Text>
-                      <Text style={styles.failedMealSubtitle}>Try a different angle</Text>
+                      {/* Show combined name or first item name */}
+                      {meal.items && meal.items.length > 0 ? (
+                        <>
+                          <Text style={styles.mealName}>
+                            {meal.combinedName || meal.items[0].name}
+                          </Text>
+                          {meal.items.length > 1 && (
+                            <Text style={styles.itemCount}>
+                              {meal.items.length} items
+                            </Text>
+                          )}
+                        </>
+                      ) : (
+                        <Text style={styles.mealName}>Unnamed meal</Text>
+                      )}
                     </View>
                     <Text style={styles.mealTime}>
                       {format(new Date(meal.timestamp), 'h:mm a')}
                     </Text>
-                    {onRetry && (
-                      <TouchableOpacity
-                        style={styles.retryButton}
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          onRetry(meal);
-                        }}
-                      >
-                        <Text style={styles.retryButtonText}>Tap to try again</Text>
-                      </TouchableOpacity>
-                    )}
                   </View>
-                ) : (
-                  // Successful meal UI
-                  <View style={styles.successfulMealContent}>
-                    <View style={styles.mealTopSection}>
-                      <View style={styles.mealNameContainer}>
-                        {/* Show combined name or first item name */}
-                        {meal.items && meal.items.length > 0 ? (
-                          <>
-                            <Text style={styles.mealName}>
-                              {meal.combinedName || meal.items[0].name}
-                            </Text>
-                            {meal.items.length > 1 && (
-                              <Text style={styles.itemCount}>
-                                {meal.items.length} items
-                              </Text>
-                            )}
-                          </>
-                        ) : (
-                          <Text style={styles.mealName}>Unnamed meal</Text>
-                        )}
-                      </View>
-                      <Text style={styles.mealTime}>
-                        {format(new Date(meal.timestamp), 'h:mm a')}
-                      </Text>
-                    </View>
 
-                    <View style={styles.mealCaloriesSection}>
-                      <Text style={styles.macroEmoji}>🔥</Text>
-                      <Text style={styles.mealCaloriesLarge}>{meal.totalMacros.calories} calories</Text>
-                    </View>
+                  <View style={styles.mealCaloriesSection}>
+                    <Text style={styles.macroEmoji}>🔥</Text>
+                    <Text style={styles.mealCaloriesLarge}>{meal.totalMacros.calories} calories</Text>
+                  </View>
 
-                    <View style={styles.macroDetailsRow}>
-                      <View style={styles.macroItem}>
-                        <Text style={styles.macroEmoji}>🥩</Text>
-                        <Text style={styles.macroDetail}>{meal.totalMacros.protein}g</Text>
-                      </View>
-                      <View style={styles.macroItem}>
-                        <Text style={styles.macroEmoji}>🌾</Text>
-                        <Text style={styles.macroDetail}>{meal.totalMacros.carbs}g</Text>
-                      </View>
-                      <View style={styles.macroItem}>
-                        <Text style={styles.macroEmoji}>🧈</Text>
-                        <Text style={styles.macroDetail}>{meal.totalMacros.fats}g</Text>
-                      </View>
+                  <View style={styles.macroDetailsRow}>
+                    <View style={styles.macroItem}>
+                      <Text style={styles.macroEmoji}>🥩</Text>
+                      <Text style={styles.macroDetail}>{meal.totalMacros.protein}g</Text>
+                    </View>
+                    <View style={styles.macroItem}>
+                      <Text style={styles.macroEmoji}>🌾</Text>
+                      <Text style={styles.macroDetail}>{meal.totalMacros.carbs}g</Text>
+                    </View>
+                    <View style={styles.macroItem}>
+                      <Text style={styles.macroEmoji}>🧈</Text>
+                      <Text style={styles.macroDetail}>{meal.totalMacros.fats}g</Text>
                     </View>
                   </View>
-                )}
-              </View>
-            </Pressable>
-          </Swipeable>
-        </Animated.View>
-      ))}
+                </View>
+              )}
+            </View>
+          </Pressable>
+        ))}
+      </View>
     </Animated.View>
   );
 }
@@ -951,11 +914,9 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   calorieHeader: {
     alignItems: 'center',
@@ -1048,7 +1009,7 @@ const styles = StyleSheet.create({
     color: '#000000',
   },
   macrosCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#E2E8FE',
     margin: 24,
     marginTop: 0,
     borderRadius: 24,
@@ -1056,14 +1017,13 @@ const styles = StyleSheet.create({
     gap: 24,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  macroItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
+  macroProgressItem: {
+    flexDirection: 'column',
+    gap: 8,
   },
   macroHeader: {
     flexDirection: 'row',
@@ -1092,7 +1052,7 @@ const styles = StyleSheet.create({
   adherenceContainer: {
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#E2E8FE',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     marginTop: 16,
   },
@@ -1147,6 +1107,7 @@ const styles = StyleSheet.create({
   mealsSection: {
     padding: 24,
     paddingTop: 0,
+    backgroundColor: '#FFFFFF',
   },
   mealsSectionHeader: {
     flexDirection: 'row',
@@ -1234,13 +1195,13 @@ const styles = StyleSheet.create({
   },
   loggedMealsContainer: {
     marginTop: 16,
-    paddingHorizontal: 24,
+    backgroundColor: '#FFFFFF',
   },
   loggedMealsTitle: {
     fontSize: 20,
     fontWeight: '600',
     color: '#000000',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   swipeableWrapper: {
     marginBottom: 12,
@@ -1248,48 +1209,52 @@ const styles = StyleSheet.create({
   },
   mealItem: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'stretch',
     backgroundColor: '#E2E8FE',
-    padding: 16,
     borderRadius: 16,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-    minHeight: 140,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    overflow: 'hidden',
+    height: 140, // Match the photo height exactly
   },
   mealItemFailed: {
-    backgroundColor: '#FFE5E5',
+    backgroundColor: '#F5F8FF',
     borderWidth: 1,
-    borderColor: '#FF6B6B',
+    borderColor: '#FFE5E5',
   },
   mealContent: {
     flex: 1,
+    padding: 12, // Reduced from 16
+    justifyContent: 'space-between', // Distribute content evenly
   },
   mealTopSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 8, // Reduced from 12
+    paddingRight: 48, // Add padding to prevent overlap with delete button
   },
   mealCaloriesSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8, // Reduced from 12
     gap: 6,
   },
   mealCaloriesLarge: {
-    fontSize: 18,
+    fontSize: 16, // Reduced from 18
     fontWeight: '700',
     color: '#000000',
   },
   mealPhotoContainer: {
     width: 140,
     height: 140,
-    borderRadius: 12,
-    marginRight: 16,
     overflow: 'hidden',
+    flexShrink: 0,
+    borderTopLeftRadius: 16,
+    borderBottomLeftRadius: 16,
   },
   mealThumbnail: {
     width: 50,
@@ -1427,7 +1392,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 12,
     alignItems: 'center',
-    backgroundColor: '#F8F8F8',
+    backgroundColor: '#F8F9FA',
     position: 'relative',
   },
   selectedDay: {
@@ -1530,12 +1495,13 @@ const styles = StyleSheet.create({
     color: '#999999',
   },
   deleteButton: {
-    padding: 8,
     position: 'absolute',
     top: 8,
     right: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    padding: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
     borderRadius: 12,
+    zIndex: 1,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1807,9 +1773,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 16,
   },
+  macroItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
   failedMealContent: {
     flex: 1,
     paddingVertical: 8,
+    paddingRight: 48, // Add padding to prevent overlap with delete button
   },
   failedMealName: {
     fontSize: 16,
@@ -1821,6 +1793,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999999',
     marginBottom: 4,
+  },
+  mealCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    overflow: 'hidden',
+    marginBottom: 12, // Add spacing between meal cards
+  },
+  failedMealItem: {
+    backgroundColor: '#FFE5E5',
+    borderWidth: 1,
+    borderColor: '#FF6B6B',
   },
 });
 
@@ -2852,6 +2840,7 @@ export default function NutritionScreen() {
         contentContainerStyle={{
           flexGrow: 1,
           paddingBottom: 120,
+          backgroundColor: '#FFFFFF',
         }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={true}
@@ -2864,7 +2853,7 @@ export default function NutritionScreen() {
         <View style={{
           paddingTop: 48,
           paddingHorizontal: 24,
-          backgroundColor: '#ffffff',
+          backgroundColor: '#FFFFFF',
         }}>
           {/* Header with Logo */}
           <View style={{
@@ -2915,7 +2904,7 @@ export default function NutritionScreen() {
         </View>
 
         {/* Weekly Overview */}
-        <View>
+        <View style={{ backgroundColor: '#FFFFFF' }}>
           <WeeklyOverview 
             selectedDate={selectedDate}
             onDateSelect={setSelectedDate}
@@ -2981,7 +2970,7 @@ export default function NutritionScreen() {
           )}
         </View>
 
-        <View>
+        <View style={{ paddingHorizontal: 24 }}>
           <LoggedMeals 
             meals={loggedMeals} 
             onDelete={async (mealId: string) => {

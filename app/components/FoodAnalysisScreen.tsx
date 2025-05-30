@@ -34,6 +34,7 @@ const analysisSteps = [
 export default function FoodAnalysisScreen({ visible, imageUri, onAnalysisComplete }: FoodAnalysisScreenProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [displayPercentage, setDisplayPercentage] = useState(0);
+  const [isComplete, setIsComplete] = useState(false);
   const progress = useSharedValue(0);
   
   // Animation values for placeholder lines
@@ -50,18 +51,23 @@ export default function FoodAnalysisScreen({ visible, imageUri, onAnalysisComple
       // Reset values
       setCurrentStep(0);
       setDisplayPercentage(0);
+      setIsComplete(false);
       progress.value = 0;
       
-      // Percentage counter animation - increment by 2 every 60ms
+      // Calculate the interval needed to reach 99% in the total duration
+      // We need to go from 0 to 99 in totalDuration milliseconds
+      const incrementInterval = totalDuration / 99; // Time per 1% increment
+      
+      // Percentage counter animation - increment by 1 to match circular progress
       const percentageInterval = setInterval(() => {
         setDisplayPercentage(prev => {
-          if (prev >= 100) {
+          if (prev >= 99) {
             clearInterval(percentageInterval);
-            return 100;
+            return 99; // Cap at 99% until analysis is complete
           }
-          return prev + 2;
+          return prev + 1;
         });
-      }, 60);
+      }, incrementInterval);
       
       // Start shimmer animation
       shimmerPosition.value = withRepeat(
@@ -98,8 +104,8 @@ export default function FoodAnalysisScreen({ visible, imageUri, onAnalysisComple
         true
       );
       
-      // Animate progress from 0 to 1
-      progress.value = withTiming(1, {
+      // Animate progress from 0 to 0.99 (99%)
+      progress.value = withTiming(0.99, {
         duration: totalDuration,
         easing: Easing.linear
       });
@@ -119,7 +125,15 @@ export default function FoodAnalysisScreen({ visible, imageUri, onAnalysisComple
       // Call completion callback if provided
       if (onAnalysisComplete) {
         const completionTimeout = setTimeout(() => {
-          onAnalysisComplete();
+          // Set to 100% right before completion
+          setDisplayPercentage(100);
+          progress.value = 1;
+          setIsComplete(true);
+          
+          // Small delay to show 100% before closing
+          setTimeout(() => {
+            onAnalysisComplete();
+          }, 200);
         }, totalDuration);
         timeouts.push(completionTimeout);
       }
@@ -129,7 +143,7 @@ export default function FoodAnalysisScreen({ visible, imageUri, onAnalysisComple
         timeouts.forEach(timeout => clearTimeout(timeout));
       };
     }
-  }, [visible]);
+  }, [visible, totalDuration, onAnalysisComplete]);
 
   const animatedCircleProps = useAnimatedProps(() => {
     const strokeDashoffset = interpolate(
