@@ -37,6 +37,7 @@ interface Meal {
   };
   photoUri?: string;
   timestamp: string;
+  combinedName?: string;
 }
 
 interface MealEditModalProps {
@@ -63,6 +64,11 @@ export default function MealEditModal({ visible, meal, onClose, onSave }: MealEd
     const updatedMeal = { ...editedMeal };
     updatedMeal.totalMacros[macroType] = numValue;
     setEditedMeal(updatedMeal);
+  };
+
+  const updateMealName = (name: string) => {
+    if (!editedMeal) return;
+    setEditedMeal({ ...editedMeal, combinedName: name });
   };
 
   const handleSave = async () => {
@@ -122,6 +128,21 @@ export default function MealEditModal({ visible, meal, onClose, onSave }: MealEd
           </View>
 
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+            {/* Meal Name */}
+            <Animated.View 
+              style={styles.nameSection}
+              entering={FadeIn.duration(400).delay(100)}
+            >
+              <Text style={styles.sectionTitle}>Meal Name</Text>
+              <TextInput
+                style={styles.nameInput}
+                value={editedMeal.combinedName || editedMeal.items?.[0]?.name || ''}
+                onChangeText={updateMealName}
+                placeholder="Enter meal name"
+                placeholderTextColor="#999"
+              />
+            </Animated.View>
+
             {/* Total Section */}
             <Animated.View 
               style={styles.totalSection}
@@ -310,12 +331,14 @@ const styles = StyleSheet.create({
   totalMacroInput: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    padding: 10,
+    padding: 12,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E5E5E5',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
+    color: '#000000',
+    textAlign: 'center',
   },
   totalMacroUnit: {
     fontSize: 16,
@@ -383,5 +406,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 8,
     overflow: 'hidden',
+  },
+  nameSection: {
+    marginBottom: 24,
+  },
+  nameInput: {
+    backgroundColor: '#F8F9FA',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
   },
 }); 

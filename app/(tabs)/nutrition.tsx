@@ -26,6 +26,7 @@ import FoodCamera from '../components/FoodCamera';
 import FoodAnalysisScreen from '../components/FoodAnalysisScreen';
 import MealEditModal from '../components/MealEditModal';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useRouter } from 'expo-router';
 
 // Type definition for food analysis result
 type FoodAnalysisResult = {
@@ -573,6 +574,7 @@ function LoggedMeals({ meals, onDelete, onEdit, onRetry }: {
 }) {
   const screenWidth = Dimensions.get('window').width;
   const cardWidth = screenWidth - 48; // Screen width minus horizontal padding (24 * 2)
+  const router = useRouter();
 
   const getNutrientColor = (type: string) => {
     switch (type) {
@@ -607,7 +609,11 @@ function LoggedMeals({ meals, onDelete, onEdit, onRetry }: {
               pressed && { opacity: 0.95 },
               { width: cardWidth, marginBottom: 12 }
             ]}
-            onPress={() => !meal.failed && onEdit(meal)}
+            onPress={() => {
+              if (!meal.failed) {
+                router.push(`/(nutrition)/meal/${meal.id}`);
+              }
+            }}
             disabled={meal.failed}
           >
             {/* Trash button */}
@@ -2319,6 +2325,9 @@ export default function NutritionScreen() {
   const deleteMeal = async (mealId: string) => {
     if (!user) return;
     try {
+      // Instantly update UI by removing the meal from the list
+      setLoggedMeals(prev => prev.filter(m => m.id !== mealId));
+
       // Get the meal data before deleting it
       const mealRef = doc(db, 'meals', mealId);
       const mealDoc = await getDoc(mealRef);
