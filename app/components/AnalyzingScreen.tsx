@@ -71,12 +71,12 @@ export default function AnalyzingScreen() {
     // Cycle through messages
     const messageInterval = setInterval(() => {
       setCurrentMessageIndex((prev) => (prev + 1) % loadingMessages.length);
-    }, 2000);
+    }, 900);
 
     // Navigate after delay
     const timer = setTimeout(() => {
       router.replace('/fitness-level');
-    }, 10000);
+    }, 5000);
 
     return () => {
       clearTimeout(timer);
