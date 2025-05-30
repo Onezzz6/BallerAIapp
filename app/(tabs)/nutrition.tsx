@@ -22,6 +22,9 @@ import { calculateNutritionGoals } from '../utils/nutritionCalculations';
 import * as imageAnalysis from '../services/imageAnalysis';
 import WeeklyOverview from '../components/WeeklyOverview';
 import analytics from '@react-native-firebase/analytics';
+import FoodCamera from '../components/FoodCamera';
+import FoodAnalysisScreen from '../components/FoodAnalysisScreen';
+import MealEditModal from '../components/MealEditModal';
 
 // Type definition for food analysis result
 type FoodAnalysisResult = {
@@ -181,7 +184,7 @@ function CalorieProgress({ eaten, burned, goal }: { eaten: number; burned: numbe
   return (
     <View style={styles.calorieCard}>
       <View style={styles.calorieHeader}>
-        <Text style={styles.calorieTitle}>Daily Calories</Text>
+        <Text style={styles.calorieTitle}>🔥 Daily Calories</Text>
       </View>
 
       <View style={styles.calorieCircleContainer}>
@@ -254,10 +257,20 @@ function MacroProgress({ type, current, goal, color }: {
 
   const progress = goal > 0 ? Math.min(current / goal, 1) : 0;
 
+  // Get emoji for each macro type
+  const getEmojiForType = (macroType: string) => {
+    switch (macroType) {
+      case 'Protein': return '🥩';
+      case 'Carbs': return '🌾';
+      case 'Fats': return '🧈';
+      default: return '';
+    }
+  };
+
   return (
     <View style={styles.macroItem}>
       <View style={styles.macroHeader}>
-        <Text style={styles.macroTitle}>{type}</Text>
+        <Text style={styles.macroTitle}>{getEmojiForType(type)} {type}</Text>
         <Text style={styles.macroValue}>
           {current}g / {goal || 0}g
         </Text>
@@ -318,14 +331,15 @@ type LogMealModalProps = {
   onClose: () => void;
   onPhotoAnalysis: (imageUri: string) => Promise<void>;
   onLogMeal: (items: any[]) => Promise<void>;
+  onOpenCamera: () => void;
   isPhotoAnalysisDisabled: boolean;
   dailyAnalysisCount: number;
   dailyAnalysisLimit: number;
   timeUntilReset: string;
 };
 
-function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal, isPhotoAnalysisDisabled, dailyAnalysisCount, dailyAnalysisLimit, timeUntilReset }: LogMealModalProps) {
-  const [method, setMethod] = useState<'manual' | 'gallery' | 'camera' | null>(null);
+function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal, onOpenCamera, isPhotoAnalysisDisabled, dailyAnalysisCount, dailyAnalysisLimit, timeUntilReset }: LogMealModalProps) {
+  const [method, setMethod] = useState<'manual' | null>(null);
   const [manualEntry, setManualEntry] = useState({
     name: '',
     calories: '',
@@ -367,7 +381,6 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal, isPhotoAna
       await onLogMeal([meal]);
       setManualEntry({ name: '', calories: '', protein: '', carbs: '', fats: '' });
       setIsLogging(false);
-      // Modal is already closed, so no need to call onClose() here
     } catch (error) {
       console.error('Error logging meal:', error);
       Alert.alert('Error', 'Failed to log a meal. Please try again.');
@@ -375,69 +388,16 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal, isPhotoAna
     }
   };
 
-  const handleGallerySelect = async () => {
-    try {
-      // Update to use newer API syntax with higher quality settings
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: "images", 
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 1.0, // Maximum quality to ensure best analysis
-        base64: false, // Let our service handle the base64 conversion
-        exif: false,   // Don't need extra metadata
-      });
-      if (!result.canceled) {
-        // Close the modal before starting analysis
-        onClose();
-        onPhotoAnalysis(result.assets[0].uri);
-      }
-    } catch (error) {
-      console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to select an image. Please try again.');
-    }
-  };
-
-  const handleCameraCapture = async () => {
-    try {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission Needed', 'Please grant camera permissions to take photos.');
-        return;
-      }
-
-      // Update to use newer API syntax with higher quality settings
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: "images",
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 1.0, // Maximum quality to ensure best analysis
-        base64: false, // Let our service handle the base64 conversion
-        exif: false,   // Don't need extra metadata
-      });
-      if (!result.canceled) {
-        // Close the modal before starting analysis
-        onClose();
-        onPhotoAnalysis(result.assets[0].uri);
-      }
-    } catch (error) {
-      console.error('Error taking photo:', error);
-      Alert.alert('Error', 'Failed to take a photo. Please try again.');
-    }
-  };
-
-  const handleMethodSelect = (selectedMethod: 'manual' | 'gallery' | 'camera') => {
-    setMethod(selectedMethod);
-    if (selectedMethod === 'gallery') {
-      handleGallerySelect();
-    } else if (selectedMethod === 'camera') {
-      handleCameraCapture();
-    }
+  const handleScanFoodSelect = () => {
+    // Close modal and open camera directly
+    onClose();
+    onOpenCamera();
   };
 
   return (
     <Modal
       visible={visible}
-      animationType="slide"
+      animationType="fade"
       transparent={true}
       onRequestClose={onClose}
     >
@@ -451,24 +411,31 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal, isPhotoAna
             activeOpacity={1} 
             onPress={onClose}
           />
-          <View style={styles.modalContent}>
+          <Animated.View 
+            style={styles.modalContent}
+            entering={FadeInDown.duration(400).springify()}
+          >
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
                 {method === 'manual' ? 'Manual Entry' : 'Log Meal'}
               </Text>
-              <Pressable onPress={() => {
-                if (method === 'manual') {
-                  setMethod(null);
-                } else {
-                  onClose();
-                }
-              }}>
-                <Ionicons name={method === 'manual' ? "arrow-back" : "close"} size={24} color="#000000" />
+              <Pressable 
+                style={styles.closeButtonModal}
+                onPress={() => {
+                  if (method === 'manual') {
+                    setMethod(null);
+                  } else {
+                    onClose();
+                  }
+                }}
+              >
+                <Ionicons name={method === 'manual' ? "arrow-back" : "close"} size={20} color="#666666" />
               </Pressable>
             </View>
 
             {method === 'manual' ? (
-              <ScrollView style={{ padding: 16 }}>
+              // Manual Entry Form
+              <ScrollView style={styles.manualEntryContainer} showsVerticalScrollIndicator={false}>
                 <TextInput
                   style={styles.input}
                   placeholder="Meal Name"
@@ -505,130 +472,219 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal, isPhotoAna
                 />
                 <Pressable
                   style={({ pressed }) => [
-                    styles.logMealButton,
-                    { marginTop: 16 },
+                    styles.submitButton,
                     pressed && { opacity: 0.8 }
                   ]}
                   onPress={handleManualSubmit}
                 >
-                  <Text style={styles.logMealText}>Log Meal</Text>
+                  <Text style={styles.submitButtonText}>Log Meal</Text>
                 </Pressable>
               </ScrollView>
             ) : (
-              <View>
+              // Main Menu
+              <View style={styles.menuContent}>
                 {isPhotoAnalysisDisabled && (
-                  <View style={styles.limitWarningContainer}>
-                    <Ionicons name="alert-circle" size={24} color="#FF6B6B" />
+                  <Animated.View 
+                    style={styles.limitWarningContainer}
+                    entering={FadeIn.duration(300)}
+                  >
+                    <Ionicons name="alert-circle" size={20} color="#FF6B6B" />
                     <View style={styles.limitWarningTextContainer}>
                       <Text style={styles.limitWarningText}>
-                        Daily limit reached ({dailyAnalysisCount}/{dailyAnalysisLimit}). Please use manual entry until reset.
+                        Daily limit reached ({dailyAnalysisCount}/{dailyAnalysisLimit})
                       </Text>
                       {timeUntilReset && (
                         <Text style={styles.limitCountdownText}>
-                          Resets at midnight in: {timeUntilReset}
+                          Resets in: {timeUntilReset}
                         </Text>
                       )}
                     </View>
-                  </View>
+                  </Animated.View>
                 )}
 
-                <View style={styles.methodSelection}>
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.methodButton,
-                      pressed && { opacity: 0.8 }
-                    ]}
-                    onPress={() => setMethod('manual')}
+                <View style={styles.optionsContainer}>
+                  <Animated.View
+                    entering={FadeInDown.duration(400).delay(100)}
                   >
-                    <Ionicons name="create-outline" size={32} color="#000000" />
-                    <Text style={styles.methodButtonText}>Log{'\n'}Manually</Text>
-                  </Pressable>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.optionButton,
+                        pressed && styles.optionButtonPressed
+                      ]}
+                      onPress={() => setMethod('manual')}
+                    >
+                      <View style={styles.optionIconContainer}>
+                        <Ionicons name="create-outline" size={32} color="#4064F6" />
+                      </View>
+                      <Text style={styles.optionTitle}>Log Manually</Text>
+                      <Text style={styles.optionSubtitle}>Enter nutrition info manually</Text>
+                    </Pressable>
+                  </Animated.View>
 
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.methodButton,
-                      isPhotoAnalysisDisabled && styles.disabledButton,
-                      pressed && { opacity: 0.8 }
-                    ]}
-                    onPress={() => !isPhotoAnalysisDisabled && handleGallerySelect()}
-                    disabled={isPhotoAnalysisDisabled}
+                  <Animated.View
+                    entering={FadeInDown.duration(400).delay(200)}
                   >
-                    <Ionicons name="images-outline" size={32} color={isPhotoAnalysisDisabled ? "#999999" : "#000000"} />
-                    <Text style={[styles.methodButtonText, isPhotoAnalysisDisabled && {color: "#999999"}]}>Pick from{'\n'}Gallery</Text>
-                  </Pressable>
-
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.methodButton,
-                      isPhotoAnalysisDisabled && styles.disabledButton
-                    ]}
-                    onPress={() => !isPhotoAnalysisDisabled && handleCameraCapture()}
-                    disabled={isPhotoAnalysisDisabled}
-                  >
-                    <Ionicons name="camera-outline" size={32} color={isPhotoAnalysisDisabled ? "#999999" : "#000000"} />
-                    <Text style={[styles.methodButtonText, isPhotoAnalysisDisabled && {color: "#999999"}]}>Take{'\n'}Photo</Text>
-                  </Pressable>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.optionButton,
+                        isPhotoAnalysisDisabled && styles.optionButtonDisabled,
+                        pressed && !isPhotoAnalysisDisabled && styles.optionButtonPressed
+                      ]}
+                      onPress={() => !isPhotoAnalysisDisabled && handleScanFoodSelect()}
+                      disabled={isPhotoAnalysisDisabled}
+                    >
+                      <View style={styles.optionIconContainer}>
+                        <Ionicons 
+                          name="scan-outline" 
+                          size={32} 
+                          color={isPhotoAnalysisDisabled ? "#CCCCCC" : "#4064F6"} 
+                        />
+                      </View>
+                      <Text style={[
+                        styles.optionTitle,
+                        isPhotoAnalysisDisabled && styles.optionTitleDisabled
+                      ]}>
+                        Scan Food
+                      </Text>
+                      <Text style={[
+                        styles.optionSubtitle,
+                        isPhotoAnalysisDisabled && styles.optionSubtitleDisabled
+                      ]}>
+                        Use camera or gallery
+                      </Text>
+                    </Pressable>
+                  </Animated.View>
                 </View>
               </View>
             )}
-          </View>
+          </Animated.View>
         </View>
       </KeyboardAvoidingView>
     </Modal>
   );
 }
 
-function LoggedMeals({ meals, onDelete }: { meals: any[]; onDelete: (mealId: string) => Promise<void> }) {
+function LoggedMeals({ meals, onDelete, onEdit, onRetry }: { 
+  meals: any[]; 
+  onDelete: (mealId: string) => Promise<void>; 
+  onEdit: (meal: any) => void;
+  onRetry?: (meal: any) => void;
+}) {
   return (
     <View style={styles.loggedMealsContainer}>
-      <Text style={styles.loggedMealsTitle}>Today's Meals</Text>
+      <Text style={styles.loggedMealsTitle}>Logged Today</Text>
       {meals.map((meal, index) => (
-        <View 
+        <TouchableOpacity
           key={meal.id} 
-          style={styles.mealItem}
+          style={[
+            styles.mealItem,
+            meal.failed && styles.mealItemFailed
+          ]}
+          onPress={() => !meal.failed && onEdit(meal)}
+          activeOpacity={0.7}
+          disabled={meal.failed}
         >
-          <View style={styles.mealInfo}>
-            {/* Show all food items instead of just the first one */}
-            {meal.items && meal.items.length > 0 ? (
-              <>
-                <Text style={styles.mealName}>
-                  {meal.items.map((item: any, index: number) => (
-                    index === meal.items.length - 1 
-                      ? item.name 
-                      : `${item.name}, `
-                  ))}
-                </Text>
-                {meal.items.length > 1 && (
-                  <Text style={styles.itemCount}>
-                    {meal.items.length} items
-                  </Text>
-                )}
-              </>
+          {/* Photo Thumbnail */}
+          <View style={styles.mealPhotoContainer}>
+            {meal.photoUri ? (
+              <Image source={{ uri: meal.photoUri }} style={styles.mealPhoto} />
             ) : (
-              <Text style={styles.mealName}>Unnamed meal</Text>
+              <View style={styles.mealPhotoPlaceholder}>
+                <Ionicons name="restaurant" size={24} color="#CCCCCC" />
+              </View>
             )}
-            <Text style={styles.mealTime}>
-              {format(new Date(meal.timestamp), 'h:mm a')}
-            </Text>
           </View>
-          <View style={styles.mealMacros}>
-            <Text style={styles.mealCalories}>{meal.totalMacros.calories} kcal</Text>
-            <View style={styles.macroDetails}>
-              <Text style={styles.macroDetail}>P: {meal.totalMacros.protein}g</Text>
-              <Text style={styles.macroDetail}>C: {meal.totalMacros.carbs}g</Text>
-              <Text style={styles.macroDetail}>F: {meal.totalMacros.fats}g</Text>
-            </View>
+
+          <View style={styles.mealContent}>
+            {meal.failed ? (
+              // Failed attempt UI
+              <View style={styles.failedAttemptContent}>
+                <View style={styles.failedHeader}>
+                  <Text style={styles.failedTitle}>No food detected</Text>
+                  <Text style={styles.failedTime}>
+                    {format(new Date(meal.timestamp), 'h:mm a')}
+                  </Text>
+                </View>
+                <Text style={styles.failedSubtitle}>Try a different angle</Text>
+                {onRetry && (
+                  <TouchableOpacity
+                    style={styles.retryButton}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      onRetry(meal);
+                    }}
+                  >
+                    <Text style={styles.retryButtonText}>Tap to retry</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : (
+              // Successful meal UI
+              <View style={styles.successfulMealContent}>
+                <View style={styles.mealTopSection}>
+                  <View style={styles.mealNameContainer}>
+                    {/* Show all food items instead of just the first one */}
+                    {meal.items && meal.items.length > 0 ? (
+                      <>
+                        <Text style={styles.mealName}>
+                          {meal.items.map((item: any, index: number) => (
+                            index === meal.items.length - 1 
+                              ? item.name 
+                              : `${item.name}, `
+                          ))}
+                        </Text>
+                        {meal.items.length > 1 && (
+                          <Text style={styles.itemCount}>
+                            {meal.items.length} items
+                          </Text>
+                        )}
+                      </>
+                    ) : (
+                      <Text style={styles.mealName}>Unnamed meal</Text>
+                    )}
+                  </View>
+                  <Text style={styles.mealTime}>
+                    {format(new Date(meal.timestamp), 'h:mm a')}
+                  </Text>
+                </View>
+
+                <View style={styles.mealCaloriesSection}>
+                  <Text style={styles.macroEmoji}>🔥</Text>
+                  <Text style={styles.mealCaloriesLarge}>{meal.totalMacros.calories} calories</Text>
+                </View>
+
+                <View style={styles.macroDetailsRow}>
+                  <View style={styles.macroItem}>
+                    <Text style={styles.macroEmoji}>🥩</Text>
+                    <Text style={styles.macroDetail}>{meal.totalMacros.protein}g</Text>
+                  </View>
+                  <View style={styles.macroItem}>
+                    <Text style={styles.macroEmoji}>🌾</Text>
+                    <Text style={styles.macroDetail}>{meal.totalMacros.carbs}g</Text>
+                  </View>
+                  <View style={styles.macroItem}>
+                    <Text style={styles.macroEmoji}>🧈</Text>
+                    <Text style={styles.macroDetail}>{meal.totalMacros.fats}g</Text>
+                  </View>
+                </View>
+              </View>
+            )}
           </View>
+
+          {/* Delete Button */}
           <Pressable
             style={({ pressed }) => [
               styles.deleteButton,
               pressed && { opacity: 0.8 }
             ]}
-            onPress={() => onDelete(meal.id)}
+            onPress={(e) => {
+              e.stopPropagation();
+              onDelete(meal.id);
+            }}
           >
-            <Ionicons name="trash-outline" size={24} color="#FF6B6B" />
+            <Ionicons name="close" size={16} color="#FF6B6B" />
           </Pressable>
-        </View>
+        </TouchableOpacity>
       ))}
     </View>
   );
@@ -952,7 +1008,9 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   macroItem: {
-    gap: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
   },
   macroHeader: {
     flexDirection: 'row',
@@ -1088,13 +1146,31 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  },
+  modalBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   modalContent: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderRadius: 20,
+    width: '90%',
+    maxWidth: 400,
     maxHeight: '80%',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 10,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
   },
   input: {
     backgroundColor: '#F5F5F5',
@@ -1115,55 +1191,102 @@ const styles = StyleSheet.create({
   },
   mealItem: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 8,
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 12,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+    minHeight: 120,
   },
-  mealInfo: {
+  mealItemFailed: {
+    backgroundColor: '#FFF5F5',
+    borderWidth: 1,
+    borderColor: '#FFE5E5',
+  },
+  mealContent: {
     flex: 1,
   },
-  mealName: {
-    fontSize: 16,
-    fontWeight: '500',
+  mealTopSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  mealCaloriesSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 6,
+  },
+  mealCaloriesLarge: {
+    fontSize: 18,
+    fontWeight: '700',
     color: '#000000',
-    marginBottom: 4,
+  },
+  mealPhotoContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 12,
+    marginRight: 16,
+    overflow: 'hidden',
+  },
+  mealThumbnail: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  mealPhoto: {
+    width: '100%',
+    height: '100%',
+  },
+  mealPhotoPlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mealName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 2,
     flexShrink: 1,
   },
   itemCount: {
     fontSize: 12,
     color: '#666666',
-    marginBottom: 4,
+    marginBottom: 0,
     fontStyle: 'italic',
   },
   mealTime: {
     fontSize: 14,
     color: '#666666',
-  },
-  mealMacros: {
-    alignItems: 'flex-end',
-    minWidth: 100,
+    fontWeight: '500',
   },
   mealCalories: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#000000',
-    marginBottom: 4,
   },
   macroDetails: {
     flexDirection: 'row',
     gap: 8,
   },
   macroDetail: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#666666',
+    fontWeight: '500',
+  },
+  macroEmoji: {
+    fontSize: 14,
+    marginRight: 4,
   },
   loggingOption: {
     flexDirection: 'row',
@@ -1322,10 +1445,6 @@ const styles = StyleSheet.create({
   macroCircles: {
     // Placeholder for macro circles
   },
-  dayContent: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-  },
   dailySummary: {
     padding: 16,
     backgroundColor: '#FFFFFF',
@@ -1356,18 +1475,23 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     padding: 8,
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 12,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
+    borderBottomColor: '#F0F0F0',
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: 22,
+    fontWeight: '700',
     color: '#000000',
   },
   methodSelection: {
@@ -1393,10 +1517,6 @@ const styles = StyleSheet.create({
   },
   modalKeyboardAvoidingView: {
     flex: 1,
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   macroLabel: {
     fontSize: 12,
@@ -1434,6 +1554,203 @@ const styles = StyleSheet.create({
     color: '#666666',
     fontWeight: '500',
   },
+  scanToggleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  scanToggleButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    marginHorizontal: 4,
+  },
+  scanToggleButtonActive: {
+    backgroundColor: '#4064F6',
+  },
+  scanToggleText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666666',
+    marginTop: 4,
+  },
+  scanToggleTextActive: {
+    color: '#FFFFFF',
+  },
+  cameraButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4064F6',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 25,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    marginTop: 16,
+  },
+  cameraButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginLeft: 8,
+  },
+  mainMenuContainer: {
+    padding: 16,
+    gap: 16,
+  },
+  mainMenuButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+    borderRadius: 16,
+    backgroundColor: '#F8F9FA',
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+  },
+  mainMenuButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+    marginTop: 8,
+  },
+  mainMenuButtonSubtext: {
+    fontSize: 14,
+    color: '#666666',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  manualEntryContainer: {
+    padding: 16,
+  },
+  submitButton: {
+    backgroundColor: '#4064F6',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  submitButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  menuContent: {
+    padding: 16,
+  },
+  optionsContainer: {
+    gap: 8,
+  },
+  optionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: '#F5F5F5',
+    marginBottom: 8,
+  },
+  optionButtonPressed: {
+    backgroundColor: '#E2E8FE',
+  },
+  optionButtonDisabled: {
+    opacity: 0.5,
+  },
+  optionIconContainer: {
+    marginRight: 8,
+  },
+  optionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+  },
+  optionSubtitle: {
+    fontSize: 14,
+    color: '#666666',
+  },
+  optionTitleDisabled: {
+    color: '#CCCCCC',
+  },
+  optionSubtitleDisabled: {
+    color: '#999999',
+  },
+  closeButtonModal: {
+    padding: 8,
+    borderRadius: 12,
+    backgroundColor: '#F5F5F5',
+  },
+  failedAttemptContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  failedHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  failedTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FF6B6B',
+  },
+  failedTime: {
+    fontSize: 14,
+    color: '#666666',
+  },
+  failedSubtitle: {
+    fontSize: 14,
+    color: '#666666',
+    textAlign: 'center',
+  },
+  retryButton: {
+    backgroundColor: '#4064F6',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  successfulMealContent: {
+    flex: 1,
+  },
+  mealHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  mealNameContainer: {
+    flex: 1,
+  },
+  mealMacrosRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  caloriesContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  macroDetailsRow: {
+    flexDirection: 'row',
+    gap: 16,
+  },
 });
 
 export default function NutritionScreen() {
@@ -1460,6 +1777,30 @@ export default function NutritionScreen() {
   const [isLoadingWeek, setIsLoadingWeek] = useState(true);
   const [isUpdatingFromLoad, setIsUpdatingFromLoad] = useState(false);
   const mealItemRef = useRef<View>(null);
+
+  // New state for improved flow
+  const [showAnalysisScreen, setShowAnalysisScreen] = useState(false);
+  const [analyzingImageUri, setAnalyzingImageUri] = useState<string>('');
+  const [editingMeal, setEditingMeal] = useState<any>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
+
+  // Handle camera opening
+  const handleOpenCamera = () => {
+    setIsLogMealModalVisible(false);
+    setShowCamera(true);
+  };
+
+  // Handle photo taken from camera
+  const handlePhotoTaken = (imageUri: string) => {
+    setShowCamera(false);
+    handlePhotoAnalysis(imageUri);
+  };
+
+  // Handle camera close
+  const handleCameraClose = () => {
+    setShowCamera(false);
+  };
 
   // Track the time until midnight (when analysis limit resets)
   useEffect(() => {
@@ -2118,16 +2459,16 @@ export default function NutritionScreen() {
             );
             return;
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error('Error checking analysis count:', error);
           // Continue with analysis if we can't check (don't block user)
         }
       }
 
-      setIsLoading(true);
-      setIsAnalyzing(true);
-      // Close the modal immediately when analysis/logging begins
-      setIsLogMealModalVisible(false);
+      // Show analysis screen
+      setAnalyzingImageUri(imageUri);
+      setShowAnalysisScreen(true);
+      
       console.log('Starting photo analysis process for URI:', imageUri);
       
       // Compress and resize the image before analysis to avoid timeouts
@@ -2154,82 +2495,126 @@ export default function NutritionScreen() {
         setTimeout(() => reject(new Error('Image analysis timed out. Please try again with a clearer photo.')), 60000);
       });
       
-      // Race between the normal analysis and the timeout
-      const result = await Promise.race([
-        analyzeImage(processedUri),
-        timeoutPromise
-      ]) as FoodAnalysisResult;
-      
-      if (!result) {
-        console.error('Analysis result is undefined or null');
-        setIsAnalyzing(false);
-        return; // Exit silently if analysis failed
-      }
-      
-      console.log('Successfully analyzed image, logging meal');
-      
-      // Ensure all macro values are rounded to the nearest whole number
-      const roundedResult = {
-        ...result,
-        items: result.items.map((item: any) => ({
-          ...item,
-          macros: {
-            calories: Math.round(item.macros.calories),
-            protein: Math.round(item.macros.protein),
-            carbs: Math.round(item.macros.carbs),
-            fats: Math.round(item.macros.fats)
-          }
-        })),
-        totalMacros: {
-          calories: Math.round(result.totalMacros.calories),
-          protein: Math.round(result.totalMacros.protein),
-          carbs: Math.round(result.totalMacros.carbs),
-          fats: Math.round(result.totalMacros.fats)
-        }
-      };
-
-      // Increment the analysis count in Firebase using atomic operation
-      if (isTodaySelected && user) {
-        const todayStr = formatDateId(today);
-        const analysisCountRef = doc(db, 'users', user.uid, 'imageAnalysisUsage', todayStr);
+      try {
+        // Race between the normal analysis and the timeout
+        const result = await Promise.race([
+          analyzeImage(processedUri),
+          timeoutPromise
+        ]) as FoodAnalysisResult;
         
-        try {
-          // Use updateDoc with increment for atomic update
-          await updateDoc(analysisCountRef, {
-            count: increment(1),
-            updatedAt: new Date().toISOString()
-          }).catch(async (error) => {
-            // Document might not exist yet, create it
-            if (error.code === 'not-found') {
-              await setDoc(analysisCountRef, {
-                count: 1,
-                updatedAt: new Date().toISOString(),
-                createdAt: new Date().toISOString()
-              });
-            } else {
-              throw error;
-            }
-          });
-          
-          // Refresh the count after successful update
-          const updatedDocSnap = await getDoc(analysisCountRef);
-          if (updatedDocSnap.exists()) {
-            const newCount = updatedDocSnap.data().count || 1;
-            setDailyAnalysisCount(newCount);
-            setAnalysisLimitReached(newCount >= DAILY_ANALYSIS_LIMIT);
-          }
-        } catch (error) {
-          console.error('Error updating analysis count:', error);
-          // Continue with meal logging even if tracking fails
+        if (!result) {
+          console.error('Analysis result is undefined or null');
+          throw new Error('No food detected');
         }
+        
+        console.log('Successfully analyzed image, logging meal');
+        
+        // Ensure all macro values are rounded to the nearest whole number
+        const roundedResult = {
+          ...result,
+          items: result.items.map((item: any) => ({
+            ...item,
+            macros: {
+              calories: Math.round(item.macros.calories),
+              protein: Math.round(item.macros.protein),
+              carbs: Math.round(item.macros.carbs),
+              fats: Math.round(item.macros.fats)
+            }
+          })),
+          totalMacros: {
+            calories: Math.round(result.totalMacros.calories),
+            protein: Math.round(result.totalMacros.protein),
+            carbs: Math.round(result.totalMacros.carbs),
+            fats: Math.round(result.totalMacros.fats)
+          }
+        };
+
+        // Store photo in Firebase Storage
+        let photoDownloadUrl = null;
+        try {
+          if (user?.uid) {
+            const storage = getStorage();
+            const photoRef = ref(storage, `meal-photos/${user.uid}/${Date.now()}.jpg`);
+            
+            // Convert image to blob for upload
+            const response = await fetch(imageUri);
+            const blob = await response.blob();
+            
+            await uploadBytes(photoRef, blob);
+            photoDownloadUrl = await getDownloadURL(photoRef);
+            console.log('Photo uploaded to Firebase Storage:', photoDownloadUrl);
+          }
+        } catch (photoError) {
+          console.error('Error uploading photo to Firebase:', photoError);
+          // Continue without photo if upload fails
+        }
+
+        // Add photo URL to the result
+        const resultWithPhoto = {
+          ...roundedResult,
+          photoUri: photoDownloadUrl || imageUri // Fallback to local URI if upload fails
+        };
+
+        // Increment the analysis count in Firebase using atomic operation
+        if (isTodaySelected && user) {
+          const todayStr = formatDateId(today);
+          const analysisCountRef = doc(db, 'users', user.uid, 'imageAnalysisUsage', todayStr);
+          
+          try {
+            // Use updateDoc with increment for atomic update
+            await updateDoc(analysisCountRef, {
+              count: increment(1),
+              updatedAt: new Date().toISOString()
+            }).catch(async (error) => {
+              // Document might not exist yet, create it
+              if (error.code === 'not-found') {
+                await setDoc(analysisCountRef, {
+                  count: 1,
+                  updatedAt: new Date().toISOString(),
+                  createdAt: new Date().toISOString()
+                });
+              } else {
+                throw error;
+              }
+            });
+            
+            // Refresh the count after successful update
+            const updatedDocSnap = await getDoc(analysisCountRef);
+            if (updatedDocSnap.exists()) {
+              const newCount = updatedDocSnap.data().count || 1;
+              setDailyAnalysisCount(newCount);
+              setAnalysisLimitReached(newCount >= DAILY_ANALYSIS_LIMIT);
+            }
+          } catch (error: any) {
+            console.error('Error updating analysis count:', error);
+            // Continue with meal logging even if tracking fails
+          }
+        }
+        
+        // Hide analysis screen
+        setShowAnalysisScreen(false);
+        
+        await logMealToFirestore(resultWithPhoto);
+        
+        // Refresh the data
+        await loadSelectedDayData();
+        
+      } catch (analysisError: any) {
+        console.error('Analysis failed:', analysisError);
+        
+        // Hide analysis screen
+        setShowAnalysisScreen(false);
+        
+        // Store failed attempt with photo but no macro data
+        await logFailedAttempt(imageUri);
+        
+        // Don't show additional error alert since we're showing it in the UI
       }
-      
-      await logMealToFirestore(roundedResult);
-      
-      // Refresh the data
-      await loadSelectedDayData();
     } catch (error: any) {
       console.error('Photo analysis error:', error);
+      
+      // Hide analysis screen on error
+      setShowAnalysisScreen(false);
       
       // Handle timeout error specifically
       if (error.message && error.message.includes('timed out')) {
@@ -2244,9 +2629,70 @@ export default function NutritionScreen() {
           'We could not properly analyze this image. Please try again with a clearer photo of your food.'
         );
       }
-    } finally {
-      setIsLoading(false);
-      setIsAnalyzing(false);
+    }
+  };
+
+  // Function to log failed analysis attempts
+  const logFailedAttempt = async (imageUri: string) => {
+    if (!user) return;
+    
+    try {
+      // Store photo in Firebase Storage
+      let photoDownloadUrl = null;
+      try {
+        if (user?.uid) {
+          const storage = getStorage();
+          const photoRef = ref(storage, `meal-photos/${user.uid}/${Date.now()}_failed.jpg`);
+          
+          // Convert image to blob for upload
+          const response = await fetch(imageUri);
+          const blob = await response.blob();
+          
+          await uploadBytes(photoRef, blob);
+          photoDownloadUrl = await getDownloadURL(photoRef);
+          console.log('Failed attempt photo uploaded to Firebase Storage:', photoDownloadUrl);
+        }
+      } catch (photoError) {
+        console.error('Error uploading failed attempt photo to Firebase:', photoError);
+        // Continue with local URI if upload fails
+      }
+
+      // Use selected date for the meal timestamp
+      const mealDate = new Date(selectedDate);
+      mealDate.setHours(new Date().getHours());
+      mealDate.setMinutes(new Date().getMinutes());
+
+      const failedAttemptData = {
+        userId: user.uid,
+        timestamp: mealDate.toISOString(),
+        photoUri: photoDownloadUrl || imageUri,
+        failed: true,
+        items: [],
+        totalMacros: {
+          calories: 0,
+          protein: 0,
+          carbs: 0,
+          fats: 0
+        }
+      };
+
+      await addDoc(collection(db, 'meals'), failedAttemptData);
+      console.log('Failed attempt logged successfully:', failedAttemptData);
+      
+      // Refresh the data to show the failed attempt
+      await loadSelectedDayData();
+    } catch (error) {
+      console.error('Error logging failed attempt:', error);
+    }
+  };
+
+  // Handle retry for failed attempts
+  const handleRetryAnalysis = (meal: any) => {
+    if (meal.photoUri) {
+      handlePhotoAnalysis(meal.photoUri);
+    } else {
+      // If no photo URI, open camera
+      setShowCamera(true);
     }
   };
 
@@ -2297,6 +2743,35 @@ export default function NutritionScreen() {
 
   // Add back the scrollViewRef that's still needed
   const scrollViewRef = useRef<ScrollView>(null);
+
+  // Handle meal editing
+  const handleEditMeal = (meal: any) => {
+    setEditingMeal(meal);
+    setShowEditModal(true);
+  };
+
+  const handleSaveMealEdit = async (updatedMeal: any) => {
+    try {
+      if (!user) throw new Error('User not authenticated');
+
+      // Update meal in Firestore
+      const mealRef = doc(db, 'meals', updatedMeal.id);
+      await updateDoc(mealRef, {
+        items: updatedMeal.items,
+        totalMacros: updatedMeal.totalMacros,
+        updatedAt: new Date().toISOString()
+      });
+
+      // Refresh data to show updated values
+      await loadSelectedDayData();
+      
+      setShowEditModal(false);
+      setEditingMeal(null);
+    } catch (error) {
+      console.error('Error updating meal:', error);
+      throw error;
+    }
+  };
 
   return (
     <>
@@ -2451,6 +2926,12 @@ export default function NutritionScreen() {
                 setIsLoading(false);
               }
             }}
+            onEdit={(meal) => {
+              // Implement edit functionality
+              console.log('Editing meal:', meal);
+              handleEditMeal(meal);
+            }}
+            onRetry={handleRetryAnalysis}
           /> 
         </View>
 
@@ -2487,6 +2968,7 @@ export default function NutritionScreen() {
               setIsLoggingMeal(false);
             }
           }}
+          onOpenCamera={handleOpenCamera}
           isPhotoAnalysisDisabled={analysisLimitReached}
           dailyAnalysisCount={dailyAnalysisCount}
           dailyAnalysisLimit={DAILY_ANALYSIS_LIMIT}
@@ -2541,6 +3023,26 @@ export default function NutritionScreen() {
           </Animated.View>
         </Animated.View>
       )}
+
+      {/* Food Analysis Screen */}
+      <FoodAnalysisScreen
+        visible={showAnalysisScreen}
+        imageUri={analyzingImageUri}
+      />
+
+      {/* Food Camera */}
+      <FoodCamera
+        visible={showCamera}
+        onPhotoTaken={handlePhotoTaken}
+        onClose={handleCameraClose}
+      />
+
+      <MealEditModal
+        visible={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        meal={editingMeal}
+        onSave={handleSaveMealEdit}
+      />
     </>
   );
 }
