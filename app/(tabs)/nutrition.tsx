@@ -1926,6 +1926,13 @@ export default function NutritionScreen() {
     };
   }, [setSelectedDate]);
 
+  // Load data when selected date changes
+  useEffect(() => {
+    if (user) {
+      loadSelectedDayData();
+    }
+  }, [selectedDate, user]);
+
   // Move canLogMeal to component scope
   const canLogMeal = useCallback(() => {
     const today = new Date();
