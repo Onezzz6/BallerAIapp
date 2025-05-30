@@ -90,12 +90,12 @@ export default function MealDetailsScreen() {
         setMeal({ id: mealDoc.id, ...mealDoc.data() });
       } else {
         Alert.alert('Error', 'Meal not found');
-        router.back();
+        router.push('/(tabs)/nutrition');
       }
     } catch (error) {
       console.error('Error loading meal:', error);
       Alert.alert('Error', 'Failed to load meal details');
-      router.back();
+      router.push('/(tabs)/nutrition');
     } finally {
       setLoading(false);
     }
@@ -209,7 +209,7 @@ export default function MealDetailsScreen() {
                 }
               }
               
-              router.back();
+              router.push('/(tabs)/nutrition');
             } catch (error) {
               console.error('Error deleting meal:', error);
               Alert.alert('Error', 'Failed to delete meal');
@@ -268,7 +268,7 @@ export default function MealDetailsScreen() {
           {/* Header with back button */}
           <View style={styles.header}>
             <TouchableOpacity
-              onPress={() => router.back()}
+              onPress={() => router.push('/(tabs)/nutrition')}
               style={styles.backButton}
             >
               <Ionicons name="arrow-back" size={24} color="#000" />

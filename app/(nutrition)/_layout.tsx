@@ -7,7 +7,7 @@ export default function NutritionLayout() {
         name="meal/[id]"
         options={{
           headerShown: false,
-          presentation: 'modal',
+          presentation: 'card',
         }}
       />
     </Stack>
