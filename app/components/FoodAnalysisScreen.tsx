@@ -33,6 +33,7 @@ const analysisSteps = [
 
 export default function FoodAnalysisScreen({ visible, imageUri, onAnalysisComplete }: FoodAnalysisScreenProps) {
   const [currentStep, setCurrentStep] = useState(0);
+  const [displayPercentage, setDisplayPercentage] = useState(0);
   const progress = useSharedValue(0);
   
   // Animation values for placeholder lines
@@ -48,7 +49,19 @@ export default function FoodAnalysisScreen({ visible, imageUri, onAnalysisComple
     if (visible) {
       // Reset values
       setCurrentStep(0);
+      setDisplayPercentage(0);
       progress.value = 0;
+      
+      // Percentage counter animation - increment by 2 every 60ms
+      const percentageInterval = setInterval(() => {
+        setDisplayPercentage(prev => {
+          if (prev >= 100) {
+            clearInterval(percentageInterval);
+            return 100;
+          }
+          return prev + 2;
+        });
+      }, 60);
       
       // Start shimmer animation
       shimmerPosition.value = withRepeat(
@@ -112,6 +125,7 @@ export default function FoodAnalysisScreen({ visible, imageUri, onAnalysisComple
       }
       
       return () => {
+        clearInterval(percentageInterval);
         timeouts.forEach(timeout => clearTimeout(timeout));
       };
     }
@@ -210,7 +224,7 @@ export default function FoodAnalysisScreen({ visible, imageUri, onAnalysisComple
                 />
               </Svg>
               <Animated.Text style={[styles.percentageText, percentageStyle]}>
-                {`${Math.round(progress.value * 100)}%`}
+                {`${displayPercentage}%`}
               </Animated.Text>
             </View>
           </View>

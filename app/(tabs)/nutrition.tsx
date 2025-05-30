@@ -619,118 +619,127 @@ function LoggedMeals({ meals, onDelete, onEdit, onRetry }: {
   };
 
   return (
-    <View style={styles.loggedMealsContainer}>
+    <Animated.View 
+      style={styles.loggedMealsContainer}
+      layout={FadeInDown.duration(300)}
+    >
       <Text style={styles.loggedMealsTitle}>Logged Today</Text>
       {meals.map((meal) => (
-        <Swipeable
+        <Animated.View
           key={meal.id}
-          ref={(ref) => { swipeableRefs.current[meal.id] = ref; }}
-          renderRightActions={renderRightActions}
-          onSwipeableWillOpen={(direction) => {
-            console.log(`Swipeable will open: ${direction}, meal: ${meal.id}`);
-            handleSwipeableOpen(meal.id, direction);
-          }}
-          rightThreshold={80}  // Changed from 150 to 80
-          overshootRight={false}
-          friction={1}
-          useNativeAnimations={true}
-          shouldCancelWhenOutside={true}
+          entering={FadeInDown.duration(300)}
+          exiting={FadeOut.duration(200)}
+          layout={FadeInDown.duration(300).springify()}
         >
-          <Pressable
-            style={({ pressed }) => [
-              styles.mealItem,
-              meal.failed && styles.mealItemFailed,
-              pressed && { opacity: 0.95 }
-            ]}
-            onPress={() => !meal.failed && onEdit(meal)}
-            disabled={meal.failed}
+          <Swipeable
+            ref={(ref) => { swipeableRefs.current[meal.id] = ref; }}
+            renderRightActions={renderRightActions}
+            onSwipeableWillOpen={(direction) => {
+              console.log(`Swipeable will open: ${direction}, meal: ${meal.id}`);
+              handleSwipeableOpen(meal.id, direction);
+            }}
+            rightThreshold={80}  // Changed from 150 to 80
+            overshootRight={false}
+            friction={1}
+            useNativeAnimations={true}
+            shouldCancelWhenOutside={true}
           >
-            {/* Photo Thumbnail - Larger size */}
-            <View style={styles.mealPhotoContainer}>
-              {meal.photoUri ? (
-                <Image source={{ uri: meal.photoUri }} style={styles.mealPhoto} />
-              ) : (
-                <View style={styles.mealPhotoPlaceholder}>
-                  <Ionicons name="restaurant" size={32} color="#CCCCCC" />
-                </View>
-              )}
-            </View>
-
-            <View style={styles.mealContent}>
-              {meal.failed ? (
-                // Failed attempt UI - simplified without explanation card
-                <View style={styles.failedMealContent}>
-                  <View style={styles.mealNameContainer}>
-                    <Text style={styles.failedMealName}>No food detected</Text>
-                    <Text style={styles.failedMealSubtitle}>Try a different angle</Text>
+            <Pressable
+              style={({ pressed }) => [
+                styles.mealItem,
+                meal.failed && styles.mealItemFailed,
+                pressed && { opacity: 0.95 }
+              ]}
+              onPress={() => !meal.failed && onEdit(meal)}
+              disabled={meal.failed}
+            >
+              {/* Photo Thumbnail - Larger size */}
+              <View style={styles.mealPhotoContainer}>
+                {meal.photoUri ? (
+                  <Image source={{ uri: meal.photoUri }} style={styles.mealPhoto} />
+                ) : (
+                  <View style={styles.mealPhotoPlaceholder}>
+                    <Ionicons name="restaurant" size={32} color="#CCCCCC" />
                   </View>
-                  <Text style={styles.mealTime}>
-                    {format(new Date(meal.timestamp), 'h:mm a')}
-                  </Text>
-                  {onRetry && (
-                    <TouchableOpacity
-                      style={styles.retryButton}
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        onRetry(meal);
-                      }}
-                    >
-                      <Text style={styles.retryButtonText}>Tap to try again</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              ) : (
-                // Successful meal UI
-                <View style={styles.successfulMealContent}>
-                  <View style={styles.mealTopSection}>
+                )}
+              </View>
+
+              <View style={styles.mealContent}>
+                {meal.failed ? (
+                  // Failed attempt UI - simplified without explanation card
+                  <View style={styles.failedMealContent}>
                     <View style={styles.mealNameContainer}>
-                      {/* Show combined name or first item name */}
-                      {meal.items && meal.items.length > 0 ? (
-                        <>
-                          <Text style={styles.mealName}>
-                            {meal.combinedName || meal.items[0].name}
-                          </Text>
-                          {meal.items.length > 1 && (
-                            <Text style={styles.itemCount}>
-                              {meal.items.length} items
-                            </Text>
-                          )}
-                        </>
-                      ) : (
-                        <Text style={styles.mealName}>Unnamed meal</Text>
-                      )}
+                      <Text style={styles.failedMealName}>No food detected</Text>
+                      <Text style={styles.failedMealSubtitle}>Try a different angle</Text>
                     </View>
                     <Text style={styles.mealTime}>
                       {format(new Date(meal.timestamp), 'h:mm a')}
                     </Text>
+                    {onRetry && (
+                      <TouchableOpacity
+                        style={styles.retryButton}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          onRetry(meal);
+                        }}
+                      >
+                        <Text style={styles.retryButtonText}>Tap to try again</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
+                ) : (
+                  // Successful meal UI
+                  <View style={styles.successfulMealContent}>
+                    <View style={styles.mealTopSection}>
+                      <View style={styles.mealNameContainer}>
+                        {/* Show combined name or first item name */}
+                        {meal.items && meal.items.length > 0 ? (
+                          <>
+                            <Text style={styles.mealName}>
+                              {meal.combinedName || meal.items[0].name}
+                            </Text>
+                            {meal.items.length > 1 && (
+                              <Text style={styles.itemCount}>
+                                {meal.items.length} items
+                              </Text>
+                            )}
+                          </>
+                        ) : (
+                          <Text style={styles.mealName}>Unnamed meal</Text>
+                        )}
+                      </View>
+                      <Text style={styles.mealTime}>
+                        {format(new Date(meal.timestamp), 'h:mm a')}
+                      </Text>
+                    </View>
 
-                  <View style={styles.mealCaloriesSection}>
-                    <Text style={styles.macroEmoji}>🔥</Text>
-                    <Text style={styles.mealCaloriesLarge}>{meal.totalMacros.calories} calories</Text>
-                  </View>
+                    <View style={styles.mealCaloriesSection}>
+                      <Text style={styles.macroEmoji}>🔥</Text>
+                      <Text style={styles.mealCaloriesLarge}>{meal.totalMacros.calories} calories</Text>
+                    </View>
 
-                  <View style={styles.macroDetailsRow}>
-                    <View style={styles.macroItem}>
-                      <Text style={styles.macroEmoji}>🥩</Text>
-                      <Text style={styles.macroDetail}>{meal.totalMacros.protein}g</Text>
-                    </View>
-                    <View style={styles.macroItem}>
-                      <Text style={styles.macroEmoji}>🌾</Text>
-                      <Text style={styles.macroDetail}>{meal.totalMacros.carbs}g</Text>
-                    </View>
-                    <View style={styles.macroItem}>
-                      <Text style={styles.macroEmoji}>🧈</Text>
-                      <Text style={styles.macroDetail}>{meal.totalMacros.fats}g</Text>
+                    <View style={styles.macroDetailsRow}>
+                      <View style={styles.macroItem}>
+                        <Text style={styles.macroEmoji}>🥩</Text>
+                        <Text style={styles.macroDetail}>{meal.totalMacros.protein}g</Text>
+                      </View>
+                      <View style={styles.macroItem}>
+                        <Text style={styles.macroEmoji}>🌾</Text>
+                        <Text style={styles.macroDetail}>{meal.totalMacros.carbs}g</Text>
+                      </View>
+                      <View style={styles.macroItem}>
+                        <Text style={styles.macroEmoji}>🧈</Text>
+                        <Text style={styles.macroDetail}>{meal.totalMacros.fats}g</Text>
+                      </View>
                     </View>
                   </View>
-                </View>
-              )}
-            </View>
-          </Pressable>
-        </Swipeable>
+                )}
+              </View>
+            </Pressable>
+          </Swipeable>
+        </Animated.View>
       ))}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -2013,6 +2022,11 @@ export default function NutritionScreen() {
       }));
       
       console.log(`Found ${meals.length} meals for ${dateString}`);
+      // Debug log to check if meals have photoUri
+      meals.forEach((meal: any, index) => {
+        console.log(`Meal ${index}: photoUri=${meal.photoUri ? 'YES' : 'NO'}, failed=${meal.failed || false}`);
+      });
+      
       setLoggedMeals(meals);
       
       // Check if today's date is selected - we should always recompute the daily macros
@@ -2112,11 +2126,13 @@ export default function NutritionScreen() {
       // Handle both the new format with multiple items and the old format
       let mealItems: any[] = [];
       let totalMacros: any = { calories: 0, protein: 0, carbs: 0, fats: 0 };
+      let photoUri: string | null = null;
       
       // Check if this is our new format with already calculated totalMacros
       if (items.totalMacros && items.items && Array.isArray(items.items)) {
         mealItems = items.items;
         totalMacros = items.totalMacros;
+        photoUri = items.photoUri || null;
         console.log('Using pre-calculated total macros from multiple items');
       } 
       // Handle array of items but without total macros
@@ -2152,8 +2168,11 @@ export default function NutritionScreen() {
         userId: user.uid,
         timestamp: mealDate.toISOString(),
         items: mealItems,
-        totalMacros
+        totalMacros,
+        ...(photoUri && { photoUri }) // Include photoUri if it exists
       };
+
+      console.log('Saving meal data with photo:', mealData.photoUri ? 'YES' : 'NO');
 
       await addDoc(collection(db, 'meals'), mealData);
       
@@ -2440,14 +2459,6 @@ export default function NutritionScreen() {
         Alert.alert('Error', 'This image format is not supported. Please try another image.');
       } else if (error.message.includes('invalid_image')) {
         Alert.alert('Error', 'The image could not be processed. Please ensure it clearly shows food items.');
-      } else if (!error.message.includes('Analysis failed')) {
-        Alert.alert(
-          'Analysis Failed',
-          'Please ensure that:\n\n' +
-          '• Photo is taken 40-50cm from the food\n' +
-          '• Background is clean and clear\n' +
-          '• Only the intended food is in the picture'
-        );
       }
       
       throw error;
@@ -2692,12 +2703,6 @@ export default function NutritionScreen() {
         Alert.alert(
           'Image Analysis Timeout',
           'The analysis is taking too long. Please try again with a smaller or clearer photo.'
-        );
-      } else {
-        // Error messaging handled in analyzeImage
-        Alert.alert(
-          'Image Analysis Failed', 
-          'We could not properly analyze this image. Please try again with a clearer photo of your food.'
         );
       }
     }
@@ -2981,17 +2986,13 @@ export default function NutritionScreen() {
             meals={loggedMeals} 
             onDelete={async (mealId: string) => {
               try {
-                setIsLoading(true);
                 await deleteMeal(mealId);
-                // Show success message
-                Alert.alert('Success', 'Meal deleted successfully.');
+                // Removed success alert for smoother UX
                 // Refresh weekly data to update the overview
                 await loadSelectedDayData();
               } catch (error) {
                 console.error('Error deleting meal:', error);
                 Alert.alert('Error', 'Failed to delete meal. Please try again.');
-              } finally {
-                setIsLoading(false);
               }
             }}
             onEdit={(meal) => {
