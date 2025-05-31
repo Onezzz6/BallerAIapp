@@ -1321,7 +1321,7 @@ IMPORTANT USAGE GUIDELINES:
               disabled={loading}
             >
               <Text style={styles.generateButtonText}>
-                {loading ? 'Generating Plan...' : 'Generate Recovery Plan'}
+                {loading ? 'Generating Plan...' : 'Generate Plan'}
               </Text>
               <Ionicons name="fitness" size={20} color="#FFFFFF" />
             </Pressable>
@@ -1993,7 +1993,7 @@ IMPORTANT USAGE GUIDELINES:
               <View 
                 ref={planHolderRef}
                 style={{
-                marginHorizontal: 24,
+                  marginHorizontal: 24,
                 }}
               >
                 <View style={[
@@ -2281,7 +2281,12 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   backButton: {
-    padding: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 0,
+    borderRadius: 32,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   logoContainer: {
     flexDirection: 'row',
@@ -2347,7 +2352,7 @@ const styles = StyleSheet.create({
     margin: 24,
     padding: 24,
     borderRadius: 24,
-    gap: 24,
+    gap: 16,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -2391,12 +2396,13 @@ const styles = StyleSheet.create({
   sliderLabels: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 8,
+    paddingHorizontal: 3,
     paddingVertical: 0,
   },
   sliderLabel: {
     fontSize: 12,
     color: '#666666',
+    marginLeft: 10,
   },
   helperText: {
     fontSize: 14,
@@ -2523,7 +2529,6 @@ const styles = StyleSheet.create({
   
   // New styles for plan holder
   planHolderContainer: {
-    marginTop: 24,
     marginBottom: 24,
     padding: 20,
     backgroundColor: '#F5F9FF',
@@ -2905,9 +2910,10 @@ const styles = StyleSheet.create({
   workflowCard: {
     backgroundColor: '#DCF4F5',
     borderRadius: 24,
-    padding: 32,
+    padding: 24,
     marginHorizontal: 24,
-    marginVertical: 16,
+    marginTop: 0,
+    marginBottom: 24,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -2923,8 +2929,8 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   workflowTitle: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '600',
     color: '#000000',
     marginBottom: 12,
     textAlign: 'center',
@@ -2945,7 +2951,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   getStartedButtonText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
   },
@@ -2978,8 +2984,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#CCCCCC',
   },
   stepTitle: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '600',
     color: '#000000',
     marginBottom: 8,
     textAlign: 'center',
