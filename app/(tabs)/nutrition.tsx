@@ -186,7 +186,8 @@ function CalorieProgress({ eaten, burned, goal }: { eaten: number; burned: numbe
   return (
     <View style={styles.calorieCard}>
       <View style={styles.calorieHeader}>
-        <Text style={styles.calorieTitle}>🔥 Daily Calories</Text>
+      <Ionicons name="flame-outline" size={24} color="#000000" />
+      <Text style={styles.calorieTitle}>Daily Calories</Text>
       </View>
 
       <View style={styles.calorieCircleContainer}>
@@ -431,7 +432,7 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal, onOpenCame
                   }
                 }}
               >
-                <Ionicons name={method === 'manual' ? "arrow-back" : "close"} size={20} color="#666666" />
+                <Ionicons name={method === 'manual' ? "chevron-back" : "close"} size={20} color="#666666" />
               </Pressable>
             </View>
 
@@ -440,7 +441,7 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal, onOpenCame
               <ScrollView style={styles.manualEntryContainer} showsVerticalScrollIndicator={false}>
                 <TextInput
                   style={styles.input}
-                  placeholder="Meal Name"
+                  placeholder="Meal name"
                   value={manualEntry.name}
                   onChangeText={(text) => setManualEntry(prev => ({ ...prev, name: text }))}
                 />
@@ -518,8 +519,10 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal, onOpenCame
                       <View style={styles.optionIconContainer}>
                         <Ionicons name="create-outline" size={32} color="#4064F6" />
                       </View>
-                      <Text style={styles.optionTitle}>Log Manually</Text>
-                      <Text style={styles.optionSubtitle}>Enter nutrition info manually</Text>
+                      <View style={styles.optionTextContainer}>
+                        <Text style={styles.optionTitle}>Log Manually</Text>
+                        <Text style={styles.optionSubtitle}>Enter nutrition info manually</Text>
+                      </View>
                     </Pressable>
                   </Animated.View>
 
@@ -542,18 +545,20 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal, onOpenCame
                           color={isPhotoAnalysisDisabled ? "#CCCCCC" : "#4064F6"} 
                         />
                       </View>
-                      <Text style={[
-                        styles.optionTitle,
-                        isPhotoAnalysisDisabled && styles.optionTitleDisabled
-                      ]}>
-                        Scan Food
-                      </Text>
-                      <Text style={[
-                        styles.optionSubtitle,
-                        isPhotoAnalysisDisabled && styles.optionSubtitleDisabled
-                      ]}>
-                        Use camera or gallery
-                      </Text>
+                      <View style={styles.optionTextContainer}>
+                        <Text style={[
+                          styles.optionTitle,
+                          isPhotoAnalysisDisabled && styles.optionTitleDisabled
+                        ]}>
+                          Scan Food
+                        </Text>
+                        <Text style={[
+                          styles.optionSubtitle,
+                          isPhotoAnalysisDisabled && styles.optionSubtitleDisabled
+                        ]}>
+                            Use camera or gallery
+                        </Text>
+                      </View>
                     </Pressable>
                   </Animated.View>
                 </View>
@@ -598,7 +603,7 @@ function LoggedMeals({ meals, onDelete, onEdit, onRetry }: {
       style={styles.loggedMealsContainer}
       layout={FadeInDown.duration(300)}
     >
-      <Text style={styles.loggedMealsTitle}>Logged Today</Text>
+      <Text style={styles.loggedMealsTitle}>Today's Meals</Text>
       <View style={{ flex: 1 }}>
         {meals.map((meal) => (
           <Pressable
@@ -606,7 +611,7 @@ function LoggedMeals({ meals, onDelete, onEdit, onRetry }: {
             style={({ pressed }) => [
               styles.mealItem,
               meal.failed && styles.failedMealItem,
-              pressed && { opacity: 0.95 },
+              pressed && { opacity: 0.8 },
               { width: cardWidth, marginBottom: 12 }
             ]}
             onPress={() => {
@@ -665,7 +670,7 @@ function LoggedMeals({ meals, onDelete, onEdit, onRetry }: {
                       {/* Show combined name or first item name */}
                       {meal.items && meal.items.length > 0 ? (
                         <>
-                          <Text style={styles.mealName}>
+                          <Text style={styles.mealName} allowFontScaling={false}>
                             {meal.combinedName || meal.items[0].name}
                           </Text>
                           {meal.items.length > 1 && (
@@ -678,28 +683,28 @@ function LoggedMeals({ meals, onDelete, onEdit, onRetry }: {
                         <Text style={styles.mealName}>Unnamed meal</Text>
                       )}
                     </View>
-                    <Text style={styles.mealTime}>
+                    <Text style={styles.mealTime} allowFontScaling={false}>
                       {format(new Date(meal.timestamp), 'h:mm a')}
                     </Text>
                   </View>
 
                   <View style={styles.mealCaloriesSection}>
                     <Text style={styles.macroEmoji}>🔥</Text>
-                    <Text style={styles.mealCaloriesLarge}>{meal.totalMacros.calories} calories</Text>
+                    <Text style={styles.mealCaloriesLarge} allowFontScaling={false}>{meal.totalMacros.calories} calories</Text>
                   </View>
 
                   <View style={styles.macroDetailsRow}>
                     <View style={styles.macroItem}>
                       <Text style={styles.macroEmoji}>🥩</Text>
-                      <Text style={styles.macroDetail}>{meal.totalMacros.protein}g</Text>
+                      <Text style={styles.macroDetail} allowFontScaling={false}>{meal.totalMacros.protein}g</Text>
                     </View>
                     <View style={styles.macroItem}>
                       <Text style={styles.macroEmoji}>🌾</Text>
-                      <Text style={styles.macroDetail}>{meal.totalMacros.carbs}g</Text>
+                      <Text style={styles.macroDetail} allowFontScaling={false}>{meal.totalMacros.carbs}g</Text>
                     </View>
                     <View style={styles.macroItem}>
                       <Text style={styles.macroEmoji}>🧈</Text>
-                      <Text style={styles.macroDetail}>{meal.totalMacros.fats}g</Text>
+                      <Text style={styles.macroDetail} allowFontScaling={false}>{meal.totalMacros.fats}g</Text>
                     </View>
                   </View>
                 </View>
@@ -920,12 +925,17 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
   },
   calorieHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
     marginBottom: 24,
   },
   calorieTitle: {
@@ -1023,9 +1033,11 @@ const styles = StyleSheet.create({
     gap: 24,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
   },
   macroProgressItem: {
     flexDirection: 'column',
@@ -1196,7 +1208,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
     padding: 16,
     borderRadius: 12,
-    marginBottom: 16,
+    marginBottom: 12,
     fontSize: 16,
   },
   loggedMealsContainer: {
@@ -1251,14 +1263,13 @@ const styles = StyleSheet.create({
   },
   mealCaloriesLarge: {
     fontSize: 16, // Reduced from 18
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#000000',
   },
   mealPhotoContainer: {
-    width: 140,
-    height: 140,
+    minWidth: '25%',
+    height: '100%',
     overflow: 'hidden',
-    flexShrink: 0,
     borderTopLeftRadius: 16,
     borderBottomLeftRadius: 16,
   },
@@ -1280,7 +1291,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   mealName: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: '#000000',
     marginBottom: 2,
@@ -1506,7 +1517,7 @@ const styles = StyleSheet.create({
     right: 8,
     padding: 8,
     backgroundColor: 'rgba(0, 0, 0, 0.65)',
-    borderRadius: 12,
+    borderRadius: 24,
     zIndex: 1,
   },
   modalHeader: {
@@ -1657,15 +1668,17 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   manualEntryContainer: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
   submitButton: {
     backgroundColor: '#4064F6',
     paddingVertical: 12,
     paddingHorizontal: 24,
-    borderRadius: 12,
+    borderRadius: 24,
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: 8,
+    marginBottom: 16,
   },
   submitButtonText: {
     color: '#FFFFFF',
@@ -1696,6 +1709,9 @@ const styles = StyleSheet.create({
   optionIconContainer: {
     marginRight: 8,
   },
+  optionTextContainer: {
+    flex: 1,
+  },
   optionTitle: {
     fontSize: 16,
     fontWeight: '600',
@@ -1713,7 +1729,7 @@ const styles = StyleSheet.create({
   },
   closeButtonModal: {
     padding: 8,
-    borderRadius: 12,
+    borderRadius: 24,
     backgroundColor: '#F5F5F5',
   },
   failedAttemptContent: {

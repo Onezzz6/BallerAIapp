@@ -271,7 +271,7 @@ export default function MealDetailsScreen() {
               onPress={() => router.push('/(tabs)/nutrition')}
               style={styles.backButton}
             >
-              <Ionicons name="arrow-back" size={24} color="#000" />
+              <Ionicons name="chevron-back" size={24} color="#000" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Meal Details</Text>
             <View style={styles.headerRight} />
@@ -505,9 +505,9 @@ const styles = StyleSheet.create({
   },
   contentCard: {
     backgroundColor: '#FFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    marginTop: -24,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    marginTop: -20,
     paddingTop: 24,
     paddingHorizontal: 24,
     paddingBottom: 24,

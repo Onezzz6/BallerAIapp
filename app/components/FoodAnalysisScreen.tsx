@@ -199,7 +199,7 @@ export default function FoodAnalysisScreen({ visible, imageUri, onAnalysisComple
         showsVerticalScrollIndicator={false}
       >
         {/* Logged Today header */}
-        <Text style={styles.loggedTodayTitle}>Logged Today</Text>
+        <Text style={styles.loggedTodayTitle}>Analyzing...</Text>
         
         {/* Analysis card positioned where meals get logged */}
         <Animated.View 
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+    backgroundColor: 'rgba(255, 255, 255, 0.88)',
     zIndex: 1000,
   },
   scrollContainer: {
