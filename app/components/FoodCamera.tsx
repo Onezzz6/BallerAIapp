@@ -62,14 +62,14 @@ export default function FoodCamera({ visible, onPhotoTaken, onClose }: FoodCamer
   const handleGallerySelect = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: "images",
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 1.0,
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 0.8,
       });
       
-      if (!result.canceled) {
+      if (!result.canceled && result.assets[0]) {
         onPhotoTaken(result.assets[0].uri);
+        onClose(); // Close the camera after selection
       }
     } catch (error) {
       console.error('Error picking image:', error);

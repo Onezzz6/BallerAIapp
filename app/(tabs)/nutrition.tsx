@@ -335,13 +335,14 @@ type LogMealModalProps = {
   onPhotoAnalysis: (imageUri: string) => Promise<void>;
   onLogMeal: (items: any[]) => Promise<void>;
   onOpenCamera: () => void;
+  onOpenGallery: () => void;
   isPhotoAnalysisDisabled: boolean;
   dailyAnalysisCount: number;
   dailyAnalysisLimit: number;
   timeUntilReset: string;
 };
 
-function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal, onOpenCamera, isPhotoAnalysisDisabled, dailyAnalysisCount, dailyAnalysisLimit, timeUntilReset }: LogMealModalProps) {
+function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal, onOpenCamera, onOpenGallery, isPhotoAnalysisDisabled, dailyAnalysisCount, dailyAnalysisLimit, timeUntilReset }: LogMealModalProps) {
   const [method, setMethod] = useState<'manual' | null>(null);
   const [manualEntry, setManualEntry] = useState({
     name: '',
@@ -535,12 +536,12 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal, onOpenCame
                         isPhotoAnalysisDisabled && styles.optionButtonDisabled,
                         pressed && !isPhotoAnalysisDisabled && styles.optionButtonPressed
                       ]}
-                      onPress={() => !isPhotoAnalysisDisabled && handleScanFoodSelect()}
+                      onPress={() => !isPhotoAnalysisDisabled && onOpenCamera()}
                       disabled={isPhotoAnalysisDisabled}
                     >
                       <View style={styles.optionIconContainer}>
                         <Ionicons 
-                          name="scan-outline" 
+                          name="camera-outline" 
                           size={32} 
                           color={isPhotoAnalysisDisabled ? "#CCCCCC" : "#4064F6"} 
                         />
@@ -550,13 +551,49 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal, onOpenCame
                           styles.optionTitle,
                           isPhotoAnalysisDisabled && styles.optionTitleDisabled
                         ]}>
-                          Scan Food
+                          Camera
                         </Text>
                         <Text style={[
                           styles.optionSubtitle,
                           isPhotoAnalysisDisabled && styles.optionSubtitleDisabled
                         ]}>
-                            Use camera or gallery
+                          Take a photo of your meal
+                        </Text>
+                      </View>
+                    </Pressable>
+                  </Animated.View>
+
+                  <Animated.View
+                    entering={FadeInDown.duration(400).delay(300)}
+                  >
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.optionButton,
+                        isPhotoAnalysisDisabled && styles.optionButtonDisabled,
+                        pressed && !isPhotoAnalysisDisabled && styles.optionButtonPressed
+                      ]}
+                      onPress={() => !isPhotoAnalysisDisabled && onOpenGallery()}
+                      disabled={isPhotoAnalysisDisabled}
+                    >
+                      <View style={styles.optionIconContainer}>
+                        <Ionicons 
+                          name="images-outline" 
+                          size={32} 
+                          color={isPhotoAnalysisDisabled ? "#CCCCCC" : "#4064F6"} 
+                        />
+                      </View>
+                      <View style={styles.optionTextContainer}>
+                        <Text style={[
+                          styles.optionTitle,
+                          isPhotoAnalysisDisabled && styles.optionTitleDisabled
+                        ]}>
+                          Gallery
+                        </Text>
+                        <Text style={[
+                          styles.optionSubtitle,
+                          isPhotoAnalysisDisabled && styles.optionSubtitleDisabled
+                        ]}>
+                          Choose from your photos
                         </Text>
                       </View>
                     </Pressable>
@@ -1871,6 +1908,35 @@ export default function NutritionScreen() {
     setShowCamera(true);
   };
 
+  // Handle gallery opening
+  const handleOpenGallery = async () => {
+    setIsLogMealModalVisible(false);
+    
+    try {
+      // Request permissions
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert('Permission needed', 'Please grant permission to access your photos');
+        return;
+      }
+
+      // Open image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        // Directly analyze the selected image
+        handlePhotoAnalysis(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error opening gallery:', error);
+      Alert.alert('Error', 'Failed to open gallery');
+    }
+  };
+
   // Handle photo taken from camera
   const handlePhotoTaken = async (imageUri: string) => {
     setShowCamera(false);
@@ -3058,6 +3124,7 @@ export default function NutritionScreen() {
             }
           }}
           onOpenCamera={handleOpenCamera}
+          onOpenGallery={handleOpenGallery}
           isPhotoAnalysisDisabled={analysisLimitReached}
           dailyAnalysisCount={dailyAnalysisCount}
           dailyAnalysisLimit={DAILY_ANALYSIS_LIMIT}

@@ -31,11 +31,13 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 
 // Get screen dimensions for portrait photo (Instagram Story ratio)
 const { width: SCREEN_W } = Dimensions.get('window');
-const STORY_RATIO = 16 / 9;          // height ÷ width
+const STORY_RATIO = 0.55;          // 55% of width for better content fit
 const STORY_H = Math.round(SCREEN_W * STORY_RATIO);
 
 // Macro stamp component for both display and capture
-const MacroStamp = ({ meal, style }: { meal: any; style?: any }) => {
+const MacroStamp = ({ meal, style, visible = true }: { meal: any; style?: any; visible?: boolean }) => {
+  if (!visible) return null;
+  
   return (
     <View style={[styles.macroStamp, style]}>
       <View style={styles.macroStampHeader}>
@@ -78,6 +80,7 @@ export default function MealDetailsScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showStampInUI, setShowStampInUI] = useState(false);
 
   useEffect(() => {
     loadMealDetails();
@@ -143,8 +146,18 @@ export default function MealDetailsScreen() {
         return;
       }
 
+      // Show stamp for capture
+      setShowStampInUI(true);
+      
+      // Wait a bit for the state to update
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       // Capture the view
       const uri = await viewShotRef.current?.capture?.();
+      
+      // Hide stamp after capture
+      setShowStampInUI(false);
+      
       if (!uri) throw new Error('Failed to capture image');
 
       // Save to camera roll
@@ -156,6 +169,7 @@ export default function MealDetailsScreen() {
       ]);
     } catch (error) {
       console.error('Error saving image:', error);
+      setShowStampInUI(false);
       Alert.alert('Error', 'Failed to save image');
     } finally {
       setSaving(false);
@@ -167,7 +181,18 @@ export default function MealDetailsScreen() {
       let uri = imageUri;
       if (!uri) {
         setSaving(true);
+        
+        // Show stamp for capture
+        setShowStampInUI(true);
+        
+        // Wait a bit for the state to update
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         uri = await viewShotRef.current?.capture?.();
+        
+        // Hide stamp after capture
+        setShowStampInUI(false);
+        
         if (!uri) throw new Error('Failed to capture image');
       }
 
@@ -179,6 +204,7 @@ export default function MealDetailsScreen() {
       });
     } catch (error) {
       console.error('Error sharing:', error);
+      setShowStampInUI(false);
       Alert.alert('Error', 'Failed to share image');
     } finally {
       setSaving(false);
@@ -323,7 +349,7 @@ export default function MealDetailsScreen() {
               </View>
 
               {/* Macro stamp for capture (positioned over photo) */}
-              <MacroStamp meal={meal} style={styles.captureStamp} />
+              <MacroStamp meal={meal} style={styles.captureStamp} visible={showStampInUI} />
             </View>
           </ViewShot>
 
@@ -451,7 +477,7 @@ const styles = StyleSheet.create({
   photoSection: {
     position: 'relative',
     width: '100%',
-    height: STORY_H,        // ≈ 9:16 portrait
+    height: STORY_H,        // 55% of width for better content visibility
     backgroundColor: '#000',
   },
   mealPhoto: {
