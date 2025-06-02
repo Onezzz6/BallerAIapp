@@ -1,603 +1,380 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
   Image,
   ScrollView,
+  StyleSheet,
+  Text,
   TouchableOpacity,
-  Alert,
-  Platform,
-  ActionSheetIOS,
-  Share,
-  ActivityIndicator,
-  Dimensions,
+  View,
 } from 'react-native';
-import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import ViewShot from 'react-native-view-shot';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
-import { doc, getDoc, deleteDoc, updateDoc } from 'firebase/firestore';
-import { ref, deleteObject } from 'firebase/storage';
-import { db, storage } from '../../config/firebase';
-import { format } from 'date-fns';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { db } from '../../config/firebase';
 import MealEditModal from '../../components/MealEditModal';
+import { format } from 'date-fns';
 
-// Get screen dimensions for square photo crop
-const SCREEN_WIDTH = Dimensions.get('window').width;
+/* ------------------------------------------------------------------ */
+/*  CONSTANTS                                                          */
+/* ------------------------------------------------------------------ */
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const STORY_HEIGHT = SCREEN_WIDTH * (16 / 9); // 9-by-16 portrait canvas
+const LOGO_SRC = Image.resolveAssetSource(
+  require('../../../assets/images/BallerAILogo.png')
+).uri; // ensure ViewShot picks it up
 
-// Get screen dimensions for portrait photo (Instagram Story ratio)
-const { width: SCREEN_W } = Dimensions.get('window');
-const STORY_RATIO = 0.55;          // 55% of width for better content fit
-const STORY_H = Math.round(SCREEN_W * STORY_RATIO);
-
-// Macro stamp component for both display and capture
-const MacroStamp = ({ meal, style, visible = true }: { meal: any; style?: any; visible?: boolean }) => {
+/* ------------------------------------------------------------------ */
+/*  SHARE-CARD (Macro stamp)                                           */
+/* ------------------------------------------------------------------ */
+function MacroStamp({ meal, visible }: { meal: any; visible: boolean }) {
   if (!visible) return null;
-  
+
   return (
-    <View style={[styles.macroStamp, style]}>
-      <View style={styles.macroStampHeader}>
-        <Image 
-          source={require('../../../assets/images/BallerAILogo.png')}
-          style={styles.stampLogo}
-        />
-        <Text style={styles.stampBrand}>BallerAI</Text>
+    <View style={styles.stampContainer} pointerEvents="none">
+      {/* Brand */}
+      <View style={styles.stampBrandRow}>
+        <Image source={{ uri: LOGO_SRC }} style={styles.stampLogo} />
+        <Text style={styles.stampBrandTxt}>BallerAI</Text>
       </View>
+
+      {/* Meal name */}
       <Text style={styles.stampMealName} numberOfLines={2}>
         {meal.combinedName || meal.items?.[0]?.name || 'Meal'}
       </Text>
+
+      {/* Macro grid */}
       <View style={styles.stampMacros}>
-        <View style={styles.stampMacroItem}>
-          <Text style={styles.stampMacroEmoji}>🔥</Text>
-          <Text style={styles.stampMacroValue}>{meal.totalMacros?.calories || 0}</Text>
-        </View>
-        <View style={styles.stampMacroItem}>
-          <Text style={styles.stampMacroEmoji}>🥩</Text>
-          <Text style={styles.stampMacroValue}>{meal.totalMacros?.protein || 0}g</Text>
-        </View>
-        <View style={styles.stampMacroItem}>
-          <Text style={styles.stampMacroEmoji}>🌾</Text>
-          <Text style={styles.stampMacroValue}>{meal.totalMacros?.carbs || 0}g</Text>
-        </View>
-        <View style={styles.stampMacroItem}>
-          <Text style={styles.stampMacroEmoji}>🧈</Text>
-          <Text style={styles.stampMacroValue}>{meal.totalMacros?.fats || 0}g</Text>
-        </View>
+        {[
+          { icon: '🔥', label: `${meal.totalMacros?.calories || 0}` },
+          { icon: '🥩', label: `${meal.totalMacros?.protein || 0}g` },
+          { icon: '🌾', label: `${meal.totalMacros?.carbs || 0}g` },
+          { icon: '🧈', label: `${meal.totalMacros?.fats || 0}g` },
+        ].map((m, i) => (
+          <View key={i} style={styles.stampMacroItem}>
+            <Text style={styles.stampMacroIcon}>{m.icon}</Text>
+            <Text style={styles.stampMacroVal}>{m.label}</Text>
+          </View>
+        ))}
       </View>
     </View>
   );
-};
+}
 
+/* ------------------------------------------------------------------ */
+/*  MAIN COMPONENT                                                     */
+/* ------------------------------------------------------------------ */
 export default function MealDetailsScreen() {
-  const { id } = useLocalSearchParams();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const viewShotRef = useRef<ViewShot>(null);
+
   const [meal, setMeal] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showStampInUI, setShowStampInUI] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
 
+  /* ------------------ fetch meal once ------------------ */
   useEffect(() => {
-    loadMealDetails();
-  }, [id]);
-
-  const loadMealDetails = async () => {
-    try {
-      const mealDoc = await getDoc(doc(db, 'meals', id as string));
-      if (mealDoc.exists()) {
-        setMeal({ id: mealDoc.id, ...mealDoc.data() });
-      } else {
+    (async () => {
+      try {
+        const snap = await getDoc(doc(db, 'meals', id));
+        if (!snap.exists()) throw new Error('not found');
+        setMeal({ id: snap.id, ...snap.data() });
+      } catch {
         Alert.alert('Error', 'Meal not found');
         router.push('/(tabs)/nutrition');
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Error loading meal:', error);
-      Alert.alert('Error', 'Failed to load meal details');
-      router.push('/(tabs)/nutrition');
+    })();
+  }, [id]);
+
+  /* ------------------ helpers -------------------------- */
+  const captureAsync = async () => {
+    const uri = await viewShotRef.current?.capture?.();
+    if (!uri) throw new Error('capture-failed');
+    return uri;
+  };
+
+  const shareAsync = async (uri: string) => {
+    const msg =
+      `Logged ${meal.combinedName || meal.items?.[0]?.name || 'a meal'} on BallerAI – ` +
+      `${meal.totalMacros?.calories || 0} kcal · ${meal.totalMacros?.protein || 0} P · ` +
+      `${meal.totalMacros?.carbs || 0} C · ${meal.totalMacros?.fats || 0} F`;
+    await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: msg });
+  };
+
+  /* ------------------ actions -------------------------- */
+  const handleShare = async () => {
+    try {
+      setExporting(true);
+      const uri = await captureAsync();
+      await shareAsync(uri);
+    } catch {
+      Alert.alert('Error', 'Unable to share image');
     } finally {
-      setLoading(false);
+      setExporting(false);
     }
   };
 
-  const handleActionSheet = () => {
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: ['Cancel', 'Save Image', 'Delete Meal'],
-          destructiveButtonIndex: 2,
-          cancelButtonIndex: 0,
-        },
-        (buttonIndex) => {
-          if (buttonIndex === 1) {
-            handleSaveImage();
-          } else if (buttonIndex === 2) {
-            handleDeleteMeal();
-          }
-        }
-      );
-    } else {
-      // For Android, use Alert as a simple alternative
-      Alert.alert(
-        'Options',
-        '',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Save Image', onPress: handleSaveImage },
-          { text: 'Delete Meal', onPress: handleDeleteMeal, style: 'destructive' },
-        ],
-        { cancelable: true }
-      );
-    }
-  };
-
-  const handleSaveImage = async () => {
+  const handleSave = async () => {
     try {
       setSaving(true);
-      
-      // Request permissions
+      setExporting(true);
       const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Please grant permission to save images');
-        return;
-      }
-
-      // Show stamp for capture
-      setShowStampInUI(true);
-      
-      // Wait a bit for the state to update
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Capture the view
-      const uri = await viewShotRef.current?.capture?.();
-      
-      // Hide stamp after capture
-      setShowStampInUI(false);
-      
-      if (!uri) throw new Error('Failed to capture image');
-
-      // Save to camera roll
-      const asset = await MediaLibrary.createAssetAsync(uri);
-      
-      Alert.alert('Success', 'Image saved to Photos 📸', [
+      if (status !== 'granted') throw new Error();
+      const uri = await captureAsync();
+      await MediaLibrary.createAssetAsync(uri);
+      Alert.alert('Saved', 'Image saved to Photos 📸', [
         { text: 'OK' },
-        { text: 'Share', onPress: () => handleShare(uri) }
+        { text: 'Share', onPress: () => shareAsync(uri) },
       ]);
-    } catch (error) {
-      console.error('Error saving image:', error);
-      setShowStampInUI(false);
+    } catch {
       Alert.alert('Error', 'Failed to save image');
     } finally {
       setSaving(false);
+      setExporting(false);
     }
   };
 
-  const handleShare = async (imageUri?: string) => {
-    try {
-      let uri = imageUri;
-      if (!uri) {
-        setSaving(true);
-        
-        // Show stamp for capture
-        setShowStampInUI(true);
-        
-        // Wait a bit for the state to update
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        uri = await viewShotRef.current?.capture?.();
-        
-        // Hide stamp after capture
-        setShowStampInUI(false);
-        
-        if (!uri) throw new Error('Failed to capture image');
-      }
-
-      const shareMessage = `Just logged ${meal.combinedName || meal.items?.[0]?.name || 'a meal'} on BallerAI – ${meal.totalMacros?.calories || 0} kcal • ${meal.totalMacros?.carbs || 0} C • ${meal.totalMacros?.protein || 0} P • ${meal.totalMacros?.fats || 0} F 🔥`;
-
-      await Sharing.shareAsync(uri, {
-        mimeType: 'image/png',
-        dialogTitle: shareMessage,
-      });
-    } catch (error) {
-      console.error('Error sharing:', error);
-      setShowStampInUI(false);
-      Alert.alert('Error', 'Failed to share image');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDeleteMeal = () => {
-    Alert.alert(
-      'Delete this meal?',
-      'This will remove the photo and nutrition data from your log.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // Delete from Firestore
-              await deleteDoc(doc(db, 'meals', id as string));
-              
-              // Try to delete from Storage if photoUri exists
-              if (meal?.photoUri && meal.photoUri.includes('firebase')) {
-                try {
-                  const storageRef = ref(storage, meal.photoUri);
-                  await deleteObject(storageRef);
-                } catch (error) {
-                  console.log('Storage deletion error (ignoring):', error);
-                }
-              }
-              
-              router.push('/(tabs)/nutrition');
-            } catch (error) {
-              console.error('Error deleting meal:', error);
-              Alert.alert('Error', 'Failed to delete meal');
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const handleSaveMealEdit = async (updatedMeal: any) => {
-    try {
-      // Update meal in Firestore
-      const mealRef = doc(db, 'meals', updatedMeal.id);
-      await updateDoc(mealRef, {
-        items: updatedMeal.items,
-        totalMacros: updatedMeal.totalMacros,
-        combinedName: updatedMeal.combinedName,
-        updatedAt: new Date().toISOString()
-      });
-
-      // Update local state
-      setMeal(updatedMeal);
-      
-      setShowEditModal(false);
-      Alert.alert('Success', 'Meal updated successfully');
-    } catch (error) {
-      console.error('Error updating meal:', error);
-      throw error;
-    }
-  };
-
+  /* ------------------ render --------------------------- */
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={styles.center}>
         <ActivityIndicator size="large" color="#4064F6" />
       </View>
     );
   }
-
   if (!meal) return null;
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          headerShown: false,
-        }}
-      />
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <ScrollView 
-          contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 }]}
-          bounces={true}
-          showsVerticalScrollIndicator={false}
+    <View style={styles.root}>
+      <Stack.Screen options={{ headerShown: false }} />
+
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+        {/* ---------- story canvas (captured) ---------- */}
+        <ViewShot
+          ref={viewShotRef}
+          options={{ format: 'png', quality: 1 }}
+          style={{ width: SCREEN_WIDTH, height: STORY_HEIGHT }}
         >
-          {/* Header with back button */}
-          <View style={styles.header}>
-            <TouchableOpacity
-              onPress={() => router.push('/(tabs)/nutrition')}
-              style={styles.backButton}
-            >
-              <Ionicons name="chevron-back" size={24} color="#000" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Meal Details</Text>
-            <View style={styles.headerRight} />
-          </View>
-
-          {/* Photo Section with ViewShot wrapper for capturing */}
-          <ViewShot
-            ref={viewShotRef}
-            style={{ width: SCREEN_W, height: STORY_H }}
-            options={{ 
-              format: 'png', 
-              quality: 1, 
-              result: 'tmpfile',
-              width: 1080,             // force 1080×1920 export
-              height: 1920,
-            }}
-          >
-            <View style={styles.photoSection}>
-              {meal.photoUri ? (
-                <Image source={{ uri: meal.photoUri }} style={styles.mealPhoto} />
-              ) : (
-                <View style={[styles.mealPhoto, styles.photoPlaceholder]}>
-                  <Ionicons name="image-outline" size={48} color="#999" />
-                  <Text style={styles.noPhotoText}>No photo available</Text>
+          <View style={styles.canvas}>
+            {/* overlay buttons (not captured) */}
+            {!exporting && (
+              <View style={styles.topBar}>
+                <TouchableOpacity style={styles.barBtn} onPress={router.back}>
+                  <Ionicons name="chevron-back" size={24} color="#fff" />
+                </TouchableOpacity>
+                <View style={{ flexDirection: 'row' }}>
+                  <TouchableOpacity style={[styles.barBtn, { marginRight: 8 }]} onPress={handleSave}>
+                    <Ionicons name="download-outline" size={20} color="#fff" />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.barBtn} onPress={handleShare}>
+                    <Ionicons name="share-outline" size={20} color="#fff" />
+                  </TouchableOpacity>
                 </View>
-              )}
-              
-              {/* Gradient overlay for text legibility */}
-              <LinearGradient
-                colors={['transparent', 'rgba(0,0,0,0.3)']}
-                style={styles.photoGradient}
-                pointerEvents="none"
-              />
-
-              {/* Action buttons overlay */}
-              <View style={styles.photoOverlay}>
-                <TouchableOpacity
-                  onPress={() => handleShare()}
-                  style={styles.overlayButton}
-                >
-                  <Ionicons name="share-outline" size={24} color="#FFF" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={handleActionSheet}
-                  style={styles.overlayButton}
-                >
-                  <Ionicons name="ellipsis-horizontal" size={24} color="#FFF" />
-                </TouchableOpacity>
-              </View>
-
-              {/* Macro stamp for capture (positioned over photo) */}
-              <MacroStamp meal={meal} style={styles.captureStamp} visible={showStampInUI} />
-            </View>
-          </ViewShot>
-
-          {/* Content Card */}
-          <View style={styles.contentCard}>
-            {/* Edit Button */}
-            <TouchableOpacity
-              onPress={() => setShowEditModal(true)}
-              style={styles.editButton}
-            >
-              <Ionicons name="create-outline" size={24} color="#4064F6" />
-            </TouchableOpacity>
-
-            {/* Date Badge */}
-            <View style={styles.dateBadge}>
-              <Text style={styles.dateBadgeText}>
-                {format(new Date(meal.timestamp), 'MMM d, yyyy • h:mm a')}
-              </Text>
-            </View>
-
-            {/* Meal Title */}
-            <Text style={styles.mealTitle}>
-              {meal.combinedName || meal.items?.[0]?.name || 'Unnamed Meal'}
-            </Text>
-
-            {/* Food Items */}
-            {meal.items && meal.items.length > 0 && (
-              <View style={styles.itemsSection}>
-                <Text style={styles.sectionTitle}>Items</Text>
-                {meal.items.map((item: any, index: number) => (
-                  <View key={index} style={styles.foodItem}>
-                    <Text style={styles.foodItemName}>{item.name}</Text>
-                    <Text style={styles.foodItemPortion}>{item.portion}</Text>
-                  </View>
-                ))}
               </View>
             )}
 
-            {/* Nutrition Information */}
-            <View style={styles.nutritionSection}>
-              <Text style={styles.sectionTitle}>Nutrition Facts</Text>
-              
-              {/* Total Calories */}
-              <View style={styles.caloriesRow}>
-                <Text style={styles.caloriesLabel}>Calories</Text>
-                <Text style={styles.caloriesValue}>{meal.totalMacros?.calories || 0}</Text>
+            {/* meal image */}
+            {meal.photoUri ? (
+              <Image source={{ uri: meal.photoUri }} style={styles.img} resizeMode="cover" />
+            ) : (
+              <View style={styles.noImg}>
+                <Ionicons name="image-outline" size={48} color="#999" />
+                <Text style={{ marginTop: 8, fontWeight: '600', color: '#999' }}>No photo</Text>
               </View>
+            )}
 
-              {/* Macros Grid */}
-              <View style={styles.macrosGrid}>
-                <View style={styles.macroCard}>
-                  <Text style={styles.macroEmoji}>🥩</Text>
-                  <Text style={styles.macroValue}>{meal.totalMacros?.protein || 0}g</Text>
-                  <Text style={styles.macroLabel}>Protein</Text>
+            {/* share-card */}
+            <MacroStamp meal={meal} visible={exporting} />
+          </View>
+        </ViewShot>
+
+        {/* ---------- details card ---------- */}
+        <View style={styles.card}>
+          <TouchableOpacity style={styles.editFab} onPress={() => setShowEdit(true)}>
+            <Ionicons name="create-outline" size={22} color="#4064F6" />
+          </TouchableOpacity>
+
+          <View style={styles.badge}>
+            <Text style={styles.badgeTxt}>{format(new Date(meal.timestamp), 'MMM d, yyyy • h:mm a')}</Text>
+          </View>
+
+          <Text style={styles.title}>{meal.combinedName || meal.items?.[0]?.name || 'Meal'}</Text>
+
+          {/* Items */}
+          {!!meal.items?.length && (
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Items</Text>
+              {meal.items.map((it: any, i: number) => (
+                <View key={i} style={styles.itemRow}>
+                  <Text style={styles.itemName}>{it.name}</Text>
+                  <Text style={styles.itemPortion}>{it.portion}</Text>
                 </View>
-                <View style={styles.macroCard}>
-                  <Text style={styles.macroEmoji}>🌾</Text>
-                  <Text style={styles.macroValue}>{meal.totalMacros?.carbs || 0}g</Text>
-                  <Text style={styles.macroLabel}>Carbs</Text>
-                </View>
-                <View style={styles.macroCard}>
-                  <Text style={styles.macroEmoji}>🧈</Text>
-                  <Text style={styles.macroValue}>{meal.totalMacros?.fats || 0}g</Text>
-                  <Text style={styles.macroLabel}>Fats</Text>
-                </View>
+              ))}
+            </View>
+          )}
+
+          {/* Nutrition */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Nutrition Facts</Text>
+            <View style={styles.calRow}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="flame-outline" size={20} color="#4064F6" style={{ marginRight: 6 }} />
+                <Text style={styles.calLabel}>Calories</Text>
               </View>
+              <Text style={styles.calVal}>{meal.totalMacros?.calories || 0}</Text>
+            </View>
+
+            <View style={styles.macroGrid}>
+              {[
+                { icon: '🥩', name: 'Protein', val: `${meal.totalMacros?.protein || 0}g` },
+                { icon: '🌾', name: 'Carbs', val: `${meal.totalMacros?.carbs || 0}g` },
+                { icon: '🧈', name: 'Fats', val: `${meal.totalMacros?.fats || 0}g` },
+              ].map((m, i) => (
+                <View key={i} style={styles.macroCard}>
+                  <Text style={styles.macroIcon}>{m.icon}</Text>
+                  <Text style={styles.macroVal}>{m.val}</Text>
+                  <Text style={styles.macroName}>{m.name}</Text>
+                </View>
+              ))}
             </View>
           </View>
-        </ScrollView>
+        </View>
+      </ScrollView>
 
-        {/* Loading overlay */}
-        {saving && (
-          <View style={styles.savingOverlay}>
-            <ActivityIndicator size="large" color="#FFF" />
-          </View>
-        )}
+      {/* overlay while saving */}
+      {saving && (
+        <View style={styles.overlay}>
+          <ActivityIndicator size="large" color="#fff" />
+        </View>
+      )}
 
-        {/* Meal Edit Modal */}
-        <MealEditModal
-          visible={showEditModal}
-          meal={meal}
-          onClose={() => setShowEditModal(false)}
-          onSave={handleSaveMealEdit}
-        />
-      </SafeAreaView>
-    </>
+      {/* edit modal */}
+      <MealEditModal
+        visible={showEdit}
+        meal={meal}
+        onClose={() => setShowEdit(false)}
+        onSave={async (m) => {
+          await updateDoc(doc(db, 'meals', m.id), {
+            items: m.items,
+            totalMacros: m.totalMacros,
+            combinedName: m.combinedName,
+            updatedAt: new Date().toISOString(),
+          });
+          setMeal(m);
+          setShowEdit(false);
+        }}
+      />
+    </View>
   );
 }
 
+/* ------------------------------------------------------------------ */
+/*  STYLES                                                             */
+/* ------------------------------------------------------------------ */
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#FFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  backButton: {
-    padding: 8,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  headerRight: {
-    width: 40,
-    height: 40,
-  },
-  photoSection: {
-    position: 'relative',
-    width: '100%',
-    height: STORY_H,        // 55% of width for better content visibility
-    backgroundColor: '#000',
-  },
-  mealPhoto: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  photoPlaceholder: {
-    backgroundColor: '#F0F0F0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  noPhotoText: {
-    marginTop: 8,
-    color: '#999',
-    fontSize: 14,
-  },
-  photoGradient: {
+  root: { flex: 1, backgroundColor: '#F5F5F5' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+
+  /* canvas / story */
+  canvas: { flex: 1 },
+  topBar: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 100,
-  },
-  photoOverlay: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    flexDirection: 'row',
-    gap: 12,
-  },
-  overlayButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  captureStamp: {
-    position: 'absolute',
+    top: 60,
     left: 16,
     right: 16,
-    bottom: 24,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 8,
-    elevation: 4,
+    zIndex: 5,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
-  contentCard: {
-    backgroundColor: '#FFF',
+  barBtn: { padding: 10, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 20 },
+
+  img: { width: '100%', height: '100%' },
+  noImg: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#eee' },
+
+  /* floating share-card */
+  stampContainer: {
+    position: 'absolute',
+    bottom: 32,
+    left: '5%',
+    right: '5%',
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    paddingVertical: 20,
+    paddingHorizontal: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  stampBrandRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  stampLogo: { width: 20, height: 20, resizeMode: 'contain', marginRight: 6 },
+  stampBrandTxt: { fontSize: 16, fontWeight: '700', color: '#4064F6' },
+  stampMealName: { fontSize: 14, fontWeight: '600', color: '#000', marginBottom: 14 },
+  stampMacros: { flexDirection: 'row', justifyContent: 'space-between' },
+  stampMacroItem: { flex: 1, alignItems: 'center' },
+  stampMacroIcon: { fontSize: 22, marginBottom: 4 },
+  stampMacroVal: { fontSize: 14, fontWeight: '600' },
+
+  /* details card */
+  card: {
+    backgroundColor: '#fff',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     marginTop: -20,
-    paddingTop: 24,
-    paddingHorizontal: 24,
-    paddingBottom: 24,
-    minHeight: 400,
+    padding: 24,
+    paddingBottom: 40,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
   },
-  editButton: {
+  editFab: {
     position: 'absolute',
     top: 24,
     right: 24,
-    padding: 8,
-    backgroundColor: '#F0F0F0',
-    borderRadius: 20,
     width: 40,
     height: 40,
-    alignItems: 'center',
+    borderRadius: 20,
+    backgroundColor: '#F0F0F0',
     justifyContent: 'center',
+    alignItems: 'center',
   },
-  dateBadge: {
+  badge: {
     alignSelf: 'flex-start',
     backgroundColor: '#F0F0F0',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     marginBottom: 16,
   },
-  dateBadgeText: {
-    fontSize: 12,
-    color: '#666',
-  },
-  mealTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#000',
-    marginBottom: 24,
-  },
-  itemsSection: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 12,
-  },
-  foodItem: {
+  badgeTxt: { fontSize: 12, color: '#666' },
+  title: { fontSize: 24, fontWeight: '700', color: '#000', marginBottom: 24 },
+
+  section: { marginBottom: 24 },
+  sectionLabel: { fontSize: 16, fontWeight: '600', marginBottom: 12 },
+  itemRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
   },
-  foodItemName: {
-    fontSize: 14,
-    color: '#333',
-    flex: 1,
-  },
-  foodItemPortion: {
-    fontSize: 14,
-    color: '#666',
-  },
-  nutritionSection: {
-    marginTop: 8,
-  },
-  caloriesRow: {
+  itemName: { fontSize: 14, flex: 1, color: '#333' },
+  itemPortion: { fontSize: 14, color: '#666' },
+
+  calRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -606,21 +383,10 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F0F0F0',
     marginBottom: 16,
   },
-  caloriesLabel: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-  },
-  caloriesValue: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#4064F6',
-  },
-  macrosGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
+  calLabel: { fontSize: 18, fontWeight: '600' },
+  calVal: { fontSize: 24, fontWeight: '700', color: '#4064F6' },
+
+  macroGrid: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
   macroCard: {
     flex: 1,
     backgroundColor: '#F8F9FA',
@@ -628,75 +394,14 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
   },
-  macroEmoji: {
-    fontSize: 24,
-    marginBottom: 8,
-  },
-  macroValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#000',
-    marginBottom: 4,
-  },
-  macroLabel: {
-    fontSize: 12,
-    color: '#666',
-  },
-  macroStamp: {
-    backgroundColor: '#FFF',
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  macroStampHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  stampLogo: {
-    width: 24,
-    height: 24,
-    marginRight: 8,
-  },
-  stampBrand: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#4064F6',
-  },
-  stampMealName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 12,
-  },
-  stampMacros: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  stampMacroItem: {
-    alignItems: 'center',
-  },
-  stampMacroEmoji: {
-    fontSize: 20,
-    marginBottom: 4,
-  },
-  stampMacroValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000',
-  },
-  savingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+  macroIcon: { fontSize: 24, marginBottom: 8 },
+  macroVal: { fontSize: 18, fontWeight: '700', marginBottom: 2 },
+  macroName: { fontSize: 12, color: '#666' },
+
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-}); 
+});

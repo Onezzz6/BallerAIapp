@@ -541,7 +541,7 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal, onOpenCame
                     >
                       <View style={styles.optionIconContainer}>
                         <Ionicons 
-                          name="camera-outline" 
+                          name="scan-outline" 
                           size={32} 
                           color={isPhotoAnalysisDisabled ? "#CCCCCC" : "#4064F6"} 
                         />
@@ -551,49 +551,13 @@ function LogMealModal({ visible, onClose, onPhotoAnalysis, onLogMeal, onOpenCame
                           styles.optionTitle,
                           isPhotoAnalysisDisabled && styles.optionTitleDisabled
                         ]}>
-                          Camera
+                          Scan Food
                         </Text>
                         <Text style={[
                           styles.optionSubtitle,
                           isPhotoAnalysisDisabled && styles.optionSubtitleDisabled
                         ]}>
-                          Take a photo of your meal
-                        </Text>
-                      </View>
-                    </Pressable>
-                  </Animated.View>
-
-                  <Animated.View
-                    entering={FadeInDown.duration(400).delay(300)}
-                  >
-                    <Pressable
-                      style={({ pressed }) => [
-                        styles.optionButton,
-                        isPhotoAnalysisDisabled && styles.optionButtonDisabled,
-                        pressed && !isPhotoAnalysisDisabled && styles.optionButtonPressed
-                      ]}
-                      onPress={() => !isPhotoAnalysisDisabled && onOpenGallery()}
-                      disabled={isPhotoAnalysisDisabled}
-                    >
-                      <View style={styles.optionIconContainer}>
-                        <Ionicons 
-                          name="images-outline" 
-                          size={32} 
-                          color={isPhotoAnalysisDisabled ? "#CCCCCC" : "#4064F6"} 
-                        />
-                      </View>
-                      <View style={styles.optionTextContainer}>
-                        <Text style={[
-                          styles.optionTitle,
-                          isPhotoAnalysisDisabled && styles.optionTitleDisabled
-                        ]}>
-                          Gallery
-                        </Text>
-                        <Text style={[
-                          styles.optionSubtitle,
-                          isPhotoAnalysisDisabled && styles.optionSubtitleDisabled
-                        ]}>
-                          Choose from your photos
+                          AI-powered nutrition analysis
                         </Text>
                       </View>
                     </Pressable>

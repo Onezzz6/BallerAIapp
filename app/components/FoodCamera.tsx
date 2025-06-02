@@ -15,7 +15,6 @@ export default function FoodCamera({ visible, onPhotoTaken, onClose }: FoodCamer
   const [permission, requestPermission] = useCameraPermissions();
   const [flashMode, setFlashMode] = useState<'off' | 'on'>('off');
   const [isCapturing, setIsCapturing] = useState(false);
-  const [scanMethod, setScanMethod] = useState<'scan' | 'gallery'>('scan');
   const cameraRef = useRef<CameraView>(null);
 
   useEffect(() => {
@@ -28,17 +27,10 @@ export default function FoodCamera({ visible, onPhotoTaken, onClose }: FoodCamer
   useEffect(() => {
     if (!visible) {
       setFlashMode('off');
-      setScanMethod('scan'); // Reset to default scan method
     }
   }, [visible]);
 
   const takePicture = async () => {
-    if (scanMethod === 'gallery') {
-      // Open gallery instead of taking picture
-      handleGallerySelect();
-      return;
-    }
-
     if (cameraRef.current && !isCapturing) {
       try {
         setIsCapturing(true);
@@ -69,7 +61,6 @@ export default function FoodCamera({ visible, onPhotoTaken, onClose }: FoodCamer
       
       if (!result.canceled && result.assets[0]) {
         onPhotoTaken(result.assets[0].uri);
-        onClose(); // Close the camera after selection
       }
     } catch (error) {
       console.error('Error picking image:', error);
@@ -152,41 +143,28 @@ export default function FoodCamera({ visible, onPhotoTaken, onClose }: FoodCamer
           {/* Scan Method Options */}
           <View style={styles.scanMethodContainer}>
             <TouchableOpacity 
-              style={[
-                styles.scanMethodButton,
-                scanMethod === 'scan' && styles.scanMethodButtonActive
-              ]} 
-              onPress={() => setScanMethod('scan')}
+              style={styles.scanMethodButton}
             >
               <Ionicons 
                 name="scan" 
                 size={20} 
-                color={scanMethod === 'scan' ? "#000000" : "white"} 
+                color="white"
               />
-              <Text style={[
-                styles.scanMethodText,
-                scanMethod === 'scan' && styles.scanMethodTextActive
-              ]}>
+              <Text style={styles.scanMethodText}>
                 Scan Food
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[
-                styles.scanMethodButton,
-                scanMethod === 'gallery' && styles.scanMethodButtonActive
-              ]} 
-              onPress={() => setScanMethod('gallery')}
+              style={styles.scanMethodButton}
+              onPress={handleGallerySelect}
             >
               <Ionicons 
                 name="images" 
                 size={20} 
-                color={scanMethod === 'gallery' ? "#000000" : "white"} 
+                color="white"
               />
-              <Text style={[
-                styles.scanMethodText,
-                scanMethod === 'gallery' && styles.scanMethodTextActive
-              ]}>
+              <Text style={styles.scanMethodText}>
                 Gallery
               </Text>
             </TouchableOpacity>
@@ -316,32 +294,6 @@ const styles = StyleSheet.create({
     paddingBottom: 50,
     paddingHorizontal: 20,
   },
-  scanMethodContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 20,
-    gap: 8,
-  },
-  scanMethodButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    gap: 6,
-  },
-  scanMethodButtonActive: {
-    backgroundColor: 'white',
-  },
-  scanMethodText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  scanMethodTextActive: {
-    color: '#000000',
-  },
   controlsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -411,6 +363,26 @@ const styles = StyleSheet.create({
   galleryFallbackButtonText: {
     color: 'white',
     fontSize: 16,
+    fontWeight: '500',
+  },
+  scanMethodContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 20,
+    gap: 8,
+  },
+  scanMethodButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    gap: 6,
+  },
+  scanMethodText: {
+    color: 'white',
+    fontSize: 14,
     fontWeight: '500',
   },
 }); 
