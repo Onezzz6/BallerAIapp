@@ -635,6 +635,32 @@ IMPORTANT USAGE GUIDELINES:
     }
   };
 
+  // Add this helper function to format the recovery plan text
+  const formatPlanText = (planText: string) => {
+    if (!planText) return [];
+    
+    // Split by common delimiters and clean up
+    const lines = planText
+      .split(/[.\n]/)
+      .map(line => line.trim())
+      .filter(line => line.length > 0)
+      .map(line => {
+        // Remove any leading numbers or bullets
+        return line.replace(/^\d+\.\s*/, '').replace(/^[-•]\s*/, '');
+      });
+    
+    return lines;
+  };
+
+  // Add this function to show streak explanation
+  const showStreakExplanation = () => {
+    Alert.alert(
+      'Recovery Streak',
+      'Each recovery plan you mark as completed adds one to your streak. If you miss a day, the streak drops by one.',
+      [{ text: 'Got it!', style: 'default' }]
+    );
+  };
+
   // Update Streak Card with timer logic and loading state
   const renderStreakCard = () => {
     return (
@@ -652,15 +678,24 @@ IMPORTANT USAGE GUIDELINES:
           </View>
           
           <View style={styles.streakInfoContainer}>
-            <Text style={styles.streakTitle}>Current Recovery Streak</Text>
+            <View style={styles.streakHeaderContainer}>
+              <Text style={styles.streakTitle}>Recovery Streak</Text>
+              <Pressable
+                onPress={showStreakExplanation}
+                style={({ pressed }) => [
+                  styles.infoIconButton,
+                  pressed && { opacity: 0.7 }
+                ]}
+              >
+                <Ionicons name="information-circle-outline" size={24} color="#4064F6" />
+              </Pressable>
+            </View>
             {isLoadingStreak ? (
               <ActivityIndicator size="small" color="#4064F6" style={{ marginVertical: 8 }} />
             ) : (
               <Text style={styles.streakCount}>{streakCount} {streakCount === 1 ? 'day' : 'days'}</Text>
             )}
-            <Text style={styles.streakHelperText}>
-                Each recovery plan you mark as completed adds one to your streak. If you miss a day, the streak drops by one.
-            </Text>
+            {/* Removed the "Tap for info" text and its container */}
           </View>
         </View>
       </Animated.View>
@@ -1994,6 +2029,7 @@ IMPORTANT USAGE GUIDELINES:
                 ref={planHolderRef}
                 style={{
                   marginHorizontal: 24,
+                  flex: 1, // Make it fill available space
                 }}
               >
                 <View style={[
@@ -2004,16 +2040,7 @@ IMPORTANT USAGE GUIDELINES:
                     <Text style={styles.planHolderTitle} allowFontScaling={false}>
                       {isToday ? 'Your Plan for Today' : `Plan For ${format(selectedDate, 'MMM d')}`}
                     </Text>
-                    {todaysPlan && (
-                      <View style={[
-                        styles.planStatusBadge,
-                        !isToday && styles.historicalBadge
-                      ]}>
-                        <Text style={styles.planStatusText}>
-                          {isToday ? 'Active' : 'Historical'}
-                        </Text>
-                      </View>
-                    )}
+                    {/* Removed the Active/Historical badge as requested */}
                   </View>
                   
                   {planLoading ? (
@@ -2023,7 +2050,14 @@ IMPORTANT USAGE GUIDELINES:
                     </View>
                   ) : todaysPlan ? (
                     <View style={styles.planContentContainer}>
-                      <Text style={styles.planText}>{todaysPlan}</Text>
+                      <View style={styles.formattedPlanContainer}>
+                        {formatPlanText(todaysPlan).map((line, index) => (
+                          <View key={index} style={styles.recoveryDrillRow}>
+                            <Text style={styles.recoveryDrillIndex}>{index + 1}.</Text>
+                            <Text style={styles.recoveryDrillText}>{line}</Text>
+                          </View>
+                        ))}
+                      </View>
                       <Text style={styles.planDateText}>
                         Generated on {format(selectedDate, 'MMMM d, yyyy')}
                       </Text>
@@ -2088,7 +2122,11 @@ IMPORTANT USAGE GUIDELINES:
 
             
             {/* Streak Card - Only show after first plan has been generated and only for today */}
-            {hasEverGeneratedPlan && isToday && renderStreakCard()}
+            {hasEverGeneratedPlan && isToday && (
+              <View style={{ marginTop: 'auto' }}>
+                {renderStreakCard()}
+              </View>
+            )}
           </View>
       </ScrollView>
       </KeyboardAvoidingView>
@@ -2530,7 +2568,7 @@ const styles = StyleSheet.create({
   // New styles for plan holder
   planHolderContainer: {
     marginBottom: 24,
-    padding: 20,
+    padding: 24, // Increased padding
     backgroundColor: '#F5F9FF',
     borderRadius: 24,
     borderWidth: 1,
@@ -2550,13 +2588,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
-    paddingBottom: 12,
+    marginBottom: 20, // Increased margin
+    paddingBottom: 16, // Increased padding
     borderBottomWidth: 1,
     borderBottomColor: '#E0E7FF',
   },
   planHolderTitle: {
-    fontSize: 20,
+    fontSize: 22, // Increased font size
     fontWeight: '600',
     color: '#000000',
   },
@@ -2574,7 +2612,7 @@ const styles = StyleSheet.create({
   planLoadingContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 24,
+    paddingVertical: 40, // Increased padding
     gap: 12,
   },
   planLoadingText: {
@@ -2582,7 +2620,7 @@ const styles = StyleSheet.create({
     color: '#999999',
   },
   planContentContainer: {
-    padding: 12,
+    padding: 16, // Increased padding
   },
   emptyPlanContainer: {
     alignItems: 'center',
@@ -2847,39 +2885,40 @@ const styles = StyleSheet.create({
     elevation: 4,
     borderWidth: 1,
     borderColor: '#E5E5E5',
+    minHeight: 120, // Make it taller
   },
   streakCardContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    padding: 24, // Increased padding
   },
   streakMascotContainer: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 80, // Larger mascot container
+    height: 80,
+    borderRadius: 40,
     backgroundColor: '#DCF4F5',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: 20, // More spacing
   },
   streakMascot: {
-    width: 60,
-    height: 60,
+    width: 70, // Larger mascot
+    height: 70,
   },
   streakInfoContainer: {
     flex: 1,
   },
   streakTitle: {
-    fontSize: 14,
+    fontSize: 18, // Larger title
     color: '#000000',
     fontWeight: '700',
-    marginBottom: 4,
+    marginBottom: 8, // More spacing
   },
   streakCount: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 32, // Much larger count
+    fontWeight: '900',
     color: '#4064F6',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   streakHelperText: {
     fontSize: 12,
@@ -2996,5 +3035,57 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 32,
     lineHeight: 22,
+  },
+  tapHintContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 8,
+  },
+  tapHintText: {
+    fontSize: 14,
+    color: '#666666',
+    fontWeight: '500',
+  },
+  formattedPlanContainer: {
+    padding: 20, // Increased padding
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    minHeight: 200, // Ensure minimum height
+    flex: 1, // Allow it to expand
+  },
+  recoveryDrillRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start', // Changed to flex-start for better alignment
+    marginBottom: 16, // Increased margin
+  },
+  recoveryDrillIndex: {
+    width: 30, // Fixed width like in training.tsx
+    fontSize: 16,
+    color: '#4064F6', // Changed to blue to match training.tsx
+    fontWeight: '600',
+    marginRight: 12,
+  },
+  recoveryDrillText: {
+    fontSize: 16,
+    color: '#000000',
+    fontWeight: '500',
+    lineHeight: 22, // Added line height
+    flex: 1, // Take remaining space
+  },
+  streakHeaderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between', // Positions title left, icon right
+    marginBottom: 4, // Optional: adjust spacing under the header
+  },
+  infoIconButton: {
+    padding: 8, // Make it easier to tap
+    marginLeft: 8, // Space between title and icon
   },
 }); 
