@@ -6,6 +6,7 @@ import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState, useEffect } from 'react';
 import ScrollIfNeeded from '../components/ScrollIfNeeded';
+import analytics from '@react-native-firebase/analytics';
 
 export default function MotivationReasonScreen() {
   const router = useRouter();
@@ -20,6 +21,7 @@ export default function MotivationReasonScreen() {
 
   const handleContinue = async () => {
     if (motivation.trim()) {
+      await analytics().logEvent('onboarding_motivation_reason_continue');
       await updateOnboardingData({ motivation: motivation.trim() });
       router.push('/account-ready');
     }

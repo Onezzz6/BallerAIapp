@@ -6,6 +6,7 @@ import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
 import ScrollIfNeeded from '../components/ScrollIfNeeded';
+import analytics from '@react-native-firebase/analytics';
 
 export default function NutritionScreen() {
   const router = useRouter();
@@ -85,6 +86,7 @@ export default function NutritionScreen() {
             title="Continue" 
             onPress={async () => {
               if (focusedOnNutrition !== null) {
+                await analytics().logEvent('onboarding_nutrition_continue');
                 await updateOnboardingData({ nutrition: focusedOnNutrition.toString() });
                 router.push('/smartwatch');
               }

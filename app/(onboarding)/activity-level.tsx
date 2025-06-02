@@ -6,6 +6,7 @@ import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
 import ScrollIfNeeded from '../components/ScrollIfNeeded';
+import analytics from '@react-native-firebase/analytics';
 
 const ACTIVITY_LEVELS = [
   {
@@ -115,6 +116,7 @@ export default function ActivityLevelScreen() {
             title="Continue" 
             onPress={async () => {
               if (selected) {
+                await analytics().logEvent('onboarding_activity_level_continue');
                 await updateOnboardingData({ activityLevel: selected });
                 router.push('/sleep-hours');
               }

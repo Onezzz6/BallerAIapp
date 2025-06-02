@@ -5,6 +5,7 @@ import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import ScrollIfNeeded from '../components/ScrollIfNeeded';
 import { useState } from 'react';
+import analytics from '@react-native-firebase/analytics';
 
 export default function SocialProofScreen() {
   const router = useRouter();
@@ -309,7 +310,8 @@ export default function SocialProofScreen() {
           }}>
             <Button 
               title="Continue" 
-              onPress={() => {
+              onPress={async () => {
+                await analytics().logEvent('onboarding_social_proof_continue');
                 router.push('/motivation-reason');
               }}
               buttonStyle={{

@@ -6,6 +6,7 @@ import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
 import ScrollIfNeeded from '../components/ScrollIfNeeded';
+import analytics from '@react-native-firebase/analytics';
 
 const POSITIONS = [
   {
@@ -100,6 +101,7 @@ export default function PositionScreen() {
             title="Continue" 
             onPress={async () => {
               if (selected) {
+                await analytics().logEvent('onboarding_position_continue');
                 await updateOnboardingData({ position: selected });
                 router.push('/team-status');
               }

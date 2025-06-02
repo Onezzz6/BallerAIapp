@@ -6,6 +6,7 @@ import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
 import ScrollIfNeeded from '../components/ScrollIfNeeded';
+import analytics from '@react-native-firebase/analytics';
 
 export default function TeamStatusScreen() {
   const router = useRouter();
@@ -85,6 +86,7 @@ export default function TeamStatusScreen() {
             title="Continue" 
             onPress={async () => {
               if (selected !== null) {
+                await analytics().logEvent('onboarding_team_status_continue');
                 await updateOnboardingData({ teamStatus: selected.toString() });
                 router.push('/training-surface');
               }

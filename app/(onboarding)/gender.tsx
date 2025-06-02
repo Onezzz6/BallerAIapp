@@ -6,6 +6,7 @@ import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
 import ScrollIfNeeded from '../components/ScrollIfNeeded';
+import analytics from '@react-native-firebase/analytics';
 
 export default function GenderScreen() {
   const router = useRouter();
@@ -85,6 +86,7 @@ export default function GenderScreen() {
           title="Continue" 
           onPress={async () => {
             if (selectedGender) {
+              await analytics().logEvent('onboarding_gender_continue');
               await updateOnboardingData({ gender: selectedGender });
               router.push('/age');
             }

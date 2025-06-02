@@ -7,6 +7,7 @@ import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
 import { Picker } from '@react-native-picker/picker';
 import ScrollIfNeeded from '../components/ScrollIfNeeded';
+import analytics from '@react-native-firebase/analytics';
 
 export default function SleepHoursScreen() {
   const router = useRouter();
@@ -77,6 +78,7 @@ export default function SleepHoursScreen() {
             title="Continue" 
             onPress={async () => {
               if (selected) {
+                await analytics().logEvent('onboarding_sleep_hours_continue');
                 await updateOnboardingData({ sleepHours: selected });
                 router.push('/nutrition');
               }

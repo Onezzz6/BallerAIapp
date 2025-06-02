@@ -6,6 +6,7 @@ import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
 import ScrollIfNeeded from '../components/ScrollIfNeeded';
+import analytics from '@react-native-firebase/analytics';
 
 const SURFACES = [
   {
@@ -99,6 +100,7 @@ export default function TrainingSurfaceScreen() {
             title="Continue" 
             onPress={async () => {
               if (selected) {
+                await analytics().logEvent('onboarding_training_surface_continue');
                 await updateOnboardingData({ trainingSurface: selected });
                 router.push('/analyzing');
               }

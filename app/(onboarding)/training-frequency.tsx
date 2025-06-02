@@ -6,6 +6,7 @@ import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
 import ScrollIfNeeded from '../components/ScrollIfNeeded';
+import analytics from '@react-native-firebase/analytics';
 
 const FREQUENCY_OPTIONS = [
   {
@@ -33,6 +34,7 @@ export default function TrainingFrequencyScreen() {
 
   const handleContinue = async () => {
     if (selected) {
+      await analytics().logEvent('onboarding_training_frequency_continue');
       await updateOnboardingData({ trainingFrequency: selected });
       router.push('/gym-access');
     }

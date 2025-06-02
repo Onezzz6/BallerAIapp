@@ -6,6 +6,7 @@ import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
 import ScrollIfNeeded from '../components/ScrollIfNeeded';
+import analytics from '@react-native-firebase/analytics';
 
 const IMPROVEMENTS = [
   {
@@ -103,6 +104,7 @@ export default function ImprovementFocusScreen() {
             title="Continue" 
             onPress={async () => {
               if (selected) {
+                await analytics().logEvent('onboarding_improvement_focus_continue');
                 await updateOnboardingData({ improvementFocus: selected });
                 router.push('/ambition-transition');
               }

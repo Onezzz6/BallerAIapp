@@ -6,6 +6,7 @@ import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
 import ScrollIfNeeded from '../components/ScrollIfNeeded';
+import analytics from '@react-native-firebase/analytics';
 
 export default function MeasurementsScreen() {
   const router = useRouter();
@@ -115,6 +116,7 @@ export default function MeasurementsScreen() {
                 title="Continue" 
                 onPress={async () => {
                   if (height && weight) {
+                    await analytics().logEvent('onboarding_measurements_continue');
                     await updateOnboardingData({ height, weight });
                     router.push('/dominant-foot');
                   }

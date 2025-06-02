@@ -6,6 +6,7 @@ import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
 import ScrollIfNeeded from '../components/ScrollIfNeeded';
+import analytics from '@react-native-firebase/analytics';
 
 export default function UsernameScreen() {
   const router = useRouter();
@@ -73,6 +74,7 @@ export default function UsernameScreen() {
             title="Continue" 
             onPress={async () => {
               if (username.trim()) {
+                await analytics().logEvent('onboarding_username_continue');
                 await updateOnboardingData({ username: username.trim() });
                 router.push('/gender');
               }

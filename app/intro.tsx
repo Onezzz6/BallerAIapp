@@ -4,6 +4,7 @@ import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import Button from './components/Button';
 import OnboardingHeader from './components/OnboardingHeader';
 import ScrollIfNeeded from './components/ScrollIfNeeded';
+import analytics from '@react-native-firebase/analytics';
 
 export default function IntroScreen() {
   const router = useRouter();
@@ -66,7 +67,10 @@ export default function IntroScreen() {
 
             <Button 
               title="Continue" 
-              onPress={() => router.push('/(onboarding)/username')}
+              onPress={async () => {
+                await analytics().logEvent('onboarding_intro_continue');
+                router.push('/(onboarding)/username');
+              }}
               buttonStyle={{
                 backgroundColor: '#4064F6',
               }}

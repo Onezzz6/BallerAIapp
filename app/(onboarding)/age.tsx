@@ -7,6 +7,7 @@ import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
 import { Picker } from '@react-native-picker/picker';
 import ScrollIfNeeded from '../components/ScrollIfNeeded';
+import analytics from '@react-native-firebase/analytics';
 
 export default function AgeScreen() {
   const router = useRouter();
@@ -77,6 +78,7 @@ export default function AgeScreen() {
           title="Continue" 
           onPress={async () => {
             if (age) {
+              await analytics().logEvent('onboarding_age_continue');
               await updateOnboardingData({ age });
               router.push('/measurements');
             }

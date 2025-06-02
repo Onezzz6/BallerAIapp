@@ -4,6 +4,7 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import Button from '../components/Button';
 import ScrollIfNeeded from '../components/ScrollIfNeeded';
 import OnboardingHeader from '../components/OnboardingHeader';
+import analytics from '@react-native-firebase/analytics';
                 
 export default function AccountReadyScreen() {
   const router = useRouter();
@@ -60,7 +61,8 @@ export default function AccountReadyScreen() {
 
           <Button 
             title="First step to go pro!" 
-            onPress={() => {
+            onPress={async () => {
+              await analytics().logEvent('onboarding_account_ready_continue');
               router.push('/sign-up');
             }}
           />

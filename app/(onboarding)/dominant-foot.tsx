@@ -6,6 +6,7 @@ import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
 import ScrollIfNeeded from '../components/ScrollIfNeeded';
+import analytics from '@react-native-firebase/analytics';
 
 export default function DominantFootScreen() {
   const router = useRouter();
@@ -85,6 +86,7 @@ export default function DominantFootScreen() {
           title="Continue" 
           onPress={async () => {
             if (selected) {
+              await analytics().logEvent('onboarding_dominant_foot_continue');
               await updateOnboardingData({ dominantFoot: selected });
               router.push('/injury-history');
             }
