@@ -73,7 +73,8 @@
     "react-native-tracking-transparency": "^0.1.2",
     "react-native-view-shot": "^4.0.3",
     "react-native-web": "^0.19.13",
-    "react-native-webview": "^13.12.5"
+    "react-native-webview": "^13.12.5",
+    "expo-clipboard": "~7.0.1"
   },
   "devDependencies": {
     "@babel/core": "^7.26.9",

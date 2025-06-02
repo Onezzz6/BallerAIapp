@@ -53,7 +53,14 @@ export default function MealEditModal({ visible, meal, onClose, onSave }: MealEd
 
   useEffect(() => {
     if (meal) {
-      setEditedMeal(JSON.parse(JSON.stringify(meal))); // Deep copy
+      const mealCopy = JSON.parse(JSON.stringify(meal)); // Deep copy
+      
+      // Ensure combinedName has a value to prevent undefined errors
+      if (!mealCopy.combinedName) {
+        mealCopy.combinedName = mealCopy.items?.[0]?.name || 'Meal';
+      }
+      
+      setEditedMeal(mealCopy);
     }
   }, [meal]);
 
