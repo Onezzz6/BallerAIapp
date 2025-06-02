@@ -2029,7 +2029,7 @@ IMPORTANT USAGE GUIDELINES:
                 ref={planHolderRef}
                 style={{
                   marginHorizontal: 24,
-                  flex: 1, // Make it fill available space
+                  flex: 1, // Restored flex property
                 }}
               >
                 <View style={[

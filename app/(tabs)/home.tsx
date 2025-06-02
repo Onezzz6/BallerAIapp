@@ -33,7 +33,7 @@ export default function HomeScreen() {
   const [question, setQuestion] = useState('');
   const [aiResponse, setAiResponse] = useState('');
   const [questionCount, setQuestionCount] = useState(0);
-  const [maxQuestions, setMaxQuestions] = useState(5);
+  const [maxQuestions, setMaxQuestions] = useState(10);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -1080,7 +1080,7 @@ export default function HomeScreen() {
             await setDoc(doc(db, 'users', user.uid, 'aiQuestions', 'counter'), {
               count: 0,
               date: today,
-              maxQuestions: 5
+              maxQuestions: 10
             });
             setQuestionCount(0);
             // Clear conversation history for new day
@@ -1088,13 +1088,13 @@ export default function HomeScreen() {
           }
           
           // Set max questions from stored value
-          setMaxQuestions(data.maxQuestions || 5);
+          setMaxQuestions(data.maxQuestions || 10);
         } else {
           // Initialize counter document
           await setDoc(doc(db, 'users', user.uid, 'aiQuestions', 'counter'), {
             count: 0,
             date: today,
-            maxQuestions: 5
+            maxQuestions: 10
           });
           setQuestionCount(0);
         }
@@ -1245,8 +1245,8 @@ export default function HomeScreen() {
 
   // Function to handle question input change with character limit
   const handleQuestionChange = (text: string) => {
-    // Limit to 60 characters
-    if (text.length <= 60) {
+    // Limit to 300 characters
+    if (text.length <= 300) {
       setQuestion(text);
     }
   };
@@ -1929,7 +1929,7 @@ export default function HomeScreen() {
                 Ask me a question!
               </Text>
               <Pressable
-                onPress={() => setShowQuestion(!showQuestion)}
+                onPress={() => setShowQuestion(true)}
                 style={({ pressed }) => ({
                   backgroundColor: '#FFFFFF',
                   paddingHorizontal: 20,
@@ -1944,7 +1944,7 @@ export default function HomeScreen() {
                   fontWeight: '600',
                   color: '#4064F6',
                 }}>
-                  {showQuestion ? 'Close' : 'Ask Ballzy'}
+                  Chat with Ballzy
                 </Text>
               </Pressable>
             </View>
@@ -2446,6 +2446,365 @@ export default function HomeScreen() {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
+
+      {/* Chat Modal */}
+      <Modal
+        visible={showQuestion}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setShowQuestion(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }} // Ensure KAV takes full height
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0} // Adjust as needed, start with 0
+        >
+          <View style={{
+            flex: 1,
+            backgroundColor: '#F8F9FA',
+          }}>
+            {/* Chat Header */}
+            <View style={{
+              backgroundColor: '#4064F6',
+              paddingTop: Platform.OS === 'ios' ? 60 : 20, // Adjusted padding for Android status bar
+              paddingBottom: 16,
+              paddingHorizontal: 20,
+              borderBottomLeftRadius: 20,
+              borderBottomRightRadius: 20,
+              alignItems: 'center', // Center header content
+            }}>
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%', // Ensure full width for space-between
+              }}>
+                {/* Empty view for spacing to allow mascot and title to center */}
+                <View style={{ width: 40 }} /> 
+                
+                <View style={{ alignItems: 'center' }}> 
+                  <Image 
+                    source={require('../../assets/images/mascot.png')}
+                    style={{
+                      width: 40,
+                      height: 40,
+                      marginBottom: 4, // Space between mascot and text
+                    }}
+                    resizeMode="contain"
+                  />
+                  <Text style={{
+                    fontSize: 18,
+                    fontWeight: '600',
+                    color: '#FFFFFF',
+                  }}>
+                    Ballzy
+                  </Text>
+                  <Text style={{
+                    fontSize: 14,
+                    color: '#FFFFFF',
+                    opacity: 0.8,
+                  }}>
+                    Your personal coach and mentor
+                  </Text>
+                </View>
+                
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                  {questionCount >= 8 && (
+                    <Text style={{
+                      color: questionCount >= maxQuestions ? '#FFB3B3' : '#FFE6B3', 
+                      fontSize: 14,
+                      opacity: 0.9,
+                    }}>
+                      {maxQuestions - questionCount} left
+                    </Text>
+                  )}
+                  <Pressable
+                    onPress={() => setShowQuestion(false)}
+                    style={({ pressed }) => ({
+                      opacity: pressed ? 0.7 : 1,
+                      padding: 4,
+                    })}
+                  >
+                    <Ionicons name="close" size={28} color="#FFFFFF" />
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+
+            {/* Messages Container */}
+            <ScrollView
+              ref={scrollViewRef}
+              style={{ flex: 1 }} // Takes remaining space
+              contentContainerStyle={{
+                paddingVertical: 20,
+                paddingHorizontal: 16,
+                paddingBottom: Platform.OS === 'ios' ? 60 : 40, // Increased bottom padding for scroll content
+              }}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+              onLayout={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+            >
+              {/* Welcome Message */}
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'flex-start',
+                marginBottom: 24,
+                gap: 12,
+              }}>
+                <View style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: '#4064F6',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                  <Image 
+                    source={require('../../assets/images/mascot.png')} // Changed to mascot
+                    style={{ width: 24, height: 24 }} 
+                    resizeMode="contain"
+                  />
+                </View>
+                <View style={{
+                  flex: 1,
+                  backgroundColor: '#FFFFFF',
+                  padding: 16,
+                  borderRadius: 20,
+                  borderTopLeftRadius: 4,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 3,
+                  elevation: 2,
+                }}>
+                  <Text style={{
+                    fontSize: 16,
+                    color: '#000000',
+                    lineHeight: 22,
+                  }}>
+                    Hi! I'm Ballzy, your football AI assistant. I can help you with questions about training, nutrition, recovery, mental preparation, tactics, and anything else football-related. What would you like to know?
+                  </Text>
+                </View>
+              </View>
+
+              {/* Conversation History */}
+              {questionHistory.map((item, index) => (
+                <View key={index} style={{ marginBottom: 24 }}>
+                  {/* User Message */}
+                  <View style={{
+                    flexDirection: 'row',
+                    justifyContent: 'flex-end',
+                    marginBottom: 12,
+                  }}>
+                    <View style={{
+                      maxWidth: '80%',
+                      backgroundColor: '#4064F6',
+                      padding: 16,
+                      borderRadius: 20,
+                      borderBottomRightRadius: 4,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 3,
+                      elevation: 2,
+                    }}>
+                      <Text style={{
+                        fontSize: 16,
+                        color: '#FFFFFF',
+                        lineHeight: 22,
+                      }}>
+                        {item.question}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* AI Response */}
+                  <View style={{
+                    flexDirection: 'row',
+                    alignItems: 'flex-start',
+                    gap: 12,
+                  }}>
+                    <View style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 20,
+                      backgroundColor: '#4064F6',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                    }}>
+                      <Image 
+                        source={require('../../assets/images/mascot.png')} // Changed to mascot
+                        style={{ width: 24, height: 24 }} 
+                        resizeMode="contain"
+                      />
+                    </View>
+                    <View style={{
+                      flex: 1,
+                      backgroundColor: '#FFFFFF',
+                      padding: 16,
+                      borderRadius: 20,
+                      borderTopLeftRadius: 4,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 3,
+                      elevation: 2,
+                    }}>
+                      <Text style={{
+                        fontSize: 16,
+                        color: '#000000',
+                        lineHeight: 22,
+                      }}>
+                        {item.response}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              ))}
+
+              {/* Loading Animation */}
+              {isAiLoading && (
+                <View style={{
+                  flexDirection: 'row',
+                  alignItems: 'flex-start',
+                  gap: 12,
+                  marginBottom: 24,
+                }}>
+                  <View style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: '#4064F6',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}>
+                    <Ionicons name="football" size={20} color="#FFFFFF" />
+                  </View>
+                  <View style={{
+                    backgroundColor: '#FFFFFF',
+                    padding: 16,
+                    borderRadius: 20,
+                    borderTopLeftRadius: 4,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 3,
+                    elevation: 2,
+                  }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <ActivityIndicator size="small" color="#4064F6" />
+                      <Text style={{
+                        fontSize: 16,
+                        color: '#666666',
+                        fontStyle: 'italic',
+                      }}>
+                        Ballzy is thinking...
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+            </ScrollView>
+
+            {/* Input Container - This will be pushed up by KAV */}
+            <View style={{
+              backgroundColor: '#FFFFFF',
+              borderTopWidth: 1,
+              borderTopColor: '#E5E5E5',
+              paddingHorizontal: 16,
+              paddingTop: 16, // Increased top padding for a bit more space
+              paddingBottom: Platform.OS === 'ios' ? 30 : 20, // Increased bottom padding to lift the input area
+            }}>
+              {/* Question Count Indicator */}
+              {questionCount >= maxQuestions && (
+                <View style={{
+                  backgroundColor: '#FFF5F5',
+                  borderColor: '#FFB3B3',
+                  borderWidth: 1,
+                  borderRadius: 12,
+                  padding: 12,
+                  marginBottom: 12,
+                }}>
+                  <Text style={{
+                    color: '#FF3B30',
+                    fontSize: 14,
+                    textAlign: 'center',
+                    fontWeight: '500',
+                  }}>
+                    You've reached your daily limit of {maxQuestions} questions. Come back tomorrow!
+                  </Text>
+                </View>
+              )}
+
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'flex-end',
+                gap: 12,
+              }}>
+                <View style={{ flex: 1, position: 'relative' }}>
+                  <TextInput
+                    ref={questionInputRef}
+                    value={question}
+                    onChangeText={handleQuestionChange}
+                    placeholder={questionCount >= maxQuestions ? "Daily limit reached..." : "Ask about football, nutrition, recovery..."}
+                    maxLength={300} // Increased character limit
+                    multiline
+                    style={{
+                      borderWidth: 1,
+                      borderColor: '#E5E5E5',
+                      borderRadius: 20,
+                      paddingHorizontal: 16,
+                      paddingVertical: 12,
+                      fontSize: 16,
+                      maxHeight: 100,
+                      minHeight: 44,
+                      backgroundColor: questionCount >= maxQuestions ? '#F5F5F5' : '#FFFFFF',
+                      color: questionCount >= maxQuestions ? '#999999' : '#000000',
+                    }}
+                    editable={questionCount < maxQuestions}
+                    onFocus={handleQuestionInputFocus}
+                  />
+                  {questionCount < maxQuestions && question.length > 280 && ( // Show only after 280 characters
+                    <Text style={{
+                      position: 'absolute',
+                      bottom: 6,
+                      right: 12,
+                      fontSize: 12,
+                      color: question.length >= 295 ? '#FF3B30' : '#999999', // Warning color after 295 characters
+                      backgroundColor: '#FFFFFF',
+                      paddingHorizontal: 4,
+                    }}>
+                      {question.length}/300
+                    </Text>
+                  )}
+                </View>
+
+                <Pressable
+                  onPress={askAiQuestion}
+                  disabled={!question.trim() || questionCount >= maxQuestions || isAiLoading}
+                  style={({ pressed }) => ({
+                    width: 44,
+                    height: 44,
+                    borderRadius: 22,
+                    backgroundColor: (!question.trim() || questionCount >= maxQuestions) ? '#CCCCCC' : '#4064F6',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    opacity: pressed ? 0.8 : 1,
+                  })}
+                >
+                  <Ionicons 
+                    name={isAiLoading ? "hourglass" : "send"} 
+                    size={20} 
+                    color="#FFFFFF" 
+                  />
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
     </KeyboardAvoidingView>
   );
 }
