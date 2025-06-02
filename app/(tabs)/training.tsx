@@ -8,7 +8,7 @@ import { db } from '../config/firebase';
 import Constants from 'expo-constants';
 import Animated, { FadeIn, FadeInDown, PinwheelIn, SlideInRight, SlideOutLeft, FadeOut } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { startOfWeek, endOfWeek, differenceInMilliseconds, format, isSunday, subWeeks, isAfter, parseISO, addDays, getWeek } from 'date-fns';
+import { format, addDays, getWeek } from 'date-fns';
 import analytics from '@react-native-firebase/analytics';
 import Accordion from '../components/Accordion';
 
@@ -764,7 +764,7 @@ export default function TrainingScreen() {
   const [scheduleConfirmed, setScheduleConfirmed] = useState(false);
   const [canGeneratePlan, setCanGeneratePlan] = useState(true);
   const [lastGeneratedDate, setLastGeneratedDate] = useState<Date | null>(null);
-  const [timeUntilNextSunday, setTimeUntilNextSunday] = useState<{ days: number; hours: number; minutes: number }>({ days: 0, hours: 0, minutes: 0 });
+  const [timeUntilNextGeneration, setTimeUntilNextGeneration] = useState<{ days: number; hours: number; minutes: number; nextDate: Date }>({ days: 0, hours: 0, minutes: 0, nextDate: new Date() });
   const [currentStep, setCurrentStep] = useState<WorkflowStep>('welcome');
   const [hasCheckedPlans, setHasCheckedPlans] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
@@ -798,37 +798,46 @@ export default function TrainingScreen() {
     }
   }, [plans.length, currentStep]);
 
-  // Function to calculate time until next Sunday
-  const calculateTimeUntilNextSunday = () => {
+  // Function to calculate time until next generation is available
+  const calculateTimeUntilNextGeneration = () => {
     const now = new Date();
+    const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
     
     // TODO: Remove debug code before production
     // DEBUG: Uncomment the line below to simulate timer expiring (force generate button to show)
-    // return { days: 0, hours: 0, minutes: 0 }; // Force timer to show as expired
+    // return { days: 0, hours: 0, minutes: 0, nextDate: now }; // Force timer to show as expired
     
-    // If today is Sunday and they've already generated a plan, they need to wait until next Sunday
-    const daysUntilSunday = now.getDay() === 0 ? 7 : 7 - now.getDay();
-    const nextSunday = new Date(now);
-    nextSunday.setDate(now.getDate() + daysUntilSunday);
-    nextSunday.setHours(0, 0, 0, 0);
+    let nextAvailableDate = new Date(now);
     
-    const timeDiff = nextSunday.getTime() - now.getTime();
+    if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+      // Monday-Friday: next generation available on Saturday (switches to next week)
+      const daysUntilSaturday = 6 - dayOfWeek; // 6 = Saturday
+      nextAvailableDate.setDate(now.getDate() + daysUntilSaturday);
+      nextAvailableDate.setHours(0, 0, 0, 0);
+    } else {
+      // Saturday-Sunday: next generation available on Monday (switches to current week of that Monday)
+      const daysUntilMonday = dayOfWeek === 0 ? 1 : 2; // 0 = Sunday, 6 = Saturday
+      nextAvailableDate.setDate(now.getDate() + daysUntilMonday);
+      nextAvailableDate.setHours(0, 0, 0, 0);
+    }
+    
+    const timeDiff = nextAvailableDate.getTime() - now.getTime();
     const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
     
-    return { days, hours, minutes };
+    return { days, hours, minutes, nextDate: nextAvailableDate };
   };
 
   // Update the countdown timer
   useEffect(() => {
     if (!canGeneratePlan && lastGeneratedDate) {
       // Initial calculation
-      setTimeUntilNextSunday(calculateTimeUntilNextSunday());
+      setTimeUntilNextGeneration(calculateTimeUntilNextGeneration());
       
       // Set up timer to update every minute
       const timer = setInterval(() => {
-        setTimeUntilNextSunday(calculateTimeUntilNextSunday());
+        setTimeUntilNextGeneration(calculateTimeUntilNextGeneration());
       }, 60000); // Update every minute
       
       return () => clearInterval(timer);
@@ -860,7 +869,7 @@ export default function TrainingScreen() {
         const userDoc = await getDoc(doc(db, 'users', user.uid));
         const userData = userDoc.data();
 
-        if (userData?.lastPlanGenerated) {
+        if (userData?.lastPlanGenerated && userData?.lastPlanWeek !== undefined) {
           const lastGenDate = userData.lastPlanGenerated.toDate ? 
             userData.lastPlanGenerated.toDate() : 
             new Date(userData.lastPlanGenerated);
@@ -868,27 +877,27 @@ export default function TrainingScreen() {
           setLastGeneratedDate(lastGenDate);
           
           const today = new Date();
+          const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
           
-          // Allow generation if today is Sunday
-          if (isSunday(today)) {
-            setCanGeneratePlan(true);
-            return;
+          // Calculate which week we're trying to generate for
+          let targetWeek;
+          if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+            // Monday-Friday: generate for current week
+            targetWeek = getWeek(today);
+          } else {
+            // Saturday-Sunday: generate for next week
+            targetWeek = getWeek(addDays(today, 1));
           }
-
-          // Check if the last generated date is from the current week
-          const thisWeekStart = startOfWeek(today, { weekStartsOn: 1 }); // Start of week (Monday)
-          const lastGenWeekStart = startOfWeek(lastGenDate, { weekStartsOn: 1 });
           
-          // If last generation was this week, user cannot generate again
-          const isFromCurrentWeek = thisWeekStart.getTime() === lastGenWeekStart.getTime();
-          setCanGeneratePlan(!isFromCurrentWeek);
-          
-          // If can't generate, calculate time until next Sunday
-          if (isFromCurrentWeek) {
-            setTimeUntilNextSunday(calculateTimeUntilNextSunday());
+          // If lastPlanWeek equals the week we're trying to generate for, block generation
+          if (userData.lastPlanWeek === targetWeek) {
+            setCanGeneratePlan(false);
+            setTimeUntilNextGeneration(calculateTimeUntilNextGeneration());
+          } else {
+            setCanGeneratePlan(true);
           }
         } else {
-          // No previous plans, allow generation
+          // No previous plans or no lastPlanWeek field, allow generation
           setCanGeneratePlan(true);
         }
       } catch (error) {
@@ -1009,14 +1018,11 @@ export default function TrainingScreen() {
     }
 
     if (!canGeneratePlan) {
-      const nextSunday = new Date();
-      while (!isSunday(nextSunday)) {
-        nextSunday.setDate(nextSunday.getDate() + 1);
-      }
+      const nextAvailable = calculateTimeUntilNextGeneration();
       
       Alert.alert(
         'Plan Generation Limit Reached', 
-        `You can only generate one plan per week. You can generate a new plan on Sunday (${format(nextSunday, 'MMMM d')}).`
+        `You can only generate one plan per week window. You can generate a new plan on ${format(nextAvailable.nextDate, 'EEEE, MMMM d')}.`
       );
       return;
     }
@@ -1032,7 +1038,20 @@ export default function TrainingScreen() {
 
       if (!userData) throw new Error('User data not found');
 
-      const prompt = `You are BallerAI. Your job is to create a training plan for the user. It should include rest of the week until sunday based on the following information
+      const prompt = `You are BallerAI. Your job is to create a training plan for the user. ${
+        (() => {
+          const today = new Date();
+          const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+          
+          if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+            // Monday-Friday: plan for rest of current week
+            return "It should include the rest of this week until Sunday based on the following information";
+          } else {
+            // Saturday-Sunday: plan for full upcoming week
+            return "It should include the full upcoming week (Monday through Sunday) based on the following information";
+          }
+        })()
+      }
 this is an example of a plan for one day for this user.
 user onboarding answers:
 age ${userData.age}
@@ -1110,7 +1129,13 @@ IMPORTANT FORMAT INSTRUCTIONS:
    No asterisks, dashes, or circles—just plain numbers and periods.
    EXCEPTION: Do NOT number a recovery day; it must contain only the line above.
 
-Example of correct format:
+${(() => {
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  
+  if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+    // Monday-Friday: show example for rest of week
+    return `Example of correct format (for rest of current week):
 MONDAY
 1. 10 min warm up - light jog and stretching
 2. 15 min passing drills - wall passes varying distance
@@ -1135,7 +1160,37 @@ SATURDAY
 Game day
 
 SUNDAY
+Focus on recovery today`;
+  } else {
+    // Saturday-Sunday: show example for full week
+    return `Example of correct format (for full upcoming week):
+MONDAY
+1. 10 min warm up - light jog and stretching
+2. 15 min passing drills - wall passes varying distance
+3. 15 min dribbling - cone drills focusing on control
+4. 5 min cool down
+
+TUESDAY
+1. Gym session: 45 minutes of strength training focused on lower body
+
+WEDNESDAY
 Focus on recovery today
+
+THURSDAY (Light training - game in 2 days)
+1. 20 min very light technical work - focus on ball control
+2. 10 min stretching
+
+FRIDAY (Pre-game day)
+Focus on recovery today
+Light stretching only
+
+SATURDAY
+Game day
+
+SUNDAY
+Focus on recovery today`;
+  }
+})()}
 
 IMPORTANT: After the last day (Sunday), write a short summary section titled "NOTES:" that explains the weekly plan structure and why certain types of training were scheduled on specific days. This helps users understand the reasoning behind their training program.`;
 
@@ -1209,11 +1264,15 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
       const now = new Date();
       
       // Get the week number for plan naming
-      let weekNumber = getWeek(now);
+      const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+      let weekNumber;
       
-      // If today is Sunday, this plan is for the next week
-      if (isSunday(now)) {
-        weekNumber += 1;
+      if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+        // Monday-Friday: generate plan for current week
+        weekNumber = getWeek(now);
+      } else {
+        // Saturday-Sunday: generate plan for next week
+        weekNumber = getWeek(addDays(now, 1));
       }
       
       await addPlan({
@@ -1229,9 +1288,10 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
         createdAt: now
       });
 
-      // Update lastPlanGenerated in user document
+      // Update lastPlanGenerated and lastPlanWeek in user document
       await setDoc(doc(db, 'users', user.uid), {
         lastPlanGenerated: now,
+        lastPlanWeek: weekNumber,
       }, { merge: true });
 
       // Update local state
@@ -1680,13 +1740,13 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
               {!canGeneratePlan && lastGeneratedDate ? (
                 <View style={styles.timerContainer}>
                   <Text style={styles.timerText}>
-                    Next week's plan available on Sunday, {format(startOfWeek(addDays(new Date(), 7), { weekStartsOn: 1 }), 'MMMM d')}
+                    Next plan available {format(timeUntilNextGeneration.nextDate, 'EEEE, MMMM d')}
                   </Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, justifyContent: 'center', gap: 5 }}>
                     <Ionicons name="time-outline" size={18} color="#4064F6" />
                     <Text style={styles.countdownText}>
-                      {timeUntilNextSunday.days > 0 && `${timeUntilNextSunday.days} day${timeUntilNextSunday.days !== 1 ? 's' : ''}, `}
-                      {timeUntilNextSunday.hours} hour{timeUntilNextSunday.hours !== 1 ? 's' : ''}, {timeUntilNextSunday.minutes} min
+                      {timeUntilNextGeneration.days > 0 && `${timeUntilNextGeneration.days} day${timeUntilNextGeneration.days !== 1 ? 's' : ''}, `}
+                      {timeUntilNextGeneration.hours} hour{timeUntilNextGeneration.hours !== 1 ? 's' : ''}, {timeUntilNextGeneration.minutes} min
                     </Text>
                   </View>
                 </View>
@@ -2211,13 +2271,13 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
                   {!canGeneratePlan && lastGeneratedDate && (
                     <View style={styles.timerContainer}>
                       <Text style={styles.timerText}>
-                        Next week's plan available on Sunday, {format(startOfWeek(addDays(new Date(), 7), { weekStartsOn: 1 }), 'MMMM d')}
+                        Next plan available {format(timeUntilNextGeneration.nextDate, 'EEEE, MMMM d')}
                       </Text>
                       <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, justifyContent: 'center', gap: 5 }}>
                         <Ionicons name="time-outline" size={18} color="#4064F6" />
                         <Text style={styles.countdownText}>
-                          {timeUntilNextSunday.days > 0 && `${timeUntilNextSunday.days} day${timeUntilNextSunday.days !== 1 ? 's' : ''}, `}
-                          {timeUntilNextSunday.hours} hour{timeUntilNextSunday.hours !== 1 ? 's' : ''}, {timeUntilNextSunday.minutes} min
+                          {timeUntilNextGeneration.days > 0 && `${timeUntilNextGeneration.days} day${timeUntilNextGeneration.days !== 1 ? 's' : ''}, `}
+                          {timeUntilNextGeneration.hours} hour{timeUntilNextGeneration.hours !== 1 ? 's' : ''}, {timeUntilNextGeneration.minutes} min
                         </Text>
                       </View>
                     </View>
