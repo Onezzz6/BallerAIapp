@@ -20,11 +20,74 @@ import { BlurView } from 'expo-blur';
 import { useUserSettings } from '../context/UserSettingsContext';
 import { calculateNutritionGoals } from '../utils/nutritionCalculations';
 import { format, startOfWeek, addDays, subDays } from 'date-fns';
-import { TextInput, ActivityIndicator, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard, Pressable, Modal, Alert } from 'react-native';
+import { TextInput, ActivityIndicator, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard, Pressable, Modal, Alert, Animated } from 'react-native';
 import { askOpenAI } from '../utils/openai';
 import Svg, { Circle } from 'react-native-svg';
-import Animated, { PinwheelIn } from 'react-native-reanimated';
+import ReanimatedAnimated, { PinwheelIn } from 'react-native-reanimated';
 import analytics from '@react-native-firebase/analytics'; // Add analytics import
+
+// Animated Typing Indicator Component
+const TypingIndicator = () => {
+  const dot1 = useRef(new Animated.Value(0.3)).current;
+  const dot2 = useRef(new Animated.Value(0.3)).current;
+  const dot3 = useRef(new Animated.Value(0.3)).current;
+
+  useEffect(() => {
+    const createAnimation = (dot: Animated.Value, delay: number) => {
+      return Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(dot, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(dot, {
+            toValue: 0.3,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+    };
+
+    const animation = Animated.parallel([
+      createAnimation(dot1, 0),
+      createAnimation(dot2, 200),
+      createAnimation(dot3, 400),
+    ]);
+
+    animation.start();
+
+    return () => animation.stop();
+  }, [dot1, dot2, dot3]);
+
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 8 }}>
+      <Animated.View style={{
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#666666',
+        opacity: dot1,
+      }} />
+      <Animated.View style={{
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#666666',
+        opacity: dot2,
+      }} />
+      <Animated.View style={{
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#666666',
+        opacity: dot3,
+      }} />
+    </View>
+  );
+};
 
 export default function HomeScreen() {
   const { user } = useAuth();
@@ -1058,6 +1121,7 @@ export default function HomeScreen() {
     question: string;
     response: string;
     timestamp: string;
+    isLoading?: boolean;
   }>>([]);
 
   // Modify the checkDailyQuestionLimit function to handle missing index
@@ -1180,11 +1244,20 @@ export default function HomeScreen() {
     }
 
     try {
-      setIsAiLoading(true);
-      
       // Save the current question to display it immediately
       const currentQuestion = question;
       setQuestion('');
+
+      // Add the user's message to history immediately
+      const userMessage = {
+        question: currentQuestion,
+        response: '', // Empty response initially
+        timestamp: new Date().toISOString(),
+        isLoading: true // Flag to show loading state
+      };
+      
+      setQuestionHistory(prevHistory => [...prevHistory, userMessage]);
+      setIsAiLoading(true);
 
       // Create context from user profile
       let userContext = '';
@@ -1195,15 +1268,20 @@ export default function HomeScreen() {
       // Call OpenAI API using the utility function
       const response = await askOpenAI(currentQuestion, userContext);
       
-      // Update the conversation history with a temporary item
-      const newHistoryItem = {
-        question: currentQuestion,
-        response: response,
-        timestamp: new Date().toISOString()
-      };
-      
-      // Add to conversation history
-      setQuestionHistory(prevHistory => [...prevHistory, newHistoryItem]);
+      // Update the last message in history with the response
+      setQuestionHistory(prevHistory => {
+        const updatedHistory = [...prevHistory];
+        const lastMessageIndex = updatedHistory.length - 1;
+        if (lastMessageIndex >= 0) {
+          updatedHistory[lastMessageIndex] = {
+            question: currentQuestion,
+            response: response,
+            timestamp: new Date().toISOString(),
+            isLoading: false
+          };
+        }
+        return updatedHistory;
+      });
 
       // After getting a response, save the question and response to Firestore
       if (user) {
@@ -1237,7 +1315,20 @@ export default function HomeScreen() {
       }
     } catch (error) {
       console.error('Error asking AI:', error);
-      setAiResponse('Sorry, there was an error processing your question. Please try again later.');
+      
+      // Update the last message with error state
+      setQuestionHistory(prevHistory => {
+        const updatedHistory = [...prevHistory];
+        const lastMessageIndex = updatedHistory.length - 1;
+        if (lastMessageIndex >= 0) {
+          updatedHistory[lastMessageIndex] = {
+            ...updatedHistory[lastMessageIndex],
+            response: 'Sorry, there was an error processing your question. Please try again later.',
+            isLoading: false
+          };
+        }
+        return updatedHistory;
+      });
     } finally {
       setIsAiLoading(false);
     }
@@ -1488,7 +1579,7 @@ export default function HomeScreen() {
               alignItems: 'center',
               gap: 6,
             }}>
-              <Animated.View 
+              <ReanimatedAnimated.View 
                 entering={PinwheelIn.duration(500)}
               >
               <Image 
@@ -1499,7 +1590,7 @@ export default function HomeScreen() {
                 }}
                 resizeMode="contain"
               />
-              </Animated.View>
+              </ReanimatedAnimated.View>
               <Text style={{
                 fontSize: 28,
                 fontWeight: '300',
@@ -2037,13 +2128,18 @@ export default function HomeScreen() {
                             borderRadius: 12,
                             borderTopLeftRadius: 4,
                           }}>
-                            <Text style={{
-                              fontSize: 16,
-                              color: '#000000',
-                              lineHeight: 24,
-                            }}>
-                              {item.response}
-                            </Text>
+                            {item.isLoading ? (
+                              // Typing indicator for embedded chat
+                              <TypingIndicator />
+                            ) : (
+                              <Text style={{
+                                fontSize: 16,
+                                color: '#000000',
+                                lineHeight: 24,
+                              }}>
+                                {item.response}
+                              </Text>
+                            )}
                           </View>
                         </View>
                       </View>
@@ -2106,37 +2202,11 @@ export default function HomeScreen() {
                   fontWeight: '600',
                   color: '#FFFFFF',
                 }}>
-                  {isAiLoading ? 'Thinking...' : questionCount >= maxQuestions ? 'Limit Reached' : 'Get Answer'}
+                  {questionCount >= maxQuestions ? 'Limit Reached' : 'Get Answer'}
                 </Text>
               </Pressable>
 
-              {isAiLoading && (
-                <View style={{ 
-                  marginTop: 16, 
-                  alignItems: 'center', 
-                  justifyContent: 'center'
-                }}>
-                  <ActivityIndicator size="large" color="#4A3AFF" />
-                  <Text style={{ marginTop: 8, color: '#666666' }}>
-                    BallerAI is thinking...
-                  </Text>
-                </View>
-              )}
-
-              {/* Show limit reached message */}
-              {questionCount >= maxQuestions && (
-                <View style={{
-                  padding: 16,
-                  backgroundColor: '#FFF5F5',
-                  borderRadius: 12,
-                  marginTop: 8,
-                }}>
-                  <Text style={{ color: '#FF3B30', textAlign: 'center' }}>
-                    You've reached your daily limit of {maxQuestions} questions.
-                    Come back tomorrow for more!
-                  </Text>
-                </View>
-              )}
+              {/* Remove the old loading display since we handle it in messages now */}
             </View>
           )}
 
@@ -2619,7 +2689,7 @@ export default function HomeScreen() {
                     </View>
                   </View>
 
-                  {/* AI Response */}
+                  {/* AI Response or Loading */}
                   <View style={{
                     flexDirection: 'row',
                     alignItems: 'flex-start',
@@ -2634,7 +2704,7 @@ export default function HomeScreen() {
                       alignItems: 'center',
                     }}>
                       <Image 
-                        source={require('../../assets/images/mascot.png')} // Changed to mascot
+                        source={require('../../assets/images/mascot.png')}
                         style={{ width: 24, height: 24 }} 
                         resizeMode="contain"
                       />
@@ -2651,60 +2721,25 @@ export default function HomeScreen() {
                       shadowRadius: 3,
                       elevation: 2,
                     }}>
-                      <Text style={{
-                        fontSize: 16,
-                        color: '#000000',
-                        lineHeight: 22,
-                      }}>
-                        {item.response}
-                      </Text>
+                      {item.isLoading ? (
+                        // Typing indicator for the main chat modal
+                        <TypingIndicator />
+                      ) : (
+                        // Actual response
+                        <Text style={{
+                          fontSize: 16,
+                          color: '#000000',
+                          lineHeight: 22,
+                        }}>
+                          {item.response}
+                        </Text>
+                      )}
                     </View>
                   </View>
                 </View>
               ))}
 
-              {/* Loading Animation */}
-              {isAiLoading && (
-                <View style={{
-                  flexDirection: 'row',
-                  alignItems: 'flex-start',
-                  gap: 12,
-                  marginBottom: 24,
-                }}>
-                  <View style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 20,
-                    backgroundColor: '#4064F6',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                  }}>
-                    <Ionicons name="football" size={20} color="#FFFFFF" />
-                  </View>
-                  <View style={{
-                    backgroundColor: '#FFFFFF',
-                    padding: 16,
-                    borderRadius: 20,
-                    borderTopLeftRadius: 4,
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 1 },
-                    shadowOpacity: 0.1,
-                    shadowRadius: 3,
-                    elevation: 2,
-                  }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <ActivityIndicator size="small" color="#4064F6" />
-                      <Text style={{
-                        fontSize: 16,
-                        color: '#666666',
-                        fontStyle: 'italic',
-                      }}>
-                        Ballzy is thinking...
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-              )}
+              {/* Remove the old loading animation since we now handle it per message */}
             </ScrollView>
 
             {/* Input Container - This will be pushed up by KAV */}
@@ -2794,7 +2829,7 @@ export default function HomeScreen() {
                   })}
                 >
                   <Ionicons 
-                    name={isAiLoading ? "hourglass" : "send"} 
+                    name="send" 
                     size={20} 
                     color="#FFFFFF" 
                   />
