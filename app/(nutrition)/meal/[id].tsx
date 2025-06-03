@@ -240,214 +240,301 @@
        <View style={styles.root}>
          <Stack.Screen options={{ headerShown: false }} />
    
-         {/* ===================== SCROLLABLE CONTENT ========================== */}
-         <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-           {/* ================ IMAGE CANVAS (9:16) ================= */}
-           <ViewShot
-             ref={viewShot}
-             style={{ width: SCREEN_WIDTH, height: STORY_HEIGHT }}
-             options={{ format: 'png', quality: 1 }}
-           >
-             <Image
-               source={{ uri: meal.photoUri || '' }}
-               style={styles.img}
-               resizeMode="cover"
-             />
-   
-             {/* Top buttons: back, download, share */}
-             {!stampVisible && (
-               <View style={styles.topOverlay}>
-                 <TouchableOpacity
-                   style={styles.topButton}
-                   onPress={() => router.push('/(tabs)/nutrition')}
-                   disabled={capturing}
-                 >
-                   <Ionicons name="chevron-back" size={24} color="#fff" />
-                 </TouchableOpacity>
-                 <View style={{ flexDirection: 'row' }}>
-                   <TouchableOpacity
-                     style={styles.topButton}
-                     onPress={downloadImage}
-                     disabled={capturing}
-                   >
-                     <Ionicons name="download-outline" size={22} color="#fff" />
-                   </TouchableOpacity>
-                   <TouchableOpacity
-                     style={styles.topButton}
-                     onPress={openShareModal}
-                     disabled={capturing}
-                   >
-                     <Ionicons name="share-outline" size={22} color="#fff" />
-                   </TouchableOpacity>
-                 </View>
-               </View>
-             )}
-   
-             {/* Footer: display only when capturing */}
-             <MacroStamp meal={meal} visible={stampVisible} />
-           </ViewShot>
-   
-           {/* ================ DETAILS CARD ================= */}
-           <View style={styles.card}>
-             {/* Edit FAB */}
-             <TouchableOpacity
-               style={styles.editFab}
-               onPress={() => setEditOpen(true)}
+         {/* Check if meal has a photo URL */}
+         {meal.photoUri ? (
+           // LAYOUT WITH PHOTO - Existing layout
+           <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+             {/* ================ IMAGE CANVAS (9:16) ================= */}
+             <ViewShot
+               ref={viewShot}
+               style={{ width: SCREEN_WIDTH, height: STORY_HEIGHT }}
+               options={{ format: 'png', quality: 1 }}
              >
-               <Ionicons name="create-outline" size={22} color="#4064F6" />
-             </TouchableOpacity>
+               <Image
+                 source={{ uri: meal.photoUri }}
+                 style={styles.img}
+                 resizeMode="cover"
+               />
    
-             {/* Date badge */}
-             <View style={styles.dateBadge}>
-               <Text style={styles.dateTxt}>
-                 {format(new Date(meal.timestamp), 'MMM d, yyyy • h:mm a')}
-               </Text>
-             </View>
-   
-             {/* Meal title */}
-             <Text style={styles.title}>
-               {meal.combinedName || meal.items?.[0]?.name || 'Meal'}
-             </Text>
-   
-             {/* Items */}
-             {!!meal.items?.length && (
-               <View style={styles.section}>
-                 <Text style={styles.sectionLabel}>Items</Text>
-                 {meal.items.map((it: any, i: number) => (
-                   <View key={i} style={styles.itemRow}>
-                     <Text style={styles.itemName}>{it.name}</Text>
-                     <Text style={styles.itemPortion}>{it.portion}</Text>
+               {/* Top buttons: back, download, share */}
+               {!stampVisible && (
+                 <View style={styles.topOverlay}>
+                   <TouchableOpacity
+                     style={styles.topButton}
+                     onPress={() => router.push('/(tabs)/nutrition')}
+                     disabled={capturing}
+                   >
+                     <Ionicons name="chevron-back" size={24} color="#fff" />
+                   </TouchableOpacity>
+                   <View style={{ flexDirection: 'row' }}>
+                     <TouchableOpacity
+                       style={styles.topButton}
+                       onPress={downloadImage}
+                       disabled={capturing}
+                     >
+                       <Ionicons name="download-outline" size={22} color="#fff" />
+                     </TouchableOpacity>
+                     <TouchableOpacity
+                       style={styles.topButton}
+                       onPress={openShareModal}
+                       disabled={capturing}
+                     >
+                       <Ionicons name="share-outline" size={22} color="#fff" />
+                     </TouchableOpacity>
                    </View>
-                 ))}
-               </View>
-             )}
-   
-             {/* Nutrition Facts */}
-             <View style={styles.section}>
-               <Text style={styles.sectionLabel}>Nutrition Facts</Text>
-               <View style={styles.calRow}>
-                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                   <Ionicons
-                     name="flame-outline"
-                     size={20}
-                     color="#4064F6"
-                     style={{ marginRight: 6 }}
-                   />
-                   <Text style={styles.calLabel}>Calories</Text>
-                 </View>
-                 <Text style={styles.calVal}>{meal.totalMacros?.calories || 0}</Text>
-               </View>
-   
-               <View style={styles.macroGrid}>
-                 {[
-                   { icon: '🥩', name: 'Protein', val: `${meal.totalMacros?.protein || 0}g` },
-                   { icon: '🌾', name: 'Carbs', val: `${meal.totalMacros?.carbs || 0}g` },
-                   { icon: '🧈', name: 'Fats', val: `${meal.totalMacros?.fats || 0}g` },
-                 ].map((m, i) => (
-                   <View key={i} style={styles.macroCard}>
-                     <Text style={styles.macroIcon}>{m.icon}</Text>
-                     <Text style={styles.macroVal}>{m.val}</Text>
-                     <Text style={styles.macroName}>{m.name}</Text>
-                   </View>
-                 ))}
-               </View>
-             </View>
-           </View>
-         </ScrollView>
-   
-         {/* ================ SHARE MODAL ================= */}
-         <Modal
-           transparent
-           visible={shareVisible}
-           animationType="slide"
-           onRequestClose={() => setShareVisible(false)}
-         >
-           <View style={styles.modalBackdrop}>
-             <View style={styles.shareModalContainer}>
-               
-               {/* Header */}
-               <View style={styles.shareModalHeader}>
-                 <TouchableOpacity
-                   onPress={() => setShareVisible(false)}
-                   style={styles.closeButton}
-                 >
-                   <Ionicons name="close" size={24} color="#666" />
-                 </TouchableOpacity>
-                 <Text style={styles.shareModalTitle}>Share</Text>
-                 <View style={styles.headerSpacer} />
-               </View>
-
-               {/* Preview Image */}
-               {shareURI && (
-                 <View style={styles.previewContainer}>
-                   <Image 
-                     source={{ uri: shareURI }} 
-                     style={styles.previewImage}
-                     resizeMode="contain"
-                   />
                  </View>
                )}
-
-               {/* Share Options */}
-               <View style={styles.shareOptionsContainer}>
-                 <TouchableOpacity
-                   style={styles.shareOptionButton}
-                   onPress={shareOther}
-                 >
-                   <View style={[styles.shareOptionIcon, styles.shareButton]}>
+   
+               {/* Footer: display only when capturing */}
+               <MacroStamp meal={meal} visible={stampVisible} />
+             </ViewShot>
+   
+             {/* ================ DETAILS CARD ================= */}
+             <View style={styles.card}>
+               {/* Edit FAB */}
+               <TouchableOpacity
+                 style={styles.editFab}
+                 onPress={() => setEditOpen(true)}
+               >
+                 <Ionicons name="create-outline" size={22} color="#4064F6" />
+               </TouchableOpacity>
+   
+               {/* Date badge */}
+               <View style={styles.dateBadge}>
+                 <Text style={styles.dateTxt}>
+                   {format(new Date(meal.timestamp), 'MMM d, yyyy • h:mm a')}
+                 </Text>
+               </View>
+   
+               {/* Meal title */}
+               <Text style={styles.title}>
+                 {meal.combinedName || meal.items?.[0]?.name || 'Meal'}
+               </Text>
+   
+               {/* Items */}
+               {!!meal.items?.length && (
+                 <View style={styles.section}>
+                   <Text style={styles.sectionLabel}>Items</Text>
+                   {meal.items.map((it: any, i: number) => (
+                     <View key={i} style={styles.itemRow}>
+                       <Text style={styles.itemName}>{it.name}</Text>
+                       <Text style={styles.itemPortion}>{it.portion}</Text>
+                     </View>
+                   ))}
+                 </View>
+               )}
+   
+               {/* Nutrition Facts */}
+               <View style={styles.section}>
+                 <Text style={styles.sectionLabel}>Nutrition Facts</Text>
+                 <View style={styles.calRow}>
+                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                      <Ionicons
-                       name="share-outline"
-                       size={28}
-                       color="#fff"
+                       name="flame-outline"
+                       size={20}
+                       color="#4064F6"
+                       style={{ marginRight: 6 }}
                      />
+                     <Text style={styles.calLabel}>Calories</Text>
                    </View>
-                   <Text style={styles.shareOptionText}>Share</Text>
-                 </TouchableOpacity>
-
-                 <TouchableOpacity
-                   style={styles.shareOptionButton}
-                   onPress={() => {
-                     if (shareURI) {
-                       Clipboard.setStringAsync(shareURI);
-                       Alert.alert('Copied', 'Image copied to clipboard');
-                     }
-                     setShareVisible(false);
-                   }}
-                 >
-                   <View style={[styles.shareOptionIcon, styles.copyButton]}>
-                     <Ionicons name="copy-outline" size={28} color="#fff" />
-                   </View>
-                   <Text style={styles.shareOptionText}>Copy</Text>
-                 </TouchableOpacity>
-
-                 <TouchableOpacity
-                   style={styles.shareOptionButton}
-                   onPress={async () => {
-                     try {
-                       const { status } = await MediaLibrary.requestPermissionsAsync();
-                       if (status !== 'granted') {
-                         Alert.alert('Permission needed', 'Please grant permission to save images');
-                         return;
-                       }
-                       if (shareURI) {
-                         await MediaLibrary.createAssetAsync(shareURI);
-                         Alert.alert('Saved', 'Image saved to your Photos');
-                       }
-                     } catch {
-                       Alert.alert('Error', 'Failed to save image');
-                     }
-                     setShareVisible(false);
-                   }}
-                 >
-                   <View style={[styles.shareOptionIcon, styles.downloadButton]}>
-                     <Ionicons name="download-outline" size={28} color="#fff" />
-                   </View>
-                   <Text style={styles.shareOptionText}>Download</Text>
-                 </TouchableOpacity>
+                   <Text style={styles.calVal}>{meal.totalMacros?.calories || 0}</Text>
+                 </View>
+   
+                 <View style={styles.macroGrid}>
+                   {[
+                     { icon: '🥩', name: 'Protein', val: `${meal.totalMacros?.protein || 0}g` },
+                     { icon: '🌾', name: 'Carbs', val: `${meal.totalMacros?.carbs || 0}g` },
+                     { icon: '🧈', name: 'Fats', val: `${meal.totalMacros?.fats || 0}g` },
+                   ].map((m, i) => (
+                     <View key={i} style={styles.macroCard}>
+                       <Text style={styles.macroIcon}>{m.icon}</Text>
+                       <Text style={styles.macroVal}>{m.val}</Text>
+                       <Text style={styles.macroName}>{m.name}</Text>
+                     </View>
+                   ))}
+                 </View>
                </View>
              </View>
-           </View>
-         </Modal>
+           </ScrollView>
+         ) : (
+           // LAYOUT WITHOUT PHOTO - Nutrition details only
+           <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+             {/* Header with back button only */}
+             <View style={styles.noPhotoHeader}>
+               <TouchableOpacity
+                 style={styles.noPhotoBackButton}
+                 onPress={() => router.push('/(tabs)/nutrition')}
+               >
+                 <Ionicons name="chevron-back" size={24} color="#000" />
+               </TouchableOpacity>
+               <Text style={styles.noPhotoHeaderTitle}>Meal Details</Text>
+               <View style={{ width: 40 }} />
+             </View>
+   
+             {/* ================ NUTRITION DETAILS CARD (Full Screen) ================= */}
+             <View style={styles.noPhotoCard}>
+               {/* Edit FAB */}
+               <TouchableOpacity
+                 style={styles.editFab}
+                 onPress={() => setEditOpen(true)}
+               >
+                 <Ionicons name="create-outline" size={22} color="#4064F6" />
+               </TouchableOpacity>
+   
+               {/* Date badge */}
+               <View style={styles.dateBadge}>
+                 <Text style={styles.dateTxt}>
+                   {format(new Date(meal.timestamp), 'MMM d, yyyy • h:mm a')}
+                 </Text>
+               </View>
+   
+               {/* Meal title */}
+               <Text style={styles.title}>
+                 {meal.combinedName || meal.items?.[0]?.name || 'Meal'}
+               </Text>
+   
+               {/* Items */}
+               {!!meal.items?.length && (
+                 <View style={styles.section}>
+                   <Text style={styles.sectionLabel}>Items</Text>
+                   {meal.items.map((it: any, i: number) => (
+                     <View key={i} style={styles.itemRow}>
+                       <Text style={styles.itemName}>{it.name}</Text>
+                       <Text style={styles.itemPortion}>{it.portion}</Text>
+                     </View>
+                   ))}
+                 </View>
+               )}
+   
+               {/* Nutrition Facts */}
+               <View style={styles.section}>
+                 <Text style={styles.sectionLabel}>Nutrition Facts</Text>
+                 <View style={styles.calRow}>
+                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                     <Ionicons
+                       name="flame-outline"
+                       size={20}
+                       color="#4064F6"
+                       style={{ marginRight: 6 }}
+                     />
+                     <Text style={styles.calLabel}>Calories</Text>
+                   </View>
+                   <Text style={styles.calVal}>{meal.totalMacros?.calories || 0}</Text>
+                 </View>
+   
+                 <View style={styles.macroGrid}>
+                   {[
+                     { icon: '🥩', name: 'Protein', val: `${meal.totalMacros?.protein || 0}g` },
+                     { icon: '🌾', name: 'Carbs', val: `${meal.totalMacros?.carbs || 0}g` },
+                     { icon: '🧈', name: 'Fats', val: `${meal.totalMacros?.fats || 0}g` },
+                   ].map((m, i) => (
+                     <View key={i} style={styles.macroCard}>
+                       <Text style={styles.macroIcon}>{m.icon}</Text>
+                       <Text style={styles.macroVal}>{m.val}</Text>
+                       <Text style={styles.macroName}>{m.name}</Text>
+                     </View>
+                   ))}
+                 </View>
+               </View>
+             </View>
+           </ScrollView>
+         )}
+   
+         {/* ================ SHARE MODAL (Only show if meal has photo) ================= */}
+         {meal.photoUri && (
+           <Modal
+             transparent
+             visible={shareVisible}
+             animationType="slide"
+             onRequestClose={() => setShareVisible(false)}
+           >
+             <View style={styles.modalBackdrop}>
+               <View style={styles.shareModalContainer}>
+                 
+                 {/* Header */}
+                 <View style={styles.shareModalHeader}>
+                   <TouchableOpacity
+                     onPress={() => setShareVisible(false)}
+                     style={styles.closeButton}
+                   >
+                     <Ionicons name="close" size={24} color="#666" />
+                   </TouchableOpacity>
+                   <Text style={styles.shareModalTitle}>Share</Text>
+                   <View style={styles.headerSpacer} />
+                 </View>
+
+                 {/* Preview Image */}
+                 {shareURI && (
+                   <View style={styles.previewContainer}>
+                     <Image 
+                       source={{ uri: shareURI }} 
+                       style={styles.previewImage}
+                       resizeMode="contain"
+                     />
+                   </View>
+                 )}
+
+                 {/* Share Options */}
+                 <View style={styles.shareOptionsContainer}>
+                   <TouchableOpacity
+                     style={styles.shareOptionButton}
+                     onPress={shareOther}
+                   >
+                     <View style={[styles.shareOptionIcon, styles.shareButton]}>
+                       <Ionicons
+                         name="share-outline"
+                         size={28}
+                         color="#fff"
+                       />
+                     </View>
+                     <Text style={styles.shareOptionText}>Share</Text>
+                   </TouchableOpacity>
+
+                   <TouchableOpacity
+                     style={styles.shareOptionButton}
+                     onPress={() => {
+                       if (shareURI) {
+                         Clipboard.setStringAsync(shareURI);
+                         Alert.alert('Copied', 'Image copied to clipboard');
+                       }
+                       setShareVisible(false);
+                     }}
+                   >
+                     <View style={[styles.shareOptionIcon, styles.copyButton]}>
+                       <Ionicons name="copy-outline" size={28} color="#fff" />
+                     </View>
+                     <Text style={styles.shareOptionText}>Copy</Text>
+                   </TouchableOpacity>
+
+                   <TouchableOpacity
+                     style={styles.shareOptionButton}
+                     onPress={async () => {
+                       try {
+                         const { status } = await MediaLibrary.requestPermissionsAsync();
+                         if (status !== 'granted') {
+                           Alert.alert('Permission needed', 'Please grant permission to save images');
+                           return;
+                         }
+                         if (shareURI) {
+                           await MediaLibrary.createAssetAsync(shareURI);
+                           Alert.alert('Saved', 'Image saved to your Photos');
+                         }
+                       } catch {
+                         Alert.alert('Error', 'Failed to save image');
+                       }
+                       setShareVisible(false);
+                     }}
+                   >
+                     <View style={[styles.shareOptionIcon, styles.downloadButton]}>
+                       <Ionicons name="download-outline" size={28} color="#fff" />
+                     </View>
+                     <Text style={styles.shareOptionText}>Download</Text>
+                   </TouchableOpacity>
+                 </View>
+               </View>
+             </View>
+           </Modal>
+         )}
    
          {/* ================ EDIT MODAL ================= */}
          <MealEditModal
@@ -747,5 +834,29 @@
      },
      downloadButton: {
        backgroundColor: '#34C759',
+     },
+     noPhotoHeader: {
+       flexDirection: 'row',
+       alignItems: 'center',
+       justifyContent: 'space-between',
+       padding: 16,
+       paddingTop: 60, // Account for status bar
+       backgroundColor: '#fff',
+     },
+     noPhotoBackButton: {
+       padding: 8,
+       borderRadius: 20,
+       backgroundColor: '#F0F0F0',
+     },
+     noPhotoHeaderTitle: {
+       fontSize: 18,
+       fontWeight: '700',
+       color: '#000',
+     },
+     noPhotoCard: {
+       backgroundColor: '#fff',
+       flex: 1,
+       padding: 24,
+       paddingBottom: 48,
      },
    });
