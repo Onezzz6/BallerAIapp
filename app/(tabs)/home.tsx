@@ -135,6 +135,10 @@ export default function HomeScreen() {
   // ViewShot ref for sharing - dedicated ref for the shareable content
   const shareableContentRef = useRef<ViewShot>(null);
   const [shareableContentHeight, setShareableContentHeight] = useState(0);
+  
+  // Story canvas refs & state for 9:16 sharing
+  const storyCanvasRef = useRef<ViewShot>(null);
+  const [storyURI, setStoryURI] = useState<string | null>(null);
 
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -1536,32 +1540,47 @@ export default function HomeScreen() {
     );
   };  
 
+  // Helper function to capture 9:16 story format
+  const captureStory = async (): Promise<string> => {
+    if (!shareableContentRef.current?.capture || !storyCanvasRef.current?.capture) {
+      throw new Error('ViewShot refs not available');
+    }
+    
+    // 1️⃣ grab the normal screenshot
+    const innerURI = await shareableContentRef.current.capture();
+    
+    // 2️⃣ feed that into the canvas Image (setStoryURI)
+    setStoryURI(innerURI);
+    
+    // 3️⃣ wait for the Image to load in the story canvas
+    await new Promise(r => setTimeout(r, 200));
+    
+    // 4️⃣ capture the 9:16 canvas
+    return await storyCanvasRef.current.capture();
+  };
+
   // Handle sharing progress with improved capture
   const handleShare = async () => {
     try {
-      if (!shareableContentRef.current?.capture) {
-        Alert.alert('Error', 'Unable to capture screenshot. Please try again.');
-        return;
-      }
-
       // Ensure layout is complete before capturing
       requestAnimationFrame(async () => {
         try {
-          if (!shareableContentRef.current || !shareableContentRef.current.capture) {
-            Alert.alert('Error', 'Unable to capture screenshot. Please try again.');
-            return;
-          }
-
-          const uri = await shareableContentRef.current.capture();
+          // Use the new 9:16 story capture flow
+          const uri = await captureStory();
           
           await Share.share({
             url: uri,
             message: 'Check out my progress on BallerAI! ⚽️🔥',
             title: 'My BallerAI Progress'
           });
+          
+          // Reset storyURI after sharing to prevent memory issues
+          setStoryURI(null);
         } catch (error) {
           console.error('Error capturing/sharing progress:', error);
           Alert.alert('Error', 'Unable to share progress. Please try again.');
+          // Reset storyURI on error as well
+          setStoryURI(null);
         }
       });
     } catch (error) {
@@ -2603,6 +2622,49 @@ export default function HomeScreen() {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
+
+      {/* Off-screen 9:16 Story Canvas - Always rendered but off-screen */}
+      <ViewShot
+        ref={storyCanvasRef}
+        options={{ format: 'png', quality: 1, result: 'tmpfile' }}
+        style={{
+          position: 'absolute',
+          left: -9999,
+          width: Dimensions.get('window').width,
+          height: Math.round(Dimensions.get('window').width * 16 / 9),
+          backgroundColor: '#ffffff',
+        }}
+      >
+        {storyURI ? (
+          <>
+            <Image
+              source={{ uri: storyURI }}
+              style={{
+                width: '100%',
+                height: '100%',
+                resizeMode: 'contain',
+              }}
+            />
+            {/* Overlay QR code in the center-bottom area */}
+            <Image
+              source={require('../../assets/images/qr.png')}
+              style={{
+                position: 'absolute',
+                width: 80,
+                height: 80,
+                top: '65%',
+                left: '50%',
+                marginTop: -40,
+                marginLeft: -40,
+                opacity: 0.8,
+              }}
+              resizeMode="contain"
+            />
+          </>
+        ) : (
+          <View style={{ flex: 1, backgroundColor: '#ffffff' }} />
+        )}
+      </ViewShot>
 
       {/* Chat Modal */}
       <Modal
