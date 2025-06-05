@@ -14,6 +14,8 @@
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
 		B18059E884C0ABDD17F3DC3D /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAC715A2D49A985799AEE119 /* ExpoModulesProvider.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
+		D5774D672DF1CD39007A0379 /* IGStoryShare.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5774D662DF1CD39007A0379 /* IGStoryShare.swift */; };
+		D5774D692DF1CD61007A0379 /* IGStoryShare.m in Sources */ = {isa = PBXBuildFile; fileRef = D5774D682DF1CD61007A0379 /* IGStoryShare.m */; };
 		F023E90B327D4857AA5685FF /* noop-file.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EAB3E4C224B4F2C8FCB8813 /* noop-file.swift */; };
 		F4C07D45468FEEFEA7317D02 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = CFB3923E20699C4008A4EA5C /* PrivacyInfo.xcprivacy */; };
 		FEFA2523C6A44E9CBA4A4363 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 415F532DBFA5402BA5316076 /* GoogleService-Info.plist */; };
@@ -33,6 +35,8 @@
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = BallerAI/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
 		CFB3923E20699C4008A4EA5C /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = BallerAI/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		D5774D662DF1CD39007A0379 /* IGStoryShare.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IGStoryShare.swift; sourceTree = "<group>"; };
+		D5774D682DF1CD61007A0379 /* IGStoryShare.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = IGStoryShare.m; sourceTree = "<group>"; };
 		E72617345EDB87DDE8598B9C /* Pods-BallerAI.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-BallerAI.release.xcconfig"; path = "Target Support Files/Pods-BallerAI/Pods-BallerAI.release.xcconfig"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F4EE4D11F95B34FDED3378FB /* Pods_BallerAI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_BallerAI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -54,6 +58,8 @@
 		13B07FAE1A68108700A75B9A /* BallerAI */ = {
 			isa = PBXGroup;
 			children = (
+				D5774D682DF1CD61007A0379 /* IGStoryShare.m */,
+				D5774D662DF1CD39007A0379 /* IGStoryShare.swift */,
 				BB2F792B24A3F905000567C9 /* Supporting */,
 				13B07FAF1A68108700A75B9A /* AppDelegate.h */,
 				13B07FB01A68108700A75B9A /* AppDelegate.mm */,
@@ -404,10 +410,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D5774D672DF1CD39007A0379 /* IGStoryShare.swift in Sources */,
 				13B07FBC1A68108700A75B9A /* AppDelegate.mm in Sources */,
 				13B07FC11A68108700A75B9A /* main.m in Sources */,
 				B18059E884C0ABDD17F3DC3D /* ExpoModulesProvider.swift in Sources */,
 				F023E90B327D4857AA5685FF /* noop-file.swift in Sources */,
+				D5774D692DF1CD61007A0379 /* IGStoryShare.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

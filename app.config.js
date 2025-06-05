@@ -49,7 +49,8 @@ export default {
         NSPhotoLibraryUsageDescription: "This app accesses your photos to analyze your meals for nutritional information.",
         NSUserTrackingUsageDescription: "This app uses tracking to improve your experience and provide personalized content.",
         UIBackgroundModes: ["fetch"],
-        ITSAppUsesNonExemptEncryption: false
+        ITSAppUsesNonExemptEncryption: false,
+        LSApplicationQueriesSchemes: ["instagram-stories", "instagram"]
       }
     },
     jsEngine: "hermes",

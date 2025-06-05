@@ -20,7 +20,7 @@ import { BlurView } from 'expo-blur';
 import { useUserSettings } from '../context/UserSettingsContext';
 import { calculateNutritionGoals } from '../utils/nutritionCalculations';
 import { format, startOfWeek, addDays, subDays } from 'date-fns';
-import { TextInput, ActivityIndicator, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard, Pressable, Modal, Alert, Animated } from 'react-native';
+import { TextInput, ActivityIndicator, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard, Pressable, Modal, Alert, Animated, Linking, NativeModules, ActionSheetIOS, PanResponder } from 'react-native';
 import { askOpenAI } from '../utils/openai';
 import Svg, { Circle } from 'react-native-svg';
 import ReanimatedAnimated, { PinwheelIn } from 'react-native-reanimated';
@@ -139,6 +139,7 @@ export default function HomeScreen() {
   // Story canvas refs & state for 9:16 sharing
   const storyCanvasRef = useRef<ViewShot>(null);
   const [storyURI, setStoryURI] = useState<string | null>(null);
+  const [showSocialEngagementModal, setShowSocialEngagementModal] = useState(false);
 
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -1540,7 +1541,7 @@ export default function HomeScreen() {
     );
   };  
 
-  // Helper function to capture 9:16 story format
+  // Helper function to capture 9:16 story format with social engagement message
   const captureStory = async (): Promise<string> => {
     if (!shareableContentRef.current?.capture || !storyCanvasRef.current?.capture) {
       throw new Error('ViewShot refs not available');
@@ -1548,44 +1549,137 @@ export default function HomeScreen() {
     
     // 1️⃣ grab the normal screenshot
     const innerURI = await shareableContentRef.current.capture();
+    console.log('Inner screenshot captured:', innerURI);
     
-    // 2️⃣ feed that into the canvas Image (setStoryURI)
+    // 2️⃣ feed image into canvas
     setStoryURI(innerURI);
     
     // 3️⃣ wait for the Image to load in the story canvas
-    await new Promise(r => setTimeout(r, 200));
+    await new Promise(r => setTimeout(r, 250));
     
-    // 4️⃣ capture the 9:16 canvas
-    return await storyCanvasRef.current.capture();
+    // 4️⃣ capture the 9:16 canvas with social engagement message
+    const storyURI = await storyCanvasRef.current.capture();
+    console.log('Story canvas captured:', storyURI);
+    
+    return storyURI;
   };
 
-  // Handle sharing progress with improved capture
+  // App Store URL constant
+  const APP_STORE_URL = 'https://apps.apple.com/fi/app/ballerai/id6742112516';
+
+  // Instagram Stories integration with native UIPasteboard
+  const shareToInstagramStories = async () => {
+    try {
+      // Check if Instagram is installed first
+      const instagramURL = 'instagram-stories://share';
+      const canOpen = await Linking.canOpenURL(instagramURL);
+      
+      if (!canOpen) {
+        throw new Error('Instagram not installed');
+      }
+
+      // Capture story for Instagram (with social engagement message)
+      const storyImageURI = await captureStory();
+      
+      // Check if native module is available
+      const { IGStoryShare } = NativeModules;
+      console.log('Available NativeModules:', Object.keys(NativeModules));
+      console.log('IGStoryShare module:', IGStoryShare);
+      
+      if (IGStoryShare && IGStoryShare.shareToStory) {
+        try {
+          // Use native module to write to UIPasteboard and open Instagram
+          const result = await IGStoryShare.shareToStory(storyImageURI, APP_STORE_URL);
+          console.log('Instagram Stories share result:', result);
+          
+          // Only show success if Instagram actually opened
+          Alert.alert(
+            'Shared to Instagram Stories!',
+            'Your progress has been shared to Instagram Stories with a direct link to download BallerAI.'
+          );
+        } catch (nativeError: any) {
+          console.error('Native module error:', nativeError);
+          throw new Error(`Native module failed: ${nativeError?.message || String(nativeError)}`);
+        }
+      } else {
+        // Native module not available, fall back to generic share
+        console.log('Native IGStoryShare module not available, falling back to generic share');
+        throw new Error('Native module not available');
+      }
+    } catch (error) {
+      console.error('Instagram Stories sharing failed:', error);
+      // This function is not used in the current implementation
+      Alert.alert('Error', 'Instagram sharing failed. Please try the regular share option.');
+    }
+  };
+
+  // Helper function to close modal and clean up
+  const closeSocialModal = () => {
+    setShowSocialEngagementModal(false);
+    setStoryURI(null);
+  };
+
+  // Pan responder for swipe down gesture
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return gestureState.dy > 0 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
+      },
+      onPanResponderMove: (_, gestureState) => {
+        // Only handle downward swipes
+        if (gestureState.dy > 0) {
+          // You can add animation here if needed
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        // If user swipes down more than 100 pixels, dismiss modal
+        if (gestureState.dy > 100) {
+          closeSocialModal();
+        }
+      },
+    })
+  ).current;
+
+  // Handle sharing progress - capture and show preview modal
   const handleShare = async () => {
     try {
-      // Ensure layout is complete before capturing
-      requestAnimationFrame(async () => {
-        try {
-          // Use the new 9:16 story capture flow
-          const uri = await captureStory();
-          
-          await Share.share({
-            url: uri,
-            message: 'Check out my progress on BallerAI! ⚽️🔥',
-            title: 'My BallerAI Progress'
-          });
-          
-          // Reset storyURI after sharing to prevent memory issues
-          setStoryURI(null);
-        } catch (error) {
-          console.error('Error capturing/sharing progress:', error);
-          Alert.alert('Error', 'Unable to share progress. Please try again.');
-          // Reset storyURI on error as well
-          setStoryURI(null);
-        }
-      });
+      // Capture the story image first
+      const previewURI = await captureStory();
+      setStoryURI(previewURI);
+      
+      // Show social engagement modal with preview
+      setShowSocialEngagementModal(true);
+    } catch (error) {
+      console.error('Error capturing progress:', error);
+      Alert.alert('Error', 'Unable to prepare share image. Please try again.');
+    }
+  };
+
+  // Handle actual sharing after user sees the preview and message
+  const proceedWithShare = async () => {
+    try {
+      if (storyURI) {
+        console.log('Starting share process with URI:', storyURI);
+        await Share.share({
+          url: storyURI,
+          message: `Check out my progress on BallerAI! ⚽️🔥\n\nDownload the app: ${APP_STORE_URL}`,
+          title: 'My BallerAI Progress'
+        });
+        
+        console.log('Share completed successfully');
+        // Close modal and reset only after sharing completes
+        setShowSocialEngagementModal(false);
+        setStoryURI(null);
+      } else {
+        console.log('No storyURI available for sharing');
+        Alert.alert('Error', 'No image available to share. Please try again.');
+      }
     } catch (error) {
       console.error('Error sharing progress:', error);
       Alert.alert('Error', 'Unable to share progress. Please try again.');
+      // Close modal on error
+      setShowSocialEngagementModal(false);
+      setStoryURI(null);
     }
   };
 
@@ -2623,6 +2717,182 @@ export default function HomeScreen() {
         </TouchableWithoutFeedback>
       </Modal>
 
+            {/* Social Engagement Modal with Preview */}
+      <Modal
+        visible={showSocialEngagementModal}
+        transparent
+        animationType="slide"
+        onRequestClose={closeSocialModal}
+      >
+        <TouchableWithoutFeedback onPress={closeSocialModal}>
+          <View style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.4)',
+            justifyContent: 'flex-end',
+          }}>
+                        <TouchableWithoutFeedback onPress={() => {}}>
+                            <View 
+                style={{
+                  backgroundColor: '#FFFFFF',
+                  borderTopLeftRadius: 20,
+                  borderTopRightRadius: 20,
+                  height: '85%',
+                  overflow: 'hidden',
+                }}
+              >
+                {/* Swipe Handle */}
+                <View 
+                  style={{
+                    alignItems: 'center',
+                    paddingTop: 8,
+                    paddingBottom: 4,
+                  }}
+                  {...panResponder.panHandlers}
+                >
+                  <View style={{
+                    width: 40,
+                    height: 4,
+                    backgroundColor: '#E0E0E0',
+                    borderRadius: 2,
+                  }} />
+                </View>
+
+                {/* Header */}
+                <View style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: 16,
+                  borderBottomWidth: 1,
+                  borderBottomColor: '#f0f0f0',
+                }}>
+                  <Pressable
+                    onPress={closeSocialModal}
+                    style={{ padding: 8 }}
+                  >
+                    <Ionicons name="close" size={24} color="#666" />
+                  </Pressable>
+                  <Text style={{
+                    fontSize: 18,
+                    fontWeight: '700',
+                    color: '#000',
+                  }}>
+                    Share Progress
+                  </Text>
+                  <View style={{ width: 40 }} />
+                </View>
+
+                {/* Scrollable Content */}
+                <ScrollView
+                  style={{ flex: 1 }}
+                  contentContainerStyle={{ flexGrow: 1 }}
+                  bounces={true}
+                  alwaysBounceVertical={true}
+                  showsVerticalScrollIndicator={false}
+                  {...panResponder.panHandlers}
+                >
+                  {/* Preview Container */}
+                  {storyURI && (
+                    <View style={{
+                      flex: 1,
+                      margin: 8,
+                      marginTop: 4,
+                      marginBottom: 4,
+                      borderRadius: 20,
+                      overflow: 'hidden',
+                      backgroundColor: '#fff',
+                      minHeight: 400,
+                      justifyContent: 'center',
+                    }}>
+                      <Image
+                        source={{ uri: storyURI }}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          resizeMode: 'contain',
+                        }}
+                      />
+                    </View>
+                  )}
+
+                  {/* Message and Share Section */}
+                  <View style={{
+                    paddingHorizontal: 24,
+                    paddingTop: 20,
+                    paddingBottom: 40,
+                    backgroundColor: '#f8f9fa',
+                    gap: 16,
+                    marginTop: 'auto',
+                  }}>
+                    {/* Icon and Title */}
+                    <View style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 12,
+                    }}>
+                      <View style={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 24,
+                        backgroundColor: '#4064F6',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                      }}>
+                        <Ionicons name="megaphone" size={24} color="#FFFFFF" />
+                      </View>
+                      <Text style={{
+                        fontSize: 20,
+                        fontWeight: '700',
+                        color: '#000000',
+                        flex: 1,
+                      }}>
+                        Get Featured! ⚽️🔥
+                      </Text>
+                    </View>
+
+                    {/* Simple Message */}
+                    <Text style={{
+                      fontSize: 16,
+                      color: '#666666',
+                      lineHeight: 22,
+                      textAlign: 'center',
+                    }}>
+                      Share your progress on IG and tag{'\n'}
+                      <Text style={{ fontWeight: '700', color: '#4064F6' }}>@ballerai_official</Text>
+                      {'\n'}
+                      We'll repost your journey to thousands!
+                    </Text>
+
+                    {/* Share Button */}
+                    <Pressable
+                      onPress={() => {
+                        console.log('Share button pressed');
+                        proceedWithShare();
+                      }}
+                      style={({ pressed }) => ({
+                        backgroundColor: '#4064F6',
+                        paddingVertical: 16,
+                        borderRadius: 16,
+                        alignItems: 'center',
+                        opacity: pressed ? 0.7 : 1,
+                      })}
+                    >
+                      <Text style={{
+                        color: '#FFFFFF',
+                        fontSize: 16,
+                        fontWeight: '600',
+                      }}>
+                        Share Progress
+                      </Text>
+                    </Pressable>
+                  </View>
+                </ScrollView>
+              </View>
+             </TouchableWithoutFeedback>
+           </View>
+         </TouchableWithoutFeedback>
+       </Modal>
+
       {/* Off-screen 9:16 Story Canvas - Always rendered but off-screen */}
       <ViewShot
         ref={storyCanvasRef}
@@ -2645,21 +2915,7 @@ export default function HomeScreen() {
                 resizeMode: 'contain',
               }}
             />
-            {/* Overlay QR code in the center-bottom area */}
-            <Image
-              source={require('../../assets/images/qr.png')}
-              style={{
-                position: 'absolute',
-                width: 80,
-                height: 80,
-                top: '65%',
-                left: '50%',
-                marginTop: -40,
-                marginLeft: -40,
-                opacity: 0.8,
-              }}
-              resizeMode="contain"
-            />
+
           </>
         ) : (
           <View style={{ flex: 1, backgroundColor: '#ffffff' }} />
