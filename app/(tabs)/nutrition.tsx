@@ -25,6 +25,7 @@ import analytics from '@react-native-firebase/analytics';
 import FoodCamera from '../components/FoodCamera';
 import FoodAnalysisScreen from '../components/FoodAnalysisScreen';
 import MealEditModal from '../components/MealEditModal';
+import GoalsEditModal from '../components/GoalsEditModal';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useRouter } from 'expo-router';
 
@@ -1040,6 +1041,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E5E5',
   },
+  goalsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  goalsTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+  },
+  editButton: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: 'rgba(64, 100, 246, 0.1)',
+  },
   macroProgressItem: {
     flexDirection: 'column',
     gap: 8,
@@ -1865,6 +1882,7 @@ export default function NutritionScreen() {
   const [editingMeal, setEditingMeal] = useState<any>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
+  const [showGoalsModal, setShowGoalsModal] = useState(false);
 
   // Handle camera opening
   const handleOpenCamera = () => {
@@ -2028,15 +2046,26 @@ export default function NutritionScreen() {
 
       const userData = userDoc.data();
       
-      // Get goals from user document if they exist
+      // Get goals from user document - prioritize custom goals if enabled
       let goals;
-      if (userData.calorieGoal && userData.macroGoals) {
+      if (userData.useCustomGoals && userData.customGoals) {
+        // Use custom goals if user has enabled them
+        goals = {
+          calories: userData.customGoals.calories,
+          protein: userData.customGoals.protein,
+          carbs: userData.customGoals.carbs,
+          fats: userData.customGoals.fats
+        };
+        console.log('Using custom goals:', goals);
+      } else if (userData.calorieGoal && userData.macroGoals) {
+        // Fallback to legacy goals structure
         goals = {
           calories: userData.calorieGoal,
           protein: userData.macroGoals.protein,
           carbs: userData.macroGoals.carbs,
           fats: userData.macroGoals.fat || userData.macroGoals.fats // Handle different property names
         };
+        console.log('Using legacy goals:', goals);
       } else {
         // Use the centralized utility function to calculate nutrition goals
         const { calorieGoal, macroGoals } = calculateNutritionGoals(userData);
@@ -2046,6 +2075,7 @@ export default function NutritionScreen() {
           carbs: macroGoals.carbs,
           fats: macroGoals.fat
         };
+        console.log('Using calculated goals:', goals);
       }
 
       // Load meals for selected date
@@ -2982,6 +3012,17 @@ export default function NutritionScreen() {
         </View>
 
         <View style={styles.macrosCard}>
+          {/* Goals Header */}
+          <View style={styles.goalsHeader}>
+            <Text style={styles.goalsTitle}>Goals</Text>
+            <TouchableOpacity 
+              style={styles.editButton}
+              onPress={() => setShowGoalsModal(true)}
+            >
+              <Ionicons name="create-outline" size={20} color="#4064F6" />
+            </TouchableOpacity>
+          </View>
+          
           <MacroProgress
             type="Protein"
             current={macros.protein.current}
@@ -3138,6 +3179,21 @@ export default function NutritionScreen() {
         onClose={() => setShowEditModal(false)}
         meal={editingMeal}
         onSave={handleSaveMealEdit}
+      />
+
+      <GoalsEditModal
+        visible={showGoalsModal}
+        onClose={() => setShowGoalsModal(false)}
+        onSave={async () => {
+          // Refresh data after goals are saved
+          await loadSelectedDayData();
+        }}
+        currentGoals={{
+          calories: macros.calories.goal,
+          protein: macros.protein.goal,
+          carbs: macros.carbs.goal,
+          fats: macros.fats.goal
+        }}
       />
     </GestureHandlerRootView>
   );

@@ -22,6 +22,7 @@ import authService from './services/auth';
 import Purchases, { CustomerInfo } from 'react-native-purchases';
 import { PAYWALL_RESULT } from 'react-native-purchases-ui';
 import { checkSubscriptionOnForeground } from './(onboarding)/paywall';
+import { initializeAppsFlyer, cleanupAppsFlyer } from './config/appsflyer';
 
 // Create a context for subscription state
 type SubscriptionContextType = {
@@ -292,12 +293,19 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
 
+    // Initialize AppsFlyer
+    initializeAppsFlyer();
+
     // Show initial loading screen for 2 seconds
     const timer = setTimeout(() => {
       setInitialLoading(false);
     }, 2000);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      // Cleanup AppsFlyer listeners
+      cleanupAppsFlyer();
+    };
   }, [loaded, error]);
 
   if (!loaded) {
