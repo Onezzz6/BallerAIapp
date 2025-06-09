@@ -20,7 +20,7 @@ import { BlurView } from 'expo-blur';
 import { useUserSettings } from '../context/UserSettingsContext';
 import { calculateNutritionGoals } from '../utils/nutritionCalculations';
 import { format, startOfWeek, addDays, subDays } from 'date-fns';
-import { TextInput, ActivityIndicator, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard, Pressable, Modal, Alert, Animated, Linking, NativeModules, ActionSheetIOS, PanResponder } from 'react-native';
+import { TextInput, ActivityIndicator, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard, Pressable, Modal, Alert, Animated, Linking, NativeModules, ActionSheetIOS } from 'react-native';
 import { askOpenAI } from '../utils/openai';
 import Svg, { Circle } from 'react-native-svg';
 import ReanimatedAnimated, { PinwheelIn } from 'react-native-reanimated';
@@ -1619,26 +1619,7 @@ export default function HomeScreen() {
     setStoryURI(null);
   };
 
-  // Pan responder for swipe down gesture
-  const panResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        return gestureState.dy > 0 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
-      },
-      onPanResponderMove: (_, gestureState) => {
-        // Only handle downward swipes
-        if (gestureState.dy > 0) {
-          // You can add animation here if needed
-        }
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        // If user swipes down more than 100 pixels, dismiss modal
-        if (gestureState.dy > 100) {
-          closeSocialModal();
-        }
-      },
-    })
-  ).current;
+  // Removed PanResponder to fix scrolling conflicts
 
   // Handle sharing progress - capture and show preview modal
   const handleShare = async () => {
@@ -2724,22 +2705,27 @@ export default function HomeScreen() {
         animationType="slide"
         onRequestClose={closeSocialModal}
       >
-        <TouchableWithoutFeedback onPress={closeSocialModal}>
+        <View style={{ flex: 1 }}>
+          {/* Backdrop - only this closes the modal */}
+          <TouchableWithoutFeedback onPress={closeSocialModal}>
+            <View style={{ 
+              flex: 1, 
+              backgroundColor: 'rgba(0,0,0,0.4)' 
+            }} />
+          </TouchableWithoutFeedback>
+
+          {/* Modal content - completely separate from backdrop */}
           <View style={{
-            flex: 1,
-            backgroundColor: 'rgba(0,0,0,0.4)',
-            justifyContent: 'flex-end',
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            backgroundColor: '#FFFFFF',
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            height: '85%',
+            overflow: 'hidden',
           }}>
-                        <TouchableWithoutFeedback onPress={() => {}}>
-                            <View 
-                style={{
-                  backgroundColor: '#FFFFFF',
-                  borderTopLeftRadius: 20,
-                  borderTopRightRadius: 20,
-                  height: '85%',
-                  overflow: 'hidden',
-                }}
-              >
                 {/* Swipe Handle */}
                 <View 
                   style={{
@@ -2747,7 +2733,6 @@ export default function HomeScreen() {
                     paddingTop: 8,
                     paddingBottom: 4,
                   }}
-                  {...panResponder.panHandlers}
                 >
                   <View style={{
                     width: 40,
@@ -2782,27 +2767,34 @@ export default function HomeScreen() {
                   <View style={{ width: 40 }} />
                 </View>
 
-                {/* Scrollable Content */}
+                {/* Scrollable Content - Everything in one ScrollView */}
                 <ScrollView
                   style={{ flex: 1 }}
-                  contentContainerStyle={{ flexGrow: 1 }}
+                  contentContainerStyle={{ 
+                    paddingBottom: 200, // Even more padding to ensure scroll access
+                  }}
                   bounces={true}
                   alwaysBounceVertical={true}
-                  showsVerticalScrollIndicator={false}
-                  {...panResponder.panHandlers}
+                  showsVerticalScrollIndicator={true}
                 >
-                  {/* Preview Container */}
+                  {/* Large Vertical Preview Container */}
                   {storyURI && (
                     <View style={{
-                      flex: 1,
-                      margin: 8,
-                      marginTop: 4,
-                      marginBottom: 4,
+                      marginHorizontal: 4, // Even smaller margins to really hug the sides
+                      marginTop: 8,
+                      marginBottom: 16,
                       borderRadius: 20,
                       overflow: 'hidden',
-                      backgroundColor: '#fff',
-                      minHeight: 400,
+                      backgroundColor: '#ffffff', // White background for the preview
+                      height: Dimensions.get('window').height * 0.65, // 65% of screen height for truly big preview
                       justifyContent: 'center',
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.15,
+                      shadowRadius: 12,
+                      elevation: 8,
+                      borderWidth: 1,
+                      borderColor: '#e0e0e0',
                     }}>
                       <Image
                         source={{ uri: storyURI }}
@@ -2817,51 +2809,183 @@ export default function HomeScreen() {
 
                   {/* Message and Share Section */}
                   <View style={{
-                    paddingHorizontal: 24,
-                    paddingTop: 20,
-                    paddingBottom: 40,
-                    backgroundColor: '#f8f9fa',
-                    gap: 16,
-                    marginTop: 'auto',
+                    paddingHorizontal: 20,
+                    paddingTop: 8, // Reduced top padding
+                    paddingBottom: 120, // Much more padding within the section
+                    backgroundColor: '#f8f9fa', // Matching background
+                    gap: 20,
                   }}>
-                    {/* Icon and Title */}
+                    {/* Main Feature Card */}
                     <View style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 12,
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: 20,
+                      padding: 24,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 12,
+                      elevation: 6,
+                      borderWidth: 1,
+                      borderColor: '#E5E7EB',
                     }}>
+                      {/* Header with Icons */}
                       <View style={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: 24,
-                        backgroundColor: '#4064F6',
-                        justifyContent: 'center',
+                        flexDirection: 'row',
                         alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: 20,
+                        gap: 12,
                       }}>
-                        <Ionicons name="megaphone" size={24} color="#FFFFFF" />
+                        <View style={{
+                          width: 48,
+                          height: 48,
+                          borderRadius: 24,
+                          backgroundColor: '#4064F6',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                        }}>
+                          <Ionicons name="trending-up" size={24} color="#FFFFFF" />
+                        </View>
+                        <Text style={{
+                          fontSize: 22,
+                          fontWeight: '800',
+                          color: '#000000',
+                        }}>
+                          Get Featured!
+                        </Text>
+                        <Text style={{ fontSize: 22 }}>⚽️🔥</Text>
                       </View>
-                      <Text style={{
-                        fontSize: 20,
-                        fontWeight: '700',
-                        color: '#000000',
-                        flex: 1,
-                      }}>
-                        Get Featured! ⚽️🔥
-                      </Text>
-                    </View>
 
-                    {/* Simple Message */}
-                    <Text style={{
-                      fontSize: 16,
-                      color: '#666666',
-                      lineHeight: 22,
-                      textAlign: 'center',
-                    }}>
-                      Share your progress on IG and tag{'\n'}
-                      <Text style={{ fontWeight: '700', color: '#4064F6' }}>@ballerai_official</Text>
-                      {'\n'}
-                      We'll repost your journey to thousands!
-                    </Text>
+                      {/* Instagram Section */}
+                      <View style={{
+                        backgroundColor: '#F7F3FF',
+                        borderRadius: 16,
+                        padding: 20,
+                        marginBottom: 20,
+                        borderWidth: 2,
+                        borderColor: '#E1D5FF',
+                      }}>
+                        {/* Instagram Header */}
+                        <View style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginBottom: 16,
+                          gap: 10,
+                        }}>
+                          <View style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: 8,
+                            backgroundColor: '#E4405F',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                          }}>
+                            <Ionicons name="logo-instagram" size={20} color="#FFFFFF" />
+                          </View>
+                          <Text style={{
+                            fontSize: 18,
+                            fontWeight: '700',
+                            color: '#000000',
+                          }}>
+                            Share on Instagram
+                          </Text>
+                        </View>
+
+                        {/* Tag Instructions */}
+                        <View style={{
+                          backgroundColor: '#FFFFFF',
+                          borderRadius: 12,
+                          padding: 16,
+                          marginBottom: 12,
+                        }}>
+                          <Text style={{
+                            fontSize: 16,
+                            color: '#374151',
+                            textAlign: 'center',
+                            lineHeight: 24,
+                          }}>
+                            Post your progress and tag
+                          </Text>
+                          <View style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            marginTop: 8,
+                            gap: 8,
+                          }}>
+                            <Image 
+                              source={require('../../assets/images/BallerAILogo.png')}
+                              style={{
+                                width: 24,
+                                height: 24,
+                              }}
+                              resizeMode="contain"
+                            />
+                            <Text style={{
+                              fontSize: 18,
+                              fontWeight: '800',
+                              color: '#4064F6',
+                              letterSpacing: 0.5,
+                            }}>
+                              @ballerai_official
+                            </Text>
+                          </View>
+                          <Text style={{
+                            fontSize: 14,
+                            color: '#059669',
+                            textAlign: 'center',
+                            marginTop: 8,
+                            fontWeight: '600',
+                          }}>
+                            We'll repost your story to thousands!
+                          </Text>
+                        </View>
+                      </View>
+                      {/* Benefits List */}
+                      <View style={{
+                        backgroundColor: '#F0F9FF',
+                        borderRadius: 12,
+                        padding: 16,
+                        marginBottom: 20,
+                      }}>
+                        <Text style={{
+                          fontSize: 16,
+                          fontWeight: '700',
+                          color: '#0369A1',
+                          marginBottom: 12,
+                          textAlign: 'center',
+                        }}>
+                          Why Share Your Progress?
+                        </Text>
+                        <View style={{ gap: 8 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <Text style={{ fontSize: 16 }}>⚽️</Text>
+                            <Text style={{ fontSize: 14, color: '#374151', flex: 1 }}>
+                              Connect with like-minded ballers
+                            </Text>
+                          </View>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <Text style={{ fontSize: 16 }}>🌟</Text>
+                            <Text style={{ fontSize: 14, color: '#374151', flex: 1 }}>
+                              Get featured on our official account
+                            </Text>
+                          </View>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <Text style={{ fontSize: 16 }}>👥</Text>
+                            <Text style={{ fontSize: 14, color: '#374151', flex: 1 }}>
+                              Inspire thousands of footballers
+                            </Text>
+                          </View>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <Text style={{ fontSize: 16 }}>🤝</Text>
+                            <Text style={{ fontSize: 14, color: '#374151', flex: 1 }}>
+                              Be part of the community
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                    </View>
 
                     {/* Share Button */}
                     <Pressable
@@ -2871,27 +2995,37 @@ export default function HomeScreen() {
                       }}
                       style={({ pressed }) => ({
                         backgroundColor: '#4064F6',
-                        paddingVertical: 16,
+                        paddingVertical: 18,
                         borderRadius: 16,
                         alignItems: 'center',
-                        opacity: pressed ? 0.7 : 1,
+                        shadowColor: '#4064F6',
+                        shadowOffset: { width: 0, height: 6 },
+                        shadowOpacity: 0.3,
+                        shadowRadius: 12,
+                        elevation: 8,
+                        transform: [{ scale: pressed ? 0.98 : 1 }],
                       })}
                     >
-                      <Text style={{
-                        color: '#FFFFFF',
-                        fontSize: 16,
-                        fontWeight: '600',
+                      <View style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 10,
                       }}>
-                        Share Progress
-                      </Text>
+                        <Ionicons name="share" size={20} color="#FFFFFF" />
+                        <Text style={{
+                          color: '#FFFFFF',
+                          fontSize: 18,
+                          fontWeight: '700',
+                        }}>
+                          Share Progress
+                        </Text>
+                      </View>
                     </Pressable>
                   </View>
                 </ScrollView>
               </View>
-             </TouchableWithoutFeedback>
            </View>
-         </TouchableWithoutFeedback>
-       </Modal>
+         </Modal>
 
       {/* Off-screen 9:16 Story Canvas - Always rendered but off-screen */}
       <ViewShot
