@@ -231,7 +231,7 @@ export default function GoalsEditModal({ visible, onClose, onSave, currentGoals 
               <View style={styles.toggleContainer}>
                 <View style={styles.toggleOption}>
                   <Text style={[styles.toggleText, !useCustomGoals && styles.toggleTextActive]}>
-                    Use suggested goals
+                    Suggested
                   </Text>
                   <Switch
                     value={useCustomGoals}
@@ -240,7 +240,7 @@ export default function GoalsEditModal({ visible, onClose, onSave, currentGoals 
                     thumbColor={useCustomGoals ? '#FFFFFF' : '#FFFFFF'}
                   />
                   <Text style={[styles.toggleText, useCustomGoals && styles.toggleTextActive]}>
-                    Customize goals
+                    Custom
                   </Text>
                 </View>
               </View>
@@ -378,7 +378,9 @@ const styles = StyleSheet.create({
     color: '#000000',
   },
   closeButton: {
-    padding: 4,
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0,0,0,0.05)',
   },
   modalBody: {
     flex: 1,
@@ -401,17 +403,18 @@ const styles = StyleSheet.create({
   toggleOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     backgroundColor: '#F8F9FA',
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     borderRadius: 16,
-    gap: 16,
     minHeight: 60,
   },
   toggleText: {
-    fontSize: 18,
+    fontSize: 16,
     color: '#666666',
     fontWeight: '500',
+    textAlign: 'center',
   },
   toggleTextActive: {
     color: '#4064F6',
@@ -424,8 +427,8 @@ const styles = StyleSheet.create({
   goalInput: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
-    paddingVertical: 8,
+    gap: 12,
+    paddingVertical: 12,
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
     borderRadius: 12,
@@ -434,31 +437,38 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
+    minHeight: 60,
   },
   goalLabel: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: '#000000',
     flex: 1,
   },
   input: {
     backgroundColor: '#F5F5F5',
-    padding: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
     borderRadius: 10,
-    fontSize: 18,
+    fontSize: 16,
     textAlign: 'center',
-    minWidth: 100,
+    minWidth: 90,
+    maxWidth: 120,
     color: '#000000',
     fontWeight: '600',
+    height: 44,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   inputReadOnly: {
     backgroundColor: '#F8F9FA',
     color: '#666666',
+    borderColor: '#E5E5E5',
   },
   goalUnit: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#666666',
-    minWidth: 40,
+    minWidth: 35,
     fontWeight: '500',
   },
   infoContainer: {
