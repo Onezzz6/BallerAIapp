@@ -1,247 +1,241 @@
-import { View, Text, Image } from 'react-native';
+import { View, Text, Image, TouchableOpacity, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { 
-  FadeIn, 
-  FadeInDown,
-  FadeOut,
-  useSharedValue, 
-  useAnimatedStyle, 
-  withRepeat, 
-  withTiming,
-  withSequence,
-  Easing,
-  interpolate
+  PinwheelIn,
 } from 'react-native-reanimated';
-import { useEffect, useState } from 'react';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
-const loadingMessages = [
-  "Analyzing your answers...",
-  "Comparing with our database...",
-  "Setting up your player profile...",
-  "Personalizing your dashboard...",
-  "Almost there...",
+const professionalFacts = [
+  {
+    icon: "analytics-outline",
+    text: "All top-tier academies and professional teams track each player's load, nutrition, and have personalized recovery plans for every day."
+  },
+  {
+    icon: "time-outline", 
+    text: "Professional players spend 5-7 hours every day at the training center perfecting their craft."
+  },
+  {
+    icon: "trophy-outline",
+    text: "At the pro level, basketball isn't just a hobby—it's a complete lifestyle and mindset."
+  },
+  {
+    icon: "restaurant-outline",
+    text: "Every meal is calculated. Pros consume 4,000+ calories daily with perfect macro balance."
+  }
 ];
 
 export default function AnalyzingScreen() {
   const router = useRouter();
-  const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
-  const pulseAnimation = useSharedValue(0);
-  const rotateAnimation = useSharedValue(0);
 
-  const pulseStyle = useAnimatedStyle(() => {
-    const scale = interpolate(pulseAnimation.value, [0, 1], [1, 1.08]);
-    const opacity = interpolate(pulseAnimation.value, [0, 1], [0.1, 0.03]);
-    return {
-      transform: [{ scale }],
-      opacity,
-    };
-  });
-
-  const innerRingStyle = useAnimatedStyle(() => {
-    const scale = interpolate(pulseAnimation.value, [0, 1], [0.9, 1.1]);
-    const opacity = interpolate(pulseAnimation.value, [0, 1], [0.3, 0.1]);
-    return {
-      transform: [{ scale }],
-      opacity,
-    };
-  });
-
-  const rotateStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ rotate: `${rotateAnimation.value}deg` }],
-    };
-  });
-
-  useEffect(() => {
-    // Start animations
-    pulseAnimation.value = withRepeat(
-      withTiming(1, { duration: 3000, easing: Easing.out(Easing.ease) }),
-      -1,
-      true
-    );
-
-    rotateAnimation.value = withRepeat(
-      withTiming(360, { duration: 8000, easing: Easing.linear }),
-      -1,
-      false
-    );
-
-    // Cycle through messages
-    const messageInterval = setInterval(() => {
-      setCurrentMessageIndex((prev) => (prev + 1) % loadingMessages.length);
-    }, 900);
-
-    // Navigate after delay
-    const timer = setTimeout(() => {
-      router.replace('/fitness-level');
-    }, 5000);
-
-    return () => {
-      clearTimeout(timer);
-      clearInterval(messageInterval);
-    };
-  }, []);
+  const handleContinue = () => {
+    router.replace('/fitness-level');
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
-      <LinearGradient
-        colors={['#ffffff', '#F0F4FF']}
-        style={{
-          flex: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-          padding: 24,
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{
+          flexGrow: 1,
+          paddingBottom: 40,
         }}
+        showsVerticalScrollIndicator={false}
       >
-        {/* Spacer to account for missing header */}
-        <View style={{ height: 160 }} />
-        
-        {/* Animated Background Circle */}
-        <Animated.View
-          style={[
-            {
-              position: 'absolute',
-              width: 300,
-              height: 300,
-              borderRadius: 150,
-              backgroundColor: '#4064F6',
-            },
-            pulseStyle,
-          ]}
-        />
-
-        {/* Mascot Container with Elegant Rings */}
-        <View style={{ alignItems: 'center', marginBottom: 48 }}>
-          {/* Outer rotating ring */}
-          <Animated.View
-            style={[
-              {
-                position: 'absolute',
-                width: 280,
-                height: 280,
-                borderRadius: 140,
-                borderWidth: 1,
-                borderColor: '#E8F0FF',
-                borderStyle: 'solid',
-              },
-              rotateStyle,
-            ]}
-          />
-          
-          {/* Inner pulsing ring */}
-          <Animated.View
-            style={[
-              {
-                position: 'absolute',
-                width: 250,
-                height: 250,
-                borderRadius: 125,
-                borderWidth: 1.5,
-                borderColor: '#DCF4F5',
-                backgroundColor: 'rgba(220, 244, 245, 0.1)',
-              },
-              innerRingStyle,
-            ]}
-          />
-          
-          <Animated.View
-            entering={FadeInDown.duration(800).springify()}
-            style={{
-              width: 220,
-              height: 220,
-              borderRadius: 110,
-              backgroundColor: '#ffffff',
-              justifyContent: 'center',
-              alignItems: 'center',
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.08,
-              shadowRadius: 16,
-              elevation: 8,
-            }}
-          >
-            <Image
-              source={require('../../assets/images/mascot.png')}
-              style={{
-                width: 200,
-                height: 200,
-                resizeMode: 'contain',
-              }}
-            />
-          </Animated.View>
-        </View>
-
-        {/* Loading Message */}
-        <View style={{ height: 40, marginBottom: 24 }}>
-          <Animated.Text
-            key={currentMessageIndex}
-            entering={FadeIn.duration(800)}
-            exiting={FadeOut.duration(400)}
-            style={{
-              fontSize: 20,
-              color: '#000000',
-              fontWeight: '600',
-              textAlign: 'center',
-            }}
-          >
-            {loadingMessages[currentMessageIndex]}
-          </Animated.Text>
-        </View>
-
-        {/* Progress Dots */}
-        <View style={{ flexDirection: 'row', gap: 12, marginBottom: 40 }}>
-          {[0, 1, 2, 3, 4].map((index) => (
-            <Animated.View
-              key={index}
-              entering={FadeIn.duration(300).delay(index * 100)}
-              style={{
-                width: 12,
-                height: 12,
-                borderRadius: 6,
-                backgroundColor: index <= currentMessageIndex ? '#4064F6' : '#E5E5E5',
-              }}
-            />
-          ))}
-        </View>
-
-        {/* Fun Facts Section */}
-        <Animated.View
-          entering={FadeIn.duration(800).delay(1000)}
-          style={{
-            backgroundColor: '#DCF4F5',
-            borderRadius: 16,
-            padding: 10,
-            width: '100%',
-            alignItems: 'center',
-          }}
-        >
+        {/* Header - Same style as other screens */}
+        <View style={{
+          paddingTop: 48,
+          paddingHorizontal: 24,
+          backgroundColor: '#ffffff',
+        }}>
+          {/* Header with Logo */}
           <View style={{
             flexDirection: 'row',
             alignItems: 'center',
-            gap: 8,
+            justifyContent: 'space-between',
+            height: 92,
+          }}>
+            {/* Title */}
+            <Text style={{
+              fontSize: 28,
+              fontWeight: '900',
+              color: '#000000',
+            }} 
+            allowFontScaling={false}
+            maxFontSizeMultiplier={1.2}>
+              Welcome
+            </Text>
+
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6,
+            }}>
+              <Animated.View 
+                entering={PinwheelIn.duration(500)}
+              >
+              <Image 
+                source={require('../../assets/images/BallerAILogo.png')}
+                style={{
+                  width: 32,
+                  height: 32,
+                }}
+                resizeMode="contain"
+              />
+              </Animated.View>
+              <Text style={{
+                fontSize: 28,
+                fontWeight: '300',
+                color: '#000000',
+              }} 
+              allowFontScaling={false}
+              maxFontSizeMultiplier={1.2}>
+                BallerAI
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Content */}
+        <View style={{ flex: 1, paddingHorizontal: 24 }}>
+          {/* Mascot */}
+          <View style={{
+            alignItems: 'center',
+            marginVertical: 32,
+          }}>
+            <View style={{
+              width: 120,
+              height: 120,
+              borderRadius: 60,
+              backgroundColor: '#F0F4FF',
+              justifyContent: 'center',
+              alignItems: 'center',
+              shadowColor: '#4064F6',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.1,
+              shadowRadius: 12,
+              elevation: 4,
+            }}>
+              <Image
+                source={require('../../assets/images/mascot.png')}
+                style={{
+                  width: 100,
+                  height: 100,
+                  resizeMode: 'contain',
+                }}
+              />
+            </View>
+          </View>
+
+          {/* Title */}
+          <Text style={{
+            fontSize: 24,
+            fontWeight: '700',
+            color: '#000000',
+            textAlign: 'center',
             marginBottom: 8,
           }}>
-            <Ionicons name="bulb-outline" size={20} color="#4064F6" />
-            <Text style={{
-              fontSize: 16,
-              color: '#4064F6',
-              fontWeight: '600',
-            }}>
-              Did you know?
-            </Text>
-          </View>
+            Train Like a Pro
+          </Text>
+          
           <Text style={{
-            fontSize: 14,
+            fontSize: 16,
             color: '#666666',
             textAlign: 'center',
-            lineHeight: 20,
+            marginBottom: 32,
           }}>
-            Professional players spend an average of 4-6 hours daily on training, recovery, and nutrition.
+            Here's what separates elite players from the rest:
           </Text>
-        </Animated.View>
-      </LinearGradient>
+
+          {/* Facts List */}
+          <View style={{ gap: 20, marginBottom: 40 }}>
+            {professionalFacts.map((fact, index) => (
+              <View
+                key={index}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'flex-start',
+                  backgroundColor: '#ffffff',
+                  padding: 20,
+                  borderRadius: 16,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.05,
+                  shadowRadius: 8,
+                  elevation: 2,
+                  borderWidth: 1,
+                  borderColor: '#F0F0F0',
+                }}
+              >
+                <View style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  backgroundColor: '#F0F4FF',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  marginRight: 16,
+                  marginTop: 2,
+                }}>
+                  <Ionicons 
+                    name={fact.icon as any} 
+                    size={16} 
+                    color="#4064F6" 
+                  />
+                </View>
+                <Text style={{
+                  fontSize: 15,
+                  color: '#333333',
+                  lineHeight: 22,
+                  flex: 1,
+                }}>
+                  {fact.text}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Bottom Section */}
+          <View style={{
+            alignItems: 'center',
+            marginTop: 'auto',
+            paddingTop: 20,
+          }}>
+            <Text style={{
+              fontSize: 14,
+              color: '#888888',
+              textAlign: 'center',
+              marginBottom: 24,
+            }}>
+              Ready to start your professional journey?
+            </Text>
+            
+            <TouchableOpacity
+              onPress={handleContinue}
+              style={{
+                backgroundColor: '#4064F6',
+                paddingHorizontal: 48,
+                paddingVertical: 16,
+                borderRadius: 25,
+                shadowColor: '#4064F6',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+                elevation: 6,
+                width: '100%',
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{
+                color: '#ffffff',
+                fontSize: 16,
+                fontWeight: '600',
+              }}>
+                Continue
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
     </View>
   );
 } 

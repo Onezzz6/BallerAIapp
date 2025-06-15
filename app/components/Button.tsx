@@ -1,4 +1,5 @@
 import { Text, Pressable, View, ViewStyle, TextStyle } from 'react-native';
+import { colors } from '../utils/theme';
 
 type ButtonProps = {
   title: string;
@@ -23,16 +24,18 @@ export default function Button({
         onPress={onPress}
         disabled={disabled}
         style={({ pressed }) => ({
-          backgroundColor: '#4064F6',
+          backgroundColor: colors.brandBlue,
           padding: 16,
-          borderRadius: 100,
+          borderRadius: 28,
+          justifyContent: 'center',
+          alignItems: 'center',
           opacity: disabled ? 0.5 : pressed ? 0.8 : 1,
           ...(buttonStyle as object),
         })}
       >
         <Text style={[
           {
-            color: '#FFFFFF',
+            color: colors.white,
             fontSize: 18,
             fontWeight: '600',
             textAlign: 'center',

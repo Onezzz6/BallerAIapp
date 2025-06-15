@@ -1,12 +1,13 @@
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, SafeAreaView } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
-import ScrollIfNeeded from '../components/ScrollIfNeeded';
 import analytics from '@react-native-firebase/analytics';
+import { colors, typography } from '../utils/theme';
+import { useHaptics } from '../utils/haptics';
 
 const SKILL_LEVELS = [
   {
@@ -28,15 +29,12 @@ const SKILL_LEVELS = [
 
 export default function SkillLevelScreen() {
   const router = useRouter();
+  const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(onboardingData.skillLevel);
 
   return (
-    <ScrollIfNeeded 
-      style={{
-        backgroundColor: '#ffffff',
-      }}
-    >
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
         currentStep={8}
         totalSteps={26}
@@ -46,26 +44,33 @@ export default function SkillLevelScreen() {
         entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}
         style={{
           flex: 1,
-          backgroundColor: '#ffffff',
+          backgroundColor: colors.backgroundColor,
         }}
       >
 
+        {/* Fixed Title Section - Locked at top like reference */}
         <View style={{
-          flex: 1,
           paddingHorizontal: 24,
-          paddingTop: 80,
-          paddingBottom: 24,
-          gap: 48,
+          paddingTop: 20,
         }}>
-          <Text style={{
-            fontSize: 28,
-            color: '#000000',
-            fontWeight: '600',
-            textAlign: 'left',
-          }} allowFontScaling={false}>
+          <Text style={[
+            typography.title,
+            {
+              textAlign: 'left',
+              marginBottom: 8,
+            }
+          ]} allowFontScaling={false}>
             What's your current level?
           </Text>
+        </View>
 
+        <View style={{
+          paddingHorizontal: 24,
+          paddingBottom: 64,
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}>
           <View style={{
             width: '100%',
             gap: 12,
@@ -73,7 +78,10 @@ export default function SkillLevelScreen() {
             {SKILL_LEVELS.map((level) => (
               <Pressable
                 key={level.id}
-                onPress={() => setSelected(level.id)}
+                onPress={() => {
+                  haptics.light();
+                  setSelected(level.id);
+                }}
                 style={({ pressed }) => ({
                   width: '100%',
                   padding: 20,
@@ -101,23 +109,35 @@ export default function SkillLevelScreen() {
               </Pressable>
             ))}
           </View>
-
-          <Button 
-            title="Continue" 
-            onPress={async () => {
-              if (selected) {
-                await analytics().logEvent('onboarding_skill_level_continue');
-                await updateOnboardingData({ skillLevel: selected });
-                router.push('/position');
-              }
-            }}
-            buttonStyle={{
-              backgroundColor: '#4064F6',
-            }}
-            disabled={!selected}
-          />
         </View>
       </Animated.View>
-    </ScrollIfNeeded>
+
+      {/* Static Continue Button - No animation, always in same position */}
+      <View style={{
+        position: 'absolute',
+        bottom: 32,
+        left: 0,
+        right: 0,
+        paddingHorizontal: 24,
+        paddingTop: 14,
+        paddingBottom: 14,
+        backgroundColor: colors.white,
+        borderTopWidth: 1,
+        borderTopColor: colors.veryLightGray,
+      }}>
+        <Button 
+          title="Continue" 
+          onPress={async () => {
+            if (selected) {
+              haptics.light();
+              await analytics().logEvent('onboarding_skill_level_continue');
+              await updateOnboardingData({ skillLevel: selected });
+              router.push('/position');
+            }
+          }}
+          disabled={!selected}
+        />
+      </View>
+    </SafeAreaView>
   );
 } 

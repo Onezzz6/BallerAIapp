@@ -2,6 +2,7 @@ import { View, Text, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import BackButton from './BackButton';
 import Animated, { FadeIn, FadeOut, PinwheelIn } from 'react-native-reanimated';
+import { colors, spacing } from '../utils/theme';
 
 type Props = {
   currentStep: number;
@@ -16,23 +17,22 @@ export default function OnboardingHeader({ currentStep, totalSteps, customBackPa
 
   return (
     <View style={{ 
-      paddingTop: 48,
-      paddingHorizontal: 24,
-      backgroundColor: '#ffffff',
+      paddingHorizontal: spacing.lg,
+      backgroundColor: colors.backgroundColor,
     }}>
-      {/* Header with Logo */}
+      {/* Header with BallerAI Logo */}
       <View style={{
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        height: 92, // Fixed height for consistency
+        height: 64, // Fixed height for consistency
       }}>
         <BackButton customBackPath={customBackPath} />
         
         <View style={{
           flexDirection: 'row',
           alignItems: 'center',
-          gap: 8,
+          gap: spacing.sm,
           marginLeft: 'auto',
         }}>
           <Animated.View 
@@ -51,20 +51,19 @@ export default function OnboardingHeader({ currentStep, totalSteps, customBackPa
             style={{
               fontSize: 28,
               fontWeight: '300',
-              color: '#000000',
+              color: colors.black,
             }} allowFontScaling={false}>
             BallerAI
           </Text>
         </View>
       </View>
 
-      {/* Progress Bar */}
+      {/* Progress Bar - Thinner but brand blue */}
       <View style={{
         width: '100%',
-        height: 12,
-        backgroundColor: '#E5E5E5',
-        borderRadius: 8,
-        marginTop: 6,
+        height: 6,
+        backgroundColor: colors.veryLightGray,
+        borderRadius: 3,
       }}>
         <Animated.View 
           entering={FadeIn.duration(500)}
@@ -72,9 +71,9 @@ export default function OnboardingHeader({ currentStep, totalSteps, customBackPa
         >
           <View style={{
             width: `${progress}%`,
-            height: '100%',
-            backgroundColor: '#4064F6',
-            borderRadius: 8,
+            height: 6,
+            backgroundColor: colors.brandBlue,
+            borderRadius: 3,
           }} />
         </Animated.View>
       </View>

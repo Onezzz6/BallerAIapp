@@ -1569,7 +1569,7 @@ export default function HomeScreen() {
 
   // Instagram Stories integration with native UIPasteboard
   const shareToInstagramStories = async () => {
-    try {
+        try {
       // Check if Instagram is installed first
       const instagramURL = 'instagram-stories://share';
       const canOpen = await Linking.canOpenURL(instagramURL);
@@ -1641,11 +1641,11 @@ export default function HomeScreen() {
     try {
       if (storyURI) {
         console.log('Starting share process with URI:', storyURI);
-        await Share.share({
+          await Share.share({
           url: storyURI,
           message: `Check out my progress on BallerAI! ⚽️🔥\n\nDownload the app: ${APP_STORE_URL}`,
-          title: 'My BallerAI Progress'
-        });
+            title: 'My BallerAI Progress'
+          });
         
         console.log('Share completed successfully');
         // Close modal and reset only after sharing completes
@@ -1654,7 +1654,7 @@ export default function HomeScreen() {
       } else {
         console.log('No storyURI available for sharing');
         Alert.alert('Error', 'No image available to share. Please try again.');
-      }
+        }
     } catch (error) {
       console.error('Error sharing progress:', error);
       Alert.alert('Error', 'Unable to share progress. Please try again.');

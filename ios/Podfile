@@ -15,7 +15,7 @@ prepare_react_native_project!
 
 target 'BallerAI' do
   use_expo_modules!
-  
+
   # AppsFlyer SDK
   pod 'AppsFlyerFramework'
 

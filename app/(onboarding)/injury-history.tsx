@@ -5,22 +5,60 @@ import {
   KeyboardAvoidingView, 
   Platform, 
   TouchableWithoutFeedback,
-  Keyboard
+  Keyboard,
+  SafeAreaView
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInRight } from 'react-native-reanimated';
+import { Animated as RNAnimated } from 'react-native';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import analytics from '@react-native-firebase/analytics';
-import ScrollIfNeeded from '../components/ScrollIfNeeded';
+import { colors, typography } from '../utils/theme';
+import { useHaptics } from '../utils/haptics';
 
 export default function InjuryHistoryScreen() {
   const router = useRouter();
+  const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [injuryHistory, setInjuryHistory] = useState(onboardingData.injuryHistory || '');
   const CHARACTER_LIMIT = 300;
+  
+  // Animated value for button bottom position
+  const buttonBottomPosition = useRef(new RNAnimated.Value(32)).current;
+
+  useEffect(() => {
+    const keyboardWillShowListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (event) => {
+        const duration = Platform.OS === 'ios' ? event.duration : 250;
+        RNAnimated.timing(buttonBottomPosition, {
+          toValue: 0,
+          duration,
+          useNativeDriver: false,
+        }).start();
+      }
+    );
+
+    const keyboardWillHideListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      (event) => {
+        const duration = Platform.OS === 'ios' ? event.duration : 250;
+        RNAnimated.timing(buttonBottomPosition, {
+          toValue: 32,
+          duration,
+          useNativeDriver: false,
+        }).start();
+      }
+    );
+
+    return () => {
+      keyboardWillShowListener?.remove();
+      keyboardWillHideListener?.remove();
+    };
+  }, [buttonBottomPosition]);
 
   return (
     <KeyboardAvoidingView 
@@ -28,11 +66,7 @@ export default function InjuryHistoryScreen() {
       style={{ flex: 1 }}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollIfNeeded 
-          style={{
-            backgroundColor: '#ffffff',
-          }}
-        >
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
           <OnboardingHeader 
             currentStep={7}
             totalSteps={26}
@@ -42,75 +76,91 @@ export default function InjuryHistoryScreen() {
             entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}
             style={{
               flex: 1,
-              backgroundColor: '#ffffff',
+              backgroundColor: colors.backgroundColor,
             }}
           >
+            {/* Fixed Title Section - Locked at top like reference */}
             <View style={{
-              flex: 1,
               paddingHorizontal: 24,
-              paddingTop: 80,
-              paddingBottom: 24,
-              gap: 48,
-              }}>
-              <Text style={{
-                fontSize: 28,
-                color: '#000000',
-                fontWeight: '600',
-                textAlign: 'left',
-              }} allowFontScaling={false}>
+              paddingTop: 20,
+            }}>
+              <Text style={[
+                typography.title,
+                {
+                  textAlign: 'left',
+                  marginBottom: 8,
+                }
+              ]} allowFontScaling={false}>
                 Brief description of your injury history
               </Text>
+            </View>
 
-              <View style={{ width: '100%' }}>
-                <TextInput
-                  value={injuryHistory}
-                  onChangeText={(text) => {
-                    if (text.length <= CHARACTER_LIMIT) {
-                      setInjuryHistory(text);
-                    }
-                  }}
-                  placeholder="Describe any injuries..."
-                  multiline
-                  style={{
-                    width: '100%',
-                    height: 120,
-                    borderWidth: 1,
-                    borderColor: '#E5E5E5',
-                    borderRadius: 12,
-                    paddingHorizontal: 16,
-                    paddingVertical: 12,
-                    fontSize: 16,
-                    backgroundColor: '#F8F8F8',
-                    textAlignVertical: 'top',
-                  }}
-                />
-                <Text style={{
-                  fontSize: 14,
-                  color: '#666666',
-                  textAlign: 'right',
-                  marginTop: 8,
-                }}>
-                  {injuryHistory.length}/{CHARACTER_LIMIT}
-                </Text>
-              </View>
-
-              <Button 
-                title="Continue" 
-                onPress={async () => {
-                  if (injuryHistory.trim()) {
-                    await analytics().logEvent('onboarding_injury_history_continue');
-                    await updateOnboardingData({ injuryHistory: injuryHistory.trim() });
-                    router.push('/skill-level');
+            <View style={{
+              paddingHorizontal: 24,
+              paddingTop: 24,
+              paddingBottom: 64,
+              flex: 1,
+              alignItems: 'center',
+            }}>
+              <TextInput
+                value={injuryHistory}
+                onChangeText={(text) => {
+                  if (text.length <= CHARACTER_LIMIT) {
+                    setInjuryHistory(text);
                   }
                 }}
-                buttonStyle={{
-                  backgroundColor: '#4064F6',
+                placeholder="Describe any injuries..."
+                multiline
+                style={{
+                  width: '100%',
+                  height: 120,
+                  borderWidth: 1,
+                  borderColor: '#E5E5E5',
+                  borderRadius: 12,
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  fontSize: 16,
+                  backgroundColor: '#F8F8F8',
+                  textAlignVertical: 'top',
                 }}
-                disabled={!injuryHistory.trim()}
               />
+              <Text style={{
+                fontSize: 14,
+                color: '#666666',
+                textAlign: 'right',
+                marginTop: 8,
+              }}>
+                {injuryHistory.length}/{CHARACTER_LIMIT}
+              </Text>
             </View>
           </Animated.View>
-        </ScrollIfNeeded>
+
+          <RNAnimated.View style={{
+            position: 'absolute',
+            bottom: buttonBottomPosition,
+            left: 0,
+            right: 0,
+            paddingHorizontal: 24,
+            paddingTop: 14,
+            paddingBottom: 14,
+            backgroundColor: colors.white,
+            borderTopWidth: 1,
+            borderTopColor: colors.veryLightGray,
+          }}>
+            <Button 
+              title="Continue" 
+              onPress={async () => {
+                if (injuryHistory.trim()) {
+                  haptics.light();
+                  await analytics().logEvent('onboarding_injury_history_continue');
+                  await updateOnboardingData({ injuryHistory: injuryHistory.trim() });
+                  router.push('/skill-level');
+                }
+              }}
+              disabled={!injuryHistory.trim()}
+            />
+          </RNAnimated.View>
+         </SafeAreaView>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );

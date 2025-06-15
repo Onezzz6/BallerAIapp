@@ -38,7 +38,6 @@ const isOnOnboardingScreen = (path: string) => {
   return path.includes('/(onboarding)') || 
     path.includes('/paywall') || 
     path.includes('/sign') || 
-    path.includes('/intro') ||
     path.includes('/motivation') ||
     path.includes('/tracking') ||
     path.includes('/football-goal') ||
