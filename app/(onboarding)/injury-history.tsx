@@ -97,9 +97,9 @@ export default function InjuryHistoryScreen() {
 
             <View style={{
               paddingHorizontal: 24,
-              paddingTop: 24,
               paddingBottom: 64,
               flex: 1,
+              justifyContent: 'center',
               alignItems: 'center',
             }}>
               <TextInput

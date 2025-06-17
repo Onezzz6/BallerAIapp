@@ -1,81 +1,101 @@
-import { View, Text, Image } from 'react-native';
+import { View, Text, Image, SafeAreaView } from 'react-native';
 import { useRouter } from 'expo-router';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
-import BackButton from '../components/BackButton';
-import analytics from '@react-native-firebase/analytics';
-import ScrollIfNeeded from '../components/ScrollIfNeeded';
 import OnboardingHeader from '../components/OnboardingHeader';
+import analytics from '@react-native-firebase/analytics';
+import { colors, typography } from '../utils/theme';
+import { useHaptics } from '../utils/haptics';
 
 export default function AmbitionTransitionScreen() {
   const router = useRouter();
+  const haptics = useHaptics();
 
   return (
-    <ScrollIfNeeded
-      style={{
-        backgroundColor: '#ffffff',
-      }}
-    >
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
         currentStep={21}
         totalSteps={26}
       />
 
       <Animated.View 
-        entering={FadeIn.duration(500)}
+        entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}
         style={{
           flex: 1,
-          backgroundColor: '#ffffff',
+          backgroundColor: colors.backgroundColor,
         }}
       >
-        {/* Mascot */}
+
+        {/* Fixed Title Section - Locked at top like reference */}
         <View style={{
+          paddingHorizontal: 24,
+          paddingTop: 20,
+        }}>
+          <Text style={[
+            typography.title,
+            {
+              textAlign: 'center',
+              marginBottom: 8,
+            }
+          ]} allowFontScaling={false}>
+            Great! You clearly show ambition!
+          </Text>
+        </View>
+
+        <View style={{
+          paddingHorizontal: 24,
+          paddingBottom: 64,
           flex: 1,
           justifyContent: 'center',
           alignItems: 'center',
-          gap: 32,
-          paddingHorizontal: 24,
-          }}>
+        }}>
+          {/* Mascot */}
           <Image 
             source={require('../../assets/images/mascot.png')}
             style={{
               width: 200,
               height: 200,
               resizeMode: 'contain',
-              marginBottom: 20,
+              marginBottom: 32,
             }}
             resizeMode="contain"
           />
-   
-          <Text style={{
-            fontSize: 28,
-            color: '#000000',
-            fontWeight: '600',
-            textAlign: 'center',
-          }}>
-            Great! You clearly show ambition!
-          </Text>
 
-          <Text style={{
-            fontSize: 18,
-            color: '#666666',
-            textAlign: 'center',
-          }}>
+          <Text style={[
+            typography.subtitle,
+            {
+              textAlign: 'center',
+              fontSize: 18,
+              color: colors.mediumGray,
+            }
+          ]}>
             Last questions to understand your current situation!
           </Text>
-
-          <Button 
-            title="Continue" 
-            onPress={async () => {
-              await analytics().logEvent('onboarding_ambition_transition_continue');
-              router.push('/training-frequency');
-            }}
-            buttonStyle={{
-              backgroundColor: '#4064F6',
-            }}
-          />
         </View>
       </Animated.View>
-    </ScrollIfNeeded>
+
+      {/* Static Continue Button - No animation, always in same position */}
+      <View style={{
+        position: 'absolute',
+        bottom: 32,
+        left: 0,
+        right: 0,
+        paddingHorizontal: 24,
+        paddingTop: 14,
+        paddingBottom: 14,
+        backgroundColor: colors.white,
+        borderTopWidth: 1,
+        borderTopColor: colors.veryLightGray,
+      }}>
+        <Button 
+          title="Continue" 
+          onPress={async () => {
+            haptics.light();
+            await analytics().logEvent('onboarding_ambition_transition_continue');
+            router.push('/training-frequency');
+          }}
+        />
+      </View>
+    </SafeAreaView>
   );
 } 

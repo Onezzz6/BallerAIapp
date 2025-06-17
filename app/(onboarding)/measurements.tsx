@@ -1,4 +1,4 @@
-import { View, Text, SafeAreaView } from 'react-native';
+import { View, Text, SafeAreaView, Switch } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
@@ -14,14 +14,71 @@ export default function MeasurementsScreen() {
   const router = useRouter();
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
+  const [isMetric, setIsMetric] = useState(true);
   const [height, setHeight] = useState(parseInt(onboardingData.height || '') || 170);
   const [weight, setWeight] = useState(parseInt(onboardingData.weight || '') || 70);
+  const [feet, setFeet] = useState(5);
+  const [inches, setInches] = useState(7);
+  const [pounds, setPounds] = useState(154);
+
+  // Convert cm to feet/inches
+  const cmToFeetInches = (cm: number) => {
+    const totalInches = cm / 2.54;
+    const ft = Math.floor(totalInches / 12);
+    const inch = Math.round(totalInches % 12);
+    return { feet: ft, inches: inch };
+  };
+
+  // Convert feet/inches to cm
+  const feetInchesToCm = (ft: number, inch: number) => {
+    return Math.round((ft * 12 + inch) * 2.54);
+  };
+
+  // Convert kg to lbs
+  const kgToLbs = (kg: number) => {
+    return Math.round(kg * 2.20462);
+  };
+
+  // Convert lbs to kg
+  const lbsToKg = (lbs: number) => {
+    return Math.round(lbs / 2.20462);
+  };
+
+  const handleUnitToggle = (value: boolean) => {
+    haptics.light();
+    setIsMetric(value);
+    
+    if (value) {
+      // Switching to metric
+      setHeight(feetInchesToCm(feet, inches));
+      setWeight(lbsToKg(pounds));
+    } else {
+      // Switching to imperial
+      const { feet: ft, inches: inch } = cmToFeetInches(height);
+      setFeet(ft);
+      setInches(inch);
+      setPounds(kgToLbs(weight));
+    }
+  };
 
   const handleContinue = async () => {
-    if (height && weight) {
+    let finalHeight, finalWeight;
+    
+    if (isMetric) {
+      finalHeight = height;
+      finalWeight = weight;
+    } else {
+      finalHeight = feetInchesToCm(feet, inches);
+      finalWeight = lbsToKg(pounds);
+    }
+
+    if (finalHeight && finalWeight) {
       haptics.light();
       await analytics().logEvent('onboarding_measurements_continue');
-      await updateOnboardingData({ height: height.toString(), weight: weight.toString() });
+      await updateOnboardingData({ 
+        height: finalHeight.toString(), 
+        weight: finalWeight.toString() 
+      });
       router.push('/dominant-foot');
     }
   };
@@ -53,7 +110,7 @@ export default function MeasurementsScreen() {
               marginBottom: 8,
             }
           ]} allowFontScaling={false}>
-            Your measurements?
+            Height & weight
           </Text>
           <Text style={[
             typography.subtitle,
@@ -62,7 +119,7 @@ export default function MeasurementsScreen() {
               color: colors.mediumGray,
             }
           ]}>
-            This will be used to calibrate your custom plans.
+            This will be used to calibrate your custom plan.
           </Text>
         </View>
 
@@ -74,6 +131,37 @@ export default function MeasurementsScreen() {
           justifyContent: 'center',
           alignItems: 'center',
         }}>
+          {/* Unit Toggle */}
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginBottom: 40,
+            paddingHorizontal: 24,
+          }}>
+            <Text style={{
+              fontSize: 18,
+              fontWeight: '600',
+              color: !isMetric ? colors.black : colors.mediumGray,
+            }}>
+              Imperial
+            </Text>
+            <Switch
+              trackColor={{ false: colors.veryLightGray, true: '#99E86C' }}
+              thumbColor={colors.white}
+              ios_backgroundColor={colors.veryLightGray}
+              onValueChange={handleUnitToggle}
+              value={isMetric}
+              style={{ marginHorizontal: 12 }}
+            />
+            <Text style={{
+              fontSize: 18,
+              fontWeight: '600',
+              color: isMetric ? colors.black : colors.mediumGray,
+            }}>
+              Metric
+            </Text>
+          </View>
+
           {/* Measurement Pickers */}
           <View style={{
             paddingHorizontal: 24,
@@ -86,31 +174,80 @@ export default function MeasurementsScreen() {
             }}>
               <Text style={{
                 fontSize: 18,
-                color: colors.mediumGray,
+                fontWeight: '600',
+                color: colors.black,
                 marginBottom: 8,
                 textAlign: 'center',
               }}>
                 Height
               </Text>
-              <Picker
-                selectedValue={height}
-                onValueChange={(itemValue) => {
-                  haptics.light();
-                  setHeight(itemValue);
-                }}
-                itemStyle={{
-                  fontSize: 16,
-                  color: colors.black,
-                }}
-              >
-                {Array.from({ length: 81 }, (_, i) => i + 150).map((cm) => (
-                  <Picker.Item
-                    key={cm}
-                    label={`${cm} cm`}
-                    value={cm}
-                  />
-                ))}
-              </Picker>
+              
+              {isMetric ? (
+                <Picker
+                  selectedValue={height}
+                  onValueChange={(itemValue) => {
+                    haptics.light();
+                    setHeight(itemValue);
+                  }}
+                  itemStyle={{
+                    fontSize: 16,
+                    color: colors.black,
+                  }}
+                >
+                  {Array.from({ length: 81 }, (_, i) => i + 150).map((cm) => (
+                    <Picker.Item
+                      key={cm}
+                      label={`${cm} cm`}
+                      value={cm}
+                    />
+                  ))}
+                </Picker>
+              ) : (
+                <View style={{ flexDirection: 'row' }}>
+                  <View style={{ flex: 1 }}>
+                    <Picker
+                      selectedValue={feet}
+                      onValueChange={(itemValue) => {
+                        haptics.light();
+                        setFeet(itemValue);
+                      }}
+                      itemStyle={{
+                        fontSize: 16,
+                        color: colors.black,
+                      }}
+                    >
+                      {Array.from({ length: 6 }, (_, i) => i + 3).map((ft) => (
+                        <Picker.Item
+                          key={ft}
+                          label={`${ft} ft`}
+                          value={ft}
+                        />
+                      ))}
+                    </Picker>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Picker
+                      selectedValue={inches}
+                      onValueChange={(itemValue) => {
+                        haptics.light();
+                        setInches(itemValue);
+                      }}
+                      itemStyle={{
+                        fontSize: 16,
+                        color: colors.black,
+                      }}
+                    >
+                      {Array.from({ length: 12 }, (_, i) => i).map((inch) => (
+                        <Picker.Item
+                          key={inch}
+                          label={`${inch} in`}
+                          value={inch}
+                        />
+                      ))}
+                    </Picker>
+                  </View>
+                </View>
+              )}
             </View>
 
             {/* Weight Picker */}
@@ -120,31 +257,55 @@ export default function MeasurementsScreen() {
             }}>
               <Text style={{
                 fontSize: 18,
-                color: colors.mediumGray,
+                fontWeight: '600',
+                color: colors.black,
                 marginBottom: 8,
                 textAlign: 'center',
               }}>
                 Weight
               </Text>
-              <Picker
-                selectedValue={weight}
-                onValueChange={(itemValue) => {
-                  haptics.light();
-                  setWeight(itemValue);
-                }}
-                itemStyle={{
-                  fontSize: 16,
-                  color: colors.black,
-                }}
-              >
-                {Array.from({ length: 101 }, (_, i) => i + 40).map((kg) => (
-                  <Picker.Item
-                    key={kg}
-                    label={`${kg} kg`}
-                    value={kg}
-                  />
-                ))}
-              </Picker>
+              
+              {isMetric ? (
+                <Picker
+                  selectedValue={weight}
+                  onValueChange={(itemValue) => {
+                    haptics.light();
+                    setWeight(itemValue);
+                  }}
+                  itemStyle={{
+                    fontSize: 16,
+                    color: colors.black,
+                  }}
+                >
+                  {Array.from({ length: 101 }, (_, i) => i + 40).map((kg) => (
+                    <Picker.Item
+                      key={kg}
+                      label={`${kg} kg`}
+                      value={kg}
+                    />
+                  ))}
+                </Picker>
+              ) : (
+                <Picker
+                  selectedValue={pounds}
+                  onValueChange={(itemValue) => {
+                    haptics.light();
+                    setPounds(itemValue);
+                  }}
+                  itemStyle={{
+                    fontSize: 16,
+                    color: colors.black,
+                  }}
+                >
+                  {Array.from({ length: 151 }, (_, i) => i + 100).map((lbs) => (
+                    <Picker.Item
+                      key={lbs}
+                      label={`${lbs} lb`}
+                      value={lbs}
+                    />
+                  ))}
+                </Picker>
+              )}
             </View>
           </View>
         </View>
