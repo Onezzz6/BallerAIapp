@@ -4,6 +4,7 @@ import Animated, {
   PinwheelIn,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
+import BackButton from './BackButton';
 
 const professionalFacts = [
   {
@@ -54,6 +55,8 @@ export default function AnalyzingScreen() {
             justifyContent: 'space-between',
             height: 92,
           }}>
+            <BackButton />
+            
             {/* Title */}
             <Text style={{
               fontSize: 28,
