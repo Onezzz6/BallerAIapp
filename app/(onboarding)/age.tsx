@@ -52,13 +52,13 @@ export default function AgeScreen() {
     haptics.light();
     await analytics().logEvent('onboarding_age_continue');
     await updateOnboardingData({ age: age.toString() });
-    router.push('/measurements');
+    router.push('/username');
   };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
-        currentStep={4}
+        currentStep={3}
         totalSteps={26}
       />
 

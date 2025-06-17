@@ -94,7 +94,7 @@ export default function WelcomeScreen() {
 
   const handleGetStarted = () => {
     haptics.light();
-    router.push('/(onboarding)/username');
+    router.push('/(onboarding)/gender');
   };
 
   const dismissKeyboard = () => {

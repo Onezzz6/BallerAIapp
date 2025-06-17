@@ -79,7 +79,7 @@ export default function MeasurementsScreen() {
         height: finalHeight.toString(), 
         weight: finalWeight.toString() 
       });
-      router.push('/dominant-foot');
+      router.push('/analyzing');
     }
   };
 

@@ -234,7 +234,7 @@ export default function AnalyzingScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
-      <OnboardingHeader currentStep={12} totalSteps={26} />
+      <OnboardingHeader currentStep={6} totalSteps={26} />
 
       <Animated.View
         entering={FadeInRight.duration(250).withInitialValues({ transform: [{ translateX: 400 }] })}
@@ -298,7 +298,7 @@ export default function AnalyzingScreen() {
           title="Continue"
           onPress={() => {
             haptics.light();
-            router.push('/fitness-level');
+            router.push('/injury-history');
           }}
         />
       </View>

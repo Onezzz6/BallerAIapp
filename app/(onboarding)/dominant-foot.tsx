@@ -19,7 +19,7 @@ export default function DominantFootScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
-        currentStep={6}
+        currentStep={12}
         totalSteps={26}
       />
 
@@ -114,7 +114,7 @@ export default function DominantFootScreen() {
               haptics.light();
               await analytics().logEvent('onboarding_dominant_foot_continue');
               await updateOnboardingData({ dominantFoot: selected });
-              router.push('/injury-history');
+              router.push('/fitness-level');
             }
           }}
           disabled={!selected}

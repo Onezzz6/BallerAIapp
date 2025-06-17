@@ -126,7 +126,7 @@ export default function TrainingSurfaceScreen() {
               haptics.light();
               await analytics().logEvent('onboarding_training_surface_continue');
               await updateOnboardingData({ trainingSurface: selected });
-              router.push('/analyzing');
+              router.push('/dominant-foot');
             }
           }}
           disabled={!selected}
