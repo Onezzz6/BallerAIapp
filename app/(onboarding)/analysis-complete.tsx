@@ -17,8 +17,8 @@ export default function AnalysisCompleteScreen() {
       }}
     >
       <OnboardingHeader 
-        currentStep={14}
-        totalSteps={14}
+        currentStep={18}
+        totalSteps={29}
       />
       
       <View style={{
@@ -40,7 +40,7 @@ export default function AnalysisCompleteScreen() {
         <Button 
           title="Continue" 
           onPress={() => {
-            router.push('/training-frequency');
+            router.push('/fitness-level');
           }}
           buttonStyle={{
             backgroundColor: '#4064F6',

@@ -39,15 +39,15 @@ export default function FootballGoalScreen() {
       haptics.light();
       await analytics().logEvent('onboarding_football_goal_continue');
       await updateOnboardingData({ footballGoal: selected });
-      router.push('/improvement-focus');
+      router.push('/injury-history');
     }
   };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
-        currentStep={19}
-        totalSteps={26}
+        currentStep={10}
+        totalSteps={29}
       />
 
       <Animated.View 

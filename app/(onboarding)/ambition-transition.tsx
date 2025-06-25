@@ -14,8 +14,8 @@ export default function AmbitionTransitionScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
-        currentStep={21}
-        totalSteps={26}
+        currentStep={25}
+        totalSteps={29}
       />
 
       <Animated.View 
@@ -92,7 +92,7 @@ export default function AmbitionTransitionScreen() {
           onPress={async () => {
             haptics.light();
             await analytics().logEvent('onboarding_ambition_transition_continue');
-            router.push('/training-frequency');
+            router.push('/gym-access');
           }}
         />
       </View>

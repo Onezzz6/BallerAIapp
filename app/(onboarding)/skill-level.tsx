@@ -36,8 +36,8 @@ export default function SkillLevelScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
-        currentStep={8}
-        totalSteps={26}
+        currentStep={12}
+        totalSteps={29}
       />
 
       <Animated.View 

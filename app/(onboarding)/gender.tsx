@@ -25,7 +25,7 @@ export default function GenderScreen() {
       haptics.light();
       await analytics().logEvent('onboarding_gender_continue');
       await updateOnboardingData({ gender: selectedGender });
-      router.push('/age');
+      router.push('/training-frequency');
     }
   };
 
@@ -33,7 +33,7 @@ export default function GenderScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
         currentStep={2}
-        totalSteps={26}
+        totalSteps={28}
       />
 
       <Animated.View 

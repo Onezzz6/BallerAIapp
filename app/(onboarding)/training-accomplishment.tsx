@@ -9,26 +9,45 @@ import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 
-export default function SmartwatchScreen() {
+const ACCOMPLISHMENT_OPTIONS = [
+  {
+    id: 'confidence',
+    title: 'Confidence on the pitch',
+  },
+  {
+    id: 'minutes-stats',
+    title: 'More minutes or better stats',
+  },
+  {
+    id: 'physical-edge',
+    title: 'Physical edge',
+  },
+  {
+    id: 'general-improvement',
+    title: 'General improvement',
+  },
+];
+
+export default function TrainingAccomplishmentScreen() {
   const router = useRouter();
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
-  const [selected, setSelected] = useState<boolean | null>(onboardingData.hasSmartwatch);
+  const [selected, setSelected] = useState<string | null>(onboardingData.trainingAccomplishment || null);
 
   const handleContinue = async () => {
-    if (selected !== null) {
+    if (selected) {
       haptics.light();
-      await analytics().logEvent('onboarding_smartwatch_continue');
-      await updateOnboardingData({ hasSmartwatch: selected });
-      router.push('/football-goal');
+      await analytics().logEvent('onboarding_training_accomplishment');
+      await updateOnboardingData({ trainingAccomplishment: selected });
+      router.push('/encouragement');
     }
   };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
-        currentStep={18}
-        totalSteps={26}
+        currentStep={13}
+        totalSteps={28}
       />
 
       <Animated.View 
@@ -51,7 +70,7 @@ export default function SmartwatchScreen() {
               marginBottom: 8,
             }
           ]} allowFontScaling={false}>
-            Do you track your training with a smartwatch?
+            What would you like to accomplish with your training?
           </Text>
         </View>
 
@@ -63,29 +82,23 @@ export default function SmartwatchScreen() {
           alignItems: 'center',
         }}>
           <View style={{
-            flexDirection: 'row',
-            gap: 16,
             width: '100%',
+            gap: 12,
           }}>
-            {[
-              { value: true, label: 'Yes' },
-              { value: false, label: 'No' },
-            ].map((option) => (
+            {ACCOMPLISHMENT_OPTIONS.map((option) => (
               <Pressable
-                key={option.label}
+                key={option.id}
                 onPress={() => {
                   haptics.light();
-                  setSelected(option.value);
+                  setSelected(option.id);
                 }}
                 style={({ pressed }) => ({
-                  flex: 1,
-                  height: 60,
-                  backgroundColor: selected === option.value ? '#99E86C' : '#FFFFFF',
+                  width: '100%',
+                  padding: 20,
+                  backgroundColor: selected === option.id ? '#99E86C' : '#FFFFFF',
                   borderRadius: 12,
                   borderWidth: 2,
-                  borderColor: selected === option.value ? '#99E86C' : '#E5E5E5',
-                  justifyContent: 'center',
-                  alignItems: 'center',
+                  borderColor: selected === option.id ? '#99E86C' : '#E5E5E5',
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
@@ -94,7 +107,7 @@ export default function SmartwatchScreen() {
                   color: '#000000',
                   fontWeight: '600',
                 }}>
-                  {option.label}
+                  {option.title}
                 </Text>
               </Pressable>
             ))}
@@ -118,7 +131,7 @@ export default function SmartwatchScreen() {
         <Button 
           title="Continue" 
           onPress={handleContinue}
-          disabled={selected === null}
+          disabled={!selected}
         />
       </View>
     </SafeAreaView>

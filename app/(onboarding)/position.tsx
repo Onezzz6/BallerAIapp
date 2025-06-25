@@ -37,8 +37,8 @@ export default function PositionScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
-        currentStep={9}
-        totalSteps={26}
+        currentStep={13}
+        totalSteps={29}
       />
 
       <Animated.View 

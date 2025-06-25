@@ -24,7 +24,7 @@ export default function SocialProofScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
         currentStep={24}
-        totalSteps={26}
+        totalSteps={28}
       />
 
       <Animated.View 

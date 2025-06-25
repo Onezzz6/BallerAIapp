@@ -61,7 +61,7 @@ export default function MotivationReasonScreen() {
       haptics.light();
       await analytics().logEvent('onboarding_motivation_reason_continue');
       await updateOnboardingData({ motivation: motivation.trim() });
-      router.push('/account-ready');
+      router.push('/profile-generation');
     }
   };
 
@@ -74,7 +74,7 @@ export default function MotivationReasonScreen() {
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
           <OnboardingHeader 
             currentStep={25}
-            totalSteps={26}
+            totalSteps={28}
           />
 
           <Animated.View 

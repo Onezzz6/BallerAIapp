@@ -1,4 +1,4 @@
-import { View, Text, Pressable, SafeAreaView } from 'react-native';
+import { View, Text, Pressable, SafeAreaView, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
@@ -8,45 +8,42 @@ import { useState } from 'react';
 import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
+import { Ionicons } from '@expo/vector-icons';
 
-const FREQUENCY_OPTIONS = [
+const OPTIONS = [
   {
-    id: '1-2',
-    title: '1-2 days',
+    id: 'no',
+    title: 'No',
+    icon: 'close-circle' as keyof typeof Ionicons.glyphMap,
+    bgColor: '#EF4444',
   },
   {
-    id: '2-4',
-    title: '3-4 days',
-  },
-  {
-    id: '4-6',
-    title: '5-6 days',
-  },
-  {
-    id: '7+',
-    title: '7+ days',
+    id: 'yes',
+    title: 'Yes',
+    icon: 'checkmark-circle' as keyof typeof Ionicons.glyphMap,
+    bgColor: '#10B981',
   },
 ];
 
-export default function TrainingFrequencyScreen() {
+export default function TriedOtherAppsScreen() {
   const router = useRouter();
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
-  const [selected, setSelected] = useState<string | null>(onboardingData.trainingFrequency);
+  const [selected, setSelected] = useState<string | null>(onboardingData.triedOtherApps);
 
   const handleContinue = async () => {
     if (selected) {
       haptics.light();
-      await analytics().logEvent('onboarding_training_frequency_continue');
-      await updateOnboardingData({ trainingFrequency: selected });
-      router.push('/where-did-you-find-us');
+      await analytics().logEvent('onboarding_tried_other_apps_continue');
+      await updateOnboardingData({ triedOtherApps: selected });
+      router.push('/analyzing');
     }
   };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
-        currentStep={3}
+        currentStep={5}
         totalSteps={29}
       />
 
@@ -62,30 +59,34 @@ export default function TrainingFrequencyScreen() {
         <View style={{
           paddingHorizontal: 24,
           paddingTop: 20,
+          paddingBottom: 16,
         }}>
           <Text style={[
             typography.title,
             {
-              textAlign: 'left',
+            textAlign: 'left',
               marginBottom: 8,
             }
           ]} allowFontScaling={false}>
-            How many days a week do you train football?
+            Have you tried other football training apps?
           </Text>
         </View>
 
-        <View style={{
-          paddingHorizontal: 24,
-          paddingBottom: 64,
-          flex: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}>
+        {/* Scrollable Content */}
+        <ScrollView 
+          style={{ flex: 1 }}
+          contentContainerStyle={{
+            paddingHorizontal: 24,
+            paddingBottom: 100, // Space for fixed button
+            justifyContent: 'center',
+            flexGrow: 1,
+          }}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={{
-            width: '100%',
-            gap: 12,
+            gap: 16, // Increased spacing
           }}>
-            {FREQUENCY_OPTIONS.map((option) => (
+            {OPTIONS.map((option) => (
               <Pressable
                 key={option.id}
                 onPress={() => {
@@ -93,6 +94,8 @@ export default function TrainingFrequencyScreen() {
                   setSelected(option.id);
                 }}
                 style={({ pressed }) => ({
+                  flexDirection: 'row',
+                  alignItems: 'center',
                   width: '100%',
                   padding: 20,
                   backgroundColor: selected === option.id ? '#99E86C' : '#FFFFFF',
@@ -102,17 +105,36 @@ export default function TrainingFrequencyScreen() {
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
+                {/* Icon Container */}
+                <View style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: selected === option.id ? '#FFFFFF' : option.bgColor,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  marginRight: 16,
+                }}>
+                  <Ionicons 
+                    name={option.icon} 
+                    size={20} 
+                    color={selected === option.id ? option.bgColor : '#FFFFFF'} 
+                  />
+                </View>
+
+                {/* Title */}
                 <Text style={{
                   fontSize: 18,
                   color: '#000000',
                   fontWeight: '600',
+                  flex: 1,
                 }}>
                   {option.title}
                 </Text>
               </Pressable>
             ))}
           </View>
-        </View>
+        </ScrollView>
       </Animated.View>
 
       {/* Static Continue Button - No animation, always in same position */}
@@ -128,12 +150,12 @@ export default function TrainingFrequencyScreen() {
         borderTopWidth: 1,
         borderTopColor: colors.veryLightGray,
       }}>
-        <Button 
-          title="Continue" 
-          onPress={handleContinue}
-          disabled={!selected}
-        />
-      </View>
+          <Button 
+            title="Continue" 
+            onPress={handleContinue}
+            disabled={!selected}
+          />
+        </View>
     </SafeAreaView>
   );
 } 

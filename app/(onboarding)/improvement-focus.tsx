@@ -41,8 +41,8 @@ export default function ImprovementFocusScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
-        currentStep={20}
-        totalSteps={26}
+        currentStep={10}
+        totalSteps={28}
       />
 
       <Animated.View 
@@ -130,7 +130,7 @@ export default function ImprovementFocusScreen() {
               haptics.light();
               await analytics().logEvent('onboarding_improvement_focus_continue');
               await updateOnboardingData({ improvementFocus: selected });
-              router.push('/ambition-transition');
+              router.push('/goal-timeline');
             }
           }}
           disabled={!selected}

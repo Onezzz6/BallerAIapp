@@ -110,19 +110,19 @@ function DevelopmentChart({
     };
   });
 
-  /* Label/logo opacity (start at 85% progress instead of 93%) */
+  /* Label/logo opacity (start at 75% progress instead of 85% for faster appearance) */
   const labelAnimatedProps = useAnimatedProps(() => ({
-    opacity: interpolate(progress.value, [0.85, 1], [0, 1]),
+    opacity: interpolate(progress.value, [0.75, 0.9], [0, 1]),
   }));
 
   /* Signal parent when lines essentially done */
   useDerivedValue(() => {
-    if (progress.value >= 0.99) runOnJS(onLinesComplete)();
+    if (progress.value >= 0.95) runOnJS(onLinesComplete)();
   });
 
-  /* Kick-off line animation */
+  /* Kick-off line animation (faster duration and shorter delay) */
   useEffect(() => {
-    progress.value = withDelay(150, withTiming(1, { duration: 2000 }));
+    progress.value = withDelay(100, withTiming(1, { duration: 1500 }));
   }, []);
 
   const cardBg = '#F8F8F8';
@@ -234,7 +234,7 @@ export default function AnalyzingScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
-      <OnboardingHeader currentStep={6} totalSteps={26} />
+      <OnboardingHeader currentStep={6} totalSteps={29} />
 
       <Animated.View
         entering={FadeInRight.duration(250).withInitialValues({ transform: [{ translateX: 400 }] })}
@@ -253,8 +253,8 @@ export default function AnalyzingScreen() {
             width={CHART_W}
             height={CHART_H}
             onLinesComplete={() => {
-              /* Caption appears immediately when lines complete */
-              captionOpacity.value = withTiming(1, { duration: 500 });
+              /* Caption appears faster when lines complete */
+              captionOpacity.value = withTiming(1, { duration: 300 });
             }}
           />
 
@@ -298,7 +298,7 @@ export default function AnalyzingScreen() {
           title="Continue"
           onPress={() => {
             haptics.light();
-            router.push('/injury-history');
+            router.push('/measurements');
           }}
         />
       </View>

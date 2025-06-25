@@ -54,7 +54,7 @@ export default function MotivationScreen() {
         <Button 
           title="Continue" 
           onPress={() => {
-            router.push('/training-frequency');
+            router.push('/gym-access');
           }}
         />
       </View>

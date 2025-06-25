@@ -1,29 +1,56 @@
-import { View, Text, SafeAreaView } from 'react-native';
+import { View, Text, Pressable, SafeAreaView } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
-import { Picker } from '@react-native-picker/picker';
 import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 
-export default function SleepHoursScreen() {
+const TIMELINE_OPTIONS = [
+  {
+    id: '1-month',
+    title: '1 Month',
+  },
+  {
+    id: '3-months',
+    title: '3 Months',
+  },
+  {
+    id: '6-months',
+    title: '6 Months',
+  },
+  {
+    id: 'no-deadline',
+    title: 'No deadline — just want to improve',
+  },
+];
+
+export default function GoalTimelineScreen() {
   const router = useRouter();
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
-  const [selected, setSelected] = useState<string | null>(onboardingData.sleepHours || '8');
+  const [selected, setSelected] = useState<string | null>(onboardingData.goalTimeline || null);
+
+  const handleContinue = async () => {
+    if (selected) {
+      haptics.light();
+      await analytics().logEvent('onboarding_goal_timeline_continue');
+      await updateOnboardingData({ goalTimeline: selected });
+      router.push('/holding-back');
+    }
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
-        currentStep={20}
+        currentStep={11}
         totalSteps={28}
       />
 
-      <Animated.View  
+      <Animated.View 
         entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}
         style={{
           flex: 1,
@@ -43,7 +70,7 @@ export default function SleepHoursScreen() {
               marginBottom: 8,
             }
           ]} allowFontScaling={false}>
-            Sleep duration on average?
+            When do you want to reach this goal?
           </Text>
         </View>
 
@@ -56,30 +83,34 @@ export default function SleepHoursScreen() {
         }}>
           <View style={{
             width: '100%',
-            height: 200,
-            backgroundColor: '#F8F8F8',
-            borderRadius: 16,
-            overflow: 'hidden',
+            gap: 12,
           }}>
-            <Picker
-              selectedValue={selected}
-              onValueChange={(itemValue) => {
-                haptics.light();
-                setSelected(itemValue);
-              }}
-              style={{
-                width: '100%',
-                height: '100%',
-              }}
-            >
-              {Array.from({ length: 20 }, (_, i) => i + 1).map((hours) => (
-                <Picker.Item 
-                  key={hours} 
-                  label={`${hours} ${hours === 1 ? 'hour' : 'hours'}`} 
-                  value={hours.toString()} 
-                />
-              ))}
-            </Picker>
+            {TIMELINE_OPTIONS.map((option) => (
+              <Pressable
+                key={option.id}
+                onPress={() => {
+                  haptics.light();
+                  setSelected(option.id);
+                }}
+                style={({ pressed }) => ({
+                  width: '100%',
+                  padding: 20,
+                  backgroundColor: selected === option.id ? '#99E86C' : '#FFFFFF',
+                  borderRadius: 12,
+                  borderWidth: 2,
+                  borderColor: selected === option.id ? '#99E86C' : '#E5E5E5',
+                  opacity: pressed ? 0.9 : 1,
+                })}
+              >
+                <Text style={{
+                  fontSize: 18,
+                  color: '#000000',
+                  fontWeight: '600',
+                }}>
+                  {option.title}
+                </Text>
+              </Pressable>
+            ))}
           </View>
         </View>
       </Animated.View>
@@ -99,14 +130,7 @@ export default function SleepHoursScreen() {
       }}>
         <Button 
           title="Continue" 
-          onPress={async () => {
-            if (selected) {
-              haptics.light();
-              await analytics().logEvent('onboarding_sleep_hours_continue');
-              await updateOnboardingData({ sleepHours: selected });
-              router.push('/nutrition');
-            }
-          }}
+          onPress={handleContinue}
           disabled={!selected}
         />
       </View>

@@ -18,8 +18,8 @@ export default function NutritionScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
-        currentStep={17}
-        totalSteps={26}
+        currentStep={21}
+        totalSteps={28}
       />
 
       <Animated.View 
@@ -113,7 +113,7 @@ export default function NutritionScreen() {
               haptics.light();
               await analytics().logEvent('onboarding_nutrition_continue');
               await updateOnboardingData({ nutrition: focusedOnNutrition.toString() });
-              router.push('/smartwatch');
+              router.push('/gym-access');
             }
           }}
           disabled={focusedOnNutrition === null}

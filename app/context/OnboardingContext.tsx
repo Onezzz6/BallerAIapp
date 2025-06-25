@@ -13,11 +13,18 @@ type OnboardingData = {
   position: string | null;
   teamStatus: string | null;
   trainingSurface: string | null;
-  hasSmartwatch: boolean | null;
   footballGoal: string | null;
   improvementFocus: string | null;
+  goalTimeline: string | null;
+  holdingBack: string | null;
+  trainingAccomplishment: string | null;
   trainingFrequency: string | null;
+  discoverySource: string | null;
+  triedOtherApps: string | null;
   hasGymAccess: boolean | null;
+  referralCode: string | null;
+  referralDiscount: number | null;
+  referralInfluencer: string | null;
   motivation: string | null;
   fitnessLevel: string | null;
   activityLevel: string | null;
@@ -43,11 +50,18 @@ const defaultOnboardingData: OnboardingData = {
   position: null,
   teamStatus: null,
   trainingSurface: null,
-  hasSmartwatch: null,
   footballGoal: null,
   improvementFocus: null,
+  goalTimeline: null,
+  holdingBack: null,
+  trainingAccomplishment: null,
   trainingFrequency: null,
+  discoverySource: null,
+  triedOtherApps: null,
   hasGymAccess: null,
+  referralCode: null,
+  referralDiscount: null,
+  referralInfluencer: null,
   motivation: null,
   fitnessLevel: null,
   activityLevel: null,

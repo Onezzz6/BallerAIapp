@@ -20,15 +20,15 @@ export default function GymAccessScreen() {
       haptics.light();
       await analytics().logEvent('onboarding_gym_access_continue');
       await updateOnboardingData({ hasGymAccess: selected });
-      router.push('/social-proof');
+      router.push('/referral-code');
     }
   };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
-        currentStep={23}
-        totalSteps={26}
+        currentStep={22}
+        totalSteps={28}
       />
 
       <Animated.View 

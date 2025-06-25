@@ -27,7 +27,7 @@ export default function UsernameScreen() {
       haptics.light();
       await analytics().logEvent('onboarding_username_continue');
       await updateOnboardingData({ username: username.trim() });
-      router.push('/measurements');
+      router.push('/improvement-focus');
     }
   };
 
@@ -75,8 +75,8 @@ export default function UsernameScreen() {
           }}
         >
           <OnboardingHeader 
-            currentStep={4}
-            totalSteps={26}
+            currentStep={9}
+            totalSteps={29}
           />
 
           <Animated.View 

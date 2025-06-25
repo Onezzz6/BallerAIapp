@@ -19,8 +19,8 @@ export default function DominantFootScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
-        currentStep={12}
-        totalSteps={26}
+        currentStep={17}
+        totalSteps={28}
       />
 
       <Animated.View 

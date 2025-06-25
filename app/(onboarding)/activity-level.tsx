@@ -46,8 +46,8 @@ export default function ActivityLevelScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
-        currentStep={15}
-        totalSteps={26}
+        currentStep={19}
+        totalSteps={28}
       />
 
       <Animated.View 

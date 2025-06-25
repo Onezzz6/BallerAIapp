@@ -58,8 +58,8 @@ export default function AgeScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
-        currentStep={3}
-        totalSteps={26}
+        currentStep={8}
+        totalSteps={29}
       />
 
       {/* Animated Content Area - Slides in */}

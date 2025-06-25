@@ -68,8 +68,8 @@ export default function InjuryHistoryScreen() {
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
           <OnboardingHeader 
-            currentStep={7}
-            totalSteps={26}
+            currentStep={11}
+            totalSteps={29}
           />
 
           <Animated.View 

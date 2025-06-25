@@ -79,15 +79,15 @@ export default function MeasurementsScreen() {
         height: finalHeight.toString(), 
         weight: finalWeight.toString() 
       });
-      router.push('/analyzing');
+      router.push('/age');
     }
   };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
-        currentStep={5}
-        totalSteps={26}
+        currentStep={7}
+        totalSteps={29}
       />
 
       {/* Animated Content Area - Slides in */}

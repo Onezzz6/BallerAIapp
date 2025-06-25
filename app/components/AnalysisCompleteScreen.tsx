@@ -16,8 +16,8 @@ export default function AnalysisCompleteScreen() {
       }}
     >
       <OnboardingHeader 
-        currentStep={13}
-        totalSteps={26}
+        currentStep={17}
+        totalSteps={29}
         customBackPath="/(onboarding)/training-surface"
       />
 
