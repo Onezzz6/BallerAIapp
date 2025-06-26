@@ -306,7 +306,7 @@ export default function EncouragementScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
-      <OnboardingHeader currentStep={14} totalSteps={28} />
+      <OnboardingHeader currentStep={15} totalSteps={28} />
 
       <Animated.View
         entering={FadeInRight.duration(250).withInitialValues({ transform: [{ translateX: 400 }] })}

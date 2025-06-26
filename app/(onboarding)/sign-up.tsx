@@ -81,12 +81,18 @@ export default function SignUpScreen() {
         // Mark authentication as complete after successful sign-up
         markAuthenticationComplete();
         
-        // Run the definitive post-login sequence with current path
+        // Run the definitive post-login sequence with current path and referral data
         await runPostLoginSequence(
           user.uid,
           () => router.replace('/(tabs)/home'),
           () => router.replace('/(onboarding)/motivation-reason'),  // Navigate to motivation-reason screen on cancellation
-          pathname
+          pathname,
+          // Pass referral code data for paywall selection
+          {
+            referralCode: onboardingData.referralCode,
+            referralDiscount: onboardingData.referralDiscount,
+            referralInfluencer: onboardingData.referralInfluencer
+          }
         );
       }
     } catch (error: any) {
@@ -108,12 +114,18 @@ export default function SignUpScreen() {
                     // Mark authentication as complete after successful sign-in
                     markAuthenticationComplete();
                     
-                    // Run the definitive post-login sequence with current path
+                    // Run the definitive post-login sequence with current path and referral data
                     await runPostLoginSequence(
                       user.uid,
                       () => router.replace('/(tabs)/home'),
                       () => router.replace('/'),  // Navigate to welcome on cancellation
-                      pathname
+                      pathname,
+                      // Pass referral code data for paywall selection
+                      {
+                        referralCode: onboardingData.referralCode,
+                        referralDiscount: onboardingData.referralDiscount,
+                        referralInfluencer: onboardingData.referralInfluencer
+                      }
                     );
                   }
                 } catch (signInError: any) {
@@ -156,13 +168,19 @@ export default function SignUpScreen() {
         // Mark authentication as complete after successful Apple sign-in
         markAuthenticationComplete();
         
-        // Run the definitive post-login sequence with current path
-        await runPostLoginSequence(
-          user.uid,
-          () => router.replace('/(tabs)/home'),
-          () => router.replace('/(onboarding)/motivation-reason'),  // Navigate to motivation-reason on cancellation
-          pathname
-        );
+                  // Run the definitive post-login sequence with current path and referral data
+          await runPostLoginSequence(
+            user.uid,
+            () => router.replace('/(tabs)/home'),
+            () => router.replace('/(onboarding)/motivation-reason'),  // Navigate to motivation-reason on cancellation
+            pathname,
+            // Pass referral code data for paywall selection
+            {
+              referralCode: onboardingData.referralCode,
+              referralDiscount: onboardingData.referralDiscount,
+              referralInfluencer: onboardingData.referralInfluencer
+            }
+          );
       } else {
         console.log("User needs a document created before going through paywall");
         await analytics().logEvent('onboarding_apple_signup_complete');
@@ -175,12 +193,18 @@ export default function SignUpScreen() {
           // Mark authentication as complete after successful Apple sign-up
           markAuthenticationComplete();
           
-          // Run the definitive post-login sequence with current path
+          // Run the definitive post-login sequence with current path and referral data
           await runPostLoginSequence(
             user.uid,
             () => router.replace('/(tabs)/home'),
             () => router.replace('/(onboarding)/motivation-reason'),  // Navigate to motivation-reason on cancellation
-            pathname
+            pathname,
+            // Pass referral code data for paywall selection
+            {
+              referralCode: onboardingData.referralCode,
+              referralDiscount: onboardingData.referralDiscount,
+              referralInfluencer: onboardingData.referralInfluencer
+            }
           );
         } catch (error) {
           console.error("Error creating user document:", error);

@@ -194,12 +194,18 @@ export async function checkSubscriptionOnForeground(
  * @param navigateToHome Function to navigate to the home screen
  * @param navigateToWelcome Function to navigate to the welcome screen
  * @param currentPath Optional current path to check if in onboarding
+ * @param referralData Optional referral code data for post-onboarding paywall selection
  */
 export async function runPostLoginSequence(
   userId: string, 
   navigateToHome: () => void,
   navigateToWelcome: () => void,
-  currentPath?: string
+  currentPath?: string,
+  referralData?: {
+    referralCode: string | null;
+    referralDiscount: number | null;
+    referralInfluencer: string | null;
+  }
 ): Promise<void> {
   console.log("======== RUNNING ONE-TIME POST-LOGIN SEQUENCE ========");
   console.log(`UserID: ${userId}, Current path: ${currentPath || 'undefined'}`);
@@ -292,12 +298,35 @@ export async function runPostLoginSequence(
     // 6. Only if truly no subscription, show paywall ONCE
     console.log("STEP 6: No active subscription confirmed, showing paywall...");
     
+    // Check if this is a post-onboarding flow with valid referral code
+    const hasValidReferralCode = referralData && 
+      referralData.referralCode && 
+      referralData.referralDiscount && 
+      referralData.referralInfluencer;
+    
+    if (hasValidReferralCode) {
+      console.log(`🎁 REFERRAL CODE DETECTED: ${referralData.referralCode} (${referralData.referralDiscount}% off from ${referralData.referralInfluencer})`);
+      console.log("Will show DISCOUNT paywall for post-onboarding user");
+    } else {
+      console.log("No valid referral code - will show REGULAR paywall");
+    }
+    
     // Mark paywall as being presented to prevent duplicates
     isPaywallCurrentlyPresented = true;
     
-    const paywallResult = await RevenueCatUI.presentPaywallIfNeeded({
-      requiredEntitlementIdentifier: ENTITLEMENT_ID
-    });
+    // Show appropriate paywall based on referral code status
+    const paywallConfig = {
+      requiredEntitlementIdentifier: ENTITLEMENT_ID,
+      // Use different paywall offerings based on referral code
+      // You'll configure these offerings in RevenueCat dashboard
+      ...(hasValidReferralCode && {
+        // When you create the discount paywall in RevenueCat, you'll specify the offering ID here
+        // For now, we'll use the same config but log different analytics
+        offeringIdentifier: 'discount_paywall' // This will be configured in RevenueCat
+      })
+    };
+    
+    const paywallResult = await RevenueCatUI.presentPaywallIfNeeded(paywallConfig);
     
     // Reset paywall presented flag
     isPaywallCurrentlyPresented = false;
@@ -308,15 +337,30 @@ export async function runPostLoginSequence(
       // Get fresh info after purchase
       console.log("STEP 7: Purchase/restore successful, refreshing data...");
       await Purchases.getCustomerInfo();
+      
+      // Log analytics for referral code success
+      if (hasValidReferralCode) {
+        console.log("🎉 REFERRAL CODE PURCHASE SUCCESS!");
+        // You can add specific analytics here for successful referral purchases
+      }
+      
       console.log("Navigating to home screen after successful purchase");
       navigateToHome();
     } else if (paywallResult === PAYWALL_RESULT.CANCELLED) {
       console.log("STEP 7: Paywall cancelled by user");
+      
+      // Log analytics for referral code cancellation
+      if (hasValidReferralCode) {
+        console.log("🚫 REFERRAL CODE PAYWALL CANCELLED");
+        // You can add specific analytics here for cancelled referral paywalls
+      }
+      
       console.log("Navigating to welcome screen after paywall cancellation");
       navigateToWelcome();
     }
     
-    console.log("Paywall sequence complete with result:", paywallResult);
+    console.log(`Paywall sequence complete with result: ${paywallResult}${hasValidReferralCode ? ' (with referral code)' : ''}`);
+    console.log("===============================================");
   } catch (error) {
     // Reset paywall presented flag even if there's an error
     isPaywallCurrentlyPresented = false;

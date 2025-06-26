@@ -108,7 +108,7 @@ export default function MotivationReasonScreen() {
                   marginTop: 16,
                 }
               ]} allowFontScaling={false}>
-                Tell me briefly, what drives you on this journey?
+                Tell us briefly, what drives you on this journey?
               </Text>
             </View>
 

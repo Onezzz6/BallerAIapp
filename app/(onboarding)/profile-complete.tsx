@@ -36,6 +36,7 @@ export default function ProfileCompleteScreen() {
       <OnboardingHeader 
         currentStep={28}
         totalSteps={28}
+        customBackPath="/(onboarding)/profile-generation"
       />
 
       <Animated.View 

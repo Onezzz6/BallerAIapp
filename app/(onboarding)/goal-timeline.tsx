@@ -39,7 +39,7 @@ export default function GoalTimelineScreen() {
       haptics.light();
       await analytics().logEvent('onboarding_goal_timeline_continue');
       await updateOnboardingData({ goalTimeline: selected });
-      router.push('/holding-back');
+      router.push('/motivation-confirmation');
     }
   };
 

@@ -14,12 +14,34 @@ import { auth, db } from '../config/firebase';
 import * as AppleAuthentication from 'expo-apple-authentication';
 
 type UserOnboardingData = {
-  hasSmartwatch: boolean | null;
+  username: string | null;
+  gender: string | null;
+  age: string | null;
+  height: string | null;
+  weight: string | null;
+  dominantFoot: string | null;
+  injuryHistory: string | null;
+  skillLevel: string | null;
+  position: string | null;
+  teamStatus: string | null;
+  trainingSurface: string | null;
   footballGoal: string | null;
   improvementFocus: string | null;
+  goalTimeline: string | null;
+  holdingBack: string | null;
+  trainingAccomplishment: string | null;
   trainingFrequency: string | null;
+  discoverySource: string | null;
+  triedOtherApps: string | null;
   hasGymAccess: boolean | null;
+  referralCode: string | null;
+  referralDiscount: number | null;
+  referralInfluencer: string | null;
   motivation: string | null;
+  fitnessLevel: string | null;
+  activityLevel: string | null;
+  sleepHours: string | null;
+  nutrition: string | null;
 };
 
 const authService = {
@@ -158,13 +180,35 @@ const authService = {
           email: credential.email || user.email,
           name: displayName,
           createdAt: new Date(),
-          // Default onboarding data
-          hasSmartwatch: null,
+          // Default onboarding data - user will need to complete onboarding
+          username: null,
+          gender: null,
+          age: null,
+          height: null,
+          weight: null,
+          dominantFoot: null,
+          injuryHistory: null,
+          skillLevel: null,
+          position: null,
+          teamStatus: null,
+          trainingSurface: null,
           footballGoal: null,
           improvementFocus: null,
+          goalTimeline: null,
+          holdingBack: null,
+          trainingAccomplishment: null,
           trainingFrequency: null,
+          discoverySource: null,
+          triedOtherApps: null,
           hasGymAccess: null,
-          motivation: null
+          referralCode: null,
+          referralDiscount: null,
+          referralInfluencer: null,
+          motivation: null,
+          fitnessLevel: null,
+          activityLevel: null,
+          sleepHours: null,
+          nutrition: null
         });
       }
       
@@ -385,14 +429,15 @@ const authService = {
       return false;
     }
     
-    // A valid user should have completed onboarding with these fields
+    // A valid user should have completed onboarding with these core fields
     const hasRequiredFields = 
       userData.footballGoal !== null && 
       userData.hasGymAccess !== null &&
-      userData.hasSmartwatch !== null &&
       userData.improvementFocus !== null &&
       userData.trainingFrequency !== null &&
-      userData.motivation !== null;
+      userData.motivation !== null &&
+      userData.username !== null &&
+      userData.gender !== null;
     
     return hasRequiredFields;
   },

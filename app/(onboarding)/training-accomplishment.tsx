@@ -46,7 +46,7 @@ export default function TrainingAccomplishmentScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
-        currentStep={13}
+        currentStep={14}
         totalSteps={28}
       />
 

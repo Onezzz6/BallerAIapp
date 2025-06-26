@@ -50,7 +50,7 @@ export default function HoldingBackScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
-        currentStep={12}
+        currentStep={13}
         totalSteps={28}
       />
 

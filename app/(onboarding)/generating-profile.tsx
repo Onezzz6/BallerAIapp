@@ -8,7 +8,7 @@ import Animated, {
   interpolate
 } from 'react-native-reanimated';
 import { useEffect, useState } from 'react';
-import OnboardingHeader from '../components/OnboardingHeader';
+
 import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
@@ -126,18 +126,13 @@ export default function GeneratingProfileScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
-      <OnboardingHeader 
-        currentStep={27}
-        totalSteps={28}
-      />
-
       <Animated.View 
         entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}
         style={{
           flex: 1,
           backgroundColor: colors.backgroundColor,
           paddingHorizontal: 24,
-          paddingTop: 40,
+          paddingTop: 60, // Extra padding to replace header space
         }}
       >
 
