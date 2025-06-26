@@ -25,6 +25,7 @@ export default function SocialProofScreen() {
       <OnboardingHeader 
         currentStep={24}
         totalSteps={28}
+        customBackPath="/referral-code"
       />
 
       <Animated.View 

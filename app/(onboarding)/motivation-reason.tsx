@@ -75,6 +75,7 @@ export default function MotivationReasonScreen() {
           <OnboardingHeader 
             currentStep={25}
             totalSteps={28}
+            customBackPath="/social-proof"
           />
 
           <Animated.View 
@@ -97,7 +98,7 @@ export default function MotivationReasonScreen() {
                   marginBottom: 8,
                 }
               ]} allowFontScaling={false}>
-                The most important part of going a pro!
+                What drives you?
               </Text>
               <Text style={[
                 typography.subtitle,

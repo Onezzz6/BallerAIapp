@@ -172,6 +172,7 @@ export default function ProfileGenerationScreen() {
       <OnboardingHeader 
         currentStep={26}
         totalSteps={28}
+        customBackPath="/(onboarding)/motivation-reason"
       />
 
       <Animated.View 
