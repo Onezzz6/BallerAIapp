@@ -523,7 +523,7 @@ export default function WelcomeScreen() {
                 buttonStyle={{ backgroundColor: colors.brandBlue, paddingVertical: 18, borderRadius: 36, width: '100%', marginBottom: 16 }}
                 textStyle={{ fontSize: 18, fontWeight: '600', color: colors.white }}
               />
-              <View style={{ alignItems: 'center', flexDirection: 'row' }}>
+              <View style={{ alignItems: 'center', flexDirection: 'row', justifyContent: 'center' }}>
                 <Text style={{ fontSize: 16, color: colors.mediumGray }}>
                   Already have an account?{' '}
                 </Text>
