@@ -15,6 +15,7 @@ import { PAYWALL_RESULT } from 'react-native-purchases-ui';
 import { usePathname } from 'expo-router';
 import ScrollIfNeeded from '../components/ScrollIfNeeded';
 import * as StoreReview from 'expo-store-review';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -36,14 +37,25 @@ export default function SignUpScreen() {
     checkAppleAuthAvailability();
   }, []);
 
-  // Request app review when user reaches sign-up page
+  // Request app review when user reaches sign-up page (only once per session)
   useEffect(() => {
     const requestReview = async () => {
       try {
+        // Check if we've already requested a review in this session
+        const hasRequestedReview = await AsyncStorage.getItem('hasRequestedReview');
+        
+        if (hasRequestedReview) {
+          console.log('Review already requested in this session, skipping');
+          return;
+        }
+
         // Check if review is available on this platform
         const isAvailable = await StoreReview.isAvailableAsync();
         
         if (isAvailable) {
+          // Mark that we've requested a review
+          await AsyncStorage.setItem('hasRequestedReview', 'true');
+          
           // Small delay to ensure the UI is fully rendered
           setTimeout(async () => {
             await StoreReview.requestReview();
@@ -85,7 +97,7 @@ export default function SignUpScreen() {
         await runPostLoginSequence(
           user.uid,
           () => router.replace('/(tabs)/home'),
-          () => router.replace('/(onboarding)/motivation-reason'),  // Navigate to motivation-reason screen on cancellation
+          () => router.replace('/(onboarding)/sign-up'),  // Navigate to sign-up screen on cancellation
           pathname,
           // Pass referral code data for paywall selection
           {
@@ -172,7 +184,7 @@ export default function SignUpScreen() {
           await runPostLoginSequence(
             user.uid,
             () => router.replace('/(tabs)/home'),
-            () => router.replace('/(onboarding)/motivation-reason'),  // Navigate to motivation-reason on cancellation
+            () => router.replace('/(onboarding)/sign-up'),  // Navigate to sign-up on cancellation
             pathname,
             // Pass referral code data for paywall selection
             {
@@ -197,7 +209,7 @@ export default function SignUpScreen() {
           await runPostLoginSequence(
             user.uid,
             () => router.replace('/(tabs)/home'),
-            () => router.replace('/(onboarding)/motivation-reason'),  // Navigate to motivation-reason on cancellation
+            () => router.replace('/(onboarding)/sign-up'),  // Navigate to sign-up on cancellation
             pathname,
             // Pass referral code data for paywall selection
             {

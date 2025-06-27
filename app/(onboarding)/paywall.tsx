@@ -315,18 +315,45 @@ export async function runPostLoginSequence(
     isPaywallCurrentlyPresented = true;
     
     // Show appropriate paywall based on referral code status
-    const paywallConfig = {
-      requiredEntitlementIdentifier: ENTITLEMENT_ID,
-      // Use different paywall offerings based on referral code
-      // You'll configure these offerings in RevenueCat dashboard
-      ...(hasValidReferralCode && {
-        // When you create the discount paywall in RevenueCat, you'll specify the offering ID here
-        // For now, we'll use the same config but log different analytics
-        offeringIdentifier: 'discount_paywall' // This will be configured in RevenueCat
-      })
-    };
+    let paywallResult;
     
-    const paywallResult = await RevenueCatUI.presentPaywallIfNeeded(paywallConfig);
+    // First, get offerings to specify which one to show
+    console.log("STEP 6a: Fetching offerings...");
+    const offerings = await Purchases.getOfferings();
+    
+    if (hasValidReferralCode) {
+      // For referral users, show the referral offering with discounted products
+      console.log("🎁 Presenting REFERRAL paywall for referral user with discount");
+      const referralOffering = offerings.all['ReferralOffering'];
+      
+      if (referralOffering) {
+        console.log("✅ ReferralOffering found, presenting with discount");
+        paywallResult = await RevenueCatUI.presentPaywall({
+          offering: referralOffering
+        });
+      } else {
+        console.warn("⚠️ ReferralOffering not found, falling back to default paywall");
+        paywallResult = await RevenueCatUI.presentPaywallIfNeeded({
+          requiredEntitlementIdentifier: ENTITLEMENT_ID
+        });
+      }
+    } else {
+      // Present regular paywall for non-referral users
+      console.log("💰 Presenting REGULAR paywall for non-referral user");
+      const regularOffering = offerings.all['NewOfferings'] || offerings.current;
+      
+      if (regularOffering) {
+        console.log("✅ Regular offering found, presenting standard paywall");
+        paywallResult = await RevenueCatUI.presentPaywall({
+          offering: regularOffering
+        });
+      } else {
+        console.warn("⚠️ Regular offering not found, using default paywall");
+        paywallResult = await RevenueCatUI.presentPaywallIfNeeded({
+          requiredEntitlementIdentifier: ENTITLEMENT_ID
+        });
+      }
+    }
     
     // Reset paywall presented flag
     isPaywallCurrentlyPresented = false;
