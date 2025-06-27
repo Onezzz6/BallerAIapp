@@ -33,7 +33,7 @@ export const TRAINING_INSTRUCTION_STEPS: Array<Omit<InstructionStep, 'position'>
   {
     id: 'schedule',
     title: 'Team Schedule',
-    description: "Enter your team training and game schedule so Ballzy can take it into account when creating your training plan.",
+            description: "Enter your team training and game schedule so your AI coach can take it into account when creating your training plan.",
     position: null,
     tooltipPosition: 'top',
     positionStyles: { borderRadius: 16 }

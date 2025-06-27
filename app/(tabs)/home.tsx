@@ -1134,30 +1134,46 @@ export default function HomeScreen() {
     isLoading?: boolean;
   }>>([]);
 
-  // Modify the checkDailyQuestionLimit function to handle missing index
+  // Helper function to get the current chat session key (based on daily reset at noon)
+  const getCurrentChatSession = () => {
+    const now = new Date();
+    const today = format(now, 'yyyy-MM-dd');
+    
+    // If it's before noon, use previous day's session (since last reset was yesterday at noon)
+    if (now.getHours() < 12) {
+      const yesterday = subDays(now, 1);
+      return format(yesterday, 'yyyy-MM-dd');
+    }
+    
+    // If it's after noon, use today's session (reset happened today at noon)
+    return today;
+  };
+
+  // Modify the checkDailyQuestionLimit function to handle noon reset and missing index
   useEffect(() => {
     const checkDailyQuestionLimit = async () => {
       if (!user) return;
       
       try {
-        const today = format(new Date(), 'yyyy-MM-dd');
+        const currentSession = getCurrentChatSession();
         const questionLimitDoc = await getDoc(doc(db, 'users', user.uid, 'aiQuestions', 'counter'));
         
         if (questionLimitDoc.exists()) {
           const data = questionLimitDoc.data();
           
-          // If data is from today, use it
-          if (data.date === today) {
+          // If data is from current session, use it
+          if (data.sessionKey === currentSession) {
             setQuestionCount(data.count || 0);
           } else {
-            // Reset counter for new day
+            // Reset counter for new session (daily at noon)
             await setDoc(doc(db, 'users', user.uid, 'aiQuestions', 'counter'), {
               count: 0,
-              date: today,
-              maxQuestions: 10
+              sessionKey: currentSession,
+              maxQuestions: 10,
+              lastReset: serverTimestamp()
             });
             setQuestionCount(0);
-            // Clear conversation history for new day
+            // Clear conversation history for new session
             setQuestionHistory([]);
           }
           
@@ -1167,19 +1183,20 @@ export default function HomeScreen() {
           // Initialize counter document
           await setDoc(doc(db, 'users', user.uid, 'aiQuestions', 'counter'), {
             count: 0,
-            date: today,
-            maxQuestions: 10
+            sessionKey: currentSession,
+            maxQuestions: 10,
+            lastReset: serverTimestamp()
           });
           setQuestionCount(0);
         }
 
-        // Try to fetch today's conversation history - handling the case where index might be missing
+        // Try to fetch current session's conversation history - handling the case where index might be missing
         try {
           // First attempt with the optimal query (requires composite index)
           const questionsRef = collection(db, `users/${user.uid}/aiQuestions`);
           const q = query(
             questionsRef,
-            where('date', '==', today),
+            where('sessionKey', '==', currentSession),
             orderBy('timestamp', 'asc')
           );
           
@@ -1199,11 +1216,11 @@ export default function HomeScreen() {
           
           // Fallback method if index doesn't exist
           try {
-            // Get all questions for today without ordering (doesn't require composite index)
+            // Get all questions for current session without ordering (doesn't require composite index)
             const questionsRef = collection(db, `users/${user.uid}/aiQuestions`);
             const simpleQuery = query(
               questionsRef,
-              where('date', '==', today)
+              where('sessionKey', '==', currentSession)
             );
             
             const querySnapshot = await getDocs(simpleQuery);
@@ -1229,7 +1246,7 @@ export default function HomeScreen() {
               console.warn(
                 "Please create the required Firebase index to optimize question loading: " +
                 "Go to your Firebase console → Firestore → Indexes and add a composite index on 'aiQuestions' " +
-                "collection with fields 'date' (Ascending) and 'timestamp' (Ascending)"
+                "collection with fields 'sessionKey' (Ascending) and 'timestamp' (Ascending)"
               );
             }
           } catch (fallbackError) {
@@ -1247,7 +1264,53 @@ export default function HomeScreen() {
     checkDailyQuestionLimit();
   }, [user]);
 
-  // Update askAiQuestion to properly update the counter in Firebase
+  // Add a periodic check to reset conversation at noon
+  useEffect(() => {
+    if (!user) return;
+
+    // Check every 5 minutes if we need to reset the conversation
+    const checkNoonReset = async () => {
+      const currentSession = getCurrentChatSession();
+      
+      // Get the stored session from Firebase
+      try {
+        const questionLimitDoc = await getDoc(doc(db, 'users', user.uid, 'aiQuestions', 'counter'));
+        
+        if (questionLimitDoc.exists()) {
+          const data = questionLimitDoc.data();
+          
+          // If the current session differs from stored session, it means we've crossed noon
+          if (data.sessionKey !== currentSession) {
+            console.log('Noon reset detected, clearing conversation history');
+            
+            // Reset counter and conversation
+            await setDoc(doc(db, 'users', user.uid, 'aiQuestions', 'counter'), {
+              count: 0,
+              sessionKey: currentSession,
+              maxQuestions: 10,
+              lastReset: serverTimestamp()
+            });
+            
+            // Clear local state
+            setQuestionCount(0);
+            setQuestionHistory([]);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking noon reset:', error);
+      }
+    };
+
+    // Check immediately
+    checkNoonReset();
+    
+    // Set up interval to check every 5 minutes
+    const intervalId = setInterval(checkNoonReset, 5 * 60 * 1000);
+    
+    return () => clearInterval(intervalId);
+  }, [user]);
+
+  // Update askAiQuestion to include conversation context and properly update the counter in Firebase
   const askAiQuestion = async () => {
     if (!question.trim() || questionCount >= maxQuestions) {
       return;
@@ -1275,8 +1338,16 @@ export default function HomeScreen() {
         userContext = `User profile: ${userProfile.age ? `Age: ${userProfile.age}, ` : ''}${userProfile.gender ? `Gender: ${userProfile.gender}, ` : ''}${userProfile.position ? `Position: ${userProfile.position}, ` : ''}${userProfile.dominantFoot ? `Dominant foot: ${userProfile.dominantFoot}, ` : ''}${userProfile.injuryHistory ? `Injury history: ${userProfile.injuryHistory}` : ''}`;
       }
 
-      // Call OpenAI API using the utility function
-      const response = await askOpenAI(currentQuestion, userContext);
+      // Prepare conversation history for AI context (exclude current loading message)
+      const conversationContext = questionHistory
+        .filter(item => !item.isLoading && item.response) // Only include completed conversations
+        .map(item => ({
+          question: item.question,
+          response: item.response
+        }));
+
+      // Call OpenAI API with conversation context
+      const response = await askOpenAI(currentQuestion, userContext, conversationContext);
       
       // Update the last message in history with the response
       setQuestionHistory(prevHistory => {
@@ -1296,14 +1367,14 @@ export default function HomeScreen() {
       // After getting a response, save the question and response to Firestore
       if (user) {
         try {
-          const todayStr = format(new Date(), 'yyyy-MM-dd');
+          const currentSession = getCurrentChatSession();
           const questionsRef = collection(db, `users/${user.uid}/aiQuestions`);
           
           await addDoc(questionsRef, {
             question: currentQuestion,
             response,
             timestamp: serverTimestamp(),
-            date: todayStr
+            sessionKey: currentSession
           });
 
           // Update the counter document directly rather than using increment
@@ -1313,8 +1384,9 @@ export default function HomeScreen() {
           
           await setDoc(counterRef, {
             count: newCount,
-            date: todayStr,
-            maxQuestions: maxQuestions
+            sessionKey: currentSession,
+            maxQuestions: maxQuestions,
+            lastReset: serverTimestamp()
           }, { merge: true });
 
           // Update local state

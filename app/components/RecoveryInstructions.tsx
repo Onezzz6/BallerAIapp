@@ -240,7 +240,7 @@ const RecoveryInstructions = forwardRef<RecoveryInstructionsRef, RecoveryInstruc
     {
       id: 'recoveryQuery',
       title: 'Recovery Query',
-      description: 'Log your overall load here. Ballzy will use it to fine-tune your program and help keep you injury-free.',
+              description: 'Log your overall load here. Your AI coach will use it to fine-tune your program and help keep you injury-free.',
       position: getRecoveryQueryPosition(), 
       tooltipVerticalOffset: 150 
     },

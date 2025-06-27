@@ -321,9 +321,9 @@ const HomeInstructions: React.FC<HomeInstructionsProps> = ({
       position: elementPositions['recoveryCard'] || null,
     },
     {
-      id: 'askBallzy',
-      title: 'Ask Ballzy',
-      description: 'Have questions about football, nutrition, or training? Ask Ballzy, your AI assistant!',
+              id: 'askBallzy',
+        title: 'Ask AI Coach',
+        description: 'Have questions about football, nutrition, or training? Ask your AI coach for personalized advice!',
       position: getAskBallzyPosition(),
     }
   ];
