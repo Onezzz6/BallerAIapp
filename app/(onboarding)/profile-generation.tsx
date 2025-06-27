@@ -358,9 +358,10 @@ export default function ProfileGenerationScreen() {
               fontSize: 16,
               color: colors.mediumGray,
               lineHeight: 22,
+              marginTop: 24,
             }
-          ]}>
-            We'll use all your responses to craft the perfect{'\n'}personalized experience just for you!
+          ]} allowFontScaling={false}>
+            We'll use all your responses to craft{'\n'}the perfect personalized experience{'\n'}just for you!
           </Text>
         </View>
       </Animated.View>

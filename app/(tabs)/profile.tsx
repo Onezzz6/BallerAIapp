@@ -522,7 +522,7 @@ export default function ProfileScreen() {
                         style={({ pressed }) => [
                           styles.optionButtonWithDescription,
                           editValue === level.id && styles.selectedOption,
-                          { opacity: pressed ? 0.9 : 1 }
+                          { opacity: pressed ? 0.8 : 1 }
                         ]}
                       >
                         <Text style={[

@@ -48,16 +48,7 @@ export default function SocialProofScreen() {
               marginBottom: 8,
             }
           ]} allowFontScaling={false}>
-            See what Players are saying about the newest tech
-          </Text>
-          <Text style={[
-            typography.title,
-            {
-              textAlign: 'center',
-              fontSize: 24,
-            }
-          ]} allowFontScaling={false}>
-            ↓
+            See what players are saying about the newest tech!
           </Text>
         </View>
 
@@ -106,7 +97,7 @@ export default function SocialProofScreen() {
                   style={{
                     width: '100%',
                     height: undefined,
-                    aspectRatio: 1,
+                    aspectRatio: 1.4,
                     resizeMode: 'contain',
                   }}
                 />

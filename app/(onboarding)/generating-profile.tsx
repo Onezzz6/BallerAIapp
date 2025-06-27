@@ -143,7 +143,7 @@ export default function GeneratingProfileScreen() {
           textAlign: 'center',
           color: '#000',
           marginBottom: 20,
-        }}>
+        }} allowFontScaling={false}>
           {currentPercentage}%
         </Text>
 
@@ -152,7 +152,7 @@ export default function GeneratingProfileScreen() {
           typography.title,
           {
             textAlign: 'center',
-            marginBottom: 40,
+            marginBottom: 50,
             fontSize: 24,
           }
         ]} allowFontScaling={false}>
@@ -165,7 +165,7 @@ export default function GeneratingProfileScreen() {
           height: 8,
           backgroundColor: '#E5E5E5',
           borderRadius: 4,
-          marginBottom: 40,
+          marginBottom: 24,
           overflow: 'hidden',
         }}>
           <Animated.View style={[
@@ -183,8 +183,8 @@ export default function GeneratingProfileScreen() {
           fontSize: 18,
           textAlign: 'center',
           color: '#666',
-          marginBottom: 40,
-        }}>
+          marginBottom: 24,
+        }} allowFontScaling={false}>
           {currentStatus}
         </Text>
 
@@ -193,14 +193,14 @@ export default function GeneratingProfileScreen() {
            backgroundColor: colors.brandBlue,
            borderRadius: 16,
            padding: 24,
-           marginBottom: 40,
+           marginBottom: 50,
          }}>
            <Text style={{
              fontSize: 18,
              fontWeight: '600',
              color: '#FFFFFF',
              marginBottom: 20,
-           }}>
+           }} allowFontScaling={false}>
              Setting up your personalized experience
            </Text>
 
@@ -217,7 +217,7 @@ export default function GeneratingProfileScreen() {
                 fontSize: 16,
                 color: '#FFFFFF',
                 marginRight: 8,
-              }}>
+              }} allowFontScaling={false}>
                 •
               </Text>
               
@@ -225,7 +225,7 @@ export default function GeneratingProfileScreen() {
                 fontSize: 16,
                 color: '#FFFFFF',
                 flex: 1,
-              }}>
+              }} allowFontScaling={false}>
                 {step.text}
               </Text>
 
@@ -245,7 +245,7 @@ export default function GeneratingProfileScreen() {
                     fontSize: 16,
                     color: '#FFFFFF',
                     fontWeight: 'bold',
-                  }}>
+                  }} allowFontScaling={false}>
                     ✓
                   </Text>
                 )}

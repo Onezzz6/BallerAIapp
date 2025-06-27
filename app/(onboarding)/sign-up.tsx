@@ -14,8 +14,6 @@ import { runPostLoginSequence, markAuthenticationComplete } from './paywall';
 import { PAYWALL_RESULT } from 'react-native-purchases-ui';
 import { usePathname } from 'expo-router';
 import ScrollIfNeeded from '../components/ScrollIfNeeded';
-import * as StoreReview from 'expo-store-review';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -35,41 +33,6 @@ export default function SignUpScreen() {
     };
     
     checkAppleAuthAvailability();
-  }, []);
-
-  // Request app review when user reaches sign-up page (only once per session)
-  useEffect(() => {
-    const requestReview = async () => {
-      try {
-        // Check if we've already requested a review in this session
-        const hasRequestedReview = await AsyncStorage.getItem('hasRequestedReview');
-        
-        if (hasRequestedReview) {
-          console.log('Review already requested in this session, skipping');
-          return;
-        }
-
-        // Check if review is available on this platform
-        const isAvailable = await StoreReview.isAvailableAsync();
-        
-        if (isAvailable) {
-          // Mark that we've requested a review
-          await AsyncStorage.setItem('hasRequestedReview', 'true');
-          
-          // Small delay to ensure the UI is fully rendered
-          setTimeout(async () => {
-            await StoreReview.requestReview();
-            
-            // Log analytics event for review request
-            await analytics().logEvent('review_requested_onboarding');
-          }, 1000);
-        }
-      } catch (error) {
-        console.log('Error requesting review:', error);
-      }
-    };
-
-    requestReview();
   }, []);
 
   const handleSubmit = async () => {

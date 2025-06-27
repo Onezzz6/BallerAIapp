@@ -166,12 +166,9 @@ export default function ReferralCodeScreen() {
                 typography.subtitle,
                 {
                   fontSize: 16,
-                  fontWeight: '400',
-                  textAlign: 'left',
-                  marginTop: 16,
                   color: colors.mediumGray,
                 }
-              ]} allowFontScaling={false}>
+              ]}>
                 You can skip this step.
               </Text>
             </View>
@@ -190,7 +187,10 @@ export default function ReferralCodeScreen() {
                     // Don't allow changes if code is already validated
                     if (isValid === true) return;
                     
-                    setReferralCode(text);
+                    // Force uppercase letters but allow numbers
+                    const uppercaseText = text.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                    setReferralCode(uppercaseText);
+                    
                     // Clear validation state when user types
                     if (validationMessage) {
                       setValidationMessage('');
@@ -198,7 +198,7 @@ export default function ReferralCodeScreen() {
                       setHasSubmitted(false);
                     }
                   }}
-                  placeholder="Referral Code"
+                  placeholder="REFERRAL CODE"
                   autoCapitalize="characters"
                   editable={!isValidating && isValid !== true}
                   style={{

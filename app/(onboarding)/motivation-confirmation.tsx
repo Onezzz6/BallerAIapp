@@ -83,7 +83,7 @@ export default function MotivationConfirmationScreen() {
               lineHeight: 40,
             }
           ]} allowFontScaling={false}>
-            It is definitely a feasible goal to improve your{' '}
+            It is definitely an achievable goal to improve your{' '}
             <Text style={{ color: '#FF8A65' }}>
               {getImprovementText()}
             </Text>

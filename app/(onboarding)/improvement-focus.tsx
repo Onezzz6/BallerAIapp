@@ -78,7 +78,7 @@ export default function ImprovementFocusScreen() {
         }}>
           <View style={{
             width: '100%',
-            gap: 8,
+            gap: 12,
           }}>
             {IMPROVEMENTS.map((area) => (
               <Pressable
@@ -89,19 +89,19 @@ export default function ImprovementFocusScreen() {
                 }}
                 style={({ pressed }) => ({
                   width: '100%',
-                  padding: 16,
+                  padding: 20,
                   backgroundColor: selected === area.id ? '#99E86C' : '#FFFFFF',
                   borderRadius: 12,
                   borderWidth: 2,
                   borderColor: selected === area.id ? '#99E86C' : '#E5E5E5',
-                  opacity: pressed ? 0.9 : 1,
+                  opacity: pressed ? 0.8 : 1,
                 })}
               >
                 <Text style={{
                   fontSize: 18,
                   color: '#000000',
                   fontWeight: '600',
-                }} allowFontScaling={false}>
+                }}>
                   {area.title}
                 </Text>
               </Pressable>

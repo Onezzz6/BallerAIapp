@@ -103,7 +103,7 @@ export default function HoldingBackScreen() {
                   borderRadius: 12,
                   borderWidth: 2,
                   borderColor: selected === option.id ? '#99E86C' : '#E5E5E5',
-                  opacity: pressed ? 0.9 : 1,
+                  opacity: pressed ? 0.8 : 1,
                 })}
               >
                 <Text style={{

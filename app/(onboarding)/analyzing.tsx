@@ -273,8 +273,9 @@ export default function AnalyzingScreen() {
               { textAlign: 'center', color: colors.mediumGray, lineHeight: 24 },
               captionStyle,
             ]}
+            allowFontScaling={false}
           >
-            90% of BallerAI athletes say their development improved exponentially during the first 6 months
+            90% of BallerAI athletes say their development improved exponentially during the first 6 months.
           </Animated.Text>
         </View>
       </Animated.View>

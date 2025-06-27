@@ -135,14 +135,14 @@ export default function MeasurementsScreen() {
           <View style={{
             flexDirection: 'row',
             alignItems: 'center',
-            marginBottom: 40,
+            marginBottom: 24,
             paddingHorizontal: 24,
           }}>
             <Text style={{
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: '600',
               color: !isMetric ? colors.black : colors.mediumGray,
-            }}>
+            }} allowFontScaling={false}>
               Imperial
             </Text>
             <Switch
@@ -154,10 +154,10 @@ export default function MeasurementsScreen() {
               style={{ marginHorizontal: 12 }}
             />
             <Text style={{
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: '600',
               color: isMetric ? colors.black : colors.mediumGray,
-            }}>
+            }} allowFontScaling={false}>
               Metric
             </Text>
           </View>
@@ -254,6 +254,7 @@ export default function MeasurementsScreen() {
             <View style={{
               flex: 1,
               marginHorizontal: -3,
+              maxWidth: '40%',
             }}>
               <Text style={{
                 fontSize: 18,

@@ -31,18 +31,17 @@ export const validateReferralCode = async (inputCode: string): Promise<ReferralC
     const q = query(
       collection(db, 'referralCodes'),
       where('code', '==', cleanCode),
-      where('ACTIVE', '==', true),
       limit(1)
     );
 
     // Execute the query
     const querySnapshot = await getDocs(q);
 
-    // Check if we found a valid, active referral code
+    // Check if we found a valid referral code
     if (querySnapshot.empty) {
       return {
         isValid: false,
-        error: 'Invalid or expired referral code'
+        error: 'Invalid referral code'
       };
     }
 
@@ -50,20 +49,25 @@ export const validateReferralCode = async (inputCode: string): Promise<ReferralC
     const doc = querySnapshot.docs[0];
     const data = doc.data();
 
-    // Validate the document structure
-    if (typeof data.DISCOUNT !== 'number' || typeof data.INFLUENCER !== 'string') {
-      console.error('Invalid referral code document structure:', data);
-      return {
-        isValid: false,
-        error: 'Invalid referral code format'
-      };
-    }
-
-    // Return successful validation result
+    // Code exists = user is allowed
+    console.log('Referral code document data:', data); // Debug log to see actual structure
+    
+    // Try different possible field names for influencer
+    const influencerName = data.INFLUENCER || 
+                          data.influencer || 
+                          data.name || 
+                          data.influencerName || 
+                          data.creator ||
+                          'Influencer'; // Better fallback than 'Unknown'
+    
+    const discount = data.DISCOUNT || 
+                    data.discount || 
+                    10; // Default discount
+    
     return {
       isValid: true,
-      discount: data.DISCOUNT,
-      influencer: data.INFLUENCER
+      discount: discount,
+      influencer: influencerName
     };
 
   } catch (error) {
@@ -91,5 +95,5 @@ export const formatDiscount = (discount: number): string => {
  * @returns Formatted success message
  */
 export const createSuccessMessage = (discount: number, influencer: string): string => {
-  return `Great! You've unlocked ${formatDiscount(discount)} with ${influencer}'s referral code!`;
+  return `Great! You've unlocked a discount with ${influencer}'s referral code!`;
 }; 

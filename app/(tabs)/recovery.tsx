@@ -670,11 +670,9 @@ IMPORTANT USAGE GUIDELINES:
       >
         <View style={styles.streakCardContent}>
           <View style={styles.streakMascotContainer}>
-            <Image 
-              source={require('../../assets/images/mascot.png')}
-              style={styles.streakMascot}
-              resizeMode="contain"
-            />
+            <View style={styles.streakIconContainer}>
+              <Ionicons name="flame" size={40} color="#FF6B35" />
+            </View>
           </View>
           
           <View style={styles.streakInfoContainer}>
@@ -1103,14 +1101,12 @@ IMPORTANT USAGE GUIDELINES:
             entering={FadeIn.duration(300)}
             style={styles.workflowCard}
           >
-            <Image 
-              source={require('../../assets/images/mascot.png')}
-              style={styles.workflowMascot}
-              resizeMode="contain"
-            />
+            <View style={styles.workflowIconContainer}>
+              <Ionicons name="flash" size={60} color="#4064F6" />
+            </View>
             <Text style={styles.workflowTitle}>Let's Make a Recovery Plan!</Text>
             <Text style={styles.workflowText}>
-              I'll create a personalized recovery plan for today based on your needs and available tools.
+              We'll create a personalized recovery plan for today based on your needs and available tools.
             </Text>
             <Pressable
               style={({ pressed }) => [
@@ -1336,14 +1332,12 @@ IMPORTANT USAGE GUIDELINES:
               </Pressable>
             </View>
 
-            <Image 
-              source={require('../../assets/images/mascot.png')}
-              style={styles.workflowMascot}
-              resizeMode="contain"
-            />
+            <View style={styles.workflowIconContainer}>
+              <Ionicons name="checkmark-circle" size={60} color="#99E86C" />
+            </View>
             <Text style={styles.workflowTitle}>Perfect!</Text>
             <Text style={styles.workflowText}>
-              I have all the info I need to make an optimal recovery plan for today.
+              We have everything we need to create an optimal recovery plan for today.
             </Text>
             
             <Pressable
@@ -2140,14 +2134,12 @@ IMPORTANT USAGE GUIDELINES:
             style={styles.loadingContent}
             entering={FadeInDown.duration(400).springify()}
           >
-            <Image 
-              source={require('../../assets/images/mascot.png')}
-              style={styles.loadingMascot}
-              resizeMode="contain"
-            />
+            <View style={styles.loadingIconContainer}>
+              <Ionicons name="fitness" size={60} color="#4064F6" />
+            </View>
             <Text style={styles.loadingTitle}>Generating Plan</Text>
             <Text style={styles.loadingText}>
-              Please don't close the app while I generate a recovery plan for you.
+              Please don't close the app while we generate your recovery plan.
             </Text>
             <ActivityIndicator size="large" color="#4064F6" />
           </Animated.View>
@@ -2689,10 +2681,14 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 320,
   },
-  loadingMascot: {
+  loadingIconContainer: {
     width: 100,
     height: 100,
     marginBottom: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(64, 100, 246, 0.1)',
+    borderRadius: 50,
   },
   loadingTitle: {
     fontSize: 20,
@@ -2901,9 +2897,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 20, // More spacing
   },
-  streakMascot: {
-    width: 70, // Larger mascot
+  streakIconContainer: {
+    width: 70,
     height: 70,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   streakInfoContainer: {
     flex: 1,
@@ -2961,11 +2959,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E5E5',
   },
-  workflowMascot: {
+  workflowIconContainer: {
     width: 80,
     height: 80,
     marginBottom: 24,
     alignSelf: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(64, 100, 246, 0.1)',
+    borderRadius: 40,
   },
   workflowTitle: {
     fontSize: 20,

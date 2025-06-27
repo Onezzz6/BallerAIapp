@@ -298,10 +298,14 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 320,
   },
-  loadingMascot: {
+  loadingIconContainer: {
     width: 100,
     height: 100,
     marginBottom: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(64, 100, 246, 0.1)',
+    borderRadius: 50,
   },
   loadingTitle: {
     fontSize: 20,
@@ -339,10 +343,14 @@ const styles = StyleSheet.create({
     paddingTop: 80,
     backgroundColor: '#FFFFFF',
   },
-  welcomeMascot: {
+  welcomeIconContainer: {
     width: 120,
     height: 120,
     marginBottom: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(64, 100, 246, 0.1)',
+    borderRadius: 60,
   },
   welcomeTitle: {
     fontSize: 28,
@@ -1981,15 +1989,15 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
             entering={FadeIn.duration(500)}
           >
             <View style={styles.welcomeCard}>
-              <Animated.Image 
-                source={require('../../assets/images/mascot.png')}
-                style={styles.welcomeMascot}
-                resizeMode="contain"
+              <Animated.View 
+                style={styles.welcomeIconContainer}
                 entering={FadeIn.duration(600).delay(200)}
-              />
+              >
+                <Ionicons name="football" size={60} color="#4064F6" />
+              </Animated.View>
               <Text style={styles.welcomeTitle}>Welcome to Training</Text>
               <Text style={styles.welcomeText}>
-                I'll generate customized training plans for you based on your load and preferences. Let's get started!
+                We'll generate customized training plans for you based on your load and preferences. Let's get started!
               </Text>
             </View>
             <Pressable
@@ -2255,15 +2263,15 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
 
             <View style={styles.content}>
               <View style={styles.summaryContainer}>
-                <Animated.Image 
-                  source={require('../../assets/images/mascot.png')}
-                  style={styles.welcomeMascot}
-                  resizeMode="contain"
+                <Animated.View 
+                  style={styles.welcomeIconContainer}
                   entering={FadeIn.duration(600).delay(200)}
-                />
+                >
+                  <Ionicons name="checkmark-circle" size={60} color="#99E86C" />
+                </Animated.View>
                 <Text style={styles.summaryTitle}>Perfect!</Text>
                 <Text style={styles.summaryText}>
-                  I have everything I need to generate an optimal training plan for you.
+                  We have everything we need to generate an optimal training plan for you.
                 </Text>
                 
                 <View style={styles.summaryButtons}>
@@ -2395,14 +2403,12 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
             style={styles.loadingContent}
             entering={FadeInDown.duration(400).springify()}
           >
-            <Image 
-              source={require('../../assets/images/mascot.png')}
-              style={styles.loadingMascot}
-              resizeMode="contain"
-            />
+            <View style={styles.loadingIconContainer}>
+              <Ionicons name="football" size={60} color="#4064F6" />
+            </View>
             <Text style={styles.loadingTitle}>Generating Plan</Text>
             <Text style={styles.loadingText}>
-              Please don't close the app while I generate a training plan for you.
+              Please don't close the app while we generate your training plan.
             </Text>
             <ActivityIndicator size="large" color="#4064F6" />
           </Animated.View>

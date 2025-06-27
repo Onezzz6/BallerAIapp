@@ -323,7 +323,8 @@ export default function EncouragementScreen() {
             typography.title, 
             { 
               textAlign: 'center', 
-              marginBottom: 16,
+              marginTop: 24,
+              marginBottom: 12,
               fontSize: 32,
               fontWeight: '700'
             }
@@ -338,18 +339,19 @@ export default function EncouragementScreen() {
                 textAlign: 'center', 
                 color: colors.mediumGray, 
                 lineHeight: 22,
-                marginBottom: 32,
+                marginBottom: 16,
                 fontSize: 16
               },
               captionStyle,
             ]}
+            allowFontScaling={false}
           >
             Let's start to customize everything up just for you!
           </Animated.Text>
 
           {/* Privacy section */}
           <Animated.View style={[
-            { alignItems: 'center', marginBottom: 20 },
+            { alignItems: 'center', marginBottom: 12 },
             captionStyle
           ]}>
             <View style={{
@@ -359,9 +361,9 @@ export default function EncouragementScreen() {
               backgroundColor: 'rgba(99, 179, 237, 0.1)',
               justifyContent: 'center',
               alignItems: 'center',
-              marginBottom: 16,
+              marginBottom: 12,
             }}>
-              <Text style={{ fontSize: 24 }}>🔒</Text>
+              <Text style={{ fontSize: 24 }} allowFontScaling={false}>🔒</Text>
             </View>
             
             <Text style={[
@@ -370,9 +372,9 @@ export default function EncouragementScreen() {
                 textAlign: 'center',
                 fontWeight: '600',
                 marginBottom: 8,
-                fontSize: 18,
+                fontSize: 16,
               }
-            ]}>
+            ]} allowFontScaling={false}>
               Your privacy and security matter to us.
             </Text>
             
@@ -384,7 +386,7 @@ export default function EncouragementScreen() {
                 lineHeight: 20,
                 fontSize: 14,
               }
-            ]}>
+            ]} allowFontScaling={false}>
               We promise to always keep your{'\n'}personal information private and secure.
             </Text>
           </Animated.View>
@@ -407,7 +409,7 @@ export default function EncouragementScreen() {
         }}
       >
         <Button
-          title="Let's do this!"
+          title="Let's Do This!"
           onPress={async () => {
             haptics.light();
             await analytics().logEvent('onboarding_encouragement_continue');

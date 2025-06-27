@@ -508,32 +508,43 @@ export default function WelcomeScreen() {
               left: 0,
               right: 0,
               paddingHorizontal: 24,
-              paddingTop: 40,
+              paddingTop: 20,
               paddingBottom: 60,
               backgroundColor: '#FFFFFF',
               borderTopLeftRadius: 20,
               borderTopRightRadius: 20,
             }}>
-                                              <Text style={{ fontSize: 28, fontWeight: '700', textAlign: 'center', color: colors.black, lineHeight: 34, marginBottom: 32 }}>
-                  Living like the pros{'\n'}Made easy
+                <Text style={{ fontSize: 28, fontWeight: '700', textAlign: 'center', color: colors.black, lineHeight: 34, marginBottom: 16 }} allowFontScaling={false}>
+                  Living like the pros{'\n'}made easy!
                 </Text>
               <Button
                 title="Get Started"
                 onPress={handleGetStarted}
-                buttonStyle={{ backgroundColor: colors.brandBlue, paddingVertical: 18, borderRadius: 25, width: '100%', marginBottom: 16 }}
+                buttonStyle={{ backgroundColor: colors.brandBlue, paddingVertical: 18, borderRadius: 36, width: '100%', marginBottom: 16 }}
                 textStyle={{ fontSize: 18, fontWeight: '600', color: colors.white }}
               />
-                              <View style={{ alignItems: 'center' }}>
-                  <Text style={{ fontSize: 16, color: colors.mediumGray }}>
-                    Already have an account?{' '}
-                    <Text 
-                      style={{ fontSize: 16, color: colors.brandBlue, fontWeight: '600' }}
-                      onPress={() => { haptics.light(); setShowSignIn(true); }}
-                    >
-                      Sign In
-                    </Text>
+              <View style={{ alignItems: 'center', flexDirection: 'row' }}>
+                <Text style={{ fontSize: 16, color: colors.mediumGray }}>
+                  Already have an account?{' '}
+                </Text>
+                <Pressable
+                  onPress={() => {
+                    haptics.light();
+                    setShowSignIn(true);
+                  }}
+                  style={({ pressed }) => ({
+                    opacity: pressed ? 0.7 : 1,
+                    alignItems: 'center',
+                  })}
+                >
+                  <Text style={{
+                    fontSize: 16,
+                    color: colors.brandBlue,
+                  }}>
+                    Sign In
                   </Text>
-                </View>
+                </Pressable>
+              </View>
             </View>
           )}
         </View>

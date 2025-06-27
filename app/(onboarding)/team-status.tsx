@@ -76,7 +76,7 @@ export default function TeamStatusScreen() {
                   borderColor: selected === option.value ? '#99E86C' : '#E5E5E5',
                   justifyContent: 'center',
                   alignItems: 'center',
-                  opacity: pressed ? 0.9 : 1,
+                  opacity: pressed ? 0.8 : 1,
                 })}
               >
                 <Text style={{

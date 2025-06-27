@@ -96,7 +96,7 @@ export default function GenderScreen() {
                     borderColor: selectedGender === option.value ? colors.selectedBorder : colors.borderColor,
                     justifyContent: 'center',
                     alignItems: 'center',
-                    opacity: pressed ? 0.9 : 1,
+                    opacity: pressed ? 0.8 : 1,
                   })}
                 >
                   <Text style={{

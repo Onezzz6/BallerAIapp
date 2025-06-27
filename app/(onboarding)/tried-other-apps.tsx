@@ -84,7 +84,7 @@ export default function TriedOtherAppsScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={{
-            gap: 16, // Increased spacing
+            gap: 12, // Increased spacing
           }}>
             {OPTIONS.map((option) => (
               <Pressable
@@ -97,12 +97,12 @@ export default function TriedOtherAppsScreen() {
                   flexDirection: 'row',
                   alignItems: 'center',
                   width: '100%',
-                  padding: 20,
+                  padding: 16,
                   backgroundColor: selected === option.id ? '#99E86C' : '#FFFFFF',
                   borderRadius: 12,
                   borderWidth: 2,
                   borderColor: selected === option.id ? '#99E86C' : '#E5E5E5',
-                  opacity: pressed ? 0.9 : 1,
+                  opacity: pressed ? 0.8 : 1,
                 })}
               >
                 {/* Icon Container */}

@@ -1,12 +1,140 @@
-import { View, Text, SafeAreaView } from 'react-native';
+import { View, Text, SafeAreaView, Image, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
-import Animated, { FadeInRight } from 'react-native-reanimated';
+import Animated, { 
+  FadeInRight, 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withTiming,
+  withRepeat,
+  Easing,
+} from 'react-native-reanimated';
+import { useState, useEffect } from 'react';
 import * as StoreReview from 'expo-store-review';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
+
+// Phone Carousel Component
+const PhoneCarousel: React.FC = () => {
+  // ---- timing configuration ---------------------------------------------
+  const ENTER_MS = 600;   // swift, smooth slide-in
+  const PAUSE_MS = 1200;  // time to glance at the centre (0.5s longer)
+  const EXIT_MS  = 600;   // swift slide-out
+
+  const PHONE_CYCLE = ENTER_MS + PAUSE_MS + EXIT_MS;  // 2 400 ms per phone
+  const PHONE_COUNT = 7;
+  const HANDOFF_OFFSET = ENTER_MS + PAUSE_MS;         // 1 800 ms - when exit starts
+  const TOTAL_MS    = (PHONE_COUNT - 1) * HANDOFF_OFFSET + PHONE_CYCLE; // 13 200 ms - no gap
+
+  // ---- geometry (screen-relative) ---------------------------------------
+  const { width: W, height: H } = Dimensions.get('window');
+  const START_X  =  W / 2 + 150;        // fully off the right edge
+  const END_X    = -W / 2 - 150;        // fully off the left edge
+  const START_Y  =  H / 2 + 250;        // below bottom edge
+  const CENTRE_Y = -H * 0.10;           // slightly above vertical centre
+
+  // ---- single repeating clock (milliseconds) ----------------------------
+  const clock = useSharedValue(0);
+
+  useEffect(() => {
+    // Ensure clock starts at exactly 0 to fix first phone positioning
+    clock.value = 0;
+    
+    clock.value = withRepeat(
+      withTiming(TOTAL_MS, { duration: TOTAL_MS, easing: Easing.linear }),
+      -1, // repeat forever
+      false,
+    );
+  }, []);
+
+  // ---- per-phone transform ----------------------------------------------
+  const makeStyle = (index: number) =>
+    useAnimatedStyle(() => {
+      // local time for this phone in ms - next phone starts when current phone begins exit
+      const tMs = clock.value - index * HANDOFF_OFFSET;
+
+      // outside its active window → keep it hidden (off-screen)
+      if (tMs < 0 || tMs >= PHONE_CYCLE) {
+        return {
+          transform: [
+            { translateX: START_X },
+            { translateY: START_Y },
+            { rotate: '-25deg' },
+          ],
+        } as const;
+      }
+
+      const p = tMs / PHONE_CYCLE; // normalised 0-1 progress
+
+      const enterFrac = ENTER_MS / PHONE_CYCLE;  // ≈ 0.3158
+      const pauseFrac = PAUSE_MS / PHONE_CYCLE;  // ≈ 0.3684
+      // exitFrac implicitly what remains to 1
+
+      let x: number, y: number, r: string, scale: number;
+
+      if (p < enterFrac) {
+        // ↗ entering
+        const q = p / enterFrac; // 0-1
+        x = START_X - START_X * q;                 // START_X → 0
+        y = START_Y - (START_Y - CENTRE_Y) * q;    // START_Y → CENTRE_Y
+        r = `${-25 + 25 * q}deg`;                  // -25° → 0°
+        scale = 1; // Normal size during entry
+      } else if (p < enterFrac + pauseFrac) {
+        // ■ pause with zoom effect
+        x = 0;
+        y = CENTRE_Y;
+        r = '0deg';
+        
+        // Create zoom in/out effect during pause
+        const pauseProgress = (p - enterFrac) / pauseFrac; // 0-1 during pause
+        // Use sine wave for smooth zoom in and out: 0 → 1 → 0
+        const zoomCurve = Math.sin(pauseProgress * Math.PI); // Creates a smooth 0→1→0 curve
+        scale = 1 + (zoomCurve * 0.25); // Scale from 1.0 to 1.25 and back to 1.0 (bigger zoom)
+      } else {
+        // ↙ exiting
+        const q = (p - enterFrac - pauseFrac) / (1 - enterFrac - pauseFrac); // 0-1
+        x = 0 + END_X * q;                       // 0 → END_X
+        y = CENTRE_Y + (START_Y - CENTRE_Y) * q; // CENTRE_Y → START_Y
+        r = `${0 + 25 * q}deg`;                  // 0° → +25°
+        scale = 1; // Normal size during exit
+      }
+
+      return {
+        transform: [
+          { translateX: x },
+          { translateY: y },
+          { rotate: r },
+          { scale: scale },
+        ],
+      } as const;
+    });
+
+  // ---- images ------------------------------------------------------------
+  const phoneImages = [
+    require('../../assets/images/p1.png'),
+    require('../../assets/images/p5.png'), // p5 jumps to second position
+    require('../../assets/images/p2.png'),
+    require('../../assets/images/p3.png'),
+    require('../../assets/images/p4.png'),
+    require('../../assets/images/p6.png'),
+    require('../../assets/images/p7.png'),
+  ];
+
+  return (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
+      {phoneImages.map((img, i) => (
+        <Animated.View
+          key={i}
+          style={[{ position: 'absolute', width: 200, height: 400 }, makeStyle(i)]}
+        >
+          <Image source={img} style={{ width: '100%', height: '100%', borderRadius: 25 }} />
+        </Animated.View>
+      ))}
+    </View>
+  );
+};
 
 export default function ProfileCompleteScreen() {
   const router = useRouter();
@@ -32,7 +160,7 @@ export default function ProfileCompleteScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#ffffff' }}>
       <OnboardingHeader 
         currentStep={28}
         totalSteps={28}
@@ -43,14 +171,13 @@ export default function ProfileCompleteScreen() {
         entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}
         style={{
           flex: 1,
-          backgroundColor: colors.backgroundColor,
+          backgroundColor: '#ffffff',
         }}
       >
-
-        {/* All done badge */}
+        {/* All done badge - positioned higher */}
         <View style={{
           paddingHorizontal: 24,
-          paddingTop: 40,
+          paddingTop: 18,
           alignItems: 'center',
         }}>
           <View style={{
@@ -73,123 +200,40 @@ export default function ProfileCompleteScreen() {
           </View>
         </View>
 
-        {/* Main content */}
-        <View style={{
-          paddingHorizontal: 24,
-          paddingBottom: 64,
-          flex: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}>
-          {/* Success illustration - hand with checkmark */}
-          <View style={{
-            width: 200,
-            height: 200,
-            borderRadius: 100,
-            backgroundColor: 'rgba(34, 197, 94, 0.1)',
-            justifyContent: 'center',
-            alignItems: 'center',
-            marginBottom: 32,
-            position: 'relative',
-          }}>
-            {/* Gradient background circles */}
-            <View style={{
-              position: 'absolute',
-              width: 180,
-              height: 180,
-              borderRadius: 90,
-              backgroundColor: 'rgba(34, 197, 94, 0.15)',
-            }} />
-            <View style={{
-              position: 'absolute',
-              width: 160,
-              height: 160,
-              borderRadius: 80,
-              backgroundColor: 'rgba(34, 197, 94, 0.2)',
-            }} />
-            
-            {/* Hand with checkmark */}
-            <View style={{
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <Text style={{ fontSize: 80 }}>🏆</Text>
-              <View style={{
-                position: 'absolute',
-                bottom: 10,
-                right: 5,
-              }}>
-                <Text style={{ fontSize: 24 }}>✅</Text>
-              </View>
-            </View>
-
-            {/* Success dots around */}
-            {Array.from({ length: 8 }).map((_, index) => {
-              const angle = (index * 45) * (Math.PI / 180);
-              const radius = 85;
-              const x = Math.cos(angle) * radius;
-              const y = Math.sin(angle) * radius;
-              
-              return (
-                <View
-                  key={index}
-                  style={{
-                    position: 'absolute',
-                    left: 100 + x - 3,
-                    top: 100 + y - 3,
-                    width: 6,
-                    height: 6,
-                    borderRadius: 3,
-                    backgroundColor: '#22C55E',
-                    opacity: 0.8,
-                  }}
-                />
-              );
-            })}
-          </View>
-
-          {/* Title */}
-          <Text style={[
-            typography.title,
-            {
-              textAlign: 'center',
-              marginBottom: 16,
-              fontSize: 28,
-            }
-          ]} allowFontScaling={false}>
-            Congrats! Your personalized{'\n'}account is ready
-          </Text>
-
-          {/* Subtitle */}
-          <Text style={[
-            typography.subtitle,
-            {
-              textAlign: 'center',
-              fontSize: 18,
-              color: colors.mediumGray,
-              lineHeight: 24,
-            }
-          ]}>
-            Take the first step towards{'\n'}going pro
-          </Text>
+        {/* Phone Carousel */}
+        <View style={{ flex: 1 }}>
+          <PhoneCarousel />
         </View>
       </Animated.View>
 
-      {/* Static Continue Button - No animation, always in same position */}
+      {/* Bottom component with text and button */}
       <View style={{
         position: 'absolute',
         bottom: 32,
         left: 0,
         right: 0,
         paddingHorizontal: 24,
-        paddingTop: 14,
+        paddingTop: 12,
         paddingBottom: 14,
         backgroundColor: colors.white,
-        borderTopWidth: 1,
-        borderTopColor: colors.veryLightGray,
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
       }}>
+        <Text style={[
+          typography.title,
+          {
+            textAlign: 'center',
+            fontSize: 24,
+            color: colors.black,
+            lineHeight: 28,
+            marginBottom: 20,
+          }
+        ]} allowFontScaling={false}>
+          Your fully personalized{'\n'}account is ready
+        </Text>
+        
         <Button 
-          title="Let's get started" 
+          title="Let's Get Started!" 
           onPress={handleGetStarted}
         />
       </View>
