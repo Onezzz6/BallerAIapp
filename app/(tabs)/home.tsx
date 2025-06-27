@@ -2179,9 +2179,6 @@ export default function HomeScreen() {
             backgroundColor: '#4064F6',
             borderRadius: 24,
             padding: 24,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
             shadowColor: '#000000',
             shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.3,
@@ -2189,25 +2186,36 @@ export default function HomeScreen() {
             elevation: 4,
             borderWidth: 1,
             borderColor: '#E5E5E5',
+            justifyContent: 'center',
+            alignItems: 'center',
             }}
           >
-            <View style={{ flex: 1 }}>
+            <View style={{ alignItems: 'center' }}>
               <Text style={{
                 fontSize: 24,
                 fontWeight: '600',
                 color: '#FFFFFF',
                 marginBottom: 8,
+                textAlign: 'center',
               }}>
-                Ask me a question!
+                Got questions about football?
+              </Text>
+              <Text style={{
+                fontSize: 16,
+                color: '#FFFFFF',
+                opacity: 0.9,
+                marginBottom: 16,
+                textAlign: 'center',
+              }}>
+                Get personalized advice on training, nutrition, recovery, and more
               </Text>
               <Pressable
                 onPress={() => setShowQuestion(true)}
                 style={({ pressed }) => ({
                   backgroundColor: '#FFFFFF',
-                  paddingHorizontal: 20,
-                  paddingVertical: 10,
+                  paddingHorizontal: 24,
+                  paddingVertical: 12,
                   borderRadius: 32,
-                  alignSelf: 'flex-start',
                   opacity: pressed ? 0.8 : 1,
                 })}
               >
@@ -2216,21 +2224,10 @@ export default function HomeScreen() {
                   fontWeight: '600',
                   color: '#4064F6',
                 }}>
-                  Chat with Ballzy
+                  Ask AI Coach
                 </Text>
               </Pressable>
             </View>
-
-            <Image 
-              source={require('../../assets/images/mascot.png')}
-              style={{
-                width: 120,
-                height: 120,
-                marginRight: -24,
-                marginBottom: -24,
-              }}
-              resizeMode="contain"
-            />
           </View>
 
           {/* Question Interface */}
@@ -2253,7 +2250,7 @@ export default function HomeScreen() {
                   fontWeight: '600',
                   color: '#000000',
                 }} allowFontScaling={false}>
-                  Ask Ballzy
+                  Ask AI Coach
                 </Text>
                 <Text style={{
                   color: questionCount >= maxQuestions ? '#FF3B30' : '#666666', 
@@ -3092,28 +3089,30 @@ export default function HomeScreen() {
                 <View style={{ width: 40 }} /> 
                 
                 <View style={{ alignItems: 'center' }}> 
-                  <Image 
-                    source={require('../../assets/images/mascot.png')}
-                    style={{
-                      width: 40,
-                      height: 40,
-                      marginBottom: 4, // Space between mascot and text
-                    }}
-                    resizeMode="contain"
-                  />
+                  <View style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    marginBottom: 4,
+                  }}>
+                    <Ionicons name="chatbubble-ellipses" size={20} color="#FFFFFF" />
+                  </View>
                   <Text style={{
                     fontSize: 18,
                     fontWeight: '600',
                     color: '#FFFFFF',
                   }}>
-                    Ballzy
+                    AI Coach
                   </Text>
                   <Text style={{
                     fontSize: 14,
                     color: '#FFFFFF',
                     opacity: 0.8,
                   }}>
-                    Your personal coach and mentor
+                    Your football training assistant
                   </Text>
                 </View>
                 
@@ -3169,11 +3168,7 @@ export default function HomeScreen() {
                   justifyContent: 'center',
                   alignItems: 'center',
                 }}>
-                  <Image 
-                    source={require('../../assets/images/mascot.png')} // Changed to mascot
-                    style={{ width: 24, height: 24 }} 
-                    resizeMode="contain"
-                  />
+                  <Ionicons name="chatbubble-ellipses" size={20} color="#FFFFFF" />
                 </View>
                 <View style={{
                   flex: 1,
@@ -3192,7 +3187,7 @@ export default function HomeScreen() {
                     color: '#000000',
                     lineHeight: 22,
                   }}>
-                    Hi! I'm Ballzy, your football AI assistant. I can help you with questions about training, nutrition, recovery, mental preparation, tactics, and anything else football-related. What would you like to know?
+                    Hi! I'm your AI football coach. I can help you with questions about training, nutrition, recovery, mental preparation, tactics, and anything else football-related. What would you like to know?
                   </Text>
                 </View>
               </View>
@@ -3242,11 +3237,7 @@ export default function HomeScreen() {
                       justifyContent: 'center',
                       alignItems: 'center',
                     }}>
-                      <Image 
-                        source={require('../../assets/images/mascot.png')}
-                        style={{ width: 24, height: 24 }} 
-                        resizeMode="contain"
-                      />
+                      <Ionicons name="chatbubble-ellipses" size={20} color="#FFFFFF" />
                     </View>
                     <View style={{
                       flex: 1,
