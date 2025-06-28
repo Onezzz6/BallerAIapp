@@ -19,8 +19,8 @@ export default function DominantFootScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
-        currentStep={17}
-        totalSteps={28}
+        currentStep={18}
+        totalSteps={29}
       />
 
       <Animated.View 
@@ -78,7 +78,7 @@ export default function DominantFootScreen() {
                   borderColor: selected === option.value ? '#99E86C' : '#E5E5E5',
                   justifyContent: 'center',
                   alignItems: 'center',
-                  opacity: pressed ? 0.9 : 1,
+                  opacity: pressed ? 0.8 : 1,
                 })}
               >
                 <Text style={{

@@ -50,7 +50,7 @@ export default function GeneratingProfileScreen() {
        // Navigate when animation completes
        setTimeout(async () => {
          await analytics().logEvent('onboarding_profile_generated');
-         router.push('/profile-complete');
+         router.replace('/profile-complete');
        }, totalDuration + 200);
 
              // Update percentage display every 100ms

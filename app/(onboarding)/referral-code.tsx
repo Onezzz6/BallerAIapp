@@ -136,8 +136,8 @@ export default function ReferralCodeScreen() {
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
           <OnboardingHeader 
-            currentStep={23}
-            totalSteps={28}
+            currentStep={24}
+            totalSteps={29}
           />
 
           <Animated.View 

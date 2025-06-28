@@ -73,9 +73,8 @@ export default function MotivationReasonScreen() {
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
           <OnboardingHeader 
-            currentStep={25}
-            totalSteps={28}
-            customBackPath="/social-proof"
+            currentStep={27}
+            totalSteps={29}
           />
 
           <Animated.View 

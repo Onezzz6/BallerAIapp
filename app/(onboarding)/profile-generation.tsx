@@ -170,9 +170,8 @@ export default function ProfileGenerationScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
-        currentStep={26}
-        totalSteps={28}
-        customBackPath="/(onboarding)/motivation-reason"
+        currentStep={28}
+        totalSteps={29}
       />
 
       <Animated.View 

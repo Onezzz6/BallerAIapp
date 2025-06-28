@@ -23,9 +23,8 @@ export default function SocialProofScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
-        currentStep={24}
-        totalSteps={28}
-        customBackPath="/referral-code"
+        currentStep={26}
+        totalSteps={29}
       />
 
       <Animated.View 

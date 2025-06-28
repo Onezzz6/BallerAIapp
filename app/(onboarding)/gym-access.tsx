@@ -27,8 +27,8 @@ export default function GymAccessScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
-        currentStep={22}
-        totalSteps={28}
+        currentStep={23}
+        totalSteps={29}
       />
 
       <Animated.View 

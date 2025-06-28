@@ -18,7 +18,7 @@ export default function NutritionScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
-        currentStep={21}
+        currentStep={22}
         totalSteps={28}
       />
 

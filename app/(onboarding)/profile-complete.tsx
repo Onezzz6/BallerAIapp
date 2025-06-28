@@ -162,9 +162,8 @@ export default function ProfileCompleteScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#ffffff' }}>
       <OnboardingHeader 
-        currentStep={28}
-        totalSteps={28}
-        customBackPath="/(onboarding)/profile-generation"
+        currentStep={29}
+        totalSteps={29}
       />
 
       <Animated.View 

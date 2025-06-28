@@ -18,7 +18,7 @@ export default function TeamStatusScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
-        currentStep={15}
+        currentStep={16}
         totalSteps={28}
       />
 

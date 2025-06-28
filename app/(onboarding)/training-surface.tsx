@@ -37,8 +37,8 @@ export default function TrainingSurfaceScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
-        currentStep={16}
-        totalSteps={28}
+        currentStep={17}
+        totalSteps={29}
       />
 
       <Animated.View 

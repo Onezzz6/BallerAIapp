@@ -19,7 +19,7 @@ export default function SleepHoursScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
-        currentStep={20}
+        currentStep={21}
         totalSteps={28}
       />
 
