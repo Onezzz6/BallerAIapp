@@ -38,7 +38,7 @@ export default function FitnessLevelScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
         currentStep={19}
-        totalSteps={28}
+        totalSteps={29}
       />
 
       <Animated.View 

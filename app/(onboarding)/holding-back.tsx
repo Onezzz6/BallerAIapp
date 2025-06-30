@@ -51,7 +51,7 @@ export default function HoldingBackScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
         currentStep={13}
-        totalSteps={28}
+        totalSteps={29}
       />
 
       <Animated.View 

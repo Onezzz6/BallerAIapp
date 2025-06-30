@@ -1984,32 +1984,45 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
 
       case 'welcome':
         return (
-          <Animated.View 
-            style={styles.welcomeContainer}
-            entering={FadeIn.duration(500)}
-          >
-            <View style={styles.welcomeCard}>
-              <Animated.View 
-                style={styles.welcomeIconContainer}
-                entering={FadeIn.duration(600).delay(200)}
-              >
-                <Ionicons name="football" size={60} color="#4064F6" />
-              </Animated.View>
-              <Text style={styles.welcomeTitle}>Welcome to Training</Text>
-              <Text style={styles.welcomeText}>
-                We'll generate customized training plans for you based on your load and preferences. Let's get started!
-              </Text>
-            </View>
-            <Pressable
-              style={({ pressed }) => [
-                styles.getStartedButton,
-                pressed && { opacity: 0.8 }
-              ]}
-              onPress={() => setCurrentStep('focus')}
+                      <ScrollView 
+              style={{ flex: 1 }}
+              showsVerticalScrollIndicator={false}
+              bounces={true}
+              contentContainerStyle={{
+                flexGrow: 1,
+                justifyContent: 'center',
+                paddingHorizontal: 24,
+                paddingTop: 40,
+                paddingBottom: 120,
+              }}
             >
-              <Text style={styles.getStartedButtonText}>Get Started</Text>
-            </Pressable>
-          </Animated.View>
+            <Animated.View 
+              style={[styles.welcomeContainer, { paddingHorizontal: 0, paddingTop: 0 }]}
+              entering={FadeIn.duration(500)}
+            >
+              <View style={styles.welcomeCard}>
+                <Animated.View 
+                  style={styles.welcomeIconContainer}
+                  entering={FadeIn.duration(600).delay(200)}
+                >
+                  <Ionicons name="football" size={60} color="#4064F6" />
+                </Animated.View>
+                <Text style={styles.welcomeTitle}>Welcome to Training</Text>
+                <Text style={styles.welcomeText}>
+                  We'll generate customized training plans for you based on your load and preferences. Let's get started!
+                </Text>
+              </View>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.getStartedButton,
+                  pressed && { opacity: 0.8 }
+                ]}
+                onPress={() => setCurrentStep('focus')}
+              >
+                <Text style={styles.getStartedButtonText}>Get Started</Text>
+              </Pressable>
+            </Animated.View>
+          </ScrollView>
         );
 
       case 'focus':

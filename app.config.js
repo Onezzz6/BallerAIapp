@@ -3,7 +3,7 @@ export default {
     name: "BallerAI",
     slug: "ballerai",
     scheme: "ballerai",
-    version: "1.0.5",
+    version: "1.0.6",
     orientation: "portrait",
     // ... other config
     icon: "./assets/images/icon.png",
@@ -27,7 +27,7 @@ export default {
     },
     android: {
       package: "com.ballerai.app",
-      versionCode: 28,
+      versionCode: 33,
       googleServicesFile: "./google-services.json",
       adaptiveIcon: {
         foregroundImage: "./assets/images/adaptive-icon.png",
@@ -41,7 +41,7 @@ export default {
     },
     ios: {
       bundleIdentifier: "com.ballerbizoy.ballerai",
-      buildNumber: "28",
+      buildNumber: "33",
       googleServicesFile: "./GoogleService-Info.plist",
       supportsTablet: true,
       infoPlist: {

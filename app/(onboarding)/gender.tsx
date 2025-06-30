@@ -33,7 +33,7 @@ export default function GenderScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
         currentStep={2}
-        totalSteps={28}
+        totalSteps={29}
       />
 
       <Animated.View 

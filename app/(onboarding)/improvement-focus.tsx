@@ -42,7 +42,7 @@ export default function ImprovementFocusScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
         currentStep={10}
-        totalSteps={28}
+        totalSteps={29}
       />
 
       <Animated.View 
