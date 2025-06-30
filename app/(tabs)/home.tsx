@@ -5,19 +5,11 @@ import { AntDesign, Feather, Ionicons } from '@expo/vector-icons';
 import { getDoc, doc, onSnapshot, setDoc, updateDoc, addDoc, increment, serverTimestamp, collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../config/firebase';
-import { shadowProps } from '../constants/Styles';
 import { useNutrition } from '../context/NutritionContext';
 import { useIsFocused } from '@react-navigation/native';
 import CalorieProgress, { showCalorieInfoAlert } from '../components/CalorieProgress';
-import WorkoutCard from '../components/WorkoutCard';
-import StepProgress from '../components/StepProgress';
-import ExerciseCard from '../components/ExerciseCard';
-import WaterIntakeProgress from '../components/WaterIntakeProgress';
-import { useWorkouts } from '../context/WorkoutContext';
-import Carousel from 'react-native-reanimated-carousel';
 import { router } from 'expo-router';
 import { BlurView } from 'expo-blur';
-import { useUserSettings } from '../context/UserSettingsContext';
 import { calculateNutritionGoals } from '../utils/nutritionCalculations';
 import { format, startOfWeek, addDays, subDays } from 'date-fns';
 import { TextInput, ActivityIndicator, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard, Pressable, Modal, Alert, Animated, Linking, NativeModules, ActionSheetIOS } from 'react-native';
@@ -3265,7 +3257,9 @@ export default function HomeScreen() {
               </View>
 
               {/* Conversation History */}
-              {questionHistory.map((item, index) => (
+              {questionHistory
+                .filter(item => item && item.question && item.question.trim() !== '') // Filter out empty or invalid items
+                .map((item, index) => (
                 <View key={index} style={{ marginBottom: 24 }}>
                   {/* User Message */}
                   <View style={{
