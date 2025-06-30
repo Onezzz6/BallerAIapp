@@ -4,6 +4,7 @@ import Purchases, { LOG_LEVEL, CustomerInfo } from 'react-native-purchases';
 import RevenueCatUI, { PAYWALL_RESULT } from "react-native-purchases-ui";
 import CustomButton from '../components/CustomButton';
 import { usePathname } from 'expo-router';
+import { setReferralCode, configureRevenueCat, logInRevenueCatUser } from '../services/revenuecat';
 // Remove import from _layout to fix circular dependency
 // import { isOnOnboardingScreen } from '../_layout';
 
@@ -29,6 +30,7 @@ export function markAuthenticationComplete() {
 export function resetAuthenticationStatus() {
   console.log("⏮️ Authentication status reset - paywall will not be shown until next sign-in");
   hasUserCompletedAuthentication = false;
+  // RevenueCat state reset is handled in the signOut flow
 }
 
 // Local implementation of onboarding screen detection to avoid circular dependency
@@ -95,9 +97,10 @@ export async function checkSubscriptionOnForeground(
   }
 
   try {
-    // 1. Identify the user to ensure we're checking the right account
-    console.log(`STEP 1: Identifying user with RevenueCat: ${userId}`);
-    await Purchases.logIn(userId);
+    // 1. Ensure RevenueCat is configured and user is logged in
+    console.log(`STEP 1: Ensuring RevenueCat is set up for user: ${userId}`);
+    await configureRevenueCat(); // Configure SDK (no-op if already configured)
+    await logInRevenueCatUser(userId); // Ensure correct user is logged in
     
     // 2. Sync purchases to ensure all receipts are associated
     console.log("STEP 2: Syncing purchases with user account...");
@@ -222,16 +225,25 @@ export async function runPostLoginSequence(
   // regardless of what screen the user is on
   
   try {
-    // 1. First identify the user with RevenueCat
-    console.log(`STEP 1: Identifying user with RevenueCat: ${userId}`);
-    await Purchases.logIn(userId);
+    // 1. Ensure RevenueCat SDK is configured and log in user
+    console.log(`STEP 1: Setting up RevenueCat for user: ${userId}`);
+    await configureRevenueCat(); // Configure SDK (first time only)
+    await logInRevenueCatUser(userId); // Log in the specific user
     
-    // 2. Sync any existing Apple receipts
-    console.log("STEP 2: Syncing purchases with user account...");
+    // 2. Set referral code attribute if available
+    if (referralData?.referralCode) {
+      console.log(`STEP 2: Setting referral code attribute in RevenueCat: ${referralData.referralCode}`);
+      await setReferralCode(referralData.referralCode);
+    } else {
+      console.log("STEP 2: No referral code to set in RevenueCat");
+    }
+    
+    // 3. Sync any existing Apple receipts
+    console.log("STEP 3: Syncing purchases with user account...");
     await Purchases.syncPurchases();
     
-    // 3. CRITICAL: Clear the customer info cache to ensure we don't read stale data
-    console.log("STEP 3: Clearing customer info cache...");
+    // 4. CRITICAL: Clear the customer info cache to ensure we don't read stale data
+    console.log("STEP 4: Clearing customer info cache...");
     // This ensures the next getCustomerInfo call will be a true server fetch
     try {
       // Using invalidateCustomerInfoCache() if available
@@ -245,8 +257,8 @@ export async function runPostLoginSequence(
       console.error("Cache clearing error (non-fatal):", cacheError);
     }
     
-    // 4. Force-fetch the latest entitlement state with a true network request
-    console.log("STEP 4: Forcing network fetch of subscription data...");
+    // 5. Force-fetch the latest entitlement state with a true network request
+    console.log("STEP 5: Forcing network fetch of subscription data...");
     
     // Adding a small delay to ensure the cache clear has propagated
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -283,8 +295,8 @@ export async function runPostLoginSequence(
     }
     console.log("=================================================================\n\n");
     
-    // 5. Check if user has the required entitlement using the fresh data
-    console.log("STEP 5: Checking entitlement status with fresh data...");
+    // 6. Check if user has the required entitlement using the fresh data
+    console.log("STEP 6: Checking entitlement status with fresh data...");
     const hasActiveSubscription = !!customerInfo.entitlements.active[ENTITLEMENT_ID];
     console.log(`Subscription status from server: ${hasActiveSubscription ? "ACTIVE ✓" : "INACTIVE ✗"}`);
     
@@ -295,8 +307,8 @@ export async function runPostLoginSequence(
       return;
     }
     
-    // 6. Only if truly no subscription, show paywall ONCE
-    console.log("STEP 6: No active subscription confirmed, showing paywall...");
+    // 7. Only if truly no subscription, show paywall ONCE
+    console.log("STEP 7: No active subscription confirmed, showing paywall...");
     
     // Check if this is a post-onboarding flow with valid referral code
     const hasValidReferralCode = referralData && 
@@ -318,7 +330,7 @@ export async function runPostLoginSequence(
     let paywallResult;
     
     // First, get offerings to specify which one to show
-    console.log("STEP 6a: Fetching offerings...");
+    console.log("STEP 7a: Fetching offerings...");
     const offerings = await Purchases.getOfferings();
     
     if (hasValidReferralCode) {
@@ -358,11 +370,11 @@ export async function runPostLoginSequence(
     // Reset paywall presented flag
     isPaywallCurrentlyPresented = false;
     
-    // 7. Handle paywall result with appropriate navigation
+    // 8. Handle paywall result with appropriate navigation
     if (paywallResult === PAYWALL_RESULT.PURCHASED || 
         paywallResult === PAYWALL_RESULT.RESTORED) {
       // Get fresh info after purchase
-      console.log("STEP 7: Purchase/restore successful, refreshing data...");
+      console.log("STEP 8: Purchase/restore successful, refreshing data...");
       await Purchases.getCustomerInfo();
       
       // Log analytics for referral code success
@@ -374,7 +386,7 @@ export async function runPostLoginSequence(
       console.log("Navigating to home screen after successful purchase");
       navigateToHome();
     } else if (paywallResult === PAYWALL_RESULT.CANCELLED) {
-      console.log("STEP 7: Paywall cancelled by user");
+      console.log("STEP 8: Paywall cancelled by user");
       
       // Log analytics for referral code cancellation
       if (hasValidReferralCode) {

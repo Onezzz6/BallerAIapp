@@ -3,6 +3,7 @@ import { auth } from '../config/firebase';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import authService from '../services/auth';
 import { resetAuthenticationStatus } from '../(onboarding)/paywall';
+import { resetRevenueCatState, logOutRevenueCatUser } from '../services/revenuecat';
 
 interface AuthContextType {
   user: User | null;
@@ -33,10 +34,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
+      // Log out RevenueCat user first
+      await logOutRevenueCatUser();
+      
+      // Then sign out from Firebase
       await authService.signOut();
       
       // Reset authentication status when user signs out
       resetAuthenticationStatus();
+      
+      // Reset RevenueCat user state (clears pending attributes, keeps SDK configured)
+      resetRevenueCatState();
       
       setUser(null);
     } catch (error) {

@@ -23,6 +23,9 @@ import Purchases, { CustomerInfo } from 'react-native-purchases';
 import { PAYWALL_RESULT } from 'react-native-purchases-ui';
 import { checkSubscriptionOnForeground } from './(onboarding)/paywall';
 import { initializeAppsFlyer, cleanupAppsFlyer } from './config/appsflyer';
+import { configureRevenueCat, logInRevenueCatUser, setReferralCode } from './services/revenuecat';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from './config/firebase';
 
 // Create a context for subscription state
 type SubscriptionContextType = {
@@ -51,6 +54,15 @@ function SubscriptionProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const currentPathRef = useRef(pathname);
   const isInOnboardingRef = useRef(false);
+  const customerInfoListenerSetup = useRef<boolean>(false);
+  
+  // Reset listener setup when user changes (including logout)
+  useEffect(() => {
+    if (!user) {
+      // User logged out, reset listener setup for next login
+      customerInfoListenerSetup.current = false;
+    }
+  }, [user]);
   
   // Update currentPathRef when pathname changes
   useEffect(() => {
@@ -80,56 +92,78 @@ function SubscriptionProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Initialize RevenueCat and set up listeners
+  // Check API key availability on startup
   useEffect(() => {
-    if (Platform.OS === 'ios') {
-      const apiKey = process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY;
-      if (apiKey) {
-        Purchases.configure({ apiKey });
-        console.log('RevenueCat SDK configured for iOS with API key from env');
-        
-        // Set up CustomerInfo update listener
-        const customerInfoUpdateListener = Purchases.addCustomerInfoUpdateListener((info) => {
-          setCustomerInfo(info);
-          console.log("CustomerInfo updated:", 
-            info.entitlements.active["BallerAISubscriptionGroup"] ? "ACTIVE" : "INACTIVE");
-        });
-        
-        // Initial fetch of subscription data
-        refreshSubscriptionStatus();
-        
-        // No cleanup needed for AppState listener in this implementation
-        // RevenueCat listeners are automatically cleaned up when the component unmounts
-        return () => {
-          // Cleanup is handled automatically
-          console.log("Cleaning up RevenueCat listeners");
-        };
-      } else {
-        console.error('RevenueCat iOS API key not found in environment variables.');
-        Alert.alert("Configuration Error", "In-app purchases are currently unavailable. Missing API Key.");
-      }
+    const apiKey = Platform.OS === 'ios' 
+      ? process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY
+      : process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY;
+      
+    if (!apiKey) {
+      console.error(`RevenueCat ${Platform.OS} API key not found in environment variables.`);
+      Alert.alert("Configuration Error", "In-app purchases are currently unavailable. Missing API Key.");
+    } else {
+      console.log('RevenueCat API key found - will configure when user authenticates');
     }
   }, []);
 
-  // When user changes, identify them with RevenueCat and sync purchases
+  // When user changes, configure RevenueCat with Firebase UID and sync purchases
   useEffect(() => {
     const identifyUser = async () => {
       if (user && user.uid) {
         try {
-          console.log(`==== IDENTIFYING USER WITH REVENUECAT: ${user.uid} ====`);
+          console.log(`==== SETTING UP REVENUECAT FOR USER: ${user.uid} ====`);
           
-          // Step 1: Identify the user with RevenueCat
-          await Purchases.logIn(user.uid);
-          console.log("RevenueCat user identification complete");
+          // Reset listener setup flag for new user (in case previous user was signed out without cleanup)
+          customerInfoListenerSetup.current = false;
           
-          // Step 2: Sync purchases to ensure all receipts are associated with this user
+          // Step 1: Ensure RevenueCat SDK is configured (first time) or log in user (subsequent times)
+          await configureRevenueCat(); // Configure SDK without user ID (first time only)
+          await logInRevenueCatUser(user.uid); // Log in the specific user
+          console.log("RevenueCat user session established");
+          
+          // Step 2: Set up CustomerInfo update listener (must be after configuration)
+          // Only set up listener once per session
+          if (!customerInfoListenerSetup.current) {
+            Purchases.addCustomerInfoUpdateListener((info) => {
+              setCustomerInfo(info);
+              console.log("CustomerInfo updated:", 
+                info.entitlements.active["BallerAISubscriptionGroup"] ? "ACTIVE" : "INACTIVE");
+            });
+            customerInfoListenerSetup.current = true;
+            console.log("CustomerInfo listener registered");
+          }
+          
+          // Step 3: Sync purchases to ensure all receipts are associated with this user
           await Purchases.syncPurchases();
           console.log("Purchase sync complete");
           
-          // Step 3: Force a fresh fetch of subscription data
+          // Step 4: Force a fresh fetch of subscription data
           console.log("Fetching fresh subscription data after identification");
           const info = await Purchases.getCustomerInfo();
           setCustomerInfo(info);
+          
+          // Step 5: Load and sync existing referral code from Firestore to RevenueCat
+          try {
+            console.log("Step 5: Checking for existing referral code in Firestore...");
+            const userDoc = await getDoc(doc(db, 'users', user.uid));
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              if (userData.referralCode) {
+                console.log(`Found existing referral code: ${userData.referralCode}, syncing to RevenueCat`);
+                await setReferralCode(userData.referralCode);
+              } else {
+                console.log("No referral code found in user document");
+              }
+            } else {
+              console.log("User document not found");
+            }
+          } catch (error) {
+            console.error("Error syncing existing referral code:", error);
+            // Don't fail the identification sequence if referral code sync fails
+          }
+          
+          // Step 6: Initial fetch of subscription data for the UI
+          await refreshSubscriptionStatus();
           
           // Log subscription status for debugging
           const hasActiveSubscription = !!info.entitlements.active["BallerAISubscriptionGroup"];

@@ -20,8 +20,19 @@ service cloud.firestore {
     // User profiles and personal data
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow write, delete: if isOwner(userId);
+      allow delete: if isOwner(userId);
       allow create: if isSignedIn() && request.auth.uid == userId;
+      
+      // Allow updates but protect subscription and referralCode fields
+      allow update: if isOwner(userId) && 
+        // Prevent clients from writing subscription field (webhook/admin only)
+        (!('subscription' in request.resource.data) || 
+         request.resource.data.subscription == resource.data.subscription) &&
+        // Prevent clients from writing referralCode field after initial creation (webhook/admin only)
+        // Note: To allow referral code changes before purchase, modify this rule to check if subscription is null
+        (!('referralCode' in request.resource.data) || 
+         request.resource.data.referralCode == resource.data.referralCode ||
+         !('referralCode' in resource.data)); // Allow setting referralCode if it doesn't exist yet
       
       // Allow batch operations for all subcollections
       match /{collection}/{doc} {

@@ -10,6 +10,7 @@ import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { validateReferralCode, createSuccessMessage } from '../services/referralCode';
+import { setReferralCode } from '../services/revenuecat';
 
 export default function ReferralCodeScreen() {
   const router = useRouter();
@@ -33,6 +34,9 @@ export default function ReferralCodeScreen() {
       setIsValid(true);
       setHasSubmitted(true);
       setValidationMessage(createSuccessMessage(onboardingData.referralDiscount, onboardingData.referralInfluencer));
+      
+      // Ensure the referral code is also set in RevenueCat (idempotent operation)
+      setReferralCode(onboardingData.referralCode);
     }
   }, [onboardingData.referralCode, onboardingData.referralDiscount, onboardingData.referralInfluencer]);
 
@@ -84,18 +88,23 @@ export default function ReferralCodeScreen() {
         setIsValid(true);
         setValidationMessage(createSuccessMessage(result.discount, result.influencer));
         
+        const validatedCode = referralCode.trim().toUpperCase();
+        
         await analytics().logEvent('onboarding_referral_code_valid', {
-          code: referralCode.trim().toUpperCase(),
+          code: validatedCode,
           discount: result.discount,
           influencer: result.influencer
         });
 
-        // Save the validated referral data
+        // Save the validated referral data to Firestore
         await updateOnboardingData({ 
-          referralCode: referralCode.trim().toUpperCase(),
+          referralCode: validatedCode,
           referralDiscount: result.discount,
           referralInfluencer: result.influencer
         });
+
+        // Set the referral code as a subscriber attribute in RevenueCat
+        await setReferralCode(validatedCode);
 
       } else {
         // Error - code is invalid
