@@ -20,6 +20,19 @@ export default function MotivationReasonScreen() {
   // Animated value for button bottom position
   const buttonBottomPosition = useRef(new RNAnimated.Value(32)).current;
 
+  // Log motivation reason screen event when screen loads
+  useEffect(() => {
+    const logMotivationReasonEvent = async () => {
+      try {
+        await analytics().logEvent('26motivation');
+        console.log("Analytics event '26motivation' logged.");
+      } catch (error) {
+        console.error("Error logging '26motivation' event:", error);
+      }
+    };
+    logMotivationReasonEvent();
+  }, []);
+
   // Update local state when onboardingData changes
   useEffect(() => {
     setMotivation(onboardingData.motivation || '');

@@ -1,6 +1,7 @@
 import { View, Text, Image, ScrollView, SafeAreaView } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInRight, FadeInUp } from 'react-native-reanimated';
+import { useEffect } from 'react';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import analytics from '@react-native-firebase/analytics';
@@ -10,6 +11,19 @@ import { useHaptics } from '../utils/haptics';
 export default function SocialProofScreen() {
   const router = useRouter();
   const haptics = useHaptics();
+
+  // Log social proof screen event when screen loads
+  useEffect(() => {
+    const logSocialProofEvent = async () => {
+      try {
+        await analytics().logEvent('25proof');
+        console.log("Analytics event '25proof' logged.");
+      } catch (error) {
+        console.error("Error logging '25proof' event:", error);
+      }
+    };
+    logSocialProofEvent();
+  }, []);
 
   const socialProofImages = [
     require('../../assets/images/r1.png'),

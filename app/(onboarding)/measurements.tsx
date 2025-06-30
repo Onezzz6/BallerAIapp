@@ -4,7 +4,7 @@ import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Picker } from '@react-native-picker/picker';
 import analytics from '@react-native-firebase/analytics';
 import { colors, typography, spacing } from '../utils/theme';
@@ -15,6 +15,19 @@ export default function MeasurementsScreen() {
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [isMetric, setIsMetric] = useState(true);
+
+  // Log measurements screen event when screen loads
+  useEffect(() => {
+    const logMeasurementsEvent = async () => {
+      try {
+        await analytics().logEvent('7measurements');
+        console.log("Analytics event '7measurements' logged.");
+      } catch (error) {
+        console.error("Error logging '7measurements' event:", error);
+      }
+    };
+    logMeasurementsEvent();
+  }, []);
   const [height, setHeight] = useState(parseInt(onboardingData.height || '') || 170);
   const [weight, setWeight] = useState(parseInt(onboardingData.weight || '') || 70);
   const [feet, setFeet] = useState(5);

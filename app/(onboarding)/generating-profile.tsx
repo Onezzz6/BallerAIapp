@@ -37,6 +37,19 @@ export default function GeneratingProfileScreen() {
   const [currentStatus, setCurrentStatus] = useState(STATUS_MESSAGES[0]);
   const [steps, setSteps] = useState(GENERATION_STEPS);
 
+  // Log generating profile screen event when screen loads
+  useEffect(() => {
+    const logGeneratingProfileEvent = async () => {
+      try {
+        await analytics().logEvent('28generating');
+        console.log("Analytics event '28generating' logged.");
+      } catch (error) {
+        console.error("Error logging '28generating' event:", error);
+      }
+    };
+    logGeneratingProfileEvent();
+  }, []);
+
   useEffect(() => {
     const startGeneration = async () => {
       // Total duration: 8 seconds (much slower like reference)

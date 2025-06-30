@@ -4,7 +4,7 @@ import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ScrollIfNeeded from '../components/ScrollIfNeeded';
 import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
@@ -15,6 +15,19 @@ export default function DominantFootScreen() {
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(onboardingData.dominantFoot);
+
+  // Log dominant foot screen event when screen loads
+  useEffect(() => {
+    const logDominantFootEvent = async () => {
+      try {
+        await analytics().logEvent('18foot');
+        console.log("Analytics event '18foot' logged.");
+      } catch (error) {
+        console.error("Error logging '18foot' event:", error);
+      }
+    };
+    logDominantFootEvent();
+  }, []);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>

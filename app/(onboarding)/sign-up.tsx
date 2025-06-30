@@ -25,6 +25,19 @@ export default function SignUpScreen() {
   const [isAppleAvailable, setIsAppleAvailable] = useState(false);
   const { onboardingData } = useOnboarding();
 
+  // Log sign up screen event when screen loads
+  useEffect(() => {
+    const logSignUpEvent = async () => {
+      try {
+        await analytics().logEvent('30signup');
+        console.log("Analytics event '30signup' logged.");
+      } catch (error) {
+        console.error("Error logging '30signup' event:", error);
+      }
+    };
+    logSignUpEvent();
+  }, []);
+
   // Check if Apple authentication is available on this device
   useEffect(() => {
     const checkAppleAuthAvailability = async () => {
@@ -52,6 +65,8 @@ export default function SignUpScreen() {
       const user = await authService.signUpWithEmail(email, password, onboardingData);
       if (user) {
         await analytics().logEvent('onboarding_signup_complete');
+        await analytics().logEvent('31signedup');
+        console.log("Analytics event '31signedup' logged for email signup.");
         
         // Mark authentication as complete after successful sign-up
         markAuthenticationComplete();
@@ -159,6 +174,8 @@ export default function SignUpScreen() {
       } else {
         console.log("User needs a document created before going through paywall");
         await analytics().logEvent('onboarding_apple_signup_complete');
+        await analytics().logEvent('31signedup');
+        console.log("Analytics event '31signedup' logged for Apple signup.");
 
         try {
           const userDocRef = doc(db, "users", user.uid);

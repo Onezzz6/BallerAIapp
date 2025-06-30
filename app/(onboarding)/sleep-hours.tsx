@@ -4,7 +4,7 @@ import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Picker } from '@react-native-picker/picker';
 import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
@@ -15,6 +15,19 @@ export default function SleepHoursScreen() {
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(onboardingData.sleepHours || '8');
+
+  // Log sleep hours screen event when screen loads
+  useEffect(() => {
+    const logSleepHoursEvent = async () => {
+      try {
+        await analytics().logEvent('21sleep');
+        console.log("Analytics event '21sleep' logged.");
+      } catch (error) {
+        console.error("Error logging '21sleep' event:", error);
+      }
+    };
+    logSleepHoursEvent();
+  }, []);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>

@@ -4,7 +4,7 @@ import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
@@ -42,6 +42,19 @@ export default function ActivityLevelScreen() {
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(onboardingData.activityLevel);
+
+  // Log activity level screen event when screen loads
+  useEffect(() => {
+    const logActivityLevelEvent = async () => {
+      try {
+        await analytics().logEvent('20activity');
+        console.log("Analytics event '20activity' logged.");
+      } catch (error) {
+        console.error("Error logging '20activity' event:", error);
+      }
+    };
+    logActivityLevelEvent();
+  }, []);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>

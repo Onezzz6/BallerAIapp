@@ -17,6 +17,7 @@ import Animated, {
   withDelay,
 } from 'react-native-reanimated';
 import { useEffect } from 'react';
+import analytics from '@react-native-firebase/analytics';
 import Svg, {
   Path,
   Rect,
@@ -221,6 +222,19 @@ function DevelopmentChart({
 export default function AnalyzingScreen() {
   const router  = useRouter();
   const haptics = useHaptics();
+
+  // Log analyzing screen event when screen loads
+  useEffect(() => {
+    const logAnalyzingEvent = async () => {
+      try {
+        await analytics().logEvent('6results');
+        console.log("Analytics event '6results' logged.");
+      } catch (error) {
+        console.error("Error logging '6results' event:", error);
+      }
+    };
+    logAnalyzingEvent();
+  }, []);
 
   /* Caption fade-in */
   const captionOpacity = useSharedValue(0);

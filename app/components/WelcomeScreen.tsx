@@ -17,6 +17,7 @@ import { runPostLoginSequence, markAuthenticationComplete } from '../(onboarding
 import { requestAppTrackingPermission } from '../utils/tracking';
 import { colors, typography, spacing } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
+import analytics from '@react-native-firebase/analytics';
 
 // Default empty onboarding data
 const defaultOnboardingData = {
@@ -169,6 +170,19 @@ export default function WelcomeScreen() {
   const [showResetModal, setShowResetModal] = useState(false);
 
 
+
+  // Log welcome event when screen loads
+  useEffect(() => {
+    const logWelcomeEvent = async () => {
+      try {
+        await analytics().logEvent('1welcome');
+        console.log("Analytics event '1welcome' logged.");
+      } catch (error) {
+        console.error("Error logging '1welcome' event:", error);
+      }
+    };
+    logWelcomeEvent();
+  }, []);
 
   // Request ATT permission after slight delay
   useEffect(() => {

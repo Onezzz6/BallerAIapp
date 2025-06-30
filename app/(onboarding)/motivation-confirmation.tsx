@@ -4,6 +4,7 @@ import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
+import { useEffect } from 'react';
 import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
@@ -12,6 +13,19 @@ export default function MotivationConfirmationScreen() {
   const router = useRouter();
   const haptics = useHaptics();
   const { onboardingData } = useOnboarding();
+
+  // Log motivation confirmation screen event when screen loads
+  useEffect(() => {
+    const logMotivationEvent = async () => {
+      try {
+        await analytics().logEvent('12achievable');
+        console.log("Analytics event '12achievable' logged.");
+      } catch (error) {
+        console.error("Error logging '12achievable' event:", error);
+      }
+    };
+    logMotivationEvent();
+  }, []);
 
   const handleContinue = async () => {
     console.log('Continue button pressed on motivation-confirmation');

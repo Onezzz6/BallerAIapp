@@ -4,7 +4,7 @@ import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
@@ -14,6 +14,19 @@ export default function NutritionScreen() {
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [focusedOnNutrition, setFocusedOnNutrition] = useState<boolean | null>(onboardingData.nutrition === 'true' ? true : onboardingData.nutrition === 'false' ? false : null);
+
+  // Log nutrition screen event when screen loads
+  useEffect(() => {
+    const logNutritionEvent = async () => {
+      try {
+        await analytics().logEvent('22nutrition');
+        console.log("Analytics event '22nutrition' logged.");
+      } catch (error) {
+        console.error("Error logging '22nutrition' event:", error);
+      }
+    };
+    logNutritionEvent();
+  }, []);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>

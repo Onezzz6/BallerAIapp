@@ -2,11 +2,16 @@ import { doc, getDoc, updateDoc, setDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../config/firebase';
 // import * as InAppPurchases from 'expo-in-app-purchases'; // Comment out InAppPurchases
 
-// Product IDs for subscription plans
+// Product IDs for subscription plans - includes both regular and referral products
 export const PRODUCT_IDS = {
   '1month': 'BallerAIOneMonth',
-  '12months': 'BallerAIOneYear'
+  '12months': 'BallerAIOneYear',
+  '1month_referral': 'BallerAIOneMonthReferral',
+  '12months_referral': 'BallerAIOneYearReferral'
 };
+
+// All product IDs as an array for RevenueCat configuration
+export const ALL_PRODUCT_IDS = Object.values(PRODUCT_IDS);
 
 // Subscription status types
 export type SubscriptionStatus = 'active' | 'expired' | 'cancelled' | 'none';

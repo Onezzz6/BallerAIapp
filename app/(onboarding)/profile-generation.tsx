@@ -19,6 +19,19 @@ export default function ProfileGenerationScreen() {
   const router = useRouter();
   const haptics = useHaptics();
   
+  // Log profile generation screen event when screen loads
+  useEffect(() => {
+    const logProfileGenerationEvent = async () => {
+      try {
+        await analytics().logEvent('27generation');
+        console.log("Analytics event '27generation' logged.");
+      } catch (error) {
+        console.error("Error logging '27generation' event:", error);
+      }
+    };
+    logProfileGenerationEvent();
+  }, []);
+  
   // Animation values for dynamic magic wand
   const wandScale = useSharedValue(1);
   const wandRotation = useSharedValue(0);

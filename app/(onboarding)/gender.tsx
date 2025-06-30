@@ -4,7 +4,7 @@ import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import analytics from '@react-native-firebase/analytics';
 import { colors, typography, spacing } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
@@ -14,6 +14,19 @@ export default function GenderScreen() {
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selectedGender, setSelectedGender] = useState(onboardingData.gender || '');
+
+  // Log gender screen event when screen loads
+  useEffect(() => {
+    const logGenderEvent = async () => {
+      try {
+        await analytics().logEvent('2gender');
+        console.log("Analytics event '2gender' logged.");
+      } catch (error) {
+        console.error("Error logging '2gender' event:", error);
+      }
+    };
+    logGenderEvent();
+  }, []);
 
   const handleGenderSelect = (gender: string) => {
     haptics.light();

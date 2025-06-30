@@ -4,7 +4,7 @@ import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import { Picker } from '@react-native-picker/picker';
 import analytics from '@react-native-firebase/analytics';
@@ -15,6 +15,19 @@ export default function AgeScreen() {
   const router = useRouter();
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
+  
+  // Log age screen event when screen loads
+  useEffect(() => {
+    const logAgeEvent = async () => {
+      try {
+        await analytics().logEvent('8age');
+        console.log("Analytics event '8age' logged.");
+      } catch (error) {
+        console.error("Error logging '8age' event:", error);
+      }
+    };
+    logAgeEvent();
+  }, []);
   
   // Parse existing age or set defaults
   const existingAge = onboardingData.age ? parseInt(onboardingData.age) : null;

@@ -4,7 +4,7 @@ import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
@@ -14,6 +14,19 @@ export default function GymAccessScreen() {
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selected, setSelected] = useState<boolean | null>(onboardingData.hasGymAccess);
+
+  // Log gym access screen event when screen loads
+  useEffect(() => {
+    const logGymAccessEvent = async () => {
+      try {
+        await analytics().logEvent('23gym');
+        console.log("Analytics event '23gym' logged.");
+      } catch (error) {
+        console.error("Error logging '23gym' event:", error);
+      }
+    };
+    logGymAccessEvent();
+  }, []);
 
   const handleContinue = async () => {
     if (selected !== null) {
