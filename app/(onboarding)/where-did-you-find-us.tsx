@@ -94,23 +94,10 @@ export default function WhereDidYouFindUsScreen() {
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(onboardingData.discoverySource);
 
-  // Log find us screen event when screen loads
-  useEffect(() => {
-    const logFindUsEvent = async () => {
-      try {
-        await analytics().logEvent('4findus');
-        console.log("Analytics event '4findus' logged.");
-      } catch (error) {
-        console.error("Error logging '4findus' event:", error);
-      }
-    };
-    logFindUsEvent();
-  }, []);
-
   const handleContinue = async () => {
     if (selected) {
       haptics.light();
-      await analytics().logEvent('onboarding_discovery_source_continue');
+      await analytics().logEvent('04_find_us_continue');
       await updateOnboardingData({ discoverySource: selected });
       router.push('/tried-other-apps');
     }

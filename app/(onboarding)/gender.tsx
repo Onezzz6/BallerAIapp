@@ -15,19 +15,6 @@ export default function GenderScreen() {
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selectedGender, setSelectedGender] = useState(onboardingData.gender || '');
 
-  // Log gender screen event when screen loads
-  useEffect(() => {
-    const logGenderEvent = async () => {
-      try {
-        await analytics().logEvent('2gender');
-        console.log("Analytics event '2gender' logged.");
-      } catch (error) {
-        console.error("Error logging '2gender' event:", error);
-      }
-    };
-    logGenderEvent();
-  }, []);
-
   const handleGenderSelect = (gender: string) => {
     haptics.light();
     setSelectedGender(gender);
@@ -36,7 +23,7 @@ export default function GenderScreen() {
   const handleContinue = async () => {
     if (selectedGender) {
       haptics.light();
-      await analytics().logEvent('onboarding_gender_continue');
+      await analytics().logEvent('02_gender_continue');
       await updateOnboardingData({ gender: selectedGender });
       router.push('/training-frequency');
     }

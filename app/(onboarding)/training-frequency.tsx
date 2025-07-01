@@ -34,23 +34,10 @@ export default function TrainingFrequencyScreen() {
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(onboardingData.trainingFrequency);
 
-  // Log training frequency screen event when screen loads
-  useEffect(() => {
-    const logTrainingFrequencyEvent = async () => {
-      try {
-        await analytics().logEvent('3trainingfrequency');
-        console.log("Analytics event '3trainingfrequency' logged.");
-      } catch (error) {
-        console.error("Error logging '3trainingfrequency' event:", error);
-      }
-    };
-    logTrainingFrequencyEvent();
-  }, []);
-
   const handleContinue = async () => {
     if (selected) {
       haptics.light();
-      await analytics().logEvent('onboarding_training_frequency_continue');
+      await analytics().logEvent('03_training_frequency_continue');
       await updateOnboardingData({ trainingFrequency: selected });
       router.push('/where-did-you-find-us');
     }

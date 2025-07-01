@@ -43,19 +43,6 @@ export default function ActivityLevelScreen() {
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(onboardingData.activityLevel);
 
-  // Log activity level screen event when screen loads
-  useEffect(() => {
-    const logActivityLevelEvent = async () => {
-      try {
-        await analytics().logEvent('20activity');
-        console.log("Analytics event '20activity' logged.");
-      } catch (error) {
-        console.error("Error logging '20activity' event:", error);
-      }
-    };
-    logActivityLevelEvent();
-  }, []);
-
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
@@ -153,7 +140,7 @@ export default function ActivityLevelScreen() {
           onPress={async () => {
             if (selected) {
               haptics.light();
-              await analytics().logEvent('onboarding_activity_level_continue');
+              await analytics().logEvent('20_activity_level_continue');
               await updateOnboardingData({ activityLevel: selected });
               router.push('/sleep-hours');
             }

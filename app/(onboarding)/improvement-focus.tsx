@@ -38,19 +38,6 @@ export default function ImprovementFocusScreen() {
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(onboardingData.improvementFocus);
 
-  // Log improvement focus screen event when screen loads
-  useEffect(() => {
-    const logImprovementEvent = async () => {
-      try {
-        await analytics().logEvent('10improve');
-        console.log("Analytics event '10improve' logged.");
-      } catch (error) {
-        console.error("Error logging '10improve' event:", error);
-      }
-    };
-    logImprovementEvent();
-  }, []);
-
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
@@ -141,7 +128,7 @@ export default function ImprovementFocusScreen() {
           onPress={async () => {
             if (selected) {
               haptics.light();
-              await analytics().logEvent('onboarding_improvement_focus_continue');
+              await analytics().logEvent('10_improvement_focus_continue');
               await updateOnboardingData({ improvementFocus: selected });
               router.push('/goal-timeline');
             }

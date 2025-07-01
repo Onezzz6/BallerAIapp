@@ -34,19 +34,6 @@ export default function FitnessLevelScreen() {
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(onboardingData.fitnessLevel);
 
-  // Log fitness level screen event when screen loads
-  useEffect(() => {
-    const logFitnessLevelEvent = async () => {
-      try {
-        await analytics().logEvent('19fitness');
-        console.log("Analytics event '19fitness' logged.");
-      } catch (error) {
-        console.error("Error logging '19fitness' event:", error);
-      }
-    };
-    logFitnessLevelEvent();
-  }, []);
-
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
@@ -137,7 +124,7 @@ export default function FitnessLevelScreen() {
           onPress={async () => {
             if (selected) {
               haptics.light();
-              await analytics().logEvent('onboarding_fitness_level_continue');
+              await analytics().logEvent('19_fitness_level_continue');
               await updateOnboardingData({ fitnessLevel: selected });
               router.push('/activity-level');
             }

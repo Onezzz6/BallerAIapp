@@ -34,19 +34,6 @@ export default function TrainingSurfaceScreen() {
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(onboardingData.trainingSurface);
 
-  // Log training surface screen event when screen loads
-  useEffect(() => {
-    const logTrainingSurfaceEvent = async () => {
-      try {
-        await analytics().logEvent('17surface');
-        console.log("Analytics event '17surface' logged.");
-      } catch (error) {
-        console.error("Error logging '17surface' event:", error);
-      }
-    };
-    logTrainingSurfaceEvent();
-  }, []);
-
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
@@ -137,7 +124,7 @@ export default function TrainingSurfaceScreen() {
           onPress={async () => {
             if (selected) {
               haptics.light();
-              await analytics().logEvent('onboarding_training_surface_continue');
+              await analytics().logEvent('17_training_surface_continue');
               await updateOnboardingData({ trainingSurface: selected });
               router.push('/dominant-foot');
             }

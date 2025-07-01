@@ -289,19 +289,6 @@ export default function EncouragementScreen() {
   const router  = useRouter();
   const haptics = useHaptics();
 
-  // Log encouragement screen event when screen loads
-  useEffect(() => {
-    const logEncouragementEvent = async () => {
-      try {
-        await analytics().logEvent('15thankyou');
-        console.log("Analytics event '15thankyou' logged.");
-      } catch (error) {
-        console.error("Error logging '15thankyou' event:", error);
-      }
-    };
-    logEncouragementEvent();
-  }, []);
-
   /* Caption fade-in */
   const captionOpacity = useSharedValue(0);
   const captionStyle   = useAnimatedStyle(() => ({
@@ -425,11 +412,11 @@ export default function EncouragementScreen() {
           title="Let's Do This!"
           onPress={async () => {
             haptics.light();
-            await analytics().logEvent('onboarding_encouragement_continue');
+            await analytics().logEvent('15_thank_you_for_trusting_us_continue');
             router.push('/team-status');
           }}
         />
       </View>
     </SafeAreaView>
   );
-} 
+}

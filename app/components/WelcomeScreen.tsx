@@ -175,10 +175,10 @@ export default function WelcomeScreen() {
   useEffect(() => {
     const logWelcomeEvent = async () => {
       try {
-        await analytics().logEvent('1welcome');
-        console.log("Analytics event '1welcome' logged.");
+        await analytics().logEvent('01_welcome');
+        console.log("Analytics event '01_welcome' logged.");
       } catch (error) {
-        console.error("Error logging '1welcome' event:", error);
+        console.error("Error logging '01_welcome' event:", error);
       }
     };
     logWelcomeEvent();
@@ -213,6 +213,7 @@ export default function WelcomeScreen() {
 
   const handleGetStarted = () => {
     haptics.light();
+    analytics().logEvent('01_welcome_get_started');
     router.push('/(onboarding)/gender');
   };
 

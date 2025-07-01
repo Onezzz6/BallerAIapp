@@ -34,23 +34,10 @@ export default function GoalTimelineScreen() {
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(onboardingData.goalTimeline || null);
 
-  // Log goal timeline screen event when screen loads
-  useEffect(() => {
-    const logGoalEvent = async () => {
-      try {
-        await analytics().logEvent('11goal');
-        console.log("Analytics event '11goal' logged.");
-      } catch (error) {
-        console.error("Error logging '11goal' event:", error);
-      }
-    };
-    logGoalEvent();
-  }, []);
-
   const handleContinue = async () => {
     if (selected) {
       haptics.light();
-      await analytics().logEvent('onboarding_goal_timeline_continue');
+      await analytics().logEvent('11_goal_timeline_continue');
       await updateOnboardingData({ goalTimeline: selected });
       router.push('/motivation-confirmation');
     }

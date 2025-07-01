@@ -16,19 +16,6 @@ export default function AgeScreen() {
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   
-  // Log age screen event when screen loads
-  useEffect(() => {
-    const logAgeEvent = async () => {
-      try {
-        await analytics().logEvent('8age');
-        console.log("Analytics event '8age' logged.");
-      } catch (error) {
-        console.error("Error logging '8age' event:", error);
-      }
-    };
-    logAgeEvent();
-  }, []);
-  
   // Parse existing age or set defaults
   const existingAge = onboardingData.age ? parseInt(onboardingData.age) : null;
   const currentYear = new Date().getFullYear();
@@ -63,7 +50,7 @@ export default function AgeScreen() {
     }
 
     haptics.light();
-    await analytics().logEvent('onboarding_age_continue');
+    await analytics().logEvent('08_age_continue');
     await updateOnboardingData({ age: age.toString() });
     router.push('/username');
   };

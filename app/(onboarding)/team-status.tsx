@@ -15,19 +15,6 @@ export default function TeamStatusScreen() {
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selected, setSelected] = useState<boolean | null>(onboardingData.teamStatus === 'true' ? true : onboardingData.teamStatus === 'false' ? false : null);
 
-  // Log team status screen event when screen loads
-  useEffect(() => {
-    const logTeamStatusEvent = async () => {
-      try {
-        await analytics().logEvent('16team');
-        console.log("Analytics event '16team' logged.");
-      } catch (error) {
-        console.error("Error logging '16team' event:", error);
-      }
-    };
-    logTeamStatusEvent();
-  }, []);
-
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
@@ -123,7 +110,7 @@ export default function TeamStatusScreen() {
           onPress={async () => {
             if (selected !== null) {
               haptics.light();
-              await analytics().logEvent('onboarding_team_status_continue');
+              await analytics().logEvent('16_team_status_continue');
               await updateOnboardingData({ teamStatus: selected.toString() });
               router.push('/training-surface');
             }

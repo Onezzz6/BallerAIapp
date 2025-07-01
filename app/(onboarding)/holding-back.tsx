@@ -38,23 +38,10 @@ export default function HoldingBackScreen() {
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(onboardingData.holdingBack || null);
 
-  // Log holding back screen event when screen loads
-  useEffect(() => {
-    const logHoldingBackEvent = async () => {
-      try {
-        await analytics().logEvent('13holdingback');
-        console.log("Analytics event '13holdingback' logged.");
-      } catch (error) {
-        console.error("Error logging '13holdingback' event:", error);
-      }
-    };
-    logHoldingBackEvent();
-  }, []);
-
   const handleContinue = async () => {
     if (selected) {
       haptics.light();
-      await analytics().logEvent('onboarding_holding_back_continue');
+      await analytics().logEvent('13_holding_back_continue');
       await updateOnboardingData({ holdingBack: selected });
       router.push('/training-accomplishment');
     }

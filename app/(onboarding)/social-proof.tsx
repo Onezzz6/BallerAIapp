@@ -12,19 +12,6 @@ export default function SocialProofScreen() {
   const router = useRouter();
   const haptics = useHaptics();
 
-  // Log social proof screen event when screen loads
-  useEffect(() => {
-    const logSocialProofEvent = async () => {
-      try {
-        await analytics().logEvent('25proof');
-        console.log("Analytics event '25proof' logged.");
-      } catch (error) {
-        console.error("Error logging '25proof' event:", error);
-      }
-    };
-    logSocialProofEvent();
-  }, []);
-
   const socialProofImages = [
     require('../../assets/images/r1.png'),
     require('../../assets/images/r2.png'),
@@ -137,7 +124,7 @@ export default function SocialProofScreen() {
           title="Continue" 
           onPress={async () => {
             haptics.light();
-            await analytics().logEvent('onboarding_social_proof_continue');
+            await analytics().logEvent('25_social_proof_continue');
             router.push('/motivation-reason');
           }}
         />

@@ -31,23 +31,10 @@ export default function TriedOtherAppsScreen() {
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(onboardingData.triedOtherApps);
 
-  // Log tried other apps screen event when screen loads
-  useEffect(() => {
-    const logTriedOtherEvent = async () => {
-      try {
-        await analytics().logEvent('5triedother');
-        console.log("Analytics event '5triedother' logged.");
-      } catch (error) {
-        console.error("Error logging '5triedother' event:", error);
-      }
-    };
-    logTriedOtherEvent();
-  }, []);
-
   const handleContinue = async () => {
     if (selected) {
       haptics.light();
-      await analytics().logEvent('onboarding_tried_other_apps_continue');
+      await analytics().logEvent('05_tried_other_apps_continue');
       await updateOnboardingData({ triedOtherApps: selected });
       router.push('/analyzing');
     }

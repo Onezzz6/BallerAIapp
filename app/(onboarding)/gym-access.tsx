@@ -15,23 +15,10 @@ export default function GymAccessScreen() {
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selected, setSelected] = useState<boolean | null>(onboardingData.hasGymAccess);
 
-  // Log gym access screen event when screen loads
-  useEffect(() => {
-    const logGymAccessEvent = async () => {
-      try {
-        await analytics().logEvent('23gym');
-        console.log("Analytics event '23gym' logged.");
-      } catch (error) {
-        console.error("Error logging '23gym' event:", error);
-      }
-    };
-    logGymAccessEvent();
-  }, []);
-
   const handleContinue = async () => {
     if (selected !== null) {
       haptics.light();
-      await analytics().logEvent('onboarding_gym_access_continue');
+      await analytics().logEvent('23_gym_access_continue');
       await updateOnboardingData({ hasGymAccess: selected });
       router.push('/referral-code');
     }

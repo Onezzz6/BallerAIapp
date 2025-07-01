@@ -15,19 +15,6 @@ export default function NutritionScreen() {
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [focusedOnNutrition, setFocusedOnNutrition] = useState<boolean | null>(onboardingData.nutrition === 'true' ? true : onboardingData.nutrition === 'false' ? false : null);
 
-  // Log nutrition screen event when screen loads
-  useEffect(() => {
-    const logNutritionEvent = async () => {
-      try {
-        await analytics().logEvent('22nutrition');
-        console.log("Analytics event '22nutrition' logged.");
-      } catch (error) {
-        console.error("Error logging '22nutrition' event:", error);
-      }
-    };
-    logNutritionEvent();
-  }, []);
-
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
@@ -124,7 +111,7 @@ export default function NutritionScreen() {
           onPress={async () => {
             if (focusedOnNutrition !== null) {
               haptics.light();
-              await analytics().logEvent('onboarding_nutrition_continue');
+              await analytics().logEvent('22_nutrition_continue');
               await updateOnboardingData({ nutrition: focusedOnNutrition.toString() });
               router.push('/gym-access');
             }

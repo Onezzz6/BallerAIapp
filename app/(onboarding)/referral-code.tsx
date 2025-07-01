@@ -25,19 +25,6 @@ export default function ReferralCodeScreen() {
   // Animated value for button bottom position
   const buttonBottomPosition = useRef(new RNAnimated.Value(32)).current;
 
-  // Log referral code screen event when screen loads
-  useEffect(() => {
-    const logReferralCodeEvent = async () => {
-      try {
-        await analytics().logEvent('24referral');
-        console.log("Analytics event '24referral' logged.");
-      } catch (error) {
-        console.error("Error logging '24referral' event:", error);
-      }
-    };
-    logReferralCodeEvent();
-  }, []);
-
   // Update local state when onboardingData changes and check if already validated
   useEffect(() => {
     setReferralCode(onboardingData.referralCode || '');
@@ -146,7 +133,8 @@ export default function ReferralCodeScreen() {
       await analytics().logEvent('onboarding_referral_code_skip');
       await updateOnboardingData({ referralCode: '' });
     }
-    
+
+    await analytics().logEvent('24_referral_code_continue');
     router.push('/social-proof');
   };
 

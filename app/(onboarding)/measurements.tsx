@@ -16,18 +16,6 @@ export default function MeasurementsScreen() {
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [isMetric, setIsMetric] = useState(true);
 
-  // Log measurements screen event when screen loads
-  useEffect(() => {
-    const logMeasurementsEvent = async () => {
-      try {
-        await analytics().logEvent('7measurements');
-        console.log("Analytics event '7measurements' logged.");
-      } catch (error) {
-        console.error("Error logging '7measurements' event:", error);
-      }
-    };
-    logMeasurementsEvent();
-  }, []);
   const [height, setHeight] = useState(parseInt(onboardingData.height || '') || 170);
   const [weight, setWeight] = useState(parseInt(onboardingData.weight || '') || 70);
   const [feet, setFeet] = useState(5);
@@ -87,7 +75,7 @@ export default function MeasurementsScreen() {
 
     if (finalHeight && finalWeight) {
       haptics.light();
-      await analytics().logEvent('onboarding_measurements_continue');
+      await analytics().logEvent('07_measurements_continue');
       await updateOnboardingData({ 
         height: finalHeight.toString(), 
         weight: finalWeight.toString() 

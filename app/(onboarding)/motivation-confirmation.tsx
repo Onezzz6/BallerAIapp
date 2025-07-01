@@ -14,25 +14,12 @@ export default function MotivationConfirmationScreen() {
   const haptics = useHaptics();
   const { onboardingData } = useOnboarding();
 
-  // Log motivation confirmation screen event when screen loads
-  useEffect(() => {
-    const logMotivationEvent = async () => {
-      try {
-        await analytics().logEvent('12achievable');
-        console.log("Analytics event '12achievable' logged.");
-      } catch (error) {
-        console.error("Error logging '12achievable' event:", error);
-      }
-    };
-    logMotivationEvent();
-  }, []);
-
   const handleContinue = async () => {
     console.log('Continue button pressed on motivation-confirmation');
     haptics.light();
     
     try {
-      await analytics().logEvent('onboarding_motivation_confirmation_continue');
+      await analytics().logEvent('12_motivation_confirmation_continue');
       console.log('Analytics event logged successfully');
     } catch (error) {
       console.log('Analytics error:', error);

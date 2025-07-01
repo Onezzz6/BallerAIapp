@@ -34,23 +34,10 @@ export default function TrainingAccomplishmentScreen() {
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(onboardingData.trainingAccomplishment || null);
 
-  // Log training accomplishment screen event when screen loads
-  useEffect(() => {
-    const logAccomplishmentEvent = async () => {
-      try {
-        await analytics().logEvent('14accomplish');
-        console.log("Analytics event '14accomplish' logged.");
-      } catch (error) {
-        console.error("Error logging '14accomplish' event:", error);
-      }
-    };
-    logAccomplishmentEvent();
-  }, []);
-
   const handleContinue = async () => {
     if (selected) {
       haptics.light();
-      await analytics().logEvent('onboarding_training_accomplishment');
+      await analytics().logEvent('14_training_accomplishment_continue');
       await updateOnboardingData({ trainingAccomplishment: selected });
       router.push('/encouragement');
     }

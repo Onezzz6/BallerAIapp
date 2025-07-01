@@ -140,19 +140,6 @@ export default function ProfileCompleteScreen() {
   const router = useRouter();
   const haptics = useHaptics();
 
-  // Log profile complete screen event when screen loads
-  useEffect(() => {
-    const logProfileCompleteEvent = async () => {
-      try {
-        await analytics().logEvent('29complete');
-        console.log("Analytics event '29complete' logged.");
-      } catch (error) {
-        console.error("Error logging '29complete' event:", error);
-      }
-    };
-    logProfileCompleteEvent();
-  }, []);
-
   const handleGetStarted = async () => {
     haptics.light();
     
@@ -168,7 +155,7 @@ export default function ProfileCompleteScreen() {
       console.log('Store review request failed:', error);
     }
     
-    await analytics().logEvent('onboarding_profile_complete');
+    await analytics().logEvent('28_profile_complete');
     router.push('/sign-up');
   };
 

@@ -16,19 +16,6 @@ export default function SleepHoursScreen() {
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(onboardingData.sleepHours || '8');
 
-  // Log sleep hours screen event when screen loads
-  useEffect(() => {
-    const logSleepHoursEvent = async () => {
-      try {
-        await analytics().logEvent('21sleep');
-        console.log("Analytics event '21sleep' logged.");
-      } catch (error) {
-        console.error("Error logging '21sleep' event:", error);
-      }
-    };
-    logSleepHoursEvent();
-  }, []);
-
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
@@ -115,7 +102,7 @@ export default function SleepHoursScreen() {
           onPress={async () => {
             if (selected) {
               haptics.light();
-              await analytics().logEvent('onboarding_sleep_hours_continue');
+              await analytics().logEvent('21_sleep_hours_continue');
               await updateOnboardingData({ sleepHours: selected });
               router.push('/nutrition');
             }

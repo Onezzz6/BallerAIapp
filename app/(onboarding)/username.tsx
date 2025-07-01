@@ -16,19 +16,6 @@ export default function UsernameScreen() {
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [username, setUsername] = useState(onboardingData.username || '');
   
-  // Log username screen event when screen loads
-  useEffect(() => {
-    const logUsernameEvent = async () => {
-      try {
-        await analytics().logEvent('9name');
-        console.log("Analytics event '9name' logged.");
-      } catch (error) {
-        console.error("Error logging '9name' event:", error);
-      }
-    };
-    logUsernameEvent();
-  }, []);
-  
   // Animated value for button bottom position
   const buttonBottomPosition = useRef(new RNAnimated.Value(32)).current;
   const dismissKeyboard = () => {
@@ -38,7 +25,7 @@ export default function UsernameScreen() {
   const handleContinue = async () => {
     if (username.trim()) {
       haptics.light();
-      await analytics().logEvent('onboarding_username_continue');
+      await analytics().logEvent('09_username_continue');
       await updateOnboardingData({ username: username.trim() });
       router.push('/improvement-focus');
     }

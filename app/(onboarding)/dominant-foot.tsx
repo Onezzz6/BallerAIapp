@@ -16,19 +16,6 @@ export default function DominantFootScreen() {
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(onboardingData.dominantFoot);
 
-  // Log dominant foot screen event when screen loads
-  useEffect(() => {
-    const logDominantFootEvent = async () => {
-      try {
-        await analytics().logEvent('18foot');
-        console.log("Analytics event '18foot' logged.");
-      } catch (error) {
-        console.error("Error logging '18foot' event:", error);
-      }
-    };
-    logDominantFootEvent();
-  }, []);
-
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
@@ -125,7 +112,7 @@ export default function DominantFootScreen() {
           onPress={async () => {
             if (selected) {
               haptics.light();
-              await analytics().logEvent('onboarding_dominant_foot_continue');
+              await analytics().logEvent('onboarding_dominant_foot');
               await updateOnboardingData({ dominantFoot: selected });
               router.push('/fitness-level');
             }
