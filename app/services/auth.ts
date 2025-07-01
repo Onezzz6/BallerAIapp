@@ -431,7 +431,6 @@ const authService = {
     
     // A valid user should have completed onboarding with these core fields
     const hasRequiredFields = 
-      userData.footballGoal !== null && 
       userData.hasGymAccess !== null &&
       userData.improvementFocus !== null &&
       userData.trainingFrequency !== null &&

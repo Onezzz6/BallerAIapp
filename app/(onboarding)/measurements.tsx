@@ -16,11 +16,21 @@ export default function MeasurementsScreen() {
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [isMetric, setIsMetric] = useState(true);
 
-  const [height, setHeight] = useState(parseInt(onboardingData.height || '') || 170);
-  const [weight, setWeight] = useState(parseInt(onboardingData.weight || '') || 70);
+  const [height, setHeight] = useState(parseFloat(onboardingData.height || '') || 170);
+  const [weight, setWeight] = useState(parseFloat(onboardingData.weight || '') || 70);
   const [feet, setFeet] = useState(5);
   const [inches, setInches] = useState(7);
   const [pounds, setPounds] = useState(154);
+  
+  // Force picker updates when unit system changes
+  const [pickerKey, setPickerKey] = useState(0);
+  
+  // Debug imperial weight picker state
+  useEffect(() => {
+    if (!isMetric) {
+      console.log('🔍 Imperial weight picker state changed - pounds:', pounds, 'type:', typeof pounds);
+    }
+  }, [pounds, isMetric]);
 
   // Convert cm to feet/inches
   const cmToFeetInches = (cm: number) => {
@@ -32,34 +42,60 @@ export default function MeasurementsScreen() {
 
   // Convert feet/inches to cm
   const feetInchesToCm = (ft: number, inch: number) => {
-    return Math.round((ft * 12 + inch) * 2.54);
+    const cm = Math.round(((ft * 12) + inch) * 2.54);
+    return cm;
   };
 
   // Convert kg to lbs
   const kgToLbs = (kg: number) => {
-    return Math.round(kg * 2.20462);
+    const lbs = Math.round(kg * 2.20462);
+    return lbs;
   };
 
   // Convert lbs to kg
   const lbsToKg = (lbs: number) => {
-    return Math.round(lbs / 2.20462);
+    const kg = Math.round(lbs / 2.20462);
+    return kg;
   };
 
   const handleUnitToggle = (value: boolean) => {
     haptics.light();
     setIsMetric(value);
     
-    if (value) {
-      // Switching to metric
-      setHeight(feetInchesToCm(feet, inches));
-      setWeight(lbsToKg(pounds));
-    } else {
-      // Switching to imperial
-      const { feet: ft, inches: inch } = cmToFeetInches(height);
-      setFeet(ft);
-      setInches(inch);
-      setPounds(kgToLbs(weight));
-    }
+    console.log('=== UNIT TOGGLE DEBUG ===');
+    console.log('Switching to:', value ? 'metric' : 'imperial');
+    console.log('Current state - height:', height, 'weight:', weight, 'feet:', feet, 'inches:', inches, 'pounds:', pounds);
+    
+    // Use setTimeout to ensure picker has time to process the unit change
+    setTimeout(() => {
+      if (value) {
+        // Switching to metric
+        const newHeight = feetInchesToCm(feet, inches);
+        const newWeight = lbsToKg(pounds);
+        console.log('Converting to metric - newHeight:', newHeight, 'newWeight:', newWeight);
+        setHeight(newHeight);
+        setWeight(newWeight);
+      } else {
+        // Switching to imperial
+        const { feet: ft, inches: inch } = cmToFeetInches(height);
+        const convertedPounds = kgToLbs(weight);
+        
+        // Validate pounds is within picker range (88-309)
+        const validPounds = Math.max(88, Math.min(309, convertedPounds));
+        
+        console.log('Converting to imperial - feet:', ft, 'inches:', inch, 'pounds:', convertedPounds);
+        if (convertedPounds !== validPounds) {
+          console.warn('⚠️  Pounds value', convertedPounds, 'clamped to', validPounds);
+        }
+        
+        setFeet(ft);
+        setInches(inch);
+        setPounds(validPounds);
+      }
+      
+      // Force picker updates when unit system changes
+      setPickerKey(prevKey => prevKey + 1);
+    }, 50); // Small delay to let React process the isMetric change first
   };
 
   const handleContinue = async () => {
@@ -185,17 +221,18 @@ export default function MeasurementsScreen() {
               
               {isMetric ? (
                 <Picker
+                  key={`metric-height-${pickerKey}`}
                   selectedValue={height}
                   onValueChange={(itemValue) => {
                     haptics.light();
-                    setHeight(itemValue);
+                    setHeight(Number(itemValue));
                   }}
                   itemStyle={{
                     fontSize: 16,
                     color: colors.black,
                   }}
                 >
-                  {Array.from({ length: 81 }, (_, i) => i + 150).map((cm) => (
+                  {Array.from({ length: 117 }, (_, i) => i + 125).map((cm) => (
                     <Picker.Item
                       key={cm}
                       label={`${cm} cm`}
@@ -207,17 +244,18 @@ export default function MeasurementsScreen() {
                 <View style={{ flexDirection: 'row' }}>
                   <View style={{ flex: 1 }}>
                     <Picker
+                      key={`imperial-feet-${pickerKey}`}
                       selectedValue={feet}
                       onValueChange={(itemValue) => {
                         haptics.light();
-                        setFeet(itemValue);
+                        setFeet(Number(itemValue));
                       }}
                       itemStyle={{
                         fontSize: 16,
                         color: colors.black,
                       }}
                     >
-                      {Array.from({ length: 6 }, (_, i) => i + 3).map((ft) => (
+                      {Array.from({ length: 4 }, (_, i) => i + 4).map((ft) => (
                         <Picker.Item
                           key={ft}
                           label={`${ft} ft`}
@@ -228,10 +266,11 @@ export default function MeasurementsScreen() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Picker
+                      key={`imperial-inches-${pickerKey}`}
                       selectedValue={inches}
                       onValueChange={(itemValue) => {
                         haptics.light();
-                        setInches(itemValue);
+                        setInches(Number(itemValue));
                       }}
                       itemStyle={{
                         fontSize: 16,
@@ -269,10 +308,11 @@ export default function MeasurementsScreen() {
               
               {isMetric ? (
                 <Picker
+                  key={`metric-weight-${pickerKey}`}
                   selectedValue={weight}
                   onValueChange={(itemValue) => {
                     haptics.light();
-                    setWeight(itemValue);
+                    setWeight(Number(itemValue));
                   }}
                   itemStyle={{
                     fontSize: 16,
@@ -289,17 +329,19 @@ export default function MeasurementsScreen() {
                 </Picker>
               ) : (
                 <Picker
+                  key={`imperial-weight-${pickerKey}-${pounds}`}
                   selectedValue={pounds}
                   onValueChange={(itemValue) => {
                     haptics.light();
-                    setPounds(itemValue);
+                    console.log('Imperial weight picker changed to:', itemValue, 'type:', typeof itemValue);
+                    setPounds(Number(itemValue)); // Convert to number
                   }}
                   itemStyle={{
                     fontSize: 16,
                     color: colors.black,
                   }}
                 >
-                  {Array.from({ length: 151 }, (_, i) => i + 100).map((lbs) => (
+                  {Array.from({ length: 222 }, (_, i) => i + 88).map((lbs) => (
                     <Picker.Item
                       key={lbs}
                       label={`${lbs} lb`}

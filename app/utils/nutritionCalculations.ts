@@ -123,15 +123,8 @@ export function calculateNutritionGoals(userData: any) {
   const age = parseInt(userData.age) || 30;
   const gender = userData.gender || 'male';
   
-  // Map footballGoal to nutrition goal
-  let goal = 'maintain';
-  if (userData.footballGoal) {
-    if (['pro', 'semi-pro', 'amateur'].includes(userData.footballGoal.toLowerCase())) {
-      goal = userData.footballGoal.toLowerCase();
-    }
-  } else if (userData.goal) {
-    goal = userData.goal.toLowerCase();
-  }
+  // No footballGoal anymore. Alaways 'pro'.
+  let goal = 'pro';
   
   // Map activityLevel
   let activityLevel: ActivityLevel = 'moderate';
