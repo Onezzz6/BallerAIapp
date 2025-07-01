@@ -170,7 +170,7 @@ export default function ProfileGenerationScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
-        currentStep={28}
+        currentStep={27}
         totalSteps={29}
       />
 

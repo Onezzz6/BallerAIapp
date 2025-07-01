@@ -112,7 +112,7 @@ export default function TeamStatusScreen() {
               haptics.light();
               await analytics().logEvent('16_team_status_continue');
               await updateOnboardingData({ teamStatus: selected.toString() });
-              router.push('/training-surface');
+              router.push('/(onboarding)/position');
             }
           }}
           disabled={selected === null}

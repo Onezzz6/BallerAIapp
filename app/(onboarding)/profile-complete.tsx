@@ -155,7 +155,7 @@ export default function ProfileCompleteScreen() {
       console.log('Store review request failed:', error);
     }
     
-    await analytics().logEvent('28_profile_complete');
+    await analytics().logEvent('29_profile_complete_get_started');
     router.push('/sign-up');
   };
 

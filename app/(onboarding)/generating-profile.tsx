@@ -49,7 +49,7 @@ export default function GeneratingProfileScreen() {
 
        // Navigate when animation completes
        setTimeout(async () => {
-         await analytics().logEvent('27_5_onboarding_profile_generated');
+         await analytics().logEvent('28_generating_profile');
          router.replace('/profile-complete');
        }, totalDuration + 200);
 

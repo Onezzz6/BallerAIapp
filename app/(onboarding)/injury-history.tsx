@@ -68,7 +68,7 @@ export default function InjuryHistoryScreen() {
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
           <OnboardingHeader 
-            currentStep={11}
+            currentStep={18}
             totalSteps={29}
           />
 
@@ -152,9 +152,9 @@ export default function InjuryHistoryScreen() {
               onPress={async () => {
                 if (injuryHistory.trim()) {
                   haptics.light();
-                  await analytics().logEvent('onboarding_injury_history_continue');
+                  await analytics().logEvent('18_injury_history_continue');
                   await updateOnboardingData({ injuryHistory: injuryHistory.trim() });
-                  router.push('/skill-level');
+                  router.push('/fitness-level');
                 }
               }}
               disabled={!injuryHistory.trim()}

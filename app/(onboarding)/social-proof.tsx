@@ -24,7 +24,7 @@ export default function SocialProofScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
-        currentStep={26}
+        currentStep={25}
         totalSteps={29}
       />
 

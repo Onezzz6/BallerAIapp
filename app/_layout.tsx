@@ -298,6 +298,35 @@ function RootLayoutContent() {
 // It is NOT used to skip paywall display after sign-in/sign-up
 export const isOnOnboardingScreen = (path: string) => {
   return path.includes('/(onboarding)') || 
+    path.includes('/gender') || 
+    path.includes('/training-frequency') ||
+    path.includes('/where-did-you-find-us') ||
+    path.includes('/tried-other-apps') ||
+    path.includes('/analyzing') ||
+    path.includes('/measurements') ||
+    path.includes('/age') ||
+    path.includes('/username') ||
+    path.includes('/improvement-focus') ||
+    path.includes('/goal-timeline') ||
+    path.includes('/motivation-confirmation') ||
+    path.includes('/holding-back') ||
+    path.includes('/training-accomplishment') ||
+    path.includes('/encouragement') ||
+    path.includes('/team-status') ||
+    path.includes('/position') ||
+    path.includes('/injury-history') ||
+    path.includes('/fitness-level') ||
+    path.includes('/activity-level') ||
+    path.includes('/sleep-hours') ||
+    path.includes('/nutrition') ||
+    path.includes('/gym-access') ||
+    path.includes('/referral-code') ||
+    path.includes('/social-proof') ||
+    path.includes('/motivation-reason') ||
+    path.includes('/profile-generation') ||
+    path.includes('/profile-complete') ||
+    path.includes('/generating-profile') ||
+
     path.includes('/paywall') || 
     path.includes('/sign') || 
     path.includes('/motivation') ||
@@ -305,7 +334,6 @@ export const isOnOnboardingScreen = (path: string) => {
     path.includes('/football-goal') ||
     path.includes('/smart-watch') ||
     path.includes('/gym-access') ||
-    path.includes('/training-frequency') ||
     path.includes('/improvement-focus') ||
     path === '/';
 };

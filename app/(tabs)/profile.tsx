@@ -269,7 +269,6 @@ export default function ProfileScreen() {
     { field: 'gender', label: 'Gender', value: userData?.gender, icon: 'person-outline' },
     { field: 'height', label: 'Height', value: userData?.height, icon: 'resize-outline', unit: 'cm' },
     { field: 'weight', label: 'Weight', value: userData?.weight, icon: 'barbell-outline', unit: 'kg' },
-    { field: 'dominantFoot', label: 'Dominant Foot', value: userData?.dominantFoot, icon: 'football-outline' },
     { field: 'position', label: 'Position', value: userData?.position, icon: 'people-outline' },
     { field: 'injuryHistory', label: 'Injury History', value: userData?.injuryHistory, icon: 'bandage' },
     { field: 'activityLevel', label: 'Activity Level', value: userData?.activityLevel, icon: 'fitness-outline' },

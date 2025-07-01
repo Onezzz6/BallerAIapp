@@ -124,7 +124,7 @@ export default function TrainingSurfaceScreen() {
           onPress={async () => {
             if (selected) {
               haptics.light();
-              await analytics().logEvent('17_training_surface_continue');
+              await analytics().logEvent('onboarding_training_surface');
               await updateOnboardingData({ trainingSurface: selected });
               router.push('/dominant-foot');
             }

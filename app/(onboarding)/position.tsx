@@ -37,7 +37,7 @@ export default function PositionScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       <OnboardingHeader 
-        currentStep={13}
+        currentStep={17}
         totalSteps={29}
       />
 
@@ -124,9 +124,9 @@ export default function PositionScreen() {
           onPress={async () => {
             if (selected) {
               haptics.light();
-              await analytics().logEvent('onboarding_position_continue');
+              await analytics().logEvent('17_position_continue');
               await updateOnboardingData({ position: selected });
-              router.push('/team-status');
+              router.push('/injury-history');
             }
           }}
           disabled={!selected}
