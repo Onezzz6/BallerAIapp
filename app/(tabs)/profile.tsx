@@ -1,4 +1,4 @@
-import { View, Text, Image, Pressable, StyleSheet, ScrollView, TextInput, Modal, ActivityIndicator, Alert, Linking, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, Image, Pressable, StyleSheet, ScrollView, TextInput, Modal, ActivityIndicator, Alert, Linking, KeyboardAvoidingView, Platform, Switch } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -54,6 +54,33 @@ export default function ProfileScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  // Imperial/Metric system state for height and weight editing
+  const [isMetricHeight, setIsMetricHeight] = useState(true);
+  const [isMetricWeight, setIsMetricWeight] = useState(true);
+  const [heightFeet, setHeightFeet] = useState(5);
+  const [heightInches, setHeightInches] = useState(7);
+  const [weightPounds, setWeightPounds] = useState(154);
+
+  // Conversion functions (from measurements.tsx)
+  const cmToFeetInches = (cm: number) => {
+    const totalInches = cm / 2.54;
+    const ft = Math.floor(totalInches / 12);
+    const inch = Math.round(totalInches % 12);
+    return { feet: ft, inches: inch };
+  };
+
+  const feetInchesToCm = (ft: number, inch: number) => {
+    return Math.round(((ft * 12) + inch) * 2.54);
+  };
+
+  const kgToLbs = (kg: number) => {
+    return Math.round(kg * 2.20462);
+  };
+
+  const lbsToKg = (lbs: number) => {
+    return Math.round(lbs / 2.20462);
+  };
 
   const renderModalButtons = (onSave: () => void) => (
     <View style={styles.modalButtons}>
@@ -683,6 +710,31 @@ export default function ProfileScreen() {
     }
 
     if (editingField === 'height') {
+      const handleUnitToggle = (value: boolean) => {
+        setIsMetricHeight(value);
+        if (value) {
+          // Switching to metric - convert from imperial
+          const heightCm = feetInchesToCm(heightFeet, heightInches);
+          setEditValue(heightCm.toString());
+        } else {
+          // Switching to imperial - convert from metric
+          const heightCm = parseFloat(editValue) || 170;
+          const { feet, inches } = cmToFeetInches(heightCm);
+          setHeightFeet(feet);
+          setHeightInches(inches);
+        }
+      };
+
+      const handleSave = () => {
+        let finalHeight;
+        if (isMetricHeight) {
+          finalHeight = editValue;
+        } else {
+          finalHeight = feetInchesToCm(heightFeet, heightInches).toString();
+        }
+        updateUserField('height', finalHeight);
+      };
+
       return (
         <Modal
           visible={editingField === 'height'}
@@ -702,28 +754,89 @@ export default function ProfileScreen() {
                   <Text style={styles.modalTitle}>
                     Edit {profileDetails.find(d => d.field === editingField)?.label}
                   </Text>
+
+                  {/* Unit Toggle */}
+                  <View style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginVertical: 16,
+                  }}>
+                    <Text style={{
+                      fontSize: 16,
+                      fontWeight: '600',
+                      color: !isMetricHeight ? '#000000' : '#666666',
+                    }}>
+                      Imperial
+                    </Text>
+                    <Switch
+                      trackColor={{ false: '#E5E5E5', true: '#4064F6' }}
+                      thumbColor={'#FFFFFF'}
+                      onValueChange={handleUnitToggle}
+                      value={isMetricHeight}
+                      style={{ marginHorizontal: 12 }}
+                    />
+                    <Text style={{
+                      fontSize: 16,
+                      fontWeight: '600',
+                      color: isMetricHeight ? '#000000' : '#666666',
+                    }}>
+                      Metric
+                    </Text>
+                  </View>
                   
                   <View style={styles.pickerContainer}>
-                    <Picker
-                      selectedValue={editValue}
-                      onValueChange={(itemValue) => setEditValue(itemValue)}
-                      style={styles.picker}
-                    >
-                      {Array.from({ length: 93 }, (_, i) => i + 120).map((num) => (
-                        <Picker.Item
-                          key={num}
-                          label={`${num} cm`}
-                          value={num.toString()}
-                        />
-                      ))}
-                    </Picker>
+                    {isMetricHeight ? (
+                      <Picker
+                        selectedValue={editValue}
+                        onValueChange={(itemValue) => setEditValue(itemValue)}
+                        style={styles.picker}
+                      >
+                        {Array.from({ length: 117 }, (_, i) => i + 125).map((num) => (
+                          <Picker.Item
+                            key={num}
+                            label={`${num} cm`}
+                            value={num.toString()}
+                          />
+                        ))}
+                      </Picker>
+                    ) : (
+                      <View style={{ flexDirection: 'row' }}>
+                        <View style={{ flex: 1 }}>
+                          <Picker
+                            selectedValue={heightFeet}
+                            onValueChange={(itemValue) => setHeightFeet(Number(itemValue))}
+                            style={styles.picker}
+                          >
+                            {Array.from({ length: 4 }, (_, i) => i + 4).map((ft) => (
+                              <Picker.Item
+                                key={ft}
+                                label={`${ft} ft`}
+                                value={ft}
+                              />
+                            ))}
+                          </Picker>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Picker
+                            selectedValue={heightInches}
+                            onValueChange={(itemValue) => setHeightInches(Number(itemValue))}
+                            style={styles.picker}
+                          >
+                            {Array.from({ length: 12 }, (_, i) => i).map((inch) => (
+                              <Picker.Item
+                                key={inch}
+                                label={`${inch} in`}
+                                value={inch}
+                              />
+                            ))}
+                          </Picker>
+                        </View>
+                      </View>
+                    )}
                   </View>
 
-                  {renderModalButtons(() => {
-                    if (editingField) {
-                      updateUserField(editingField, editValue);
-                    }
-                  })}
+                  {renderModalButtons(handleSave)}
                 </View>
               </View>
             </ScrollView>
@@ -733,6 +846,30 @@ export default function ProfileScreen() {
     }
 
     if (editingField === 'weight') {
+      const handleUnitToggle = (value: boolean) => {
+        setIsMetricWeight(value);
+        if (value) {
+          // Switching to metric - convert from imperial
+          const weightKg = lbsToKg(weightPounds);
+          setEditValue(weightKg.toString());
+        } else {
+          // Switching to imperial - convert from metric
+          const weightKg = parseFloat(editValue) || 70;
+          const pounds = kgToLbs(weightKg);
+          setWeightPounds(pounds);
+        }
+      };
+
+      const handleSave = () => {
+        let finalWeight;
+        if (isMetricWeight) {
+          finalWeight = editValue;
+        } else {
+          finalWeight = lbsToKg(weightPounds).toString();
+        }
+        updateUserField('weight', finalWeight);
+      };
+
       return (
         <Modal
           visible={editingField === 'weight'}
@@ -752,28 +889,70 @@ export default function ProfileScreen() {
                   <Text style={styles.modalTitle}>
                     Edit {profileDetails.find(d => d.field === editingField)?.label}
                   </Text>
+
+                  {/* Unit Toggle */}
+                  <View style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginVertical: 16,
+                  }}>
+                    <Text style={{
+                      fontSize: 16,
+                      fontWeight: '600',
+                      color: !isMetricWeight ? '#000000' : '#666666',
+                    }}>
+                      Imperial
+                    </Text>
+                    <Switch
+                      trackColor={{ false: '#E5E5E5', true: '#4064F6' }}
+                      thumbColor={'#FFFFFF'}
+                      onValueChange={handleUnitToggle}
+                      value={isMetricWeight}
+                      style={{ marginHorizontal: 12 }}
+                    />
+                    <Text style={{
+                      fontSize: 16,
+                      fontWeight: '600',
+                      color: isMetricWeight ? '#000000' : '#666666',
+                    }}>
+                      Metric
+                    </Text>
+                  </View>
                   
                   <View style={styles.pickerContainer}>
-                    <Picker
-                      selectedValue={editValue}
-                      onValueChange={(itemValue) => setEditValue(itemValue)}
-                      style={styles.picker}
-                    >
-                      {Array.from({ length: 81 }, (_, i) => i + 40).map((num) => (
-                        <Picker.Item
-                          key={num}
-                          label={`${num} kg`}
-                          value={num.toString()}
-                        />
-                      ))}
-                    </Picker>
+                    {isMetricWeight ? (
+                      <Picker
+                        selectedValue={editValue}
+                        onValueChange={(itemValue) => setEditValue(itemValue)}
+                        style={styles.picker}
+                      >
+                        {Array.from({ length: 101 }, (_, i) => i + 40).map((num) => (
+                          <Picker.Item
+                            key={num}
+                            label={`${num} kg`}
+                            value={num.toString()}
+                          />
+                        ))}
+                      </Picker>
+                    ) : (
+                      <Picker
+                        selectedValue={weightPounds}
+                        onValueChange={(itemValue) => setWeightPounds(Number(itemValue))}
+                        style={styles.picker}
+                      >
+                        {Array.from({ length: 222 }, (_, i) => i + 88).map((lbs) => (
+                          <Picker.Item
+                            key={lbs}
+                            label={`${lbs} lb`}
+                            value={lbs}
+                          />
+                        ))}
+                      </Picker>
+                    )}
                   </View>
 
-                  {renderModalButtons(() => {
-                    if (editingField) {
-                      updateUserField(editingField, editValue);
-                    }
-                  })}
+                  {renderModalButtons(handleSave)}
                 </View>
               </View>
             </ScrollView>
@@ -1001,6 +1180,24 @@ export default function ProfileScreen() {
                     if (isEditing) {
                       setEditingField(detail.field);
                       setEditValue(detail.value?.toString() || '');
+                      
+                      // Initialize imperial/metric state for height and weight
+                      if (detail.field === 'height') {
+                        setIsMetricHeight(true); // Start with metric
+                        if (detail.value) {
+                          const heightCm = parseFloat(detail.value);
+                          const { feet, inches } = cmToFeetInches(heightCm);
+                          setHeightFeet(feet);
+                          setHeightInches(inches);
+                        }
+                      } else if (detail.field === 'weight') {
+                        setIsMetricWeight(true); // Start with metric
+                        if (detail.value) {
+                          const weightKg = parseFloat(detail.value);
+                          const pounds = kgToLbs(weightKg);
+                          setWeightPounds(pounds);
+                        }
+                      }
                     }
                   }}
                   disabled={!isEditing}
@@ -1024,7 +1221,7 @@ export default function ProfileScreen() {
                       !isEditing && styles.disabledText,
                       isEditing && styles.editableValue
                     ]}>
-                      {detail.value?.charAt(0).toUpperCase() + detail.value?.slice(1)} {detail.unit}
+                      {detail.value ? detail.value.charAt(0).toUpperCase() + detail.value.slice(1) : ''} {detail.unit}
                     </Text>
                   </View>
                   {isEditing && (
