@@ -26,6 +26,7 @@ type UserData = {
   weight?: string;
   dominantFoot?: string;
   position?: string;
+  teamStatus?: string;
   skillLevel?: string;
   trainingFrequency?: string;
   fitnessLevel?: string;
@@ -194,7 +195,7 @@ export default function ProfileScreen() {
           }
 
           // Check if any of the fields that affect goals have changed
-          const fieldsAffectingGoals = ['weight', 'height', 'activityLevel', 'gender', 'age'];
+          const fieldsAffectingGoals = ['weight', 'height', 'activityLevel', 'gender', 'age', 'fitnessLevel'];
           const hasRelevantChanges = fieldsAffectingGoals.some(field => {
             const hasChanged = newUserData[field as keyof UserData] !== userData?.[field as keyof UserData];
             if (hasChanged) {
@@ -265,13 +266,16 @@ export default function ProfileScreen() {
   };
 
   const profileDetails: ProfileDetail[] = [
+    { field: 'username', label: 'Name', value: userData?.username, icon: 'person-outline' },
     { field: 'age', label: 'Age', value: userData?.age, icon: 'calendar-outline', unit: 'years' },
     { field: 'gender', label: 'Gender', value: userData?.gender, icon: 'person-outline' },
     { field: 'height', label: 'Height', value: userData?.height, icon: 'resize-outline', unit: 'cm' },
     { field: 'weight', label: 'Weight', value: userData?.weight, icon: 'barbell-outline', unit: 'kg' },
     { field: 'position', label: 'Position', value: userData?.position, icon: 'people-outline' },
+    { field: 'teamStatus', label: 'Team Status', value: userData?.teamStatus, icon: 'football-outline' },
     { field: 'injuryHistory', label: 'Injury History', value: userData?.injuryHistory, icon: 'bandage' },
     { field: 'activityLevel', label: 'Activity Level', value: userData?.activityLevel, icon: 'fitness-outline' },
+    { field: 'fitnessLevel', label: 'Fitness Level', value: userData?.fitnessLevel, icon: 'fitness-outline' },
   ];
 
   const renderEditModal = () => {
@@ -304,7 +308,6 @@ export default function ProfileScreen() {
                     >
                       <Picker.Item label="Male" value="male" />
                       <Picker.Item label="Female" value="female" />
-                      <Picker.Item label="Other" value="other" />
                     </Picker>
                   </View>
 
@@ -371,10 +374,10 @@ export default function ProfileScreen() {
       );
     }
 
-    if (editingField === 'dominantFoot') {
+    if (editingField === 'teamStatus') {
       return (
         <Modal
-          visible={editingField === 'dominantFoot'}
+          visible={editingField === 'teamStatus'}
           transparent
           animationType="slide"
         >
@@ -398,9 +401,8 @@ export default function ProfileScreen() {
                       onValueChange={(itemValue) => setEditValue(itemValue)}
                       style={styles.picker}
                     >
-                      <Picker.Item label="Left" value="left" />
-                      <Picker.Item label="Right" value="right" />
-                      <Picker.Item label="Both" value="both" />
+                      <Picker.Item label="Yes" value="true" />
+                      <Picker.Item label="No" value="false" />
                     </Picker>
                   </View>
 
@@ -535,6 +537,80 @@ export default function ProfileScreen() {
                           editValue === level.id && styles.selectedOptionText
                         ]} allowFontScaling={false}>
                           {level.description}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+
+                  {renderModalButtons(() => {
+                    if (editingField) {
+                      updateUserField(editingField, editValue);
+                    }
+                  })}
+                </View>
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </Modal>
+      );
+    }
+
+    if (editingField === 'fitnessLevel') {
+      const FITNESS_LEVELS = [
+        {
+          id: 'out-of-shape',
+          title: 'Out of shape',
+        },
+        {
+          id: 'average',
+          title: 'Average',
+        },
+        {
+          id: 'athletic',
+          title: 'Athletic',
+        },
+        {
+          id: 'elite',
+          title: 'Elite',
+        },
+      ];
+      
+      return (
+        <Modal
+          visible={editingField === 'fitnessLevel'}
+          transparent
+          animationType="slide"
+        >
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{ flex: 1 }}
+          >
+            <ScrollView 
+              contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.modalContainer}>
+                <View style={styles.modalContent}>
+                  <Text style={styles.modalTitle}>
+                    Edit {profileDetails.find(d => d.field === editingField)?.label}
+                  </Text>
+
+                  <View style={styles.optionsContainer}>
+                    {FITNESS_LEVELS.map((level) => (
+                      <Pressable
+                        key={level.id}
+                        onPress={() => setEditValue(level.id)}
+                        style={({ pressed }) => [
+                          styles.optionButtonWithDescription,
+                          editValue === level.id && styles.selectedOption,
+                          { opacity: pressed ? 0.8 : 1 }
+                        ]}
+                      >
+                        <Text style={[
+                          styles.optionText,
+                          editValue === level.id && styles.selectedOptionText
+                        ]} allowFontScaling={false}>
+                          {level.title}
                         </Text>
                       </Pressable>
                     ))}
@@ -712,7 +788,7 @@ export default function ProfileScreen() {
         visible={editingField !== null && 
           editingField !== 'age' && 
           editingField !== 'gender' && 
-          editingField !== 'dominantFoot' &&
+          editingField !== 'teamStatus' &&
           editingField !== 'position' &&
           editingField !== 'activityLevel' &&
           editingField !== 'injuryHistory'}
@@ -948,7 +1024,7 @@ export default function ProfileScreen() {
                       !isEditing && styles.disabledText,
                       isEditing && styles.editableValue
                     ]}>
-                      {detail.value} {detail.unit}
+                      {detail.value?.charAt(0).toUpperCase() + detail.value?.slice(1)} {detail.unit}
                     </Text>
                   </View>
                   {isEditing && (
