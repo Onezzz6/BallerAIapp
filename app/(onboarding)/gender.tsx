@@ -23,7 +23,7 @@ export default function GenderScreen() {
   const handleContinue = async () => {
     if (selectedGender) {
       haptics.light();
-      await analytics().logEvent('02_gender_continue');
+      await analytics().logEvent('AA_02_gender_continue');
       await updateOnboardingData({ gender: selectedGender });
       router.push('/training-frequency');
     }

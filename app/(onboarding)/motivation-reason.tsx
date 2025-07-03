@@ -59,7 +59,7 @@ export default function MotivationReasonScreen() {
   const handleContinue = async () => {
     if (motivation.trim()) {
       haptics.light();
-      await analytics().logEvent('26_motivation_reason_continue');
+      await analytics().logEvent('AA_26_motivation_reason_continue');
       await updateOnboardingData({ motivation: motivation.trim() });
       router.push('/profile-generation');
     }

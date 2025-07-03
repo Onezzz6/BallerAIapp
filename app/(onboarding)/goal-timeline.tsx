@@ -37,7 +37,7 @@ export default function GoalTimelineScreen() {
   const handleContinue = async () => {
     if (selected) {
       haptics.light();
-      await analytics().logEvent('11_goal_timeline_continue');
+      await analytics().logEvent('AA_11_goal_timeline_continue');
       await updateOnboardingData({ goalTimeline: selected });
       router.push('/motivation-confirmation');
     }

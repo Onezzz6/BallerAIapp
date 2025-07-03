@@ -51,7 +51,7 @@ export default function SignUpScreen() {
       // First try to create new account
       const user = await authService.signUpWithEmail(email, password, onboardingData);
       if (user) {
-        await analytics().logEvent('29_signed_up');
+        await analytics().logEvent('AA_29_signed_up');
         console.log("Analytics event '29_signed_up' logged for email signup.");
         
         // Mark authentication as complete after successful sign-up
@@ -85,7 +85,7 @@ export default function SignUpScreen() {
                 try {
                   const user = await authService.signInWithEmail(email, password);
                   if (user) {
-                    await analytics().logEvent('29_sign_in_complete');
+                    await analytics().logEvent('AA_29_sign_in_complete');
                     
                     // Mark authentication as complete after successful sign-in
                     markAuthenticationComplete();
@@ -139,7 +139,7 @@ export default function SignUpScreen() {
       
       if (hasDocument && isValidDocument) {
         console.log("User has valid document, navigating to home");
-        await analytics().logEvent('29_apple_sign_in_complete');
+        await analytics().logEvent('AA_29_apple_sign_in_complete');
         
         // Mark authentication as complete after successful Apple sign-in
         markAuthenticationComplete();

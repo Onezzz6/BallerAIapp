@@ -427,7 +427,7 @@ IMPORTANT USAGE GUIDELINES:
 
       // Log analytics event after successful saving
       try {
-        await analytics().logEvent('generate_recovery_plan');
+        await analytics().logEvent('AA_99_generate_recovery_plan');
         console.log("Analytics event 'generate_recovery_plan' logged.");
       } catch (error) {
         console.error("Error logging 'generate_recovery_plan' event:", error);

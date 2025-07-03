@@ -37,7 +37,7 @@ export default function TrainingFrequencyScreen() {
   const handleContinue = async () => {
     if (selected) {
       haptics.light();
-      await analytics().logEvent('03_training_frequency_continue');
+      await analytics().logEvent('AA_03_training_frequency_continue');
       await updateOnboardingData({ trainingFrequency: selected });
       router.push('/where-did-you-find-us');
     }

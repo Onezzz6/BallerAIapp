@@ -1,5 +1,6 @@
 import appsFlyer from 'react-native-appsflyer';
 import { Platform } from 'react-native';
+import { shouldDisableAppsFlyer, logDisabledService } from '../config/development';
 
 // AppsFlyer configuration
 const APPSFLYER_CONFIG = {
@@ -12,6 +13,11 @@ const APPSFLYER_CONFIG = {
 
 // Initialize AppsFlyer
 export const initializeAppsFlyer = () => {
+  if (shouldDisableAppsFlyer()) {
+    logDisabledService('AppsFlyer', 'initialized');
+    return;
+  }
+  
   console.log('Initializing AppsFlyer...');
   
   // Set up conversion data listener
@@ -93,18 +99,26 @@ export const initializeAppsFlyer = () => {
 
 // Cleanup function
 export const cleanupAppsFlyer = () => {
+  if (shouldDisableAppsFlyer()) {
+    logDisabledService('AppsFlyer', 'cleaned up listeners');
+    return;
+  }
+  
   if (APPSFLYER_CONFIG.onInstallConversionDataCanceller) {
     APPSFLYER_CONFIG.onInstallConversionDataCanceller();
-    APPSFLYER_CONFIG.onInstallConversionDataCanceller = null;
   }
   if (APPSFLYER_CONFIG.onDeepLinkCanceller) {
     APPSFLYER_CONFIG.onDeepLinkCanceller();
-    APPSFLYER_CONFIG.onDeepLinkCanceller = null;
   }
 };
 
 // Log custom events
 export const logAppsFlyerEvent = (eventName: string, eventValues?: Record<string, any>) => {
+  if (shouldDisableAppsFlyer()) {
+    logDisabledService('AppsFlyer', `logged event: ${eventName}`, eventValues);
+    return;
+  }
+  
   appsFlyer.logEvent(eventName, eventValues || {}, 
     (res) => {
       console.log('AppsFlyer event logged successfully:', eventName, res);
@@ -115,20 +129,14 @@ export const logAppsFlyerEvent = (eventName: string, eventValues?: Record<string
   );
 };
 
-// Common event helpers
-export const logPurchaseEvent = (revenue: number, currency: string = 'USD', productId?: string) => {
+// Export the cleanup function so it can be called when needed
+export { APPSFLYER_CONFIG };
+
+// Predefined event helpers
+export const logPurchaseEvent = (revenue: number, currency: string = 'USD') => {
   logAppsFlyerEvent('af_purchase', {
     af_revenue: revenue,
     af_currency: currency,
-    af_content_id: productId,
-  });
-};
-
-export const logSubscriptionEvent = (revenue: number, currency: string = 'USD', subscriptionType?: string) => {
-  logAppsFlyerEvent('af_subscribe', {
-    af_revenue: revenue,
-    af_currency: currency,
-    af_content_type: subscriptionType,
   });
 };
 
@@ -144,6 +152,11 @@ export const logTutorialCompletionEvent = () => {
 
 // Test function to verify AppsFlyer integration
 export const testAppsFlyerIntegration = () => {
+  if (shouldDisableAppsFlyer()) {
+    logDisabledService('AppsFlyer', 'tested integration');
+    return;
+  }
+  
   console.log('Testing AppsFlyer integration...');
   
   appsFlyer.logEvent('af_test_event', { foo: 'bar' }, (res) => {
@@ -160,13 +173,16 @@ export const testAppsFlyerIntegration = () => {
   });
 };
 
+// Export development flag for external use
+export const isAppsFlyerDisabled = shouldDisableAppsFlyer();
+
 export default {
   initializeAppsFlyer,
   cleanupAppsFlyer,
   logAppsFlyerEvent,
   logPurchaseEvent,
-  logSubscriptionEvent,
   logUserRegistrationEvent,
   logTutorialCompletionEvent,
   testAppsFlyerIntegration,
+  isAppsFlyerDisabled,
 }; 

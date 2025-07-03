@@ -90,7 +90,7 @@ export default function ReferralCodeScreen() {
         
         const validatedCode = referralCode.trim().toUpperCase();
         
-        await analytics().logEvent('onboarding_referral_code_valid', {
+        await analytics().logEvent('AA_99_onboarding_referral_code_valid', {
           code: validatedCode,
           discount: result.discount,
           influencer: result.influencer
@@ -111,7 +111,7 @@ export default function ReferralCodeScreen() {
         setIsValid(false);
         setValidationMessage(result.error || 'Invalid referral code');
         
-        await analytics().logEvent('onboarding_referral_code_invalid', {
+        await analytics().logEvent('AA_99_onboarding_referral_code_invalid', {
           code: referralCode.trim().toUpperCase(),
           error: result.error
         });
@@ -130,11 +130,11 @@ export default function ReferralCodeScreen() {
     
     // If no referral code entered or validation failed, continue without saving
     if (!referralCode.trim() || isValid === false) {
-      await analytics().logEvent('onboarding_referral_code_skip');
+      await analytics().logEvent('AA_99_onboarding_referral_code_skip');
       await updateOnboardingData({ referralCode: '' });
     }
 
-    await analytics().logEvent('24_referral_code_continue');
+    await analytics().logEvent('AA_24_referral_code_continue');
     router.push('/social-proof');
   };
 

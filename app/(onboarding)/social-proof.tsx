@@ -124,7 +124,7 @@ export default function SocialProofScreen() {
           title="Continue" 
           onPress={async () => {
             haptics.light();
-            await analytics().logEvent('25_social_proof_continue');
+            await analytics().logEvent('AA_25_social_proof_continue');
             router.push('/motivation-reason');
           }}
         />

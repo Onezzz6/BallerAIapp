@@ -300,7 +300,7 @@ export default function AnalyzingScreen() {
           title="Continue"
           onPress={async () => {
             haptics.light();
-            await analytics().logEvent('06_analyzing_continue');
+            await analytics().logEvent('AA_06_analyzing_continue');
             router.push('/measurements');
           }}
         />

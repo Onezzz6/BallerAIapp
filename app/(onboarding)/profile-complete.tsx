@@ -147,7 +147,7 @@ export default function ProfileCompleteScreen() {
     try {
       if (await StoreReview.hasAction()) {
         await StoreReview.requestReview();
-        await analytics().logEvent('app_store_review_requested');
+        await analytics().logEvent('AA_99_app_store_review_requested');
         // Small delay to let review dialog appear
         await new Promise(resolve => setTimeout(resolve, 100));
       }
@@ -155,7 +155,7 @@ export default function ProfileCompleteScreen() {
       console.log('Store review request failed:', error);
     }
     
-    await analytics().logEvent('29_profile_complete_get_started');
+    await analytics().logEvent('AA_29_profile_complete_get_started');
     router.push('/sign-up');
   };
 

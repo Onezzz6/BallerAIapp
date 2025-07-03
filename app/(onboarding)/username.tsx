@@ -25,7 +25,7 @@ export default function UsernameScreen() {
   const handleContinue = async () => {
     if (username.trim()) {
       haptics.light();
-      await analytics().logEvent('09_username_continue');
+      await analytics().logEvent('AA_09_username_continue');
       await updateOnboardingData({ username: username.trim() });
       router.push('/improvement-focus');
     }

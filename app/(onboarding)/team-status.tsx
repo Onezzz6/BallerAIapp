@@ -110,7 +110,7 @@ export default function TeamStatusScreen() {
           onPress={async () => {
             if (selected !== null) {
               haptics.light();
-              await analytics().logEvent('16_team_status_continue');
+              await analytics().logEvent('AA_16_team_status_continue');
               await updateOnboardingData({ teamStatus: selected.toString() });
               router.push('/(onboarding)/position');
             }

@@ -97,7 +97,7 @@ export default function WhereDidYouFindUsScreen() {
   const handleContinue = async () => {
     if (selected) {
       haptics.light();
-      await analytics().logEvent('04_where_did_you_find_us_continue');
+      await analytics().logEvent('AA_04_where_did_you_find_us_continue');
       await updateOnboardingData({ discoverySource: selected });
       router.push('/tried-other-apps');
     }

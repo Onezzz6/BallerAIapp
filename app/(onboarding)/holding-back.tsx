@@ -41,7 +41,7 @@ export default function HoldingBackScreen() {
   const handleContinue = async () => {
     if (selected) {
       haptics.light();
-      await analytics().logEvent('13_holding_back_continue');
+      await analytics().logEvent('AA_13_holding_back_continue');
       await updateOnboardingData({ holdingBack: selected });
       router.push('/training-accomplishment');
     }

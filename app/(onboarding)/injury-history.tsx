@@ -152,7 +152,7 @@ export default function InjuryHistoryScreen() {
               onPress={async () => {
                 if (injuryHistory.trim()) {
                   haptics.light();
-                  await analytics().logEvent('18_injury_history_continue');
+                  await analytics().logEvent('AA_18_injury_history_continue');
                   await updateOnboardingData({ injuryHistory: injuryHistory.trim() });
                   router.push('/fitness-level');
                 }

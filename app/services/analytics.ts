@@ -1,5 +1,6 @@
 import analytics from '@react-native-firebase/analytics';
 import crashlytics from '@react-native-firebase/crashlytics';
+import { shouldDisableAnalytics, shouldDisableCrashlytics, logDisabledService } from '../config/development';
 
 // Custom event names
 export const AnalyticsEvents = {
@@ -22,6 +23,11 @@ export const AnalyticsEvents = {
 const analyticsService = {
   // Log a custom event
   logEvent: async (eventName: string, params?: { [key: string]: any }) => {
+    if (shouldDisableAnalytics()) {
+      logDisabledService('Firebase Analytics', `logged event: ${eventName}`, params);
+      return;
+    }
+    
     try {
       await analytics().logEvent(eventName, params);
       console.log(`Analytics event logged: ${eventName}`, params);
@@ -34,6 +40,11 @@ const analyticsService = {
 
   // Set user properties
   setUserProperties: async (properties: { [key: string]: string }) => {
+    if (shouldDisableAnalytics()) {
+      logDisabledService('Firebase Analytics', 'set user properties', properties);
+      return;
+    }
+    
     try {
       await analytics().setUserProperties(properties);
       console.log('User properties set:', properties);
@@ -45,6 +56,11 @@ const analyticsService = {
 
   // Set user ID
   setUserId: async (userId: string) => {
+    if (shouldDisableAnalytics()) {
+      logDisabledService('Firebase Analytics', `set user ID: ${userId}`);
+      return;
+    }
+    
     try {
       await analytics().setUserId(userId);
       await crashlytics().setUserId(userId);
@@ -57,8 +73,13 @@ const analyticsService = {
 
   // Log screen view
   logScreenView: async (screenName: string, screenClass?: string) => {
+    if (shouldDisableAnalytics()) {
+      logDisabledService('Firebase Analytics', `logged screen view: ${screenName}`);
+      return;
+    }
+    
     try {
-      await analytics().logEvent('screen_view', {
+      await analytics().logEvent('AA_99_screen_view', {
         screen_name: screenName,
         screen_class: screenClass || screenName,
       });
@@ -71,6 +92,11 @@ const analyticsService = {
 
   // Initialize crash reporting
   initializeCrashReporting: async () => {
+    if (shouldDisableCrashlytics()) {
+      logDisabledService('Crashlytics', 'initialized');
+      return;
+    }
+    
     try {
       await crashlytics().setCrashlyticsCollectionEnabled(true);
       console.log('Crashlytics initialized');
@@ -81,6 +107,11 @@ const analyticsService = {
 
   // Log error to Crashlytics
   logError: async (error: Error) => {
+    if (shouldDisableCrashlytics()) {
+      logDisabledService('Crashlytics', `logged error: ${error.message}`);
+      return;
+    }
+    
     try {
       await crashlytics().recordError(error);
       console.log('Error logged to Crashlytics:', error.message);

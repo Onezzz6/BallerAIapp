@@ -37,7 +37,7 @@ export default function TrainingAccomplishmentScreen() {
   const handleContinue = async () => {
     if (selected) {
       haptics.light();
-      await analytics().logEvent('14_training_accomplishment_continue');
+      await analytics().logEvent('AA_14_training_accomplishment_continue');
       await updateOnboardingData({ trainingAccomplishment: selected });
       router.push('/encouragement');
     }

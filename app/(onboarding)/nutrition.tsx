@@ -111,7 +111,7 @@ export default function NutritionScreen() {
           onPress={async () => {
             if (focusedOnNutrition !== null) {
               haptics.light();
-              await analytics().logEvent('22_nutrition_continue');
+              await analytics().logEvent('AA_22_nutrition_continue');
               await updateOnboardingData({ nutrition: focusedOnNutrition.toString() });
               router.push('/gym-access');
             }

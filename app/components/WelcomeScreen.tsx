@@ -171,17 +171,23 @@ export default function WelcomeScreen() {
 
 
 
-  // Log welcome event when screen loads
+  // Log welcome event when screen loads (but only after a delay to prevent logging for users being sorted)
   useEffect(() => {
     const logWelcomeEvent = async () => {
       try {
-        await analytics().logEvent('01_welcome');
-        console.log("Analytics event '01_welcome' logged.");
+        // Wait 1 second before logging to prevent analytics for users being immediately redirected
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        await analytics().logEvent('AA_01_welcome');
+        console.log("Analytics event '01_welcome' logged for user starting onboarding.");
       } catch (error) {
         console.error("Error logging '01_welcome' event:", error);
       }
     };
-    logWelcomeEvent();
+    
+    // Only log if user stays on welcome screen for more than 1 second
+    const timer = setTimeout(logWelcomeEvent, 1000);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   // Request ATT permission after slight delay
@@ -213,7 +219,7 @@ export default function WelcomeScreen() {
 
   const handleGetStarted = () => {
     haptics.light();
-    analytics().logEvent('01_welcome_get_started');
+    analytics().logEvent('AA_01_welcome_get_started');
     router.push('/(onboarding)/gender');
   };
 

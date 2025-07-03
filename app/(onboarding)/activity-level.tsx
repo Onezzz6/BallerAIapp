@@ -140,7 +140,7 @@ export default function ActivityLevelScreen() {
           onPress={async () => {
             if (selected) {
               haptics.light();
-              await analytics().logEvent('20_activity_level_continue');
+              await analytics().logEvent('AA_20_activity_level_continue');
               await updateOnboardingData({ activityLevel: selected });
               router.push('/sleep-hours');
             }

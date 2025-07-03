@@ -102,7 +102,7 @@ export default function SleepHoursScreen() {
           onPress={async () => {
             if (selected) {
               haptics.light();
-              await analytics().logEvent('21_sleep_hours_continue');
+              await analytics().logEvent('AA_21_sleep_hours_continue');
               await updateOnboardingData({ sleepHours: selected });
               router.push('/nutrition');
             }

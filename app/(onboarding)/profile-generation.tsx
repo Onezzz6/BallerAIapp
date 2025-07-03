@@ -138,7 +138,7 @@ export default function ProfileGenerationScreen() {
 
   const handleContinue = async () => {
     haptics.light();
-    await analytics().logEvent('27_profile_generation_continue');
+    await analytics().logEvent('AA_27_profile_generation_continue');
     router.push('/generating-profile');
   };
 

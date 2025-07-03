@@ -111,7 +111,7 @@ export default function MeasurementsScreen() {
 
     if (finalHeight && finalWeight) {
       haptics.light();
-      await analytics().logEvent('07_measurements_continue');
+      await analytics().logEvent('AA_07_measurements_continue');
       await updateOnboardingData({ 
         height: finalHeight.toString(), 
         weight: finalWeight.toString() 

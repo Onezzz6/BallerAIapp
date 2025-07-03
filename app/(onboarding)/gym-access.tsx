@@ -18,7 +18,7 @@ export default function GymAccessScreen() {
   const handleContinue = async () => {
     if (selected !== null) {
       haptics.light();
-      await analytics().logEvent('23_gym_access_continue');
+      await analytics().logEvent('AA_23_gym_access_continue');
       await updateOnboardingData({ hasGymAccess: selected });
       router.push('/referral-code');
     }

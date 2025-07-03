@@ -124,7 +124,7 @@ export default function PositionScreen() {
           onPress={async () => {
             if (selected) {
               haptics.light();
-              await analytics().logEvent('17_position_continue');
+              await analytics().logEvent('AA_17_position_continue');
               await updateOnboardingData({ position: selected });
               router.push('/injury-history');
             }

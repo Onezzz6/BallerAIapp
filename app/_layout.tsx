@@ -1,7 +1,7 @@
 import React, { createContext, useContext } from 'react';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { router, Slot, usePathname } from 'expo-router';
+import { Slot } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
@@ -13,15 +13,15 @@ import { OnboardingProvider } from './context/OnboardingContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NutritionProvider } from './context/NutritionContext';
 import { TrainingProvider } from './context/TrainingContext';
-import { AppState, AppStateStatus, Alert, Platform } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import subscriptionService, { PRODUCT_IDS } from './services/subscription';
 import axios from 'axios';
-import authService from './services/auth';
+
 import Purchases, { CustomerInfo } from 'react-native-purchases';
 import { PAYWALL_RESULT } from 'react-native-purchases-ui';
-import { checkSubscriptionOnForeground } from './(onboarding)/paywall';
+
 import { initializeAppsFlyer, cleanupAppsFlyer } from './config/appsflyer';
 import { configureRevenueCat, logInRevenueCatUser, setReferralCode } from './services/revenuecat';
 import { doc, getDoc } from 'firebase/firestore';
@@ -49,11 +49,6 @@ SplashScreen.preventAutoHideAsync();
 function SubscriptionProvider({ children }: { children: React.ReactNode }) {
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
   const { user } = useAuth();
-  const appState = useRef(AppState.currentState);
-  const lastCheckTimeRef = useRef<number>(Date.now());
-  const pathname = usePathname();
-  const currentPathRef = useRef(pathname);
-  const isInOnboardingRef = useRef(false);
   const customerInfoListenerSetup = useRef<boolean>(false);
   
   // Reset listener setup when user changes (including logout)
@@ -63,17 +58,6 @@ function SubscriptionProvider({ children }: { children: React.ReactNode }) {
       customerInfoListenerSetup.current = false;
     }
   }, [user]);
-  
-  // Update currentPathRef when pathname changes
-  useEffect(() => {
-    currentPathRef.current = pathname;
-    // Also update onboarding status
-    isInOnboardingRef.current = isOnOnboardingScreen(pathname);
-    console.log(`Path changed to: "${pathname}" - In onboarding: ${isInOnboardingRef.current ? 'YES' : 'NO'}`);
-  }, [pathname]);
-  
-  // Check minimum time between foreground checks (10 seconds)
-  const MIN_CHECK_INTERVAL = 10 * 1000; // 10 seconds in milliseconds
 
   // Check if the user has an active subscription
   const isSubscriptionActive = React.useMemo(() => {
@@ -178,74 +162,8 @@ function SubscriptionProvider({ children }: { children: React.ReactNode }) {
     identifyUser();
   }, [user]);
   
-  // Set up AppState change listener for foreground subscription check
-  useEffect(() => {
-    if (!user) return; // Only run this effect if there's a logged-in user
-    
-    const handleAppStateChange = async (nextAppState: AppStateStatus) => {
-      // Check if app is coming to foreground from background
-      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-        console.log('App has come to the foreground');
-        
-        // Check if enough time has passed since last check
-        const now = Date.now();
-        const timeSinceLastCheck = now - lastCheckTimeRef.current;
-        
-        // Get current path and check if we should show paywall
-        const currentPath = currentPathRef.current;
-        
-        // Log the current path for debugging
-        console.log(`Current path when returning to foreground: "${currentPath}"`);
-        console.log(`Onboarding status: ${isInOnboardingRef.current ? 'IN ONBOARDING' : 'NOT IN ONBOARDING'}`);
-        
-        // First check for explicit paywall path
-        if (currentPath.includes('/paywall')) {
-          console.log('Already on paywall screen - skipping foreground subscription check');
-          return;
-        }
-        
-        // Then check for any onboarding path
-        if (isInOnboardingRef.current) {
-          console.log('User is in onboarding flow - skipping foreground subscription check');
-          return;
-        }
-        
-        if (timeSinceLastCheck >= MIN_CHECK_INTERVAL) {
-          console.log(`Running foreground subscription check (${timeSinceLastCheck/1000}s since last check)`);
-          lastCheckTimeRef.current = now;
-          
-          // Only perform check if we have a user ID
-          if (user?.uid) {
-            await checkSubscriptionOnForeground(
-              user.uid,
-              // Navigate to home on purchase/restore
-              () => router.replace('/(tabs)/home'),
-              // Navigate to welcome on cancel
-              () => router.replace('/'),
-              // Pass the current path for additional checks
-              currentPath
-            );
-          }
-        } else {
-          console.log(`Skipping foreground check - only ${timeSinceLastCheck/1000}s since last check (minimum: ${MIN_CHECK_INTERVAL/1000}s)`);
-        }
-      }
-      
-      appState.current = nextAppState;
-    };
-    
-    // Set up the AppState listener
-    AppState.addEventListener('change', handleAppStateChange);
-    
-    // Record the initial check time
-    lastCheckTimeRef.current = Date.now();
-    
-    // Return cleanup function
-    return () => {
-      // Note: modern versions of React Native don't require explicit removal
-      console.log("AppState listener cleanup");
-    };
-  }, [user]); // Only re-run if user changes
+  // Note: Removed foreground subscription check - SortingScreen now handles initial routing
+  // Background/foreground subscription checks may be re-implemented in a future version
 
   return (
     <SubscriptionContext.Provider 
@@ -262,13 +180,6 @@ function SubscriptionProvider({ children }: { children: React.ReactNode }) {
 
 function RootLayoutContent() {
   const { user } = useAuth();
-  const pathname = usePathname();
-  const lastPathRef = useRef(pathname);
-
-  // Update last path whenever pathname changes
-  useEffect(() => {
-    lastPathRef.current = pathname;
-  }, [pathname]);
 
   // Function to check if we're on an onboarding screen
   const isOnOnboardingScreen = (path: string) => {
@@ -398,31 +309,9 @@ export default function RootLayout() {
 // Auth state manager component
 function AuthStateManager({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
-  const { isSubscriptionActive } = useSubscription();
   
-  // Navigate to home when user is authenticated
-  useEffect(() => {
-    if (user && !isLoading) {
-      const checkUser = async () => {
-        const userDoc = await authService.getUserDocument(user.uid);
-        if (userDoc) {
-          // If user is already subscribed, go directly to home
-          if (isSubscriptionActive) {
-            console.log("User has active subscription, navigating to home");
-            router.replace('/(tabs)/home');
-            return;
-          }
-          
-          // Otherwise, let the app continue normally
-          // We will NOT automatically show paywall here anymore
-          // Instead, each authentication component will handle subscription checks
-          // using the runPostLoginSequence function directly after login
-        }
-      };
-
-      checkUser();
-    }
-  }, [user, isLoading, isSubscriptionActive]);
+  // Note: Removed automatic navigation logic - SortingScreen now handles this
+  // This prevents the welcome screen flash and ensures proper routing
   
   // Show loading screen until auth state is determined
   if (isLoading && user === null) {
