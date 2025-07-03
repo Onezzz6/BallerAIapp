@@ -1,5 +1,4 @@
 import { View, Text, Pressable, SafeAreaView, ScrollView, Image } from 'react-native';
-import { useRouter } from 'expo-router';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
@@ -9,6 +8,7 @@ import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { Ionicons } from '@expo/vector-icons';
+import { useOnboardingStep } from '../hooks/useOnboardingStep';
 
 // Import all custom logos
 const igLogo = require('../../assets/images/iglogo.png');
@@ -89,26 +89,27 @@ const DISCOVERY_OPTIONS: DiscoveryOption[] = [
 ];
 
 export default function WhereDidYouFindUsScreen() {
-  const router = useRouter();
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(onboardingData.discoverySource);
+  
+  // NEW: Use automatic onboarding step system
+  const { goToNext } = useOnboardingStep('where-did-you-find-us');
 
   const handleContinue = async () => {
     if (selected) {
       haptics.light();
       await analytics().logEvent('AA_04_where_did_you_find_us_continue');
       await updateOnboardingData({ discoverySource: selected });
-      router.push('/tried-other-apps');
+      // NEW: Use automatic navigation instead of hardcoded route
+      goToNext();
     }
   };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
-      <OnboardingHeader 
-        currentStep={4}
-        totalSteps={29}
-      />
+      {/* NEW: Automatic step detection */}
+      <OnboardingHeader screenId="where-did-you-find-us" />
 
       <Animated.View 
         entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}

@@ -1,5 +1,4 @@
 import { View, Text, SafeAreaView } from 'react-native';
-import { useRouter } from 'expo-router';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
@@ -10,11 +9,14 @@ import { Picker } from '@react-native-picker/picker';
 import analytics from '@react-native-firebase/analytics';
 import { colors, typography, spacing } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
+import { useOnboardingStep } from '../hooks/useOnboardingStep';
 
 export default function AgeScreen() {
-  const router = useRouter();
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
+  
+  // NEW: Use automatic onboarding step system
+  const { goToNext } = useOnboardingStep('age');
   
   // Parse existing age or set defaults
   const existingAge = onboardingData.age ? parseInt(onboardingData.age) : null;
@@ -52,15 +54,14 @@ export default function AgeScreen() {
     haptics.light();
     await analytics().logEvent('AA_08_age_continue');
     await updateOnboardingData({ age: age.toString() });
-    router.push('/username');
+    // NEW: Use automatic navigation instead of hardcoded route
+    goToNext();
   };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
-      <OnboardingHeader 
-        currentStep={8}
-        totalSteps={29}
-      />
+      {/* NEW: Automatic step detection */}
+      <OnboardingHeader screenId="age" />
 
       {/* Animated Content Area - Slides in */}
       <Animated.View 

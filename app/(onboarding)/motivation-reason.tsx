@@ -1,5 +1,4 @@
 import { View, Text, TextInput, TouchableWithoutFeedback, Keyboard, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import { Animated as RNAnimated } from 'react-native';
 import Button from '../components/Button';
@@ -9,13 +8,16 @@ import { useState, useEffect, useRef } from 'react';
 import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
+import { useOnboardingStep } from '../hooks/useOnboardingStep';
 
 export default function MotivationReasonScreen() {
-  const router = useRouter();
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [motivation, setMotivation] = useState(onboardingData.motivation || '');
   const CHARACTER_LIMIT = 100;
+  
+  // NEW: Use automatic onboarding step system
+  const { goToNext } = useOnboardingStep('motivation-reason');
   
   // Animated value for button bottom position
   const buttonBottomPosition = useRef(new RNAnimated.Value(32)).current;
@@ -61,7 +63,8 @@ export default function MotivationReasonScreen() {
       haptics.light();
       await analytics().logEvent('AA_26_motivation_reason_continue');
       await updateOnboardingData({ motivation: motivation.trim() });
-      router.push('/profile-generation');
+      // NEW: Use automatic navigation instead of hardcoded route
+      goToNext();
     }
   };
 
@@ -72,10 +75,8 @@ export default function MotivationReasonScreen() {
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
-          <OnboardingHeader 
-            currentStep={26}
-            totalSteps={29}
-          />
+          {/* NEW: Automatic step detection */}
+          <OnboardingHeader screenId="motivation-reason" />
 
           <Animated.View 
             entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}

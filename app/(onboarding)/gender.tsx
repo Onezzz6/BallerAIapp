@@ -1,5 +1,4 @@
 import { View, Text, Pressable, SafeAreaView, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
@@ -8,12 +7,15 @@ import { useState, useEffect } from 'react';
 import analytics from '@react-native-firebase/analytics';
 import { colors, typography, spacing } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
+import { useOnboardingStep } from '../hooks/useOnboardingStep';
 
 export default function GenderScreen() {
-  const router = useRouter();
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selectedGender, setSelectedGender] = useState(onboardingData.gender || '');
+  
+  // NEW: Use automatic onboarding step system
+  const { goToNext } = useOnboardingStep('gender');
 
   const handleGenderSelect = (gender: string) => {
     haptics.light();
@@ -25,16 +27,15 @@ export default function GenderScreen() {
       haptics.light();
       await analytics().logEvent('AA_02_gender_continue');
       await updateOnboardingData({ gender: selectedGender });
-      router.push('/training-frequency');
+      // NEW: Use automatic navigation instead of hardcoded route
+      goToNext();
     }
   };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
-      <OnboardingHeader 
-        currentStep={2}
-        totalSteps={29}
-      />
+      {/* NEW: Automatic step detection */}
+      <OnboardingHeader screenId="gender" />
 
       <Animated.View 
         entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}

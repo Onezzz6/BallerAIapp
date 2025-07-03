@@ -1,5 +1,4 @@
 import { View, Text, Pressable, SafeAreaView } from 'react-native';
-import { useRouter } from 'expo-router';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
@@ -8,19 +7,20 @@ import { useState, useEffect } from 'react';
 import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
+import { useOnboardingStep } from '../hooks/useOnboardingStep';
 
 export default function NutritionScreen() {
-  const router = useRouter();
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [focusedOnNutrition, setFocusedOnNutrition] = useState<boolean | null>(onboardingData.nutrition === 'true' ? true : onboardingData.nutrition === 'false' ? false : null);
+  
+  // NEW: Use automatic onboarding step system
+  const { goToNext } = useOnboardingStep('nutrition');
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
-      <OnboardingHeader 
-        currentStep={22}
-        totalSteps={29}
-      />
+      {/* NEW: Automatic step detection */}
+      <OnboardingHeader screenId="nutrition" />
 
       <Animated.View 
         entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}
@@ -113,7 +113,8 @@ export default function NutritionScreen() {
               haptics.light();
               await analytics().logEvent('AA_22_nutrition_continue');
               await updateOnboardingData({ nutrition: focusedOnNutrition.toString() });
-              router.push('/gym-access');
+              // NEW: Use automatic navigation instead of hardcoded route
+              goToNext();
             }
           }}
           disabled={focusedOnNutrition === null}

@@ -1,5 +1,4 @@
 import { View, Text, Pressable, SafeAreaView } from 'react-native';
-import { useRouter } from 'expo-router';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
@@ -8,6 +7,7 @@ import { useState, useEffect } from 'react';
 import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
+import { useOnboardingStep } from '../hooks/useOnboardingStep';
 
 const IMPROVEMENTS = [
   {
@@ -33,17 +33,17 @@ const IMPROVEMENTS = [
 ];
 
 export default function ImprovementFocusScreen() {
-  const router = useRouter();
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(onboardingData.improvementFocus);
+  
+  // NEW: Use automatic onboarding step system
+  const { goToNext } = useOnboardingStep('improvement-focus');
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
-      <OnboardingHeader 
-        currentStep={10}
-        totalSteps={29}
-      />
+      {/* NEW: Automatic step detection */}
+      <OnboardingHeader screenId="improvement-focus" />
 
       <Animated.View 
         entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}
@@ -130,7 +130,8 @@ export default function ImprovementFocusScreen() {
               haptics.light();
               await analytics().logEvent('AA_10_improvement_focus_continue');
               await updateOnboardingData({ improvementFocus: selected });
-              router.push('/goal-timeline');
+              // NEW: Use automatic navigation instead of hardcoded route
+              goToNext();
             }
           }}
           disabled={!selected}

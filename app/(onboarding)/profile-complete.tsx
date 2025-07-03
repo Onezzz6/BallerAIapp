@@ -1,5 +1,4 @@
 import { View, Text, SafeAreaView, Image, Dimensions } from 'react-native';
-import { useRouter } from 'expo-router';
 import Animated, { 
   FadeInRight, 
   useSharedValue, 
@@ -15,6 +14,7 @@ import OnboardingHeader from '../components/OnboardingHeader';
 import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
+import { useOnboardingStep } from '../hooks/useOnboardingStep';
 
 // Phone Carousel Component
 const PhoneCarousel: React.FC = () => {
@@ -137,8 +137,10 @@ const PhoneCarousel: React.FC = () => {
 };
 
 export default function ProfileCompleteScreen() {
-  const router = useRouter();
   const haptics = useHaptics();
+  
+  // NEW: Use automatic onboarding step system
+  const { goToNext } = useOnboardingStep('profile-complete');
 
   const handleGetStarted = async () => {
     haptics.light();
@@ -156,15 +158,14 @@ export default function ProfileCompleteScreen() {
     }
     
     await analytics().logEvent('AA_29_profile_complete_get_started');
-    router.push('/sign-up');
+    // NEW: Use automatic navigation instead of hardcoded route
+    goToNext();
   };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#ffffff' }}>
-      <OnboardingHeader 
-        currentStep={29}
-        totalSteps={29}
-      />
+      {/* NEW: Automatic step detection */}
+      <OnboardingHeader screenId="profile-complete" />
 
       <Animated.View 
         entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}

@@ -3,16 +3,48 @@ import { useRouter } from 'expo-router';
 import BackButton from './BackButton';
 import Animated, { FadeIn, FadeOut, PinwheelIn } from 'react-native-reanimated';
 import { colors, spacing } from '../utils/theme';
+import { getStepInfo } from '../(onboarding)/onboarding-flow';
 
 type Props = {
-  currentStep: number;
-  totalSteps: number;
+  // NEW: Automatic step detection (preferred method)
+  screenId?: string;
+  
+  // OLD: Manual step specification (for backward compatibility)
+  currentStep?: number;
+  totalSteps?: number;
+  
   customBackPath?: string;
 }
 
-export default function OnboardingHeader({ currentStep, totalSteps, customBackPath }: Props) {
+export default function OnboardingHeader({ 
+  screenId, 
+  currentStep: manualCurrentStep, 
+  totalSteps: manualTotalSteps, 
+  customBackPath 
+}: Props) {
   const router = useRouter();
-  // Calculate progress based on the totalSteps prop
+  
+  // Determine step information
+  let currentStep: number;
+  let totalSteps: number;
+  
+  if (screenId) {
+    // NEW: Automatic detection using flow configuration
+    const stepInfo = getStepInfo(screenId);
+    currentStep = stepInfo.currentStep;
+    totalSteps = stepInfo.totalSteps;
+  } else if (manualCurrentStep !== undefined && manualTotalSteps !== undefined) {
+    // OLD: Manual specification (backward compatibility)
+    currentStep = manualCurrentStep;
+    totalSteps = manualTotalSteps;
+  } else {
+    // Fallback
+    console.warn('OnboardingHeader: Either screenId or currentStep/totalSteps must be provided');
+    currentStep = 1;
+    totalSteps = 1;
+  }
+  
+  // Calculate progress based on the totalSteps
   const progress = Math.min((currentStep / totalSteps) * 100, 100);
 
   return (

@@ -1,5 +1,4 @@
 import { View, Text, SafeAreaView } from 'react-native';
-import { useRouter } from 'expo-router';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
@@ -9,19 +8,20 @@ import { Picker } from '@react-native-picker/picker';
 import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
+import { useOnboardingStep } from '../hooks/useOnboardingStep';
 
 export default function SleepHoursScreen() {
-  const router = useRouter();
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(onboardingData.sleepHours || '8');
+  
+  // NEW: Use automatic onboarding step system
+  const { goToNext } = useOnboardingStep('sleep-hours');
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
-      <OnboardingHeader 
-        currentStep={21}
-        totalSteps={29}
-      />
+      {/* NEW: Automatic step detection */}
+      <OnboardingHeader screenId="sleep-hours" />
 
       <Animated.View  
         entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}
@@ -104,7 +104,8 @@ export default function SleepHoursScreen() {
               haptics.light();
               await analytics().logEvent('AA_21_sleep_hours_continue');
               await updateOnboardingData({ sleepHours: selected });
-              router.push('/nutrition');
+              // NEW: Use automatic navigation instead of hardcoded route
+              goToNext();
             }
           }}
           disabled={!selected}

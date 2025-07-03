@@ -1,5 +1,4 @@
 import { View, Text, SafeAreaView } from 'react-native';
-import { useRouter } from 'expo-router';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
@@ -8,11 +7,14 @@ import { useEffect } from 'react';
 import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
+import { useOnboardingStep } from '../hooks/useOnboardingStep';
 
 export default function MotivationConfirmationScreen() {
-  const router = useRouter();
   const haptics = useHaptics();
   const { onboardingData } = useOnboarding();
+  
+  // NEW: Use automatic onboarding step system
+  const { goToNext } = useOnboardingStep('motivation-confirmation');
 
   const handleContinue = async () => {
     console.log('Continue button pressed on motivation-confirmation');
@@ -25,8 +27,9 @@ export default function MotivationConfirmationScreen() {
       console.log('Analytics error:', error);
     }
     
-    console.log('Attempting to navigate to holding-back');
-    router.push('/(onboarding)/holding-back');
+    // NEW: Use automatic navigation instead of hardcoded route
+    console.log('Using automatic navigation to next screen');
+    goToNext();
   };
 
   // Get the improvement focus text
@@ -54,10 +57,8 @@ export default function MotivationConfirmationScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
-      <OnboardingHeader 
-        currentStep={12}
-        totalSteps={29}
-      />
+      {/* NEW: Automatic step detection */}
+      <OnboardingHeader screenId="motivation-confirmation" />
 
       <Animated.View 
         entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}

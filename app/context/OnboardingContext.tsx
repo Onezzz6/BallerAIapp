@@ -7,11 +7,9 @@ type OnboardingData = {
   age: string | null;
   height: string | null;
   weight: string | null;
-  dominantFoot: string | null;
   injuryHistory: string | null;
   skillLevel: string | null;
   position: string | null;
-  teamStatus: string | null;
   trainingSurface: string | null;
   footballGoal: string | null;
   improvementFocus: string | null;
@@ -21,7 +19,6 @@ type OnboardingData = {
   trainingFrequency: string | null;
   discoverySource: string | null;
   triedOtherApps: string | null;
-  hasGymAccess: boolean | null;
   referralCode: string | null;
   referralDiscount: number | null;
   referralInfluencer: string | null;
@@ -44,11 +41,9 @@ const defaultOnboardingData: OnboardingData = {
   age: null,
   height: null,
   weight: null,
-  dominantFoot: null,
   injuryHistory: null,
   skillLevel: null,
   position: null,
-  teamStatus: null,
   trainingSurface: null,
   footballGoal: null,
   improvementFocus: null,
@@ -58,7 +53,6 @@ const defaultOnboardingData: OnboardingData = {
   trainingFrequency: null,
   discoverySource: null,
   triedOtherApps: null,
-  hasGymAccess: null,
   referralCode: null,
   referralDiscount: null,
   referralInfluencer: null,

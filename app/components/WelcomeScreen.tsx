@@ -25,7 +25,6 @@ const defaultOnboardingData = {
   footballGoal: null,
   improvementFocus: null,
   trainingFrequency: null,
-  hasGymAccess: null,
   motivation: null,
 };
 

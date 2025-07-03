@@ -1,5 +1,4 @@
 import { View, Text, Image, ScrollView, SafeAreaView } from 'react-native';
-import { useRouter } from 'expo-router';
 import Animated, { FadeInRight, FadeInUp } from 'react-native-reanimated';
 import { useEffect } from 'react';
 import Button from '../components/Button';
@@ -7,10 +6,13 @@ import OnboardingHeader from '../components/OnboardingHeader';
 import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
+import { useOnboardingStep } from '../hooks/useOnboardingStep';
 
 export default function SocialProofScreen() {
-  const router = useRouter();
   const haptics = useHaptics();
+  
+  // NEW: Use automatic onboarding step system
+  const { goToNext } = useOnboardingStep('social-proof');
 
   const socialProofImages = [
     require('../../assets/images/r1.png'),
@@ -23,10 +25,8 @@ export default function SocialProofScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
-      <OnboardingHeader 
-        currentStep={25}
-        totalSteps={29}
-      />
+      {/* NEW: Automatic step detection */}
+      <OnboardingHeader screenId="social-proof" />
 
       <Animated.View 
         entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}
@@ -125,7 +125,8 @@ export default function SocialProofScreen() {
           onPress={async () => {
             haptics.light();
             await analytics().logEvent('AA_25_social_proof_continue');
-            router.push('/motivation-reason');
+            // NEW: Use automatic navigation instead of hardcoded route
+            goToNext();
           }}
         />
       </View>

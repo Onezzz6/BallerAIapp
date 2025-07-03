@@ -1,5 +1,4 @@
 import { View, Text, Pressable, SafeAreaView } from 'react-native';
-import { useRouter } from 'expo-router';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
@@ -8,6 +7,7 @@ import { useState, useEffect } from 'react';
 import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
+import { useOnboardingStep } from '../hooks/useOnboardingStep';
 
 const TIMELINE_OPTIONS = [
   {
@@ -29,26 +29,27 @@ const TIMELINE_OPTIONS = [
 ];
 
 export default function GoalTimelineScreen() {
-  const router = useRouter();
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(onboardingData.goalTimeline || null);
+  
+  // NEW: Use automatic onboarding step system
+  const { goToNext } = useOnboardingStep('goal-timeline');
 
   const handleContinue = async () => {
     if (selected) {
       haptics.light();
       await analytics().logEvent('AA_11_goal_timeline_continue');
       await updateOnboardingData({ goalTimeline: selected });
-      router.push('/motivation-confirmation');
+      // NEW: Use automatic navigation instead of hardcoded route
+      goToNext();
     }
   };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
-      <OnboardingHeader 
-        currentStep={11}
-        totalSteps={29}
-      />
+      {/* NEW: Automatic step detection */}
+      <OnboardingHeader screenId="goal-timeline" />
 
       <Animated.View 
         entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}

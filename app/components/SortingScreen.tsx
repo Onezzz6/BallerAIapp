@@ -21,20 +21,63 @@ export default function SortingScreen() {
   const { isSubscriptionActive, customerInfo, refreshSubscriptionStatus } = useSubscription();
   const [isInitializing, setIsInitializing] = useState(true);
   const [hasCheckedSubscription, setHasCheckedSubscription] = useState(false);
+  const [navigationReady, setNavigationReady] = useState(false);
+
+  // Check if navigation is ready
+  useEffect(() => {
+    const checkNavigationReady = () => {
+      try {
+        // Test if router is available and can be used
+        if (router && typeof router.replace === 'function') {
+          setNavigationReady(true);
+        } else {
+          // If router is not ready, try again after a short delay
+          setTimeout(checkNavigationReady, 100);
+        }
+      } catch (error) {
+        // If there's an error accessing the router, try again
+        setTimeout(checkNavigationReady, 100);
+      }
+    };
+
+    // Add a delay to ensure the root layout has time to mount
+    // This coordinates with the root layout's 2-second initial loading
+    setTimeout(checkNavigationReady, 2200);
+  }, [router]);
+
+  const performNavigation = (path: string) => {
+    try {
+      console.log(`SortingScreen: Navigating to ${path}`);
+      router.replace(path);
+      setIsInitializing(false);
+    } catch (error) {
+      console.error('Navigation error:', error);
+      // If navigation fails, try again after a short delay
+      setTimeout(() => {
+        try {
+          router.replace(path);
+          setIsInitializing(false);
+        } catch (retryError) {
+          console.error('Navigation retry failed:', retryError);
+          // Default to showing loading screen if navigation consistently fails
+          setIsInitializing(false);
+        }
+      }, 500);
+    }
+  };
 
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        // Wait for auth state to be determined
-        if (authLoading) {
+        // Wait for auth state to be determined and navigation to be ready
+        if (authLoading || !navigationReady) {
           return;
         }
 
         // Case 1: No user - show welcome screen for onboarding
         if (!user) {
           console.log('SortingScreen: No user found, navigating to welcome screen');
-          router.replace('/welcome');
-          setIsInitializing(false);
+          performNavigation('/welcome');
           return;
         }
 
@@ -46,8 +89,7 @@ export default function SortingScreen() {
         
         if (!userDoc) {
           console.log('SortingScreen: User document not found, navigating to welcome screen');
-          router.replace('/welcome');
-          setIsInitializing(false);
+          performNavigation('/welcome');
           return;
         }
 
@@ -67,37 +109,34 @@ export default function SortingScreen() {
       } catch (error) {
         console.error('Error in SortingScreen initialization:', error);
         // On error, default to welcome screen
-        router.replace('/welcome');
-        setIsInitializing(false);
+        performNavigation('/welcome');
       }
     };
 
     // Only run once when component mounts
-    if (!hasCheckedSubscription) {
+    if (!hasCheckedSubscription && navigationReady) {
       initializeApp();
     }
-  }, [user, authLoading, router, refreshSubscriptionStatus, hasCheckedSubscription]);
+  }, [user, authLoading, router, refreshSubscriptionStatus, hasCheckedSubscription, navigationReady]);
 
   // Separate effect to handle navigation after subscription status is determined
   useEffect(() => {
-    if (hasCheckedSubscription && user && !authLoading) {
+    if (hasCheckedSubscription && user && !authLoading && navigationReady) {
       console.log('SortingScreen: Making final routing decision...');
       console.log('SortingScreen: Subscription active:', isSubscriptionActive);
       
       if (isSubscriptionActive) {
         console.log('SortingScreen: User has active subscription, navigating to home');
-        router.replace('/(tabs)/home');
+        performNavigation('/(tabs)/home');
       } else {
         console.log('SortingScreen: User has no active subscription, navigating to welcome screen');
-        router.replace('/welcome');
+        performNavigation('/welcome');
       }
-      
-      setIsInitializing(false);
     }
-  }, [hasCheckedSubscription, isSubscriptionActive, user, authLoading, router]);
+  }, [hasCheckedSubscription, isSubscriptionActive, user, authLoading, router, navigationReady]);
 
   // Show loading screen while determining where to navigate
-  if (isInitializing || authLoading) {
+  if (isInitializing || authLoading || !navigationReady) {
     return <LoadingScreen />;
   }
 

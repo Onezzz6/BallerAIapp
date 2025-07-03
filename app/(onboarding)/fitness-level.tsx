@@ -1,5 +1,4 @@
 import { View, Text, Pressable, SafeAreaView } from 'react-native';
-import { useRouter } from 'expo-router';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
@@ -8,6 +7,7 @@ import { useState, useEffect } from 'react';
 import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
+import { useOnboardingStep } from '../hooks/useOnboardingStep';
 
 const FITNESS_LEVELS = [
   {
@@ -29,17 +29,17 @@ const FITNESS_LEVELS = [
 ];
 
 export default function FitnessLevelScreen() {
-  const router = useRouter();
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(onboardingData.fitnessLevel);
+  
+  // NEW: Use automatic onboarding step system
+  const { goToNext } = useOnboardingStep('fitness-level');
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
-      <OnboardingHeader 
-        currentStep={19}
-        totalSteps={29}
-      />
+      {/* NEW: Automatic step detection */}
+      <OnboardingHeader screenId="fitness-level" />
 
       <Animated.View 
         entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}
@@ -126,7 +126,8 @@ export default function FitnessLevelScreen() {
               haptics.light();
               await analytics().logEvent('AA_19_fitness_level_continue');
               await updateOnboardingData({ fitnessLevel: selected });
-              router.push('/activity-level');
+              // NEW: Use automatic navigation instead of hardcoded route
+              goToNext();
             }
           }}
           disabled={!selected}

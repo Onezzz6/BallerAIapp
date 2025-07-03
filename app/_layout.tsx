@@ -190,7 +190,7 @@ function RootLayoutContent() {
       path.includes('/tracking') ||
       path.includes('/football-goal') ||
       path.includes('/smart-watch') ||
-      path.includes('/gym-access') ||
+
       path.includes('/training-frequency') ||
       path.includes('/improvement-focus') ||
       path === '/';
@@ -230,7 +230,6 @@ export const isOnOnboardingScreen = (path: string) => {
     path.includes('/activity-level') ||
     path.includes('/sleep-hours') ||
     path.includes('/nutrition') ||
-    path.includes('/gym-access') ||
     path.includes('/referral-code') ||
     path.includes('/social-proof') ||
     path.includes('/motivation-reason') ||
@@ -244,7 +243,6 @@ export const isOnOnboardingScreen = (path: string) => {
     path.includes('/tracking') ||
     path.includes('/football-goal') ||
     path.includes('/smart-watch') ||
-    path.includes('/gym-access') ||
     path.includes('/improvement-focus') ||
     path === '/';
 };

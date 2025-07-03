@@ -1,5 +1,4 @@
 import { View, Text, SafeAreaView } from 'react-native';
-import { useRouter } from 'expo-router';
 import Animated, { 
   FadeInRight, 
   useSharedValue, 
@@ -12,6 +11,7 @@ import { useEffect, useState } from 'react';
 import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
+import { useOnboardingStep } from '../hooks/useOnboardingStep';
 
 const GENERATION_STEPS = [
   { text: 'Creating your macro goals', checked: false },
@@ -29,8 +29,10 @@ const STATUS_MESSAGES = [
 ];
 
 export default function GeneratingProfileScreen() {
-  const router = useRouter();
   const haptics = useHaptics();
+  
+  // NEW: Use automatic onboarding step system
+  const { goToNext } = useOnboardingStep('generating-profile');
   
   const progress = useSharedValue(0);
   const [currentPercentage, setCurrentPercentage] = useState(0);
@@ -50,7 +52,8 @@ export default function GeneratingProfileScreen() {
        // Navigate when animation completes
        setTimeout(async () => {
          await analytics().logEvent('AA_28_generating_profile');
-         router.replace('/profile-complete');
+         // NEW: Use automatic navigation instead of hardcoded route
+         goToNext();
        }, totalDuration + 200);
 
              // Update percentage display every 100ms

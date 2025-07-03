@@ -4,7 +4,6 @@
  *****************************************************************************************/
 
 import { View, Text, SafeAreaView, Dimensions } from 'react-native';
-import { useRouter } from 'expo-router';
 import Animated, {
   FadeInRight,
   useSharedValue,
@@ -30,6 +29,7 @@ import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
+import { useOnboardingStep } from '../hooks/useOnboardingStep';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const generousLen = (d: string) => (d.length + 200) * 2;
@@ -220,8 +220,10 @@ function DevelopmentChart({
 
 /*──────────────────  Screen  ──────────────────*/
 export default function AnalyzingScreen() {
-  const router  = useRouter();
   const haptics = useHaptics();
+  
+  // NEW: Use automatic onboarding step system
+  const { goToNext } = useOnboardingStep('analyzing');
 
   /* Caption fade-in */
   const captionOpacity = useSharedValue(0);
@@ -235,7 +237,8 @@ export default function AnalyzingScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
-      <OnboardingHeader currentStep={6} totalSteps={29} />
+      {/* NEW: Automatic step detection */}
+      <OnboardingHeader screenId="analyzing" />
 
       <Animated.View
         entering={FadeInRight.duration(250).withInitialValues({ transform: [{ translateX: 400 }] })}
@@ -301,7 +304,7 @@ export default function AnalyzingScreen() {
           onPress={async () => {
             haptics.light();
             await analytics().logEvent('AA_06_analyzing_continue');
-            router.push('/measurements');
+            goToNext();
           }}
         />
       </View>

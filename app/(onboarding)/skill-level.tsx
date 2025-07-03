@@ -1,5 +1,4 @@
 import { View, Text, Pressable, SafeAreaView } from 'react-native';
-import { useRouter } from 'expo-router';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
@@ -8,6 +7,7 @@ import { useState } from 'react';
 import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
+import { useOnboardingStep } from '../hooks/useOnboardingStep';
 
 const SKILL_LEVELS = [
   {
@@ -28,17 +28,17 @@ const SKILL_LEVELS = [
 ];
 
 export default function SkillLevelScreen() {
-  const router = useRouter();
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(onboardingData.skillLevel);
+  
+  // NEW: Use automatic onboarding step system
+  const { goToNext } = useOnboardingStep('skill-level');
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
-      <OnboardingHeader 
-        currentStep={12}
-        totalSteps={29}
-      />
+      {/* NEW: Automatic step detection */}
+      <OnboardingHeader screenId="skill-level" />
 
       <Animated.View 
         entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}
@@ -132,7 +132,8 @@ export default function SkillLevelScreen() {
               haptics.light();
               await analytics().logEvent('onboarding_skill_level_continue');
               await updateOnboardingData({ skillLevel: selected });
-              router.push('/position');
+              // NEW: Use automatic navigation instead of hardcoded route
+              goToNext();
             }
           }}
           disabled={!selected}

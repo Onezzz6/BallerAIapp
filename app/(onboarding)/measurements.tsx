@@ -1,5 +1,4 @@
 import { View, Text, SafeAreaView, Switch } from 'react-native';
-import { useRouter } from 'expo-router';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
@@ -9,12 +8,15 @@ import { Picker } from '@react-native-picker/picker';
 import analytics from '@react-native-firebase/analytics';
 import { colors, typography, spacing } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
+import { useOnboardingStep } from '../hooks/useOnboardingStep';
 
 export default function MeasurementsScreen() {
-  const router = useRouter();
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [isMetric, setIsMetric] = useState(true);
+  
+  // NEW: Use automatic onboarding step system
+  const { goToNext } = useOnboardingStep('measurements');
 
   const [height, setHeight] = useState(parseFloat(onboardingData.height || '') || 170);
   const [weight, setWeight] = useState(parseFloat(onboardingData.weight || '') || 70);
@@ -116,16 +118,15 @@ export default function MeasurementsScreen() {
         height: finalHeight.toString(), 
         weight: finalWeight.toString() 
       });
-      router.push('/age');
+      // NEW: Use automatic navigation instead of hardcoded route
+      goToNext();
     }
   };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
-      <OnboardingHeader 
-        currentStep={7}
-        totalSteps={29}
-      />
+      {/* NEW: Automatic step detection */}
+      <OnboardingHeader screenId="measurements" />
 
       {/* Animated Content Area - Slides in */}
       <Animated.View 

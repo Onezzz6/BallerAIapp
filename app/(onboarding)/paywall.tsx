@@ -44,7 +44,7 @@ const isOnOnboardingScreen = (path: string) => {
     path.includes('/tracking') ||
     path.includes('/football-goal') ||
     path.includes('/smart-watch') ||
-    path.includes('/gym-access') ||
+    
     path.includes('/training-frequency') ||
     path.includes('/improvement-focus') ||
     path.includes('/username') ||

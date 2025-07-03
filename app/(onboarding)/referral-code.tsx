@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, TouchableWithoutFeedback, Keyboard, SafeAreaView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import { Animated as RNAnimated } from 'react-native';
 import Button from '../components/Button';
@@ -11,9 +10,9 @@ import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { validateReferralCode, createSuccessMessage } from '../services/referralCode';
 import { setReferralCode } from '../services/revenuecat';
+import { useOnboardingStep } from '../hooks/useOnboardingStep';
 
 export default function ReferralCodeScreen() {
-  const router = useRouter();
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [referralCode, setReferralCode] = useState(onboardingData.referralCode || '');
@@ -21,6 +20,9 @@ export default function ReferralCodeScreen() {
   const [validationMessage, setValidationMessage] = useState<string>('');
   const [isValid, setIsValid] = useState<boolean | null>(null);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  
+  // NEW: Use automatic onboarding step system
+  const { goToNext } = useOnboardingStep('referral-code');
   
   // Animated value for button bottom position
   const buttonBottomPosition = useRef(new RNAnimated.Value(32)).current;
@@ -135,7 +137,8 @@ export default function ReferralCodeScreen() {
     }
 
     await analytics().logEvent('AA_24_referral_code_continue');
-    router.push('/social-proof');
+    // NEW: Use automatic navigation instead of hardcoded route
+    goToNext();
   };
 
   return (
@@ -145,10 +148,8 @@ export default function ReferralCodeScreen() {
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
-          <OnboardingHeader 
-            currentStep={24}
-            totalSteps={29}
-          />
+          {/* NEW: Automatic step detection */}
+          <OnboardingHeader screenId="referral-code" />
 
           <Animated.View 
             entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}

@@ -1,5 +1,4 @@
 import { View, Text, TextInput, Keyboard, TouchableWithoutFeedback, KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
-import { useRouter } from 'expo-router';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
@@ -9,12 +8,15 @@ import analytics from '@react-native-firebase/analytics';
 import { colors, typography, spacing } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { Animated as RNAnimated } from 'react-native';
+import { useOnboardingStep } from '../hooks/useOnboardingStep';
 
 export default function UsernameScreen() {
-  const router = useRouter();
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [username, setUsername] = useState(onboardingData.username || '');
+  
+  // NEW: Use automatic onboarding step system
+  const { goToNext } = useOnboardingStep('username');
   
   // Animated value for button bottom position
   const buttonBottomPosition = useRef(new RNAnimated.Value(32)).current;
@@ -27,7 +29,8 @@ export default function UsernameScreen() {
       haptics.light();
       await analytics().logEvent('AA_09_username_continue');
       await updateOnboardingData({ username: username.trim() });
-      router.push('/improvement-focus');
+      // NEW: Use automatic navigation instead of hardcoded route
+      goToNext();
     }
   };
 
@@ -74,10 +77,8 @@ export default function UsernameScreen() {
             backgroundColor: colors.backgroundColor,
           }}
         >
-          <OnboardingHeader 
-            currentStep={9}
-            totalSteps={29}
-          />
+          {/* NEW: Automatic step detection */}
+          <OnboardingHeader screenId="username" />
 
           <Animated.View 
             entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}

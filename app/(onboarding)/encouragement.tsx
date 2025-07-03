@@ -4,7 +4,6 @@
  *****************************************************************************************/
 
 import { View, Text, SafeAreaView } from 'react-native';
-import { useRouter } from 'expo-router';
 import Animated, {
   FadeInRight,
   useSharedValue,
@@ -23,6 +22,7 @@ import OnboardingHeader from '../components/OnboardingHeader';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import analytics from '@react-native-firebase/analytics';
+import { useOnboardingStep } from '../hooks/useOnboardingStep';
 
 /*─────────────────────  Elite Partnership Animation  ─────────────────────*/
 function ElitePartnership() {
@@ -286,8 +286,10 @@ function ElitePartnership() {
 
 /*──────────────────  Screen  ──────────────────*/
 export default function EncouragementScreen() {
-  const router  = useRouter();
   const haptics = useHaptics();
+  
+  // NEW: Use automatic onboarding step system
+  const { goToNext } = useOnboardingStep('encouragement');
 
   /* Caption fade-in */
   const captionOpacity = useSharedValue(0);
@@ -306,7 +308,8 @@ export default function EncouragementScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
-      <OnboardingHeader currentStep={15} totalSteps={29} />
+      {/* NEW: Automatic step detection */}
+      <OnboardingHeader screenId="encouragement" />
 
       <Animated.View
         entering={FadeInRight.duration(250).withInitialValues({ transform: [{ translateX: 400 }] })}
@@ -413,7 +416,8 @@ export default function EncouragementScreen() {
           onPress={async () => {
             haptics.light();
             await analytics().logEvent('AA_15_thank_you_for_trusting_us_continue');
-            router.push('/team-status');
+            // NEW: Use automatic navigation instead of hardcoded route
+            goToNext();
           }}
         />
       </View>

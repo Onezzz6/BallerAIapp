@@ -1,5 +1,4 @@
 import { View, Text, SafeAreaView } from 'react-native';
-import { useRouter } from 'expo-router';
 import Animated, { 
   FadeInRight, 
   useSharedValue, 
@@ -14,10 +13,13 @@ import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { useEffect } from 'react';
+import { useOnboardingStep } from '../hooks/useOnboardingStep';
 
 export default function ProfileGenerationScreen() {
-  const router = useRouter();
   const haptics = useHaptics();
+  
+  // NEW: Use automatic onboarding step system
+  const { goToNext } = useOnboardingStep('profile-generation');
   
   // Animation values for dynamic magic wand
   const wandScale = useSharedValue(1);
@@ -139,7 +141,8 @@ export default function ProfileGenerationScreen() {
   const handleContinue = async () => {
     haptics.light();
     await analytics().logEvent('AA_27_profile_generation_continue');
-    router.push('/generating-profile');
+    // NEW: Use automatic navigation instead of hardcoded route
+    goToNext();
   };
 
   const wandAnimatedStyle = useAnimatedStyle(() => ({
@@ -169,10 +172,8 @@ export default function ProfileGenerationScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
-      <OnboardingHeader 
-        currentStep={27}
-        totalSteps={29}
-      />
+      {/* NEW: Automatic step detection */}
+      <OnboardingHeader screenId="profile-generation" />
 
       <Animated.View 
         entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}

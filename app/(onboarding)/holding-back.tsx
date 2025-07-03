@@ -1,5 +1,4 @@
 import { View, Text, Pressable, SafeAreaView } from 'react-native';
-import { useRouter } from 'expo-router';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
@@ -8,51 +7,49 @@ import { useState, useEffect } from 'react';
 import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
+import { useOnboardingStep } from '../hooks/useOnboardingStep';
 
 const HOLDING_BACK_OPTIONS = [
   {
-    id: 'no-optimal-recovery',
-    title: 'No optimal recovery',
+    id: 'inconsistent-nutrition',
+    title: 'Inconsistent nutrition',
   },
   {
-    id: 'lack-of-structure',
-    title: 'Lack of structure',
+    id: 'no-optimal-recovery',
+    title: 'No optimal recovery',
   },
   {
     id: 'injuries',
     title: 'Injuries',
   },
   {
-    id: 'low-motivation',
-    title: 'Low motivation',
-  },
-  {
-    id: 'busy-schedule',
-    title: 'Busy schedule',
+    id: 'no-structure',
+    title: 'No structure',
   },
 ];
 
 export default function HoldingBackScreen() {
-  const router = useRouter();
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(onboardingData.holdingBack || null);
+  
+  // NEW: Automatic step management and navigation
+  const { goToNext } = useOnboardingStep('holding-back');
 
   const handleContinue = async () => {
     if (selected) {
       haptics.light();
       await analytics().logEvent('AA_13_holding_back_continue');
       await updateOnboardingData({ holdingBack: selected });
-      router.push('/training-accomplishment');
+      // NEW: Automatic navigation to the next step
+      goToNext();
     }
   };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
-      <OnboardingHeader 
-        currentStep={13}
-        totalSteps={29}
-      />
+      {/* NEW: Automatic step detection */}
+      <OnboardingHeader screenId="holding-back" />
 
       <Animated.View 
         entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}
@@ -74,7 +71,7 @@ export default function HoldingBackScreen() {
               marginBottom: 8,
             }
           ]} allowFontScaling={false}>
-            What's currently holding you back?
+            One thing thats currently holding you back?
           </Text>
         </View>
 

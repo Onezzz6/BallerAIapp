@@ -1,5 +1,4 @@
 import { View, Text, Pressable, SafeAreaView } from 'react-native';
-import { useRouter } from 'expo-router';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
@@ -8,6 +7,7 @@ import { useState } from 'react';
 import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
+import { useOnboardingStep } from '../hooks/useOnboardingStep';
 
 const GOALS = [
   {
@@ -29,26 +29,27 @@ const GOALS = [
 ];
 
 export default function FootballGoalScreen() {
-  const router = useRouter();
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(onboardingData.footballGoal);
+  
+  // NEW: Use automatic onboarding step system
+  const { goToNext } = useOnboardingStep('football-goal');
 
   const handleContinue = async () => {
     if (selected) {
       haptics.light();
       await analytics().logEvent('onboarding_football_goal_continue');
       await updateOnboardingData({ footballGoal: selected });
-      router.push('/injury-history');
+      // NEW: Use automatic navigation instead of hardcoded route
+      goToNext();
     }
   };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
-      <OnboardingHeader 
-        currentStep={10}
-        totalSteps={29}
-      />
+      {/* NEW: Automatic step detection */}
+      <OnboardingHeader screenId="football-goal" />
 
       <Animated.View 
         entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}

@@ -8,7 +8,6 @@ import {
   Keyboard,
   SafeAreaView
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import { Animated as RNAnimated } from 'react-native';
 import Button from '../components/Button';
@@ -18,13 +17,16 @@ import { useState, useEffect, useRef } from 'react';
 import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
+import { useOnboardingStep } from '../hooks/useOnboardingStep';
 
 export default function InjuryHistoryScreen() {
-  const router = useRouter();
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [injuryHistory, setInjuryHistory] = useState(onboardingData.injuryHistory || '');
   const CHARACTER_LIMIT = 300;
+  
+  // NEW: Use automatic onboarding step system
+  const { goToNext } = useOnboardingStep('injury-history');
   
   // Animated value for button bottom position
   const buttonBottomPosition = useRef(new RNAnimated.Value(32)).current;
@@ -67,10 +69,8 @@ export default function InjuryHistoryScreen() {
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
-          <OnboardingHeader 
-            currentStep={18}
-            totalSteps={29}
-          />
+          {/* NEW: Automatic step detection */}
+          <OnboardingHeader screenId="injury-history" />
 
           <Animated.View 
             entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}
@@ -154,7 +154,8 @@ export default function InjuryHistoryScreen() {
                   haptics.light();
                   await analytics().logEvent('AA_18_injury_history_continue');
                   await updateOnboardingData({ injuryHistory: injuryHistory.trim() });
-                  router.push('/fitness-level');
+                  // NEW: Use automatic navigation instead of hardcoded route
+                  goToNext();
                 }
               }}
               disabled={!injuryHistory.trim()}

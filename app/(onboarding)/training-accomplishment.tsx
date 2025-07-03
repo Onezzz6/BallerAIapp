@@ -1,5 +1,4 @@
 import { View, Text, Pressable, SafeAreaView } from 'react-native';
-import { useRouter } from 'expo-router';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
@@ -8,6 +7,7 @@ import { useState, useEffect } from 'react';
 import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
+import { useOnboardingStep } from '../hooks/useOnboardingStep';
 
 const ACCOMPLISHMENT_OPTIONS = [
   {
@@ -29,26 +29,27 @@ const ACCOMPLISHMENT_OPTIONS = [
 ];
 
 export default function TrainingAccomplishmentScreen() {
-  const router = useRouter();
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(onboardingData.trainingAccomplishment || null);
+  
+  // NEW: Use automatic onboarding step system
+  const { goToNext } = useOnboardingStep('training-accomplishment');
 
   const handleContinue = async () => {
     if (selected) {
       haptics.light();
       await analytics().logEvent('AA_14_training_accomplishment_continue');
       await updateOnboardingData({ trainingAccomplishment: selected });
-      router.push('/encouragement');
+      // NEW: Use automatic navigation instead of hardcoded route
+      goToNext();
     }
   };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
-      <OnboardingHeader 
-        currentStep={14}
-        totalSteps={29}
-      />
+      {/* NEW: Automatic step detection */}
+      <OnboardingHeader screenId="training-accomplishment" />
 
       <Animated.View 
         entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}
