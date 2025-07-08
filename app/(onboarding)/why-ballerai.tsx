@@ -127,7 +127,7 @@ export default function WhyBallerAIScreen() {
         borderTopColor: colors.veryLightGray,
       }}>
         <Button 
-          title="That's exactly what I need!" 
+          title="Continue" 
           onPress={handleContinue}
         />
       </View>

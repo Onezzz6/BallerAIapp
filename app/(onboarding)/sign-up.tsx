@@ -14,6 +14,7 @@ import { runPostLoginSequence, markAuthenticationComplete } from './paywall';
 import { PAYWALL_RESULT } from 'react-native-purchases-ui';
 import { usePathname } from 'expo-router';
 import ScrollIfNeeded from '../components/ScrollIfNeeded';
+import BackButton from '../components/BackButton';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -206,6 +207,16 @@ export default function SignUpScreen() {
           backgroundColor: '#ffffff',
         }}
       >
+        {/* Absolute positioned back button - top left */}
+        <View style={{
+          position: 'absolute',
+          top: 60,
+          left: 24,
+          zIndex: 1000,
+        }}>
+          <BackButton />
+        </View>
+        
         <Animated.View 
           entering={FadeIn.duration(500)}
           style={{
