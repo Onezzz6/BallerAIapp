@@ -59,7 +59,7 @@ export default function GenderScreen() {
                 marginBottom: 8,
               }
             ]} allowFontScaling={false}>
-              Choose your Gender
+              Choose your gender
             </Text>
             <Text style={[
               typography.subtitle,
