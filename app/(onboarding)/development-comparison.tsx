@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, Image, ScrollView, SafeAreaView } from 'react-native';
 import Animated, { 
   FadeInRight, 
@@ -7,7 +7,8 @@ import Animated, {
   withTiming,
   withDelay,
   runOnJS,
-  Easing
+  Easing,
+  cancelAnimation
 } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
@@ -15,6 +16,7 @@ import analyticsService from '../services/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function DevelopmentComparisonScreen() {
   const haptics = useHaptics();
@@ -22,12 +24,25 @@ export default function DevelopmentComparisonScreen() {
   // NEW: Use the onboarding step hook - automatically handles step numbers and navigation!
   const { currentStep, totalSteps, goToNext } = useOnboardingStep('development-comparison');
   
+  // Create a unique key for this component instance
+  const [componentKey] = useState(() => Math.random().toString());
+  
   // Animation values
   const withoutProgress = useSharedValue(0);
   const withProgress = useSharedValue(0);
   const textOpacity = useSharedValue(0);
 
   useEffect(() => {
+    // Cancel any ongoing animations immediately
+    cancelAnimation(withoutProgress);
+    cancelAnimation(withProgress);
+    cancelAnimation(textOpacity);
+    
+    // Force reset all animation values to initial state
+    withoutProgress.value = 0;
+    withProgress.value = 0;
+    textOpacity.value = 0;
+    
     // Start animations after component mounts
     const timer = setTimeout(() => {
       // Animate both bars simultaneously - starts slow then accelerates
@@ -49,8 +64,14 @@ export default function DevelopmentComparisonScreen() {
       textOpacity.value = withDelay(900, withTiming(1, { duration: 300 }));
     }, 500);
 
-    return () => clearTimeout(timer);
-  }, []);
+    return () => {
+      clearTimeout(timer);
+      // Cancel animations when component unmounts
+      cancelAnimation(withoutProgress);
+      cancelAnimation(withProgress);
+      cancelAnimation(textOpacity);
+    };
+  }, [componentKey]); // Depend on componentKey to ensure fresh start
 
   const withoutBarStyle = useAnimatedStyle(() => {
     return {
@@ -86,11 +107,12 @@ export default function DevelopmentComparisonScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
+    <SafeAreaView key={`development-comparison-${componentKey}`} style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       {/* NEW: Automatic step detection - no need to manually specify numbers! */}
       <OnboardingHeader screenId="development-comparison" />
 
       <Animated.View 
+        key="comparison-content"
         entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}
         style={{
           flex: 1,
@@ -196,7 +218,7 @@ export default function DevelopmentComparisonScreen() {
                   ]} />
                   
                   {/* Percentage text */}
-                  <Animated.Text style={[
+                  <Animated.Text key="without-text" style={[
                     {
                       fontSize: 18,
                       fontWeight: '700',
@@ -266,7 +288,7 @@ export default function DevelopmentComparisonScreen() {
                   ]} />
                   
                   {/* Percentage text */}
-                  <Animated.Text style={[
+                  <Animated.Text key="with-text" style={[
                     {
                       fontSize: 18,
                       fontWeight: '700',
@@ -282,7 +304,7 @@ export default function DevelopmentComparisonScreen() {
             </View>
 
             {/* Bottom Text Inside Box */}
-            <Animated.Text style={[
+            <Animated.Text key="bottom-text" style={[
               {
                 fontSize: 18,
                 color: colors.mediumGray,
