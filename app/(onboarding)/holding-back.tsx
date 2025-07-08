@@ -71,7 +71,7 @@ export default function HoldingBackScreen() {
               marginBottom: 8,
             }
           ]} allowFontScaling={false}>
-            One thing thats currently holding you back?
+            Name one thing that's currently holding you back
           </Text>
         </View>
 

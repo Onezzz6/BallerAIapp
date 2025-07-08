@@ -6,7 +6,7 @@ export const BALLERAI_SOLUTIONS = {
   },
   'no-optimal-recovery': {
     problem: 'poor recovery',
-    description: 'BallerAI optimizes your recovery with smart daily recovery plans, that are customized based on your load and preferences that ensure you\'re always ready for peak performance.'
+    description: 'BallerAI optimizes your recovery with smart daily recovery plans that are customized based on your load and preferences. This ensures you\'re always ready for peak performance.'
   },
   'injuries': {
     problem: 'injuries',

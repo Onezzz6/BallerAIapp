@@ -109,7 +109,7 @@ export default function DevelopmentComparisonScreen() {
               marginBottom: 8,
             }
           ]} allowFontScaling={false}>
-            Develop twice as fast with BallerAI vs on your own
+            Develop twice as fast with BallerAI
           </Text>
         </View>
 

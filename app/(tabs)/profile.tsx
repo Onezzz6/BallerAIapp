@@ -64,9 +64,9 @@ export default function ProfileScreen() {
 
   // Conversion functions (from measurements.tsx)
   const cmToFeetInches = (cm: number) => {
-    const totalInches = cm / 2.54;
+    const totalInches = Math.round(cm / 2.54);
     const ft = Math.floor(totalInches / 12);
-    const inch = Math.round(totalInches % 12);
+    const inch = totalInches % 12;
     return { feet: ft, inches: inch };
   };
 
@@ -712,17 +712,25 @@ export default function ProfileScreen() {
     if (editingField === 'height') {
       const handleUnitToggle = (value: boolean) => {
         setIsMetricHeight(value);
-        if (value) {
-          // Switching to metric - convert from imperial
-          const heightCm = feetInchesToCm(heightFeet, heightInches);
-          setEditValue(heightCm.toString());
-        } else {
-          // Switching to imperial - convert from metric
-          const heightCm = parseFloat(editValue) || 170;
-          const { feet, inches } = cmToFeetInches(heightCm);
-          setHeightFeet(feet);
-          setHeightInches(inches);
-        }
+
+        console.log('=== UNIT TOGGLE DEBUG ===');
+        console.log('Switching to:', value ? 'metric' : 'imperial');
+        console.log('Current state - height:', editValue, 'feet:', heightFeet, 'inches:', heightInches);
+        
+        // Use setTimeout to ensure picker has time to process the unit change
+        setTimeout(() => {
+          if (value) {
+            // Switching to metric - convert from imperial
+            const heightCm = feetInchesToCm(heightFeet, heightInches);
+            setEditValue(heightCm.toString());
+          } else {
+            // Switching to imperial - convert from metric
+            const heightCm = parseFloat(editValue) || 170;
+            const { feet, inches } = cmToFeetInches(heightCm);
+            setHeightFeet(feet);
+            setHeightInches(inches);
+          }
+        }, 50); // Small delay to ensure picker updates
       };
 
       const handleSave = () => {
@@ -788,6 +796,7 @@ export default function ProfileScreen() {
                   <View style={styles.pickerContainer}>
                     {isMetricHeight ? (
                       <Picker
+                        key={`metric-height-1`}
                         selectedValue={editValue}
                         onValueChange={(itemValue) => setEditValue(itemValue)}
                         style={styles.picker}
@@ -848,16 +857,20 @@ export default function ProfileScreen() {
     if (editingField === 'weight') {
       const handleUnitToggle = (value: boolean) => {
         setIsMetricWeight(value);
-        if (value) {
-          // Switching to metric - convert from imperial
-          const weightKg = lbsToKg(weightPounds);
-          setEditValue(weightKg.toString());
-        } else {
-          // Switching to imperial - convert from metric
-          const weightKg = parseFloat(editValue) || 70;
-          const pounds = kgToLbs(weightKg);
-          setWeightPounds(pounds);
-        }
+
+        // Use setTimeout to ensure picker has time to process the unit change
+        setTimeout(() => {
+          if (value) {
+            // Switching to metric - convert from imperial
+            const weightKg = lbsToKg(weightPounds);
+            setEditValue(weightKg.toString());
+          } else {
+            // Switching to imperial - convert from metric
+            const weightKg = parseFloat(editValue) || 70;
+            const pounds = kgToLbs(weightKg);
+            setWeightPounds(pounds);
+          }
+        }, 50); // Small delay to ensure picker updates
       };
 
       const handleSave = () => {
@@ -923,6 +936,7 @@ export default function ProfileScreen() {
                   <View style={styles.pickerContainer}>
                     {isMetricWeight ? (
                       <Picker
+                        key={`metric-weight-1`}
                         selectedValue={editValue}
                         onValueChange={(itemValue) => setEditValue(itemValue)}
                         style={styles.picker}
@@ -937,6 +951,7 @@ export default function ProfileScreen() {
                       </Picker>
                     ) : (
                       <Picker
+                        key={`imperial-weight-1`}
                         selectedValue={weightPounds}
                         onValueChange={(itemValue) => setWeightPounds(Number(itemValue))}
                         style={styles.picker}

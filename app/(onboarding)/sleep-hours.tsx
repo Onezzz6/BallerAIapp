@@ -44,7 +44,7 @@ export default function SleepHoursScreen() {
               marginBottom: 8,
             }
           ]} allowFontScaling={false}>
-            Sleep duration on average?
+            What's your sleep duration on average?
           </Text>
         </View>
 

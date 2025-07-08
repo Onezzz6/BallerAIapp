@@ -36,9 +36,9 @@ export default function MeasurementsScreen() {
 
   // Convert cm to feet/inches
   const cmToFeetInches = (cm: number) => {
-    const totalInches = cm / 2.54;
+    const totalInches = Math.round(cm / 2.54);
     const ft = Math.floor(totalInches / 12);
-    const inch = Math.round(totalInches % 12);
+    const inch = totalInches % 12;
     return { feet: ft, inches: inch };
   };
 
