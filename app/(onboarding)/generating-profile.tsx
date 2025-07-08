@@ -51,7 +51,7 @@ export default function GeneratingProfileScreen() {
 
        // Navigate when animation completes
        setTimeout(async () => {
-         await analyticsService.logEvent('AA_28_generating_profile');
+         await analyticsService.logEvent('AA_30_generating_profile');
          // NEW: Use automatic navigation instead of hardcoded route
          goToNext();
        }, totalDuration + 200);

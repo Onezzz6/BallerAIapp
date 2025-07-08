@@ -28,7 +28,7 @@ import Svg, {
   Stop,
   ClipPath,
 } from 'react-native-svg';
-import OnboardingHeader from '../components/OnboardingHeader';
+import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
 import Button from '../components/Button';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
 import { colors, typography } from '../utils/theme';
@@ -421,7 +421,7 @@ function DevelopmentChart({
 export default function DevelopmentTransition() {
   const haptics = useHaptics();
   const { goToNext } = useOnboardingStep('development-transition');
-
+  const headerHeight = useOnboardingHeaderHeight();
   // Caption fade-in
   const captionOpacity = useSharedValue(0);
   const captionStyle = useAnimatedStyle(() => ({
@@ -441,7 +441,7 @@ export default function DevelopmentTransition() {
         style={{ flex: 1 }}
       >
         {/* Title */}
-        <View style={{ paddingHorizontal: 24, paddingTop: 20 }}>
+        <View style={{ paddingHorizontal: 24, paddingTop: headerHeight }}>
           <Text style={[typography.title, { marginBottom: 12 }]} allowFontScaling={false}>
             If you're consistent, you have great potential to crush your goal
           </Text>
@@ -494,7 +494,7 @@ export default function DevelopmentTransition() {
           onPress={async () => {
             haptics.light();
             try {
-              await analyticsService.logEvent('AA_development_transition_continue');
+              await analyticsService.logEvent('AA_14_development_transition_continue');
             } catch (_) {}
             goToNext();
           }}

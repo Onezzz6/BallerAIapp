@@ -1,7 +1,7 @@
 import { View, Text, SafeAreaView } from 'react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
-import OnboardingHeader from '../components/OnboardingHeader';
+import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useEffect } from 'react';
 import analyticsService from '../services/analytics';
@@ -12,7 +12,7 @@ import { useOnboardingStep } from '../hooks/useOnboardingStep';
 export default function MotivationConfirmationScreen() {
   const haptics = useHaptics();
   const { onboardingData } = useOnboarding();
-  
+  const headerHeight = useOnboardingHeaderHeight();
   // NEW: Use automatic onboarding step system
   const { goToNext } = useOnboardingStep('motivation-confirmation');
 
@@ -21,8 +21,7 @@ export default function MotivationConfirmationScreen() {
     haptics.light();
     
     try {
-      await analyticsService.logEvent('AA_12_motivation_confirmation_continue');
-      console.log('Analytics event logged successfully');
+      await analyticsService.logEvent('AA_13_motivation_confirmation_continue');
     } catch (error) {
       console.log('Analytics error:', error);
     }
@@ -70,6 +69,7 @@ export default function MotivationConfirmationScreen() {
 
         <View style={{
           paddingHorizontal: 24,
+          paddingTop: headerHeight,
           paddingBottom: 64,
           flex: 1,
           justifyContent: 'center',

@@ -11,7 +11,7 @@ import {
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import { Animated as RNAnimated } from 'react-native';
 import Button from '../components/Button';
-import OnboardingHeader from '../components/OnboardingHeader';
+import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState, useEffect, useRef } from 'react';
 import analyticsService from '../services/analytics';
@@ -24,7 +24,7 @@ export default function InjuryHistoryScreen() {
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [injuryHistory, setInjuryHistory] = useState(onboardingData.injuryHistory || '');
   const CHARACTER_LIMIT = 300;
-  
+  const headerHeight = useOnboardingHeaderHeight();
   // NEW: Use automatic onboarding step system
   const { goToNext } = useOnboardingStep('injury-history');
   
@@ -82,7 +82,7 @@ export default function InjuryHistoryScreen() {
             {/* Fixed Title Section - Locked at top like reference */}
             <View style={{
               paddingHorizontal: 24,
-              paddingTop: 20,
+              paddingTop: headerHeight,
             }}>
               <Text style={[
                 typography.title,
@@ -152,7 +152,7 @@ export default function InjuryHistoryScreen() {
               onPress={async () => {
                 if (injuryHistory.trim()) {
                   haptics.light();
-                  await analyticsService.logEvent('AA_18_injury_history_continue');
+                  await analyticsService.logEvent('AA_15_injury_history_continue');
                   await updateOnboardingData({ injuryHistory: injuryHistory.trim() });
                   // NEW: Use automatic navigation instead of hardcoded route
                   goToNext();

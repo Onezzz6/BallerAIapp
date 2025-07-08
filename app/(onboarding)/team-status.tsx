@@ -3,54 +3,25 @@ import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
-import { useState, useEffect } from 'react';
-import analytics from '@react-native-firebase/analytics';
+import { useState } from 'react';
+import analyticsService from '../services/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
-import analyticsService from '../services/analytics';
 
-const FREQUENCY_OPTIONS = [
-  {
-    id: '1-2',
-    title: '1-2 days',
-  },
-  {
-    id: '2-4',
-    title: '3-4 days',
-  },
-  {
-    id: '4-6',
-    title: '5-6 days',
-  },
-  {
-    id: '7+',
-    title: '7+ days',
-  },
-];
-
-export default function TrainingFrequencyScreen() {
+export default function TeamStatusScreen() {
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
-  const [selected, setSelected] = useState<string | null>(onboardingData.trainingFrequency);
+  const [selected, setSelected] = useState<boolean | null>(onboardingData.teamStatus === 'true' ? true : onboardingData.teamStatus === 'false' ? false : null);
   const headerHeight = useOnboardingHeaderHeight();
+  
   // NEW: Use automatic onboarding step system
-  const { goToNext } = useOnboardingStep('training-frequency');
-
-  const handleContinue = async () => {
-    if (selected) {
-      haptics.light();
-      await analyticsService.logEvent('AA_03_training_frequency_continue');
-      await updateOnboardingData({ trainingFrequency: selected });
-      // NEW: Use automatic navigation instead of hardcoded route
-      goToNext();
-    }
-  };
+  const { goToNext } = useOnboardingStep('team-status');
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       {/* NEW: Automatic step detection */}
-      <OnboardingHeader screenId="training-frequency" />
+      <OnboardingHeader screenId="team-status" />
 
       <Animated.View 
         entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}
@@ -72,7 +43,7 @@ export default function TrainingFrequencyScreen() {
               marginBottom: 8,
             }
           ]} allowFontScaling={false}>
-            How many days a week do you train football?
+            Do you train with a team?
           </Text>
         </View>
 
@@ -84,32 +55,37 @@ export default function TrainingFrequencyScreen() {
           alignItems: 'center',
         }}>
           <View style={{
-            width: '100%',
-            gap: 12,
+            flexDirection: 'row',
+            gap: 16,
           }}>
-            {FREQUENCY_OPTIONS.map((option) => (
+            {[
+              { value: true, label: 'Yes' },
+              { value: false, label: 'No' },
+            ].map((option) => (
               <Pressable
-                key={option.id}
+                key={option.label}
                 onPress={() => {
                   haptics.light();
-                  setSelected(option.id);
+                  setSelected(option.value);
                 }}
                 style={({ pressed }) => ({
-                  width: '100%',
-                  padding: 20,
-                  backgroundColor: selected === option.id ? '#99E86C' : '#FFFFFF',
+                  flex: 1,
+                  height: 60,
+                  backgroundColor: selected === option.value ? '#99E86C' : '#FFFFFF',
                   borderRadius: 12,
                   borderWidth: 2,
-                  borderColor: selected === option.id ? '#99E86C' : '#E5E5E5',
+                  borderColor: selected === option.value ? '#99E86C' : '#E5E5E5',
+                  justifyContent: 'center',
+                  alignItems: 'center',
                   opacity: pressed ? 0.8 : 1,
                 })}
               >
                 <Text style={{
                   fontSize: 18,
                   color: '#000000',
-                  fontWeight: '600',
+                  fontWeight: '500',
                 }}>
-                  {option.title}
+                  {option.label}
                 </Text>
               </Pressable>
             ))}
@@ -132,8 +108,16 @@ export default function TrainingFrequencyScreen() {
       }}>
         <Button 
           title="Continue" 
-          onPress={handleContinue}
-          disabled={!selected}
+          onPress={async () => {
+            if (selected !== null) {
+              haptics.light();
+              await analyticsService.logEvent('AA_18_team_status_continue');
+              await updateOnboardingData({ teamStatus: selected.toString() });
+              // NEW: Use automatic navigation instead of hardcoded route
+              goToNext();
+            }
+          }}
+          disabled={selected === null}
         />
       </View>
     </SafeAreaView>

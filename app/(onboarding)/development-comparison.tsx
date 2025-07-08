@@ -11,7 +11,7 @@ import Animated, {
   cancelAnimation
 } from 'react-native-reanimated';
 import Button from '../components/Button';
-import OnboardingHeader from '../components/OnboardingHeader';
+import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
 import analyticsService from '../services/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
@@ -20,9 +20,9 @@ import { useFocusEffect } from '@react-navigation/native';
 
 export default function DevelopmentComparisonScreen() {
   const haptics = useHaptics();
-  
+  const headerHeight = useOnboardingHeaderHeight();
   // NEW: Use the onboarding step hook - automatically handles step numbers and navigation!
-  const { currentStep, totalSteps, goToNext } = useOnboardingStep('development-comparison');
+  const { goToNext } = useOnboardingStep('development-comparison');
   
   // Create a unique key for this component instance
   const [componentKey] = useState(() => Math.random().toString());
@@ -95,7 +95,7 @@ export default function DevelopmentComparisonScreen() {
     haptics.light();
     
     try {
-      await analyticsService.logEvent('AA_14_5_development_comparison_continue', {
+      await analyticsService.logEvent('AA_25_development_comparison_continue', {
         screen_name: 'development_comparison'
       });
     } catch (error) {
@@ -122,7 +122,7 @@ export default function DevelopmentComparisonScreen() {
         {/* Fixed Title Section - Locked at top like reference */}
         <View style={{
           paddingHorizontal: 24,
-          paddingTop: 20,
+          paddingTop: headerHeight,
         }}>
           <Text style={[
             typography.title,

@@ -1,7 +1,7 @@
 import { View, Text, Pressable, SafeAreaView } from 'react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
-import OnboardingHeader from '../components/OnboardingHeader';
+import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState, useEffect } from 'react';
 import analyticsService from '../services/analytics';
@@ -36,7 +36,7 @@ export default function ImprovementFocusScreen() {
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(onboardingData.improvementFocus);
-  
+  const headerHeight = useOnboardingHeaderHeight();
   // NEW: Use automatic onboarding step system
   const { goToNext } = useOnboardingStep('improvement-focus');
 
@@ -56,7 +56,7 @@ export default function ImprovementFocusScreen() {
         {/* Fixed Title Section - Locked at top like reference */}
         <View style={{
           paddingHorizontal: 24,
-          paddingTop: 20,
+          paddingTop: headerHeight,
         }}>
           <Text style={[
             typography.title,
@@ -128,7 +128,7 @@ export default function ImprovementFocusScreen() {
           onPress={async () => {
             if (selected) {
               haptics.light();
-              await analyticsService.logEvent('AA_10_improvement_focus_continue');
+              await analyticsService.logEvent('AA_11_improvement_focus_continue');
               await updateOnboardingData({ improvementFocus: selected });
               // NEW: Use automatic navigation instead of hardcoded route
               goToNext();

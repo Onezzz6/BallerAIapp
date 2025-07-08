@@ -2,8 +2,7 @@ import { View, Text, Image, ScrollView, SafeAreaView } from 'react-native';
 import Animated, { FadeInRight, FadeInUp } from 'react-native-reanimated';
 import { useEffect } from 'react';
 import Button from '../components/Button';
-import OnboardingHeader from '../components/OnboardingHeader';
-import analytics from '@react-native-firebase/analytics';
+import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
@@ -11,7 +10,7 @@ import analyticsService from '../services/analytics';
 
 export default function SocialProofScreen() {
   const haptics = useHaptics();
-  
+  const headerHeight = useOnboardingHeaderHeight();
   // NEW: Use automatic onboarding step system
   const { goToNext } = useOnboardingStep('social-proof');
 
@@ -40,12 +39,11 @@ export default function SocialProofScreen() {
         {/* Fixed Title Section - Locked at top like reference */}
         <View style={{
           paddingHorizontal: 24,
-          paddingTop: 20,
+          paddingTop: headerHeight,
         }}>
           <Text style={[
             typography.title,
             {
-              textAlign: 'center',
               marginBottom: 8,
             }
           ]} allowFontScaling={false}>
@@ -125,7 +123,7 @@ export default function SocialProofScreen() {
           title="Continue" 
           onPress={async () => {
             haptics.light();
-            await analyticsService.logEvent('AA_25_social_proof_continue');
+            await analyticsService.logEvent('AA_27_social_proof_continue');
             // NEW: Use automatic navigation instead of hardcoded route
             goToNext();
           }}

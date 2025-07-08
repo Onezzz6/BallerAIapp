@@ -27,6 +27,9 @@ type OnboardingData = {
   activityLevel: string | null;
   sleepHours: string | null;
   nutrition: string | null;
+  teamStatus: string | null;
+  dominantFoot: string | null;
+  hasGymAccess: boolean | null;
 };
 
 type OnboardingContextType = {
@@ -61,6 +64,9 @@ const defaultOnboardingData: OnboardingData = {
   activityLevel: null,
   sleepHours: null,
   nutrition: null,
+  teamStatus: null,
+  dominantFoot: null,
+  hasGymAccess: null,
 };
 
 const OnboardingContext = createContext<OnboardingContextType>({

@@ -36,22 +36,25 @@ export const ONBOARDING_FLOW: OnboardingStep[] = [
   { id: 'measurements', route: '/measurements', title: 'Measurements' },
   { id: 'age', route: '/age', title: 'Age' },
   { id: 'username', route: '/username', title: 'Username' },
+  { id: 'encouragement', route: '/encouragement', title: 'Encouragement' },
   
   // Goals and preferences
   { id: 'improvement-focus', route: '/improvement-focus', title: 'Improvement Focus' },
   { id: 'goal-timeline', route: '/goal-timeline', title: 'Goal Timeline' },
   { id: 'motivation-confirmation', route: '/motivation-confirmation', title: 'Motivation Confirmation' },
   { id: 'development-transition', route: '/development-transition', title: 'Development Transition' },
+  { id: 'injury-history', route: '/injury-history', title: 'Injury History' },
   { id: 'sleep-hours', route: '/sleep-hours', title: 'Sleep Hours' },
   { id: 'nutrition', route: '/nutrition', title: 'Nutrition' },
-  { id: 'skill-level', route: '/skill-level', title: 'Skill Level' },
   
   // Team and position
+  { id: 'team-status', route: '/team-status', title: 'Team Status' },
   { id: 'position', route: '/position', title: 'Position' },
   { id: 'fitness-level', route: '/fitness-level', title: 'Fitness Level' },
   
   // Lifestyle
   { id: 'activity-level', route: '/activity-level', title: 'Activity Level' },
+  { id: 'training-accomplishment', route: '/training-accomplishment', title: 'Training Goals' },
   { id: 'holding-back', route: '/holding-back', title: 'Current Challenges' },
   { id: 'why-ballerai', route: '/why-ballerai', title: 'BallerAI Solution' },
   { id: 'development-comparison', route: '/development-comparison', title: 'Development Comparison' },

@@ -4,6 +4,20 @@ import BackButton from './BackButton';
 import Animated, { FadeIn, FadeOut, PinwheelIn } from 'react-native-reanimated';
 import { colors, spacing } from '../utils/theme';
 import { getStepInfo } from '../(onboarding)/onboarding-flow';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+/**
+ * Custom hook to calculate the onboarding header height consistently across all screens
+ * This includes the safe area insets plus the header content height
+ */
+export function useOnboardingHeaderHeight() {
+  const insets = useSafeAreaInsets();
+  
+  // Calculate header height: safe area insets + header content height
+  const headerHeight = insets.top + 40;
+  
+  return headerHeight;
+}
 
 type Props = {
   // NEW: Automatic step detection (preferred method)
@@ -23,6 +37,7 @@ export default function OnboardingHeader({
   customBackPath 
 }: Props) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   
   // Determine step information
   let currentStep: number;
@@ -49,6 +64,12 @@ export default function OnboardingHeader({
 
   return (
     <View style={{ 
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 1000,
+      paddingTop: insets.top,
       paddingHorizontal: spacing.lg,
       backgroundColor: colors.backgroundColor,
     }}>
@@ -96,6 +117,7 @@ export default function OnboardingHeader({
         height: 6,
         backgroundColor: colors.veryLightGray,
         borderRadius: 3,
+        marginBottom: 8,
       }}>
         <Animated.View 
           entering={FadeIn.duration(500)}

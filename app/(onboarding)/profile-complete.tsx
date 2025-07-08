@@ -159,7 +159,7 @@ export default function ProfileCompleteScreen() {
       console.log('Store review request failed:', error);
     }
     
-    await analyticsService.logEvent('AA_29_profile_complete_get_started');
+    await analyticsService.logEvent('AA_31_profile_complete_get_started');
     // Navigate to sign-up screen (profile-complete is the last onboarding step)
     router.push('/(onboarding)/sign-up' as any);
   };

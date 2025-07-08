@@ -1,7 +1,7 @@
 import { View, Text, Pressable, SafeAreaView, ScrollView } from 'react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
-import OnboardingHeader from '../components/OnboardingHeader';
+import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState, useEffect } from 'react';
 import analyticsService from '../services/analytics';
@@ -13,7 +13,9 @@ export default function GenderScreen() {
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selectedGender, setSelectedGender] = useState(onboardingData.gender || '');
-  
+ 
+  const headerHeight = useOnboardingHeaderHeight();
+
   // NEW: Use automatic onboarding step system
   const { goToNext } = useOnboardingStep('gender');
 
@@ -50,7 +52,7 @@ export default function GenderScreen() {
           {/* Title Section - Same as measurements */}
           <View style={{
             paddingHorizontal: 24,
-            paddingTop: 20,
+            paddingTop: headerHeight,
           }}>
             <Text style={[
               typography.title,

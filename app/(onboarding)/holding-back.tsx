@@ -1,7 +1,7 @@
 import { View, Text, Pressable, SafeAreaView } from 'react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
-import OnboardingHeader from '../components/OnboardingHeader';
+import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState, useEffect } from 'react';
 import analyticsService from '../services/analytics';
@@ -32,14 +32,14 @@ export default function HoldingBackScreen() {
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(onboardingData.holdingBack || null);
-  
+  const headerHeight = useOnboardingHeaderHeight();
   // NEW: Automatic step management and navigation
   const { goToNext } = useOnboardingStep('holding-back');
 
   const handleContinue = async () => {
     if (selected) {
       haptics.light();
-      await analyticsService.logEvent('AA_13_holding_back_continue');
+      await analyticsService.logEvent('AA_23_holding_back_continue');
       await updateOnboardingData({ holdingBack: selected });
       // NEW: Automatic navigation to the next step
       goToNext();
@@ -62,7 +62,7 @@ export default function HoldingBackScreen() {
         {/* Fixed Title Section - Locked at top like reference */}
         <View style={{
           paddingHorizontal: 24,
-          paddingTop: 20,
+          paddingTop: headerHeight,
         }}>
           <Text style={[
             typography.title,

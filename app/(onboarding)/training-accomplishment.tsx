@@ -1,14 +1,13 @@
 import { View, Text, Pressable, SafeAreaView } from 'react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
-import OnboardingHeader from '../components/OnboardingHeader';
+import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
-import { useState, useEffect } from 'react';
-import analytics from '@react-native-firebase/analytics';
+import { useState } from 'react';
+import analyticsService from '../services/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
-import analyticsService from '../services/analytics';
 
 const ACCOMPLISHMENT_OPTIONS = [
   {
@@ -32,7 +31,9 @@ const ACCOMPLISHMENT_OPTIONS = [
 export default function TrainingAccomplishmentScreen() {
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
-  const [selected, setSelected] = useState<string | null>(onboardingData.trainingAccomplishment || null);
+  const [selected, setSelected] = useState<string | null>(onboardingData.trainingAccomplishment);
+  
+  const headerHeight = useOnboardingHeaderHeight();
   
   // NEW: Use automatic onboarding step system
   const { goToNext } = useOnboardingStep('training-accomplishment');
@@ -40,7 +41,7 @@ export default function TrainingAccomplishmentScreen() {
   const handleContinue = async () => {
     if (selected) {
       haptics.light();
-      await analyticsService.logEvent('AA_14_training_accomplishment_continue');
+      await analyticsService.logEvent('AA_22_training_accomplishment_continue');
       await updateOnboardingData({ trainingAccomplishment: selected });
       // NEW: Use automatic navigation instead of hardcoded route
       goToNext();
@@ -63,7 +64,7 @@ export default function TrainingAccomplishmentScreen() {
         {/* Fixed Title Section - Locked at top like reference */}
         <View style={{
           paddingHorizontal: 24,
-          paddingTop: 20,
+          paddingTop: headerHeight,
         }}>
           <Text style={[
             typography.title,
@@ -72,7 +73,7 @@ export default function TrainingAccomplishmentScreen() {
               marginBottom: 8,
             }
           ]} allowFontScaling={false}>
-            What would you like to accomplish with your training?
+            What do you want to accomplish through training?
           </Text>
         </View>
 

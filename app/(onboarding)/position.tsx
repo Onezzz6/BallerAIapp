@@ -1,7 +1,7 @@
 import { View, Text, Pressable, SafeAreaView } from 'react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
-import OnboardingHeader from '../components/OnboardingHeader';
+import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
 import analyticsService from '../services/analytics';
@@ -32,7 +32,7 @@ export default function PositionScreen() {
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(onboardingData.position);
-  
+  const headerHeight = useOnboardingHeaderHeight();
   // NEW: Use automatic onboarding step system
   const { goToNext } = useOnboardingStep('position');
 
@@ -52,7 +52,7 @@ export default function PositionScreen() {
         {/* Fixed Title Section - Locked at top like reference */}
         <View style={{
           paddingHorizontal: 24,
-          paddingTop: 20,
+          paddingTop: headerHeight,
         }}>
           <Text style={[
             typography.title,
@@ -124,7 +124,7 @@ export default function PositionScreen() {
           onPress={async () => {
             if (selected) {
               haptics.light();
-              await analyticsService.logEvent('AA_17_position_continue');
+              await analyticsService.logEvent('AA_19_position_continue');
               await updateOnboardingData({ position: selected });
               // NEW: Use automatic navigation instead of hardcoded route
               goToNext();

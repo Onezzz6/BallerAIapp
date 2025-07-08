@@ -18,7 +18,7 @@ import { useEffect } from 'react';
 import Svg, { Path, G, Circle } from 'react-native-svg';
 
 import Button from '../components/Button';
-import OnboardingHeader from '../components/OnboardingHeader';
+import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import analyticsService from '../services/analytics';
@@ -287,7 +287,7 @@ function ElitePartnership() {
 /*──────────────────  Screen  ──────────────────*/
 export default function EncouragementScreen() {
   const haptics = useHaptics();
-  
+  const headerHeight = useOnboardingHeaderHeight() + 20;
   // NEW: Use automatic onboarding step system
   const { goToNext } = useOnboardingStep('encouragement');
 
@@ -316,7 +316,7 @@ export default function EncouragementScreen() {
         style={{ flex: 1 }}
       >
                  {/* Elite partnership animation centered on screen */}
-         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 40 }}>
+         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: headerHeight }}>
            <ElitePartnership />
          </View>
 
@@ -342,7 +342,7 @@ export default function EncouragementScreen() {
                 textAlign: 'center', 
                 color: colors.mediumGray, 
                 lineHeight: 22,
-                marginBottom: 16,
+                marginBottom: 24,
                 fontSize: 16
               },
               captionStyle,
@@ -364,22 +364,10 @@ export default function EncouragementScreen() {
               backgroundColor: 'rgba(99, 179, 237, 0.1)',
               justifyContent: 'center',
               alignItems: 'center',
-              marginBottom: 12,
+              marginBottom: 6,
             }}>
               <Text style={{ fontSize: 24 }} allowFontScaling={false}>🔒</Text>
             </View>
-            
-            <Text style={[
-              typography.subtitle,
-              {
-                textAlign: 'center',
-                fontWeight: '600',
-                marginBottom: 8,
-                fontSize: 16,
-              }
-            ]} allowFontScaling={false}>
-              Your privacy and security matter to us.
-            </Text>
             
             <Text style={[
               typography.body,
@@ -390,7 +378,7 @@ export default function EncouragementScreen() {
                 fontSize: 14,
               }
             ]} allowFontScaling={false}>
-              We promise to always keep your{'\n'}personal information private and secure.
+              Your privacy and security matter to us. We promise to always keep your personal information private and secure.
             </Text>
           </Animated.View>
         </View>
@@ -415,7 +403,7 @@ export default function EncouragementScreen() {
           title="Let's Do This!"
           onPress={async () => {
             haptics.light();
-            await analyticsService.logEvent('AA_15_thank_you_for_trusting_us_continue');
+            await analyticsService.logEvent('AA_10_thank_you_for_trusting_us_continue');
             // NEW: Use automatic navigation instead of hardcoded route
             goToNext();
           }}

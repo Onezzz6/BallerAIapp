@@ -2,7 +2,7 @@ import { View, Text, TextInput, TouchableWithoutFeedback, Keyboard, SafeAreaView
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import { Animated as RNAnimated } from 'react-native';
 import Button from '../components/Button';
-import OnboardingHeader from '../components/OnboardingHeader';
+import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState, useEffect, useRef } from 'react';
 import analyticsService from '../services/analytics';
@@ -15,7 +15,7 @@ export default function MotivationReasonScreen() {
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [motivation, setMotivation] = useState(onboardingData.motivation || '');
   const CHARACTER_LIMIT = 100;
-  
+  const headerHeight = useOnboardingHeaderHeight();
   // NEW: Use automatic onboarding step system
   const { goToNext } = useOnboardingStep('motivation-reason');
   
@@ -61,7 +61,7 @@ export default function MotivationReasonScreen() {
   const handleContinue = async () => {
     if (motivation.trim()) {
       haptics.light();
-      await analyticsService.logEvent('AA_26_motivation_reason_continue');
+      await analyticsService.logEvent('AA_28_motivation_reason_continue');
       await updateOnboardingData({ motivation: motivation.trim() });
       // NEW: Use automatic navigation instead of hardcoded route
       goToNext();
@@ -89,7 +89,7 @@ export default function MotivationReasonScreen() {
             {/* Fixed Title Section - Locked at top like reference */}
             <View style={{
               paddingHorizontal: 24,
-              paddingTop: 20,
+              paddingTop: headerHeight,
             }}>
               <Text style={[
                 typography.title,

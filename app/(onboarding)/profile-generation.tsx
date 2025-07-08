@@ -8,8 +8,7 @@ import Animated, {
   withSequence
 } from 'react-native-reanimated';
 import Button from '../components/Button';
-import OnboardingHeader from '../components/OnboardingHeader';
-import analytics from '@react-native-firebase/analytics';
+import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { useEffect } from 'react';
@@ -18,7 +17,7 @@ import analyticsService from '../services/analytics';
 
 export default function ProfileGenerationScreen() {
   const haptics = useHaptics();
-  
+  const headerHeight = useOnboardingHeaderHeight();
   // NEW: Use automatic onboarding step system
   const { goToNext } = useOnboardingStep('profile-generation');
   
@@ -141,7 +140,7 @@ export default function ProfileGenerationScreen() {
 
   const handleContinue = async () => {
     haptics.light();
-    await analyticsService.logEvent('AA_27_profile_generation_continue');
+    await analyticsService.logEvent('AA_29_profile_generation_continue');
     // NEW: Use automatic navigation instead of hardcoded route
     goToNext();
   };
@@ -187,7 +186,7 @@ export default function ProfileGenerationScreen() {
         {/* Fixed Title Section - Locked at top like reference */}
         <View style={{
           paddingHorizontal: 24,
-          paddingTop: 20,
+          paddingTop: headerHeight,
         }}>
           <Text style={[
             typography.title,

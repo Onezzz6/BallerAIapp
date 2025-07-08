@@ -1,7 +1,7 @@
 import { View, Text, TextInput, Keyboard, TouchableWithoutFeedback, KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
-import OnboardingHeader from '../components/OnboardingHeader';
+import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState, useEffect, useRef } from 'react';
 import analytics from '@react-native-firebase/analytics';
@@ -15,7 +15,7 @@ export default function UsernameScreen() {
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [username, setUsername] = useState(onboardingData.username || '');
-  
+  const headerHeight = useOnboardingHeaderHeight();
   // NEW: Use automatic onboarding step system
   const { goToNext } = useOnboardingStep('username');
   
@@ -95,7 +95,7 @@ export default function UsernameScreen() {
             }}>
               {/* Fixed Title Section - Locked at top like reference */}
               <View style={{
-                paddingTop: 40,
+                paddingTop: headerHeight,
                 paddingBottom: 20,
               }}>
                 <Text style={[

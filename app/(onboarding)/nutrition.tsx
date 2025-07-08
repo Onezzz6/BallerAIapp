@@ -1,7 +1,7 @@
 import { View, Text, Pressable, SafeAreaView } from 'react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
-import OnboardingHeader from '../components/OnboardingHeader';
+import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState, useEffect } from 'react';
 import analyticsService from '../services/analytics';
@@ -13,7 +13,7 @@ export default function NutritionScreen() {
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [focusedOnNutrition, setFocusedOnNutrition] = useState<boolean | null>(onboardingData.nutrition === 'true' ? true : onboardingData.nutrition === 'false' ? false : null);
-  
+  const headerHeight = useOnboardingHeaderHeight();
   // NEW: Use automatic onboarding step system
   const { goToNext } = useOnboardingStep('nutrition');
 
@@ -33,7 +33,7 @@ export default function NutritionScreen() {
         {/* Fixed Title Section - Locked at top like reference */}
         <View style={{
           paddingHorizontal: 24,
-          paddingTop: 20,
+          paddingTop: headerHeight,
         }}>
           <Text style={[
             typography.title,
@@ -111,7 +111,7 @@ export default function NutritionScreen() {
           onPress={async () => {
             if (focusedOnNutrition !== null) {
               haptics.light();
-              await analyticsService.logEvent('AA_22_nutrition_continue');
+              await analyticsService.logEvent('AA_17_nutrition_continue');
               await updateOnboardingData({ nutrition: focusedOnNutrition.toString() });
               // NEW: Use automatic navigation instead of hardcoded route
               goToNext();

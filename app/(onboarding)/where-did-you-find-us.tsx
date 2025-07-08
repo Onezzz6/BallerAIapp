@@ -1,7 +1,7 @@
 import { View, Text, Pressable, SafeAreaView, ScrollView, Image } from 'react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
-import OnboardingHeader from '../components/OnboardingHeader';
+import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState, useEffect } from 'react';
 import analytics from '@react-native-firebase/analytics';
@@ -93,7 +93,7 @@ export default function WhereDidYouFindUsScreen() {
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(onboardingData.discoverySource);
-  
+  const headerHeight = useOnboardingHeaderHeight();
   // NEW: Use automatic onboarding step system
   const { goToNext } = useOnboardingStep('where-did-you-find-us');
 
@@ -123,7 +123,7 @@ export default function WhereDidYouFindUsScreen() {
         {/* Fixed Title Section - Locked at top like reference */}
         <View style={{
           paddingHorizontal: 24,
-          paddingTop: 20,
+          paddingTop: headerHeight,
           paddingBottom: 16,
         }}>
           <Text style={[

@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableWithoutFeedback, Keyboard, SafeAreaView
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import { Animated as RNAnimated } from 'react-native';
 import Button from '../components/Button';
-import OnboardingHeader from '../components/OnboardingHeader';
+import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import analyticsService from '../services/analytics';
 import { colors, typography } from '../utils/theme';
@@ -20,7 +20,7 @@ export default function ReferralCodeScreen() {
   const [validationMessage, setValidationMessage] = useState<string>('');
   const [isValid, setIsValid] = useState<boolean | null>(null);
   const [hasSubmitted, setHasSubmitted] = useState(false);
-  
+  const headerHeight = useOnboardingHeaderHeight();
   // NEW: Use automatic onboarding step system
   const { goToNext } = useOnboardingStep('referral-code');
   
@@ -132,11 +132,11 @@ export default function ReferralCodeScreen() {
     
     // If no referral code entered or validation failed, continue without saving
     if (!referralCode.trim() || isValid === false) {
-      await analyticsService.logEvent('AA_99_onboarding_referral_code_skip');
+      await analyticsService.logEvent('AA_26_referral_code_skip');
       await updateOnboardingData({ referralCode: '' });
     }
 
-    await analyticsService.logEvent('AA_24_referral_code_continue');
+    await analyticsService.logEvent('AA_26_referral_code_continue');
     // NEW: Use automatic navigation instead of hardcoded route
     goToNext();
   };
@@ -162,7 +162,7 @@ export default function ReferralCodeScreen() {
             {/* Fixed Title Section - Locked at top like reference */}
             <View style={{
               paddingHorizontal: 24,
-              paddingTop: 20,
+              paddingTop: headerHeight,
             }}>
               <Text style={[
                 typography.title,

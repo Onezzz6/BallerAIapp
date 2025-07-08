@@ -4,7 +4,6 @@ import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
-import analytics from '@react-native-firebase/analytics';
 import { colors } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { BALLERAI_SOLUTIONS } from './helping-solutions';
@@ -32,7 +31,7 @@ export default function WhyBallerAIScreen() {
     haptics.light();
     
     try {
-      await analyticsService.logEvent('AA_13_5_why_ballerai_continue', {
+      await analyticsService.logEvent('AA_24_why_ballerai_continue', {
         holding_back_reason: holdingBack
       });
     } catch (error) {

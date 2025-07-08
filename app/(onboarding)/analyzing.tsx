@@ -26,7 +26,7 @@ import Svg, {
 } from 'react-native-svg';
 
 import Button from '../components/Button';
-import OnboardingHeader from '../components/OnboardingHeader';
+import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
@@ -225,7 +225,7 @@ function DevelopmentChart({
 /*──────────────────  Screen  ──────────────────*/
 export default function AnalyzingScreen() {
   const haptics = useHaptics();
-  
+  const headerHeight = useOnboardingHeaderHeight();
   // NEW: Use automatic onboarding step system
   const { goToNext } = useOnboardingStep('analyzing');
 
@@ -249,7 +249,7 @@ export default function AnalyzingScreen() {
         style={{ flex: 1 }}
       >
         {/* Title */}
-        <View style={{ paddingHorizontal: 24, paddingTop: 20 }}>
+        <View style={{ paddingHorizontal: 24, paddingTop: headerHeight }}>
           <Text style={[typography.title, { marginBottom: 12 }]} allowFontScaling={false}>
             BallerAI creates{'\n'}long-term results
           </Text>
