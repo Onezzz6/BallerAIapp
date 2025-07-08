@@ -52,7 +52,7 @@ export default function AgeScreen() {
     }
 
     haptics.light();
-    await analyticsService.logEvent('AA_08_age_continue');
+    await analyticsService.logEvent('AA__08_age_continue');
     await updateOnboardingData({ age: age.toString() });
     // NEW: Use automatic navigation instead of hardcoded route
     goToNext();

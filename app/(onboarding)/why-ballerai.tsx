@@ -31,7 +31,7 @@ export default function WhyBallerAIScreen() {
     haptics.light();
     
     try {
-      await analyticsService.logEvent('AA_24_why_ballerai_continue', {
+      await analyticsService.logEvent('AA__24_why_ballerai_continue', {
         holding_back_reason: holdingBack
       });
     } catch (error) {

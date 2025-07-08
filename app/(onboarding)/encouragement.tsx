@@ -403,7 +403,7 @@ export default function EncouragementScreen() {
           title="Let's Do This!"
           onPress={async () => {
             haptics.light();
-            await analyticsService.logEvent('AA_10_thank_you_for_trusting_us_continue');
+            await analyticsService.logEvent('AA__10_thank_you_for_trusting_us_continue');
             // NEW: Use automatic navigation instead of hardcoded route
             goToNext();
           }}

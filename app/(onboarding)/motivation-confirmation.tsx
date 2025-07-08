@@ -21,7 +21,7 @@ export default function MotivationConfirmationScreen() {
     haptics.light();
     
     try {
-      await analyticsService.logEvent('AA_13_motivation_confirmation_continue');
+      await analyticsService.logEvent('AA__13_motivation_confirmation_continue');
     } catch (error) {
       console.log('Analytics error:', error);
     }

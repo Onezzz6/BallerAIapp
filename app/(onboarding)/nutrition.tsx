@@ -111,7 +111,7 @@ export default function NutritionScreen() {
           onPress={async () => {
             if (focusedOnNutrition !== null) {
               haptics.light();
-              await analyticsService.logEvent('AA_17_nutrition_continue');
+              await analyticsService.logEvent('AA__17_nutrition_continue');
               await updateOnboardingData({ nutrition: focusedOnNutrition.toString() });
               // NEW: Use automatic navigation instead of hardcoded route
               goToNext();

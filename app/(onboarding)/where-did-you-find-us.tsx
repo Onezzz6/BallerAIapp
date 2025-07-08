@@ -100,7 +100,7 @@ export default function WhereDidYouFindUsScreen() {
   const handleContinue = async () => {
     if (selected) {
       haptics.light();
-      await analyticsService.logEvent('AA_04_where_did_you_find_us_continue');
+      await analyticsService.logEvent('AA__04_where_did_you_find_us_continue');
       await updateOnboardingData({ discoverySource: selected });
       // NEW: Use automatic navigation instead of hardcoded route
       goToNext();

@@ -102,7 +102,7 @@ export default function SleepHoursScreen() {
           onPress={async () => {
             if (selected) {
               haptics.light();
-              await analyticsService.logEvent('AA_16_sleep_hours_continue');
+              await analyticsService.logEvent('AA__16_sleep_hours_continue');
               await updateOnboardingData({ sleepHours: selected });
               // NEW: Use automatic navigation instead of hardcoded route
               goToNext();

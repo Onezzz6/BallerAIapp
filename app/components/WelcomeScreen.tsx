@@ -180,7 +180,7 @@ export default function WelcomeScreen() {
       try {
         // Wait 1 second before logging to prevent analytics for users being immediately redirected
         await new Promise(resolve => setTimeout(resolve, 1000));
-        await analyticsService.logEvent('AA_01_welcome');
+        await analyticsService.logEvent('AA__01_welcome');
       } catch (error) {
         console.error("Error logging '01_welcome' event:", error);
       }
@@ -221,7 +221,7 @@ export default function WelcomeScreen() {
 
   const handleGetStarted = () => {
     haptics.light();
-    analyticsService.logEvent('AA_01_welcome_get_started');
+    analyticsService.logEvent('AA__01_welcome_get_started');
     goToNext();
   };
 

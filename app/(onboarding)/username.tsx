@@ -28,7 +28,7 @@ export default function UsernameScreen() {
   const handleContinue = async () => {
     if (username.trim()) {
       haptics.light();
-      await analyticsService.logEvent('AA_09_username_continue');
+      await analyticsService.logEvent('AA__09_username_continue');
       await updateOnboardingData({ username: username.trim() });
       // NEW: Use automatic navigation instead of hardcoded route
       goToNext();

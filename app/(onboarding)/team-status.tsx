@@ -111,7 +111,7 @@ export default function TeamStatusScreen() {
           onPress={async () => {
             if (selected !== null) {
               haptics.light();
-              await analyticsService.logEvent('AA_18_team_status_continue');
+              await analyticsService.logEvent('AA__18_team_status_continue');
               await updateOnboardingData({ teamStatus: selected.toString() });
               // NEW: Use automatic navigation instead of hardcoded route
               goToNext();

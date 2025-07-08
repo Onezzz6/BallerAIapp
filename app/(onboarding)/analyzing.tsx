@@ -308,7 +308,7 @@ export default function AnalyzingScreen() {
           title="Continue"
           onPress={async () => {
             haptics.light();
-            await analyticsService.logEvent('AA_06_analyzing_continue');
+            await analyticsService.logEvent('AA__06_analyzing_continue');
             goToNext();
           }}
         />

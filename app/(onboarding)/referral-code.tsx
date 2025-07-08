@@ -92,7 +92,7 @@ export default function ReferralCodeScreen() {
         
         const validatedCode = referralCode.trim().toUpperCase();
         
-        await analyticsService.logEvent('AA_99_onboarding_referral_code_valid', {
+        await analyticsService.logEvent('AA__99_onboarding_referral_code_valid', {
           code: validatedCode,
           discount: result.discount,
           influencer: result.influencer
@@ -113,7 +113,7 @@ export default function ReferralCodeScreen() {
         setIsValid(false);
         setValidationMessage(result.error || 'Invalid referral code');
         
-        await analyticsService.logEvent('AA_99_onboarding_referral_code_invalid', {
+        await analyticsService.logEvent('AA__99_onboarding_referral_code_invalid', {
           code: referralCode.trim().toUpperCase(),
           error: result.error
         });
@@ -132,11 +132,11 @@ export default function ReferralCodeScreen() {
     
     // If no referral code entered or validation failed, continue without saving
     if (!referralCode.trim() || isValid === false) {
-      await analyticsService.logEvent('AA_26_referral_code_skip');
+      await analyticsService.logEvent('AA__26_referral_code_skip');
       await updateOnboardingData({ referralCode: '' });
     }
 
-    await analyticsService.logEvent('AA_26_referral_code_continue');
+    await analyticsService.logEvent('AA__26_referral_code_continue');
     // NEW: Use automatic navigation instead of hardcoded route
     goToNext();
   };

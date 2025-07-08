@@ -128,7 +128,7 @@ export default function ImprovementFocusScreen() {
           onPress={async () => {
             if (selected) {
               haptics.light();
-              await analyticsService.logEvent('AA_11_improvement_focus_continue');
+              await analyticsService.logEvent('AA__11_improvement_focus_continue');
               await updateOnboardingData({ improvementFocus: selected });
               // NEW: Use automatic navigation instead of hardcoded route
               goToNext();

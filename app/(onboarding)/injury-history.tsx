@@ -152,7 +152,7 @@ export default function InjuryHistoryScreen() {
               onPress={async () => {
                 if (injuryHistory.trim()) {
                   haptics.light();
-                  await analyticsService.logEvent('AA_15_injury_history_continue');
+                  await analyticsService.logEvent('AA__15_injury_history_continue');
                   await updateOnboardingData({ injuryHistory: injuryHistory.trim() });
                   // NEW: Use automatic navigation instead of hardcoded route
                   goToNext();

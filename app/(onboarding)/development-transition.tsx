@@ -494,7 +494,7 @@ export default function DevelopmentTransition() {
           onPress={async () => {
             haptics.light();
             try {
-              await analyticsService.logEvent('AA_14_development_transition_continue');
+              await analyticsService.logEvent('AA__14_development_transition_continue');
             } catch (_) {}
             goToNext();
           }}

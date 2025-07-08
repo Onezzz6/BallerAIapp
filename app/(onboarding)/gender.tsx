@@ -27,7 +27,7 @@ export default function GenderScreen() {
   const handleContinue = async () => {
     if (selectedGender) {
       haptics.light();
-      await analyticsService.logEvent('AA_02_gender_continue');
+      await analyticsService.logEvent('AA__02_gender_continue');
       await updateOnboardingData({ gender: selectedGender });
       // NEW: Use automatic navigation instead of hardcoded route
       goToNext();

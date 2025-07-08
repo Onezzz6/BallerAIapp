@@ -61,7 +61,7 @@ export default function MotivationReasonScreen() {
   const handleContinue = async () => {
     if (motivation.trim()) {
       haptics.light();
-      await analyticsService.logEvent('AA_28_motivation_reason_continue');
+      await analyticsService.logEvent('AA__28_motivation_reason_continue');
       await updateOnboardingData({ motivation: motivation.trim() });
       // NEW: Use automatic navigation instead of hardcoded route
       goToNext();

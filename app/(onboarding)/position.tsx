@@ -124,7 +124,7 @@ export default function PositionScreen() {
           onPress={async () => {
             if (selected) {
               haptics.light();
-              await analyticsService.logEvent('AA_19_position_continue');
+              await analyticsService.logEvent('AA__19_position_continue');
               await updateOnboardingData({ position: selected });
               // NEW: Use automatic navigation instead of hardcoded route
               goToNext();
