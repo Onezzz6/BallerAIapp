@@ -30,18 +30,23 @@ export default function DevelopmentComparisonScreen() {
   useEffect(() => {
     // Start animations after component mounts
     const timer = setTimeout(() => {
-      // Animate both bars simultaneously - fast start, smooth end
+      // Animate both bars simultaneously - starts slow then accelerates
       withoutProgress.value = withTiming(0.2, { 
-        duration: 1200, 
-        easing: Easing.out(Easing.cubic) 
+        duration: 800, 
+        easing: Easing.in(Easing.cubic) 
       });
       withProgress.value = withTiming(1, { 
-        duration: 1400, 
-        easing: Easing.out(Easing.cubic) 
+        duration: 1000, 
+        easing: Easing.in(Easing.cubic) 
       });
       
-      // Show text after bars finish (faster)
-      textOpacity.value = withDelay(1200, withTiming(1, { duration: 600 }));
+      // Add haptic feedback when blocks finish filling
+      setTimeout(() => {
+        haptics.light();
+      }, 1000);
+      
+      // Show text as animations are almost finished
+      textOpacity.value = withDelay(900, withTiming(1, { duration: 300 }));
     }, 500);
 
     return () => clearTimeout(timer);
@@ -72,7 +77,6 @@ export default function DevelopmentComparisonScreen() {
       await analyticsService.logEvent('AA_14_5_development_comparison_continue', {
         screen_name: 'development_comparison'
       });
-      console.log('Analytics event logged successfully');
     } catch (error) {
       console.log('Analytics error:', error);
     }
@@ -122,7 +126,7 @@ export default function DevelopmentComparisonScreen() {
           <View style={{
             width: '100%',
             maxWidth: 320,
-            backgroundColor: '#E8E8E8',
+            backgroundColor: '#F8F8F8',
             borderRadius: 20,
             padding: 32,
           }}>
@@ -192,14 +196,17 @@ export default function DevelopmentComparisonScreen() {
                   ]} />
                   
                   {/* Percentage text */}
-                  <Text style={{
-                    fontSize: 18,
-                    fontWeight: '700',
-                    color: colors.black,
-                    zIndex: 1,
-                  }}>
+                  <Animated.Text style={[
+                    {
+                      fontSize: 18,
+                      fontWeight: '700',
+                      color: colors.black,
+                      zIndex: 1,
+                    },
+                    textStyle
+                  ]}>
                     20%
-                  </Text>
+                  </Animated.Text>
                 </View>
               </View>
 
@@ -251,7 +258,7 @@ export default function DevelopmentComparisonScreen() {
                       left: 0,
                       bottom: 0,
                       width: '100%',
-                      backgroundColor: '#000000',
+                      backgroundColor: 'rgba(153, 232, 108, 1)',
                       borderRadius: 12,
                       maxHeight: 110, // Doesn't cover logo area
                     },
@@ -259,14 +266,17 @@ export default function DevelopmentComparisonScreen() {
                   ]} />
                   
                   {/* Percentage text */}
-                  <Text style={{
-                    fontSize: 18,
-                    fontWeight: '700',
-                    color: colors.white,
-                    zIndex: 1,
-                  }}>
+                  <Animated.Text style={[
+                    {
+                      fontSize: 18,
+                      fontWeight: '700',
+                      color: colors.black,
+                      zIndex: 1,
+                    },
+                    textStyle
+                  ]}>
                     2X
-                  </Text>
+                  </Animated.Text>
                 </View>
               </View>
             </View>

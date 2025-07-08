@@ -73,6 +73,7 @@ function DevelopmentChart({
   const redLen   = generousLen(redPath);
 
   const progress = useSharedValue(0);
+  const hasCompleted = useSharedValue(false); // Guard to prevent multiple calls
 
   /* Animated stroke props */
   const AnimatedPath      = Animated.createAnimatedComponent(Path);
@@ -116,9 +117,12 @@ function DevelopmentChart({
     opacity: interpolate(progress.value, [0.75, 0.9], [0, 1]),
   }));
 
-  /* Signal parent when lines essentially done */
+  /* Signal parent when lines essentially done (only once) */
   useDerivedValue(() => {
-    if (progress.value >= 0.95) runOnJS(onLinesComplete)();
+    if (progress.value >= 0.95 && !hasCompleted.value) {
+      hasCompleted.value = true;
+      runOnJS(onLinesComplete)();
+    }
   });
 
   /* Kick-off line animation (faster duration and shorter delay) */
@@ -257,6 +261,7 @@ export default function AnalyzingScreen() {
             width={CHART_W}
             height={CHART_H}
             onLinesComplete={() => {
+              haptics.light(); // Consistent feedback when animation completes
               /* Caption appears faster when lines complete */
               captionOpacity.value = withTiming(1, { duration: 300 });
             }}
