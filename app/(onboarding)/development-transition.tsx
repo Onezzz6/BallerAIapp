@@ -37,8 +37,7 @@ import analyticsService from '../services/analytics';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
-// Simple path length estimation
-const estimatePathLength = (path: string) => (path.length + 200) * 2;
+// Removed path length estimation - using coordinate-based clipping instead
 
 /*─────────────────────  Development Chart  ─────────────────────*/
 function DevelopmentChart({
@@ -56,8 +55,8 @@ function DevelopmentChart({
 
   // Calculate milestone positions on the exponential curve
   const getMilestoneOnCurve = (xPercent: number) => {
-    const x = width * xPercent;
-    const t = (x - 20) / (width - 40); // normalize to 0-1
+    const x = 20 + (endLineX - 20) * xPercent; // Use endLineX for consistency
+    const t = (x - 20) / (endLineX - 20); // normalize to 0-1 using endLineX
     const k = 3; // same steepness as the curve
     const totalHeight = startY - endY;
     const exponentialProgress = (Math.exp(k * t) - 1) / (Math.exp(k) - 1);
@@ -72,7 +71,7 @@ function DevelopmentChart({
   // Create simple exponential curve - no waves, just gets steeper and steeper
   const buildProgressPath = () => {
     const samples = 30;
-    const step = (width - 40) / samples;
+    const step = (endLineX - 20) / samples; // Use endLineX instead of width-40 to connect properly
     let d = `M20,${startY}`;
     
     for (let i = 1; i <= samples; i++) {
@@ -85,43 +84,46 @@ function DevelopmentChart({
       const y = startY - totalHeight * exponentialProgress;
       d += ` L${x.toFixed(2)},${y.toFixed(2)}`;
     }
+    // Connect to the end line at endY level
+    d += ` L${endLineX},${endY}`;
     return d;
   };
 
   const progressPath = buildProgressPath();
-  const pathLength = estimatePathLength(progressPath);
-
+  
   const progress = useSharedValue(0);
-  const dotOpacity = useSharedValue(0);
 
   // Animated components
-  const AnimatedPath = Animated.createAnimatedComponent(Path);
   const AnimatedCircle = Animated.createAnimatedComponent(Circle);
   const AnimatedSvgText = Animated.createAnimatedComponent(SvgText);
   const AnimatedRect = Animated.createAnimatedComponent(Rect);
 
-  // Animated clipping that advances with the line
+  // Animated clipping that advances with the line (perfectly synchronized)
   const animatedClipWidth = useAnimatedProps(() => ({
-    width: (endLineX - 20) * progress.value,
+    width: (endLineX - 20) * progress.value, // Grows from 0 to full width
   }));
 
-  // Path animation
-  const animatedPath = useAnimatedProps(() => ({
-    strokeDasharray: pathLength,
-    strokeDashoffset: pathLength * (1 - progress.value),
+  // Use same coordinate-based clipping for the path to ensure perfect sync
+  const animatedPathClipWidth = useAnimatedProps(() => ({
+    width: (endLineX - 20) * progress.value, // Same as curtain clipping
   }));
 
-  // Progressive milestone appearance (faster timing)
+  // Calculate exact progress values for when line reaches each milestone
+  const milestone1Progress = 0.35; // milestone1 is at 35% of the total line
+  const milestone2Progress = 0.65; // milestone2 is at 65% of the total line  
+  const milestone3Progress = 0.9;  // milestone3 is at 90% of the total line
+
+  // Progressive milestone appearance (exactly when line crosses)
   const animatedMilestone1 = useAnimatedProps(() => ({
-    opacity: progress.value > 0.15 ? 1 : 0, // Appears early
+    opacity: progress.value >= milestone1Progress ? 1 : 0,
   }));
   
   const animatedMilestone2 = useAnimatedProps(() => ({
-    opacity: progress.value > 0.35 ? 1 : 0, // Appears before line reaches milestone 3
+    opacity: progress.value >= milestone2Progress ? 1 : 0,
   }));
   
   const animatedMilestone3 = useAnimatedProps(() => ({
-    opacity: progress.value > 0.65 ? 1 : 0, // Appears well before line finishes
+    opacity: progress.value >= milestone3Progress ? 1 : 0,
   }));
 
   // Labels fade in
@@ -134,12 +136,12 @@ function DevelopmentChart({
     if (progress.value >= 0.95) runOnJS(onAnimationComplete)();
   });
 
-  // Start animation with variable speed (slower overall, accelerating)
+  // Start animation with consistent speed for perfect synchronization
   useEffect(() => {
-    // Use easing that starts slow and accelerates (matches the curve steepness)
+    // Use slightly eased timing for smooth but predictable progression
     progress.value = withDelay(200, withTiming(1, { 
       duration: 3500, // Slower overall
-      easing: Easing.in(Easing.cubic) // Starts slow, accelerates toward end
+      easing: Easing.out(Easing.quad) // Smooth but more linear for better sync
     }));
   }, []);
 
@@ -152,7 +154,7 @@ function DevelopmentChart({
       
       {/* Title */}
       <SvgText x="20" y="35" fontSize="18" fontWeight="600" fill={colors.black}>
-        Your Development Progression
+        Your Progress
       </SvgText>
 
              {/* Defs for gradients and clipping */}
@@ -188,6 +190,11 @@ function DevelopmentChart({
          <ClipPath id="progressClip">
            <AnimatedRect x="20" y="0" height={height} animatedProps={animatedClipWidth} />
          </ClipPath>
+         
+         {/* Separate clipping path for the line (same progression) */}
+         <ClipPath id="lineClip">
+           <AnimatedRect x="20" y="0" height={height} animatedProps={animatedPathClipWidth} />
+         </ClipPath>
        </Defs>
 
        {/* Bottom baseline - black line level with start */}
@@ -217,7 +224,7 @@ function DevelopmentChart({
            const step = (endX - 20) / samples;
            for (let i = 1; i <= samples; i++) {
              const x = 20 + step * i;
-             const t = (x - 20) / (width - 40);
+             const t = (x - 20) / (endLineX - 20);
              const k = 3;
              const totalHeight = startY - endY;
              const exponentialProgress = (Math.exp(k * t) - 1) / (Math.exp(k) - 1);
@@ -243,7 +250,7 @@ function DevelopmentChart({
            const step = (endX - startX) / samples;
            for (let i = 1; i <= samples; i++) {
              const x = startX + step * i;
-             const t = (x - 20) / (width - 40);
+             const t = (x - 20) / (endLineX - 20);
              const k = 3;
              const totalHeight = startY - endY;
              const exponentialProgress = (Math.exp(k * t) - 1) / (Math.exp(k) - 1);
@@ -270,7 +277,7 @@ function DevelopmentChart({
            const step1 = (milestone3.x - startX) / samples1;
            for (let i = 1; i <= samples1; i++) {
              const x = startX + step1 * i;
-             const t = (x - 20) / (width - 40);
+             const t = (x - 20) / (endLineX - 20);
              const k = 3;
              const totalHeight = startY - endY;
              const exponentialProgress = (Math.exp(k * t) - 1) / (Math.exp(k) - 1);
@@ -300,16 +307,16 @@ function DevelopmentChart({
       ))}
 
                     {/* Start point */}
-       <Circle cx="20" cy={startY} r="5" fill={colors.white} stroke={colors.brandGreen} strokeWidth="2" />
+       <Circle cx="20" cy={startY} r="5" fill={colors.white} stroke="#000000" strokeWidth="2" />
 
        {/* Animated progress path */}
-       <AnimatedPath
+       <Path
          d={progressPath}
-         stroke="url(#progressGrad)"
+         stroke="#000000"
          strokeWidth="3"
          fill="none"
          strokeLinecap="round"
-         animatedProps={animatedPath}
+         clipPath="url(#lineClip)"
        />
 
        {/* Progressive milestone markers */}
@@ -317,8 +324,8 @@ function DevelopmentChart({
          cx={milestone1.x} 
          cy={milestone1.y} 
          r="4" 
-         fill={colors.brandGreen} 
-         stroke={cardBg} 
+         fill={colors.white} 
+         stroke="#000000" 
          strokeWidth="2" 
          animatedProps={animatedMilestone1}
        />
@@ -326,8 +333,8 @@ function DevelopmentChart({
          cx={milestone2.x} 
          cy={milestone2.y} 
          r="4" 
-         fill={colors.brandGreen} 
-         stroke={cardBg} 
+         fill={colors.white} 
+         stroke="#000000" 
          strokeWidth="2" 
          animatedProps={animatedMilestone2}
        />
@@ -335,8 +342,8 @@ function DevelopmentChart({
          cx={milestone3.x} 
          cy={milestone3.y} 
          r="5" 
-         fill={colors.warning} 
-         stroke={cardBg} 
+         fill={colors.white} 
+         stroke="#000000" 
          strokeWidth="2" 
          animatedProps={animatedMilestone3}
        />

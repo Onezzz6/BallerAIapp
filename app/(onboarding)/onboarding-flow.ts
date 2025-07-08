@@ -39,11 +39,11 @@ export const ONBOARDING_FLOW: OnboardingStep[] = [
   // Goals and preferences
   { id: 'improvement-focus', route: '/improvement-focus', title: 'Improvement Focus' },
   { id: 'goal-timeline', route: '/goal-timeline', title: 'Goal Timeline' },
-  { id: 'skill-level', route: '/skill-level', title: 'Skill Level' },
   { id: 'motivation-confirmation', route: '/motivation-confirmation', title: 'Motivation Confirmation' },
+  { id: 'development-transition', route: '/development-transition', title: 'Development Transition' },
   { id: 'sleep-hours', route: '/sleep-hours', title: 'Sleep Hours' },
   { id: 'nutrition', route: '/nutrition', title: 'Nutrition' },
-  { id: 'development-transition', route: '/development-transition', title: 'Development Transition' },
+  { id: 'skill-level', route: '/skill-level', title: 'Skill Level' },
   
   // Team and position
   { id: 'position', route: '/position', title: 'Position' },
