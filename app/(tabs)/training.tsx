@@ -9,7 +9,7 @@ import Constants from 'expo-constants';
 import Animated, { FadeIn, FadeInDown, PinwheelIn, SlideInRight, SlideOutLeft, FadeOut } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { format, addDays, getWeek } from 'date-fns';
-import analytics from '@react-native-firebase/analytics';
+import analyticsService from '../services/analytics';
 import Accordion from '../components/Accordion';
 
 type FocusArea = 'technique' | 'strength' | 'endurance' | 'speed' | 'overall';
@@ -1362,7 +1362,7 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
   const handleGoToPlans = async () => {
     // Log analytics event before navigating
     try {
-      await analytics().logEvent('AA_99_view_training_plans');
+      await analyticsService.logEvent('AA_99_view_training_plans');
       console.log("Analytics event 'view_training_plans' logged.");
     } catch (error) {
       console.error("Error logging 'view_training_plans' event:", error);

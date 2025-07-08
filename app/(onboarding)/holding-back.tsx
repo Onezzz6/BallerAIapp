@@ -4,7 +4,7 @@ import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState, useEffect } from 'react';
-import analytics from '@react-native-firebase/analytics';
+import analyticsService from '../services/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
@@ -39,7 +39,7 @@ export default function HoldingBackScreen() {
   const handleContinue = async () => {
     if (selected) {
       haptics.light();
-      await analytics().logEvent('AA_13_holding_back_continue');
+      await analyticsService.logEvent('AA_13_holding_back_continue');
       await updateOnboardingData({ holdingBack: selected });
       // NEW: Automatic navigation to the next step
       goToNext();

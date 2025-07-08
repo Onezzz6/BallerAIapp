@@ -14,7 +14,7 @@ import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState, useEffect, useRef } from 'react';
-import analytics from '@react-native-firebase/analytics';
+import analyticsService from '../services/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
@@ -152,7 +152,7 @@ export default function InjuryHistoryScreen() {
               onPress={async () => {
                 if (injuryHistory.trim()) {
                   haptics.light();
-                  await analytics().logEvent('AA_18_injury_history_continue');
+                  await analyticsService.logEvent('AA_18_injury_history_continue');
                   await updateOnboardingData({ injuryHistory: injuryHistory.trim() });
                   // NEW: Use automatic navigation instead of hardcoded route
                   goToNext();

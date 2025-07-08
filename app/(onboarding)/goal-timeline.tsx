@@ -4,7 +4,7 @@ import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState, useEffect } from 'react';
-import analytics from '@react-native-firebase/analytics';
+import analyticsService from '../services/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
@@ -39,7 +39,7 @@ export default function GoalTimelineScreen() {
   const handleContinue = async () => {
     if (selected) {
       haptics.light();
-      await analytics().logEvent('AA_11_goal_timeline_continue');
+      await analyticsService.logEvent('AA_11_goal_timeline_continue');
       await updateOnboardingData({ goalTimeline: selected });
       // NEW: Use automatic navigation instead of hardcoded route
       goToNext();

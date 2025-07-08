@@ -9,6 +9,7 @@ import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
+import analyticsService from '../services/analytics';
 
 // Import all custom logos
 const igLogo = require('../../assets/images/iglogo.png');
@@ -99,7 +100,7 @@ export default function WhereDidYouFindUsScreen() {
   const handleContinue = async () => {
     if (selected) {
       haptics.light();
-      await analytics().logEvent('AA_04_where_did_you_find_us_continue');
+      await analyticsService.logEvent('AA_04_where_did_you_find_us_continue');
       await updateOnboardingData({ discoverySource: selected });
       // NEW: Use automatic navigation instead of hardcoded route
       goToNext();

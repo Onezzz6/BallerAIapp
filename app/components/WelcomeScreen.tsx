@@ -17,7 +17,7 @@ import { runPostLoginSequence, markAuthenticationComplete } from '../(onboarding
 import { requestAppTrackingPermission } from '../utils/tracking';
 import { colors, typography, spacing } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
-import analytics from '@react-native-firebase/analytics';
+import analyticsService from '../services/analytics';
 
 // Default empty onboarding data
 const defaultOnboardingData = {
@@ -176,8 +176,7 @@ export default function WelcomeScreen() {
       try {
         // Wait 1 second before logging to prevent analytics for users being immediately redirected
         await new Promise(resolve => setTimeout(resolve, 1000));
-        await analytics().logEvent('AA_01_welcome');
-        console.log("Analytics event '01_welcome' logged for user starting onboarding.");
+        await analyticsService.logEvent('AA_01_welcome');
       } catch (error) {
         console.error("Error logging '01_welcome' event:", error);
       }
@@ -218,7 +217,7 @@ export default function WelcomeScreen() {
 
   const handleGetStarted = () => {
     haptics.light();
-    analytics().logEvent('AA_01_welcome_get_started');
+    analyticsService.logEvent('AA_01_welcome_get_started');
     router.push('/(onboarding)/gender');
   };
 

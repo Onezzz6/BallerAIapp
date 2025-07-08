@@ -4,7 +4,7 @@ import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState, useEffect } from 'react';
-import analytics from '@react-native-firebase/analytics';
+import analyticsService from '../services/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
@@ -111,7 +111,7 @@ export default function NutritionScreen() {
           onPress={async () => {
             if (focusedOnNutrition !== null) {
               haptics.light();
-              await analytics().logEvent('AA_22_nutrition_continue');
+              await analyticsService.logEvent('AA_22_nutrition_continue');
               await updateOnboardingData({ nutrition: focusedOnNutrition.toString() });
               // NEW: Use automatic navigation instead of hardcoded route
               goToNext();

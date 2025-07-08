@@ -21,7 +21,7 @@ import CustomButton from '../components/CustomButton';
 import { calculateNutritionGoals } from '../utils/nutritionCalculations';
 import * as imageAnalysis from '../services/imageAnalysis';
 import WeeklyOverview from '../components/WeeklyOverview';
-import analytics from '@react-native-firebase/analytics';
+import analyticsService from '../services/analytics';
 import FoodCamera from '../components/FoodCamera';
 import FoodAnalysisScreen from '../components/FoodAnalysisScreen';
 import MealEditModal from '../components/MealEditModal';
@@ -2255,7 +2255,7 @@ export default function NutritionScreen() {
       
       // Log analytics event after successful logging
       try {
-        await analytics().logEvent('AA_99_log_meal');
+        await analyticsService.logEvent('AA_99_log_meal');
         console.log("Analytics event 'log_meal' logged.");
       } catch (error) {
         console.error("Error logging 'log_meal' event:", error);

@@ -9,6 +9,7 @@ import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
+import analyticsService from '../services/analytics';
 
 const OPTIONS = [
   {
@@ -36,7 +37,7 @@ export default function TriedOtherAppsScreen() {
   const handleContinue = async () => {
     if (selected) {
       haptics.light();
-      await analytics().logEvent('AA_05_tried_other_apps_continue');
+      await analyticsService.logEvent('AA_05_tried_other_apps_continue');
       await updateOnboardingData({ triedOtherApps: selected });
       // NEW: Use automatic navigation instead of hardcoded route
       goToNext();

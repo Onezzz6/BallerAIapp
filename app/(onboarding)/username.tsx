@@ -9,6 +9,7 @@ import { colors, typography, spacing } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { Animated as RNAnimated } from 'react-native';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
+import analyticsService from '../services/analytics';
 
 export default function UsernameScreen() {
   const haptics = useHaptics();
@@ -27,7 +28,7 @@ export default function UsernameScreen() {
   const handleContinue = async () => {
     if (username.trim()) {
       haptics.light();
-      await analytics().logEvent('AA_09_username_continue');
+      await analyticsService.logEvent('AA_09_username_continue');
       await updateOnboardingData({ username: username.trim() });
       // NEW: Use automatic navigation instead of hardcoded route
       goToNext();

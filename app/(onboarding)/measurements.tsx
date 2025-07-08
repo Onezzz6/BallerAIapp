@@ -5,7 +5,7 @@ import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState, useEffect } from 'react';
 import { Picker } from '@react-native-picker/picker';
-import analytics from '@react-native-firebase/analytics';
+import analyticsService from '../services/analytics';
 import { colors, typography, spacing } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
@@ -113,7 +113,7 @@ export default function MeasurementsScreen() {
 
     if (finalHeight && finalWeight) {
       haptics.light();
-      await analytics().logEvent('AA_07_measurements_continue');
+      await analyticsService.logEvent('AA_07_measurements_continue');
       await updateOnboardingData({ 
         height: finalHeight.toString(), 
         weight: finalWeight.toString() 

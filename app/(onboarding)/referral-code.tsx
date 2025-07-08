@@ -5,7 +5,7 @@ import { Animated as RNAnimated } from 'react-native';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
-import analytics from '@react-native-firebase/analytics';
+import analyticsService from '../services/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { validateReferralCode, createSuccessMessage } from '../services/referralCode';
@@ -92,7 +92,7 @@ export default function ReferralCodeScreen() {
         
         const validatedCode = referralCode.trim().toUpperCase();
         
-        await analytics().logEvent('AA_99_onboarding_referral_code_valid', {
+        await analyticsService.logEvent('AA_99_onboarding_referral_code_valid', {
           code: validatedCode,
           discount: result.discount,
           influencer: result.influencer
@@ -113,7 +113,7 @@ export default function ReferralCodeScreen() {
         setIsValid(false);
         setValidationMessage(result.error || 'Invalid referral code');
         
-        await analytics().logEvent('AA_99_onboarding_referral_code_invalid', {
+        await analyticsService.logEvent('AA_99_onboarding_referral_code_invalid', {
           code: referralCode.trim().toUpperCase(),
           error: result.error
         });
@@ -132,11 +132,11 @@ export default function ReferralCodeScreen() {
     
     // If no referral code entered or validation failed, continue without saving
     if (!referralCode.trim() || isValid === false) {
-      await analytics().logEvent('AA_99_onboarding_referral_code_skip');
+      await analyticsService.logEvent('AA_99_onboarding_referral_code_skip');
       await updateOnboardingData({ referralCode: '' });
     }
 
-    await analytics().logEvent('AA_24_referral_code_continue');
+    await analyticsService.logEvent('AA_24_referral_code_continue');
     // NEW: Use automatic navigation instead of hardcoded route
     goToNext();
   };

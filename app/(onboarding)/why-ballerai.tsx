@@ -9,6 +9,7 @@ import { colors } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { BALLERAI_SOLUTIONS } from './helping-solutions';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
+import analyticsService from '../services/analytics';
 
 export default function WhyBallerAIScreen() {
   const haptics = useHaptics();
@@ -31,10 +32,9 @@ export default function WhyBallerAIScreen() {
     haptics.light();
     
     try {
-      await analytics().logEvent('AA_13_5_why_ballerai_continue', {
+      await analyticsService.logEvent('AA_13_5_why_ballerai_continue', {
         holding_back_reason: holdingBack
       });
-      console.log('Analytics event logged successfully');
     } catch (error) {
       console.log('Analytics error:', error);
     }

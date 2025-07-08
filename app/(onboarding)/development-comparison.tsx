@@ -11,7 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
-import analytics from '@react-native-firebase/analytics';
+import analyticsService from '../services/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
@@ -69,7 +69,7 @@ export default function DevelopmentComparisonScreen() {
     haptics.light();
     
     try {
-      await analytics().logEvent('AA_14_5_development_comparison_continue', {
+      await analyticsService.logEvent('AA_14_5_development_comparison_continue', {
         screen_name: 'development_comparison'
       });
       console.log('Analytics event logged successfully');

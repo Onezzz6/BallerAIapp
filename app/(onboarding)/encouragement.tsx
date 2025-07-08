@@ -21,7 +21,7 @@ import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
-import analytics from '@react-native-firebase/analytics';
+import analyticsService from '../services/analytics';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
 
 /*─────────────────────  Elite Partnership Animation  ─────────────────────*/
@@ -415,7 +415,7 @@ export default function EncouragementScreen() {
           title="Let's Do This!"
           onPress={async () => {
             haptics.light();
-            await analytics().logEvent('AA_15_thank_you_for_trusting_us_continue');
+            await analyticsService.logEvent('AA_15_thank_you_for_trusting_us_continue');
             // NEW: Use automatic navigation instead of hardcoded route
             goToNext();
           }}

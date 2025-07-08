@@ -12,7 +12,7 @@ import { useRouter } from 'expo-router';
 import * as StoreReview from 'expo-store-review';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
-import analytics from '@react-native-firebase/analytics';
+import analyticsService from '../services/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
@@ -151,7 +151,7 @@ export default function ProfileCompleteScreen() {
     try {
       if (await StoreReview.hasAction()) {
         await StoreReview.requestReview();
-        await analytics().logEvent('AA_99_app_store_review_requested');
+        await analyticsService.logEvent('AA_99_app_store_review_requested');
         // Small delay to let review dialog appear
         await new Promise(resolve => setTimeout(resolve, 100));
       }
@@ -159,7 +159,7 @@ export default function ProfileCompleteScreen() {
       console.log('Store review request failed:', error);
     }
     
-    await analytics().logEvent('AA_29_profile_complete_get_started');
+    await analyticsService.logEvent('AA_29_profile_complete_get_started');
     // Navigate to sign-up screen (profile-complete is the last onboarding step)
     router.push('/(onboarding)/sign-up' as any);
   };

@@ -16,7 +16,7 @@ import Animated, {
   withDelay,
 } from 'react-native-reanimated';
 import { useEffect } from 'react';
-import analytics from '@react-native-firebase/analytics';
+import analyticsService from '../services/analytics';
 import Svg, {
   Path,
   Rect,
@@ -303,7 +303,7 @@ export default function AnalyzingScreen() {
           title="Continue"
           onPress={async () => {
             haptics.light();
-            await analytics().logEvent('AA_06_analyzing_continue');
+            await analyticsService.logEvent('AA_06_analyzing_continue');
             goToNext();
           }}
         />

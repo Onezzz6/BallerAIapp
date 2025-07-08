@@ -4,7 +4,7 @@ import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState, useEffect } from 'react';
-import analytics from '@react-native-firebase/analytics';
+import analyticsService from '../services/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
@@ -128,7 +128,7 @@ export default function ImprovementFocusScreen() {
           onPress={async () => {
             if (selected) {
               haptics.light();
-              await analytics().logEvent('AA_10_improvement_focus_continue');
+              await analyticsService.logEvent('AA_10_improvement_focus_continue');
               await updateOnboardingData({ improvementFocus: selected });
               // NEW: Use automatic navigation instead of hardcoded route
               goToNext();

@@ -8,7 +8,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useEffect, useState } from 'react';
 
-import analytics from '@react-native-firebase/analytics';
+import analyticsService from '../services/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
@@ -51,7 +51,7 @@ export default function GeneratingProfileScreen() {
 
        // Navigate when animation completes
        setTimeout(async () => {
-         await analytics().logEvent('AA_28_generating_profile');
+         await analyticsService.logEvent('AA_28_generating_profile');
          // NEW: Use automatic navigation instead of hardcoded route
          goToNext();
        }, totalDuration + 200);

@@ -4,7 +4,7 @@ import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useEffect } from 'react';
-import analytics from '@react-native-firebase/analytics';
+import analyticsService from '../services/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
@@ -21,7 +21,7 @@ export default function MotivationConfirmationScreen() {
     haptics.light();
     
     try {
-      await analytics().logEvent('AA_12_motivation_confirmation_continue');
+      await analyticsService.logEvent('AA_12_motivation_confirmation_continue');
       console.log('Analytics event logged successfully');
     } catch (error) {
       console.log('Analytics error:', error);

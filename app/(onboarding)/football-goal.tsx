@@ -4,7 +4,7 @@ import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
-import analytics from '@react-native-firebase/analytics';
+import analyticsService from '../services/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
@@ -39,7 +39,7 @@ export default function FootballGoalScreen() {
   const handleContinue = async () => {
     if (selected) {
       haptics.light();
-      await analytics().logEvent('onboarding_football_goal_continue');
+      await analyticsService.logEvent('onboarding_football_goal_continue');
       await updateOnboardingData({ footballGoal: selected });
       // NEW: Use automatic navigation instead of hardcoded route
       goToNext();

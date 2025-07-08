@@ -33,7 +33,7 @@ import Button from '../components/Button';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
-import analytics from '@react-native-firebase/analytics';
+import analyticsService from '../services/analytics';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -464,7 +464,7 @@ export default function DevelopmentTransition() {
           onPress={async () => {
             haptics.light();
             try {
-              await analytics().logEvent('AA_development_transition_continue');
+              await analyticsService.logEvent('AA_development_transition_continue');
             } catch (_) {}
             goToNext();
           }}

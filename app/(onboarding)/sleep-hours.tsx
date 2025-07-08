@@ -9,6 +9,7 @@ import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
+import analyticsService from '../services/analytics';
 
 export default function SleepHoursScreen() {
   const haptics = useHaptics();
@@ -102,7 +103,7 @@ export default function SleepHoursScreen() {
           onPress={async () => {
             if (selected) {
               haptics.light();
-              await analytics().logEvent('AA_21_sleep_hours_continue');
+              await analyticsService.logEvent('AA_21_sleep_hours_continue');
               await updateOnboardingData({ sleepHours: selected });
               // NEW: Use automatic navigation instead of hardcoded route
               goToNext();

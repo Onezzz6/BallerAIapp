@@ -14,6 +14,7 @@ import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { useEffect } from 'react';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
+import analyticsService from '../services/analytics';
 
 export default function ProfileGenerationScreen() {
   const haptics = useHaptics();
@@ -140,7 +141,7 @@ export default function ProfileGenerationScreen() {
 
   const handleContinue = async () => {
     haptics.light();
-    await analytics().logEvent('AA_27_profile_generation_continue');
+    await analyticsService.logEvent('AA_27_profile_generation_continue');
     // NEW: Use automatic navigation instead of hardcoded route
     goToNext();
   };

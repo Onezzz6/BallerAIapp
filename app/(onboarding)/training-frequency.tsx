@@ -8,6 +8,7 @@ import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
+import analyticsService from '../services/analytics';
 
 const FREQUENCY_OPTIONS = [
   {
@@ -39,7 +40,7 @@ export default function TrainingFrequencyScreen() {
   const handleContinue = async () => {
     if (selected) {
       haptics.light();
-      await analytics().logEvent('AA_03_training_frequency_continue');
+      await analyticsService.logEvent('AA_03_training_frequency_continue');
       await updateOnboardingData({ trainingFrequency: selected });
       // NEW: Use automatic navigation instead of hardcoded route
       goToNext();

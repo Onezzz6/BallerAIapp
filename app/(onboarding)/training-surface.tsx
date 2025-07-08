@@ -8,6 +8,7 @@ import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
+import analyticsService from '../services/analytics';
 
 const SURFACES = [
   {
@@ -124,7 +125,7 @@ export default function TrainingSurfaceScreen() {
           onPress={async () => {
             if (selected) {
               haptics.light();
-              await analytics().logEvent('onboarding_training_surface');
+              await analyticsService.logEvent('onboarding_training_surface');
               await updateOnboardingData({ trainingSurface: selected });
               // NEW: Use automatic navigation instead of hardcoded route
               goToNext();

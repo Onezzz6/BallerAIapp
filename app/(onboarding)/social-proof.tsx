@@ -7,6 +7,7 @@ import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
+import analyticsService from '../services/analytics';
 
 export default function SocialProofScreen() {
   const haptics = useHaptics();
@@ -124,7 +125,7 @@ export default function SocialProofScreen() {
           title="Continue" 
           onPress={async () => {
             haptics.light();
-            await analytics().logEvent('AA_25_social_proof_continue');
+            await analyticsService.logEvent('AA_25_social_proof_continue');
             // NEW: Use automatic navigation instead of hardcoded route
             goToNext();
           }}

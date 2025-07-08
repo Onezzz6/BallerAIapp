@@ -4,7 +4,7 @@ import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useState } from 'react';
-import analytics from '@react-native-firebase/analytics';
+import analyticsService from '../services/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
@@ -124,7 +124,7 @@ export default function PositionScreen() {
           onPress={async () => {
             if (selected) {
               haptics.light();
-              await analytics().logEvent('AA_17_position_continue');
+              await analyticsService.logEvent('AA_17_position_continue');
               await updateOnboardingData({ position: selected });
               // NEW: Use automatic navigation instead of hardcoded route
               goToNext();

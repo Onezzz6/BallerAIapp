@@ -8,6 +8,7 @@ import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
+import analyticsService from '../services/analytics';
 
 const ACCOMPLISHMENT_OPTIONS = [
   {
@@ -39,7 +40,7 @@ export default function TrainingAccomplishmentScreen() {
   const handleContinue = async () => {
     if (selected) {
       haptics.light();
-      await analytics().logEvent('AA_14_training_accomplishment_continue');
+      await analyticsService.logEvent('AA_14_training_accomplishment_continue');
       await updateOnboardingData({ trainingAccomplishment: selected });
       // NEW: Use automatic navigation instead of hardcoded route
       goToNext();

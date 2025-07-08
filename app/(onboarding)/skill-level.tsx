@@ -8,6 +8,7 @@ import analytics from '@react-native-firebase/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
+import analyticsService from '../services/analytics';
 
 const SKILL_LEVELS = [
   {
@@ -130,7 +131,7 @@ export default function SkillLevelScreen() {
           onPress={async () => {
             if (selected) {
               haptics.light();
-              await analytics().logEvent('onboarding_skill_level_continue');
+              await await analyticsService.logEvent('onboarding_skill_level_continue');
               await updateOnboardingData({ skillLevel: selected });
               // NEW: Use automatic navigation instead of hardcoded route
               goToNext();
