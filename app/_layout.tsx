@@ -6,6 +6,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
 import 'react-native-reanimated';
+import { ReducedMotionConfig, ReduceMotion } from 'react-native-reanimated';
 import LoadingScreen from './components/LoadingScreen';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -287,6 +288,7 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <ReducedMotionConfig mode={ReduceMotion.Never} />
       <AuthProvider>
         <SubscriptionProvider>
           <AuthStateManager>
