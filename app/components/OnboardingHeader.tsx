@@ -59,7 +59,7 @@ export default function OnboardingHeader({
         justifyContent: 'space-between',
         height: 64, // Fixed height for consistency
       }}>
-        <BackButton customBackPath={customBackPath} />
+        <BackButton customBackPath={customBackPath} screenId={screenId} />
         
         <View style={{
           flexDirection: 'row',

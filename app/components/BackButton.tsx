@@ -1,18 +1,25 @@
 import { Pressable, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInRight } from 'react-native-reanimated';
+import { useOnboardingStep } from '../hooks/useOnboardingStep';
 
 interface BackButtonProps {
   customBackPath?: string;
+  screenId?: string;
 }
 
-export default function BackButton({ customBackPath }: BackButtonProps) {
+export default function BackButton({ customBackPath, screenId }: BackButtonProps) {
   const router = useRouter();
+  const onboardingStep = screenId ? useOnboardingStep(screenId) : null;
 
   const handlePress = () => {
     if (customBackPath) {
       router.push(customBackPath);
+    } else if (onboardingStep) {
+      // Use our custom navigation logic that respects skipOnBack
+      onboardingStep.goToPrevious();
     } else {
+      // Fallback to default behavior
       router.back();
     }
   };

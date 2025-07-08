@@ -18,6 +18,7 @@ import { requestAppTrackingPermission } from '../utils/tracking';
 import { colors, typography, spacing } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import analyticsService from '../services/analytics';
+import { useOnboardingStep } from '../hooks/useOnboardingStep';
 
 // Default empty onboarding data
 const defaultOnboardingData = {
@@ -167,6 +168,9 @@ export default function WelcomeScreen() {
   const [isAppleAvailable, setIsAppleAvailable] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [showResetModal, setShowResetModal] = useState(false);
+  
+  // Use onboarding navigation system
+  const { goToNext } = useOnboardingStep('welcome');
 
 
 
@@ -218,7 +222,7 @@ export default function WelcomeScreen() {
   const handleGetStarted = () => {
     haptics.light();
     analyticsService.logEvent('AA_01_welcome_get_started');
-    router.push('/(onboarding)/gender');
+    goToNext();
   };
 
   // ----- sign-in, reset password, Apple auth … -----------
