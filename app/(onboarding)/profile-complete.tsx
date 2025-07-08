@@ -8,6 +8,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'expo-router';
 import * as StoreReview from 'expo-store-review';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
@@ -138,6 +139,7 @@ const PhoneCarousel: React.FC = () => {
 
 export default function ProfileCompleteScreen() {
   const haptics = useHaptics();
+  const router = useRouter();
   
   // NEW: Use automatic onboarding step system
   const { goToNext } = useOnboardingStep('profile-complete');
@@ -158,8 +160,8 @@ export default function ProfileCompleteScreen() {
     }
     
     await analytics().logEvent('AA_29_profile_complete_get_started');
-    // NEW: Use automatic navigation instead of hardcoded route
-    goToNext();
+    // Navigate to sign-up screen (profile-complete is the last onboarding step)
+    router.push('/(onboarding)/sign-up' as any);
   };
 
   return (
