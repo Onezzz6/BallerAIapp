@@ -22,6 +22,31 @@ export default function SortingScreen() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [hasCheckedSubscription, setHasCheckedSubscription] = useState(false);
   const [navigationReady, setNavigationReady] = useState(false);
+  const [minLoadingComplete, setMinLoadingComplete] = useState(false);
+  const [shouldFadeOut, setShouldFadeOut] = useState(false);
+
+  // Debug logging for state changes
+  useEffect(() => {
+    console.log('SortingScreen State:', {
+      authLoading,
+      navigationReady,
+      minLoadingComplete,
+      user: !!user,
+      hasCheckedSubscription,
+      shouldFadeOut
+    });
+  }, [authLoading, navigationReady, minLoadingComplete, user, hasCheckedSubscription, shouldFadeOut]);
+
+  // Ensure minimum loading time for smooth UX
+  useEffect(() => {
+    console.log('SortingScreen: Starting minimum loading timer (2 seconds)');
+    const timer = setTimeout(() => {
+      console.log('SortingScreen: Minimum loading time completed');
+      setMinLoadingComplete(true);
+    }, 2000); // Show loading for at least 2 seconds
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   // Check if navigation is ready
   useEffect(() => {
@@ -40,16 +65,21 @@ export default function SortingScreen() {
       }
     };
 
-    // Add a delay to ensure the root layout has time to mount
-    // This coordinates with the root layout's 2-second initial loading
-    setTimeout(checkNavigationReady, 2200);
+    // Start immediately
+    checkNavigationReady();
   }, [router]);
 
   const performNavigation = (path: string) => {
     try {
-      console.log(`SortingScreen: Navigating to ${path}`);
-      router.replace(path);
-      setIsInitializing(false);
+      console.log(`SortingScreen: Starting fade out before navigating to ${path}`);
+      setShouldFadeOut(true);
+      
+      // Wait for fade out animation to complete, then navigate
+      setTimeout(() => {
+        console.log(`SortingScreen: Navigating to ${path}`);
+        router.replace(path);
+        setIsInitializing(false);
+      }, 500); // Wait for fade out animation duration
     } catch (error) {
       console.error('Navigation error:', error);
       // If navigation fails, try again after a short delay
@@ -69,8 +99,8 @@ export default function SortingScreen() {
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        // Wait for auth state to be determined and navigation to be ready
-        if (authLoading || !navigationReady) {
+        // Wait for auth state to be determined, navigation to be ready, and minimum loading time
+        if (authLoading || !navigationReady || !minLoadingComplete) {
           return;
         }
 
@@ -113,15 +143,15 @@ export default function SortingScreen() {
       }
     };
 
-    // Only run once when component mounts
-    if (!hasCheckedSubscription && navigationReady) {
+    // Only run when dependencies change
+    if (!hasCheckedSubscription && navigationReady && minLoadingComplete) {
       initializeApp();
     }
-  }, [user, authLoading, router, refreshSubscriptionStatus, hasCheckedSubscription, navigationReady]);
+  }, [user, authLoading, router, refreshSubscriptionStatus, hasCheckedSubscription, navigationReady, minLoadingComplete]);
 
   // Separate effect to handle navigation after subscription status is determined
   useEffect(() => {
-    if (hasCheckedSubscription && user && !authLoading && navigationReady) {
+    if (hasCheckedSubscription && user && !authLoading && navigationReady && minLoadingComplete) {
       console.log('SortingScreen: Making final routing decision...');
       console.log('SortingScreen: Subscription active:', isSubscriptionActive);
       
@@ -133,14 +163,26 @@ export default function SortingScreen() {
         performNavigation('/welcome');
       }
     }
-  }, [hasCheckedSubscription, isSubscriptionActive, user, authLoading, router, navigationReady]);
+  }, [hasCheckedSubscription, isSubscriptionActive, user, authLoading, router, navigationReady, minLoadingComplete]);
 
   // Show loading screen while determining where to navigate
-  if (isInitializing || authLoading || !navigationReady) {
-    return <LoadingScreen />;
+  const shouldShowLoading = isInitializing || authLoading || !navigationReady || !minLoadingComplete;
+  
+  console.log('SortingScreen: Loading decision:', {
+    shouldShowLoading,
+    isInitializing,
+    authLoading,
+    navigationReady,
+    minLoadingComplete,
+    shouldFadeOut
+  });
+  
+  if (shouldShowLoading) {
+    console.log('SortingScreen: Showing LoadingScreen');
+    return <LoadingScreen shouldFadeOut={shouldFadeOut} />;
   }
 
   // This should not be reached due to navigation, but just in case
   console.warn('SortingScreen: Reached end of component without navigation - this should not happen');
-  return <LoadingScreen />;
+  return <LoadingScreen shouldFadeOut={shouldFadeOut} />;
 } 

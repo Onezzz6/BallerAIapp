@@ -1,20 +1,45 @@
 import { View, Image } from 'react-native';
+import { useEffect } from 'react';
 import Animated, { 
-  FadeIn,
-  FadeOut 
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming
 } from 'react-native-reanimated';
 
-export default function LoadingScreen() {
+interface LoadingScreenProps {
+  shouldFadeOut?: boolean;
+}
+
+export default function LoadingScreen({ shouldFadeOut = false }: LoadingScreenProps) {
+  const opacity = useSharedValue(0); // Start at 0 for manual fade-in
+
+  useEffect(() => {
+    // Fade in immediately when component mounts
+    opacity.value = withTiming(1, { duration: 500 });
+  }, [opacity]);
+
+  useEffect(() => {
+    if (shouldFadeOut) {
+      // Fade out when requested
+      opacity.value = withTiming(0, { duration: 500 });
+    }
+  }, [shouldFadeOut, opacity]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
   return (
     <Animated.View 
-      entering={FadeIn.duration(500)}
-      exiting={FadeOut.duration(500)}
-      style={{
-        flex: 1,
-        backgroundColor: '#ffffff',
-        justifyContent: 'center',
-        alignItems: 'center',
-      }}
+      style={[
+        {
+          flex: 1,
+          backgroundColor: '#ffffff',
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
+        animatedStyle
+      ]}
     >
       <Image
         source={require('../../assets/images/BallerAILogo.png')}

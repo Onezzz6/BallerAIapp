@@ -7,7 +7,6 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
 import 'react-native-reanimated';
 import { ReducedMotionConfig, ReduceMotion } from 'react-native-reanimated';
-import LoadingScreen from './components/LoadingScreen';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { OnboardingProvider } from './context/OnboardingContext';
@@ -254,8 +253,6 @@ export default function RootLayout() {
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
 
-  const [initialLoading, setInitialLoading] = useState(true);
-
   useEffect(() => {
     if (error) throw error;
 
@@ -266,13 +263,7 @@ export default function RootLayout() {
     // Initialize AppsFlyer
     initializeAppsFlyer();
 
-    // Show initial loading screen for 2 seconds
-    const timer = setTimeout(() => {
-      setInitialLoading(false);
-    }, 2000);
-
     return () => {
-      clearTimeout(timer);
       // Cleanup AppsFlyer listeners
       cleanupAppsFlyer();
     };
@@ -280,10 +271,6 @@ export default function RootLayout() {
 
   if (!loaded) {
     return null;
-  }
-
-  if (initialLoading) {
-    return <LoadingScreen />;
   }
 
   return (
@@ -312,11 +299,7 @@ function AuthStateManager({ children }: { children: React.ReactNode }) {
   
   // Note: Removed automatic navigation logic - SortingScreen now handles this
   // This prevents the welcome screen flash and ensures proper routing
-  
-  // Show loading screen until auth state is determined
-  if (isLoading && user === null) {
-    return <LoadingScreen />;
-  }
+  // Also removed LoadingScreen here to prevent multiple loading screens
   
   return <>{children}</>;
 }
