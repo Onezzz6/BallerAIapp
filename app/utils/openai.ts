@@ -44,6 +44,19 @@ export const askOpenAI = async (question: string, userContext: string, conversat
       }
     );
     
+    // Log token usage for chat feature
+    const usage = response.data.usage;
+    if (usage) {
+      console.log('🤖 CHAT AI TOKEN USAGE:', {
+        prompt_tokens: usage.prompt_tokens,
+        completion_tokens: usage.completion_tokens,
+        total_tokens: usage.total_tokens,
+        model: 'gpt-4o',
+        feature: 'chat',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
     return response.data.choices[0].message.content;
   } catch (error) {
     console.error('Error calling OpenAI API:', error);

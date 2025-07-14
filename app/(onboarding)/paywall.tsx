@@ -208,6 +208,7 @@ export async function runPostLoginSequence(
     referralCode: string | null;
     referralDiscount: number | null;
     referralInfluencer: string | null;
+    referralPaywallType: string | null;
   }
 ): Promise<void> {
   console.log("======== RUNNING ONE-TIME POST-LOGIN SEQUENCE ========");
@@ -310,17 +311,18 @@ export async function runPostLoginSequence(
     // 7. Only if truly no subscription, show paywall ONCE
     console.log("STEP 7: No active subscription confirmed, showing paywall...");
     
-    // Check if this is a post-onboarding flow with valid referral code
-    const hasValidReferralCode = referralData && 
-      referralData.referralCode && 
-      referralData.referralDiscount && 
-      referralData.referralInfluencer;
+    // Dynamic paywall selection based on referral code type
+    const hasReferralCode = referralData && referralData.referralCode;
+    const paywallType = referralData?.referralPaywallType;
     
-    if (hasValidReferralCode) {
-      console.log(`🎁 REFERRAL CODE DETECTED: ${referralData.referralCode} (${referralData.referralDiscount}% off from ${referralData.referralInfluencer})`);
-      console.log("Will show DISCOUNT paywall for post-onboarding user");
+    if (hasReferralCode && paywallType === 'freetrial') {
+      console.log(`🎁 FREE TRIAL REFERRAL CODE DETECTED: ${referralData.referralCode} from ${referralData.referralInfluencer}`);
+      console.log("Will show FREE TRIAL paywall");
+    } else if (hasReferralCode) {
+      console.log(`🎁 DISCOUNT REFERRAL CODE DETECTED: ${referralData.referralCode} (${referralData.referralDiscount}% off from ${referralData.referralInfluencer})`);
+      console.log("Will show DISCOUNT paywall");
     } else {
-      console.log("No valid referral code - will show REGULAR paywall");
+      console.log("No referral code - will show REGULAR paywall");
     }
     
     // Mark paywall as being presented to prevent duplicates
@@ -333,9 +335,25 @@ export async function runPostLoginSequence(
     console.log("STEP 7a: Fetching offerings...");
     const offerings = await Purchases.getOfferings();
     
-    if (hasValidReferralCode) {
-      // For referral users, show the referral offering with discounted products
-      console.log("🎁 Presenting REFERRAL paywall for referral user with discount");
+    if (hasReferralCode && paywallType === 'freetrial') {
+      // For free trial referral users, show the free trial paywall
+      console.log("🎁 Presenting FREE TRIAL paywall for free trial referral user");
+      const freeTrialOffering = offerings.all['free trial paywall'];
+      
+      if (freeTrialOffering) {
+        console.log("✅ Free trial offering found, presenting free trial paywall");
+        paywallResult = await RevenueCatUI.presentPaywall({
+          offering: freeTrialOffering
+        });
+      } else {
+        console.warn("⚠️ Free trial offering not found, falling back to default paywall");
+        paywallResult = await RevenueCatUI.presentPaywallIfNeeded({
+          requiredEntitlementIdentifier: ENTITLEMENT_ID
+        });
+      }
+    } else if (hasReferralCode) {
+      // For discount referral users, show the referral offering with discounted products
+      console.log("🎁 Presenting DISCOUNT paywall for discount referral user");
       const referralOffering = offerings.all['ReferralOffering'];
       
       if (referralOffering) {
@@ -378,7 +396,7 @@ export async function runPostLoginSequence(
       await Purchases.getCustomerInfo();
       
       // Log analytics for referral code success
-      if (hasValidReferralCode) {
+      if (hasReferralCode) {
         console.log("🎉 REFERRAL CODE PURCHASE SUCCESS!");
         // You can add specific analytics here for successful referral purchases
       }
@@ -389,7 +407,7 @@ export async function runPostLoginSequence(
       console.log("STEP 8: Paywall cancelled by user");
       
       // Log analytics for referral code cancellation
-      if (hasValidReferralCode) {
+      if (hasReferralCode) {
         console.log("🚫 REFERRAL CODE PAYWALL CANCELLED");
         // You can add specific analytics here for cancelled referral paywalls
       }
@@ -398,7 +416,7 @@ export async function runPostLoginSequence(
       navigateToWelcome();
     }
     
-    console.log(`Paywall sequence complete with result: ${paywallResult}${hasValidReferralCode ? ' (with referral code)' : ''}`);
+    console.log(`Paywall sequence complete with result: ${paywallResult}${hasReferralCode ? ' (with referral code)' : ''}`);
     console.log("===============================================");
   } catch (error) {
     // Reset paywall presented flag even if there's an error

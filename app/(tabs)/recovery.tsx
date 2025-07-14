@@ -394,6 +394,19 @@ IMPORTANT USAGE GUIDELINES:
       const data = await response.json();
       console.log('API Response:', data);
 
+      // Log token usage for recovery plan generation
+      const usage = data.usage;
+      if (usage) {
+        console.log('🏃‍♂️ RECOVERY PLAN GENERATION TOKEN USAGE:', {
+          prompt_tokens: usage.prompt_tokens,
+          completion_tokens: usage.completion_tokens,
+          total_tokens: usage.total_tokens,
+          model: 'gpt-4',
+          feature: 'recovery_plan_generation',
+          timestamp: new Date().toISOString()
+        });
+      }
+
       // Properly access the message content
       const planText = data.choices?.[0]?.message?.content;
       if (!planText) {

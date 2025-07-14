@@ -102,7 +102,8 @@ export default function ReferralCodeScreen() {
         await updateOnboardingData({ 
           referralCode: validatedCode,
           referralDiscount: result.discount,
-          referralInfluencer: result.influencer
+          referralInfluencer: result.influencer,
+          referralPaywallType: result.paywallType
         });
 
         // Set the referral code as a subscriber attribute in RevenueCat

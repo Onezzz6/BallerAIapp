@@ -67,7 +67,8 @@ export default function SignUpScreen() {
           {
             referralCode: onboardingData.referralCode,
             referralDiscount: onboardingData.referralDiscount,
-            referralInfluencer: onboardingData.referralInfluencer
+            referralInfluencer: onboardingData.referralInfluencer,
+            referralPaywallType: onboardingData.referralPaywallType
           }
         );
       }
@@ -100,7 +101,8 @@ export default function SignUpScreen() {
                       {
                         referralCode: onboardingData.referralCode,
                         referralDiscount: onboardingData.referralDiscount,
-                        referralInfluencer: onboardingData.referralInfluencer
+                        referralInfluencer: onboardingData.referralInfluencer,
+                        referralPaywallType: onboardingData.referralPaywallType
                       }
                     );
                   }
@@ -154,7 +156,8 @@ export default function SignUpScreen() {
             {
               referralCode: onboardingData.referralCode,
               referralDiscount: onboardingData.referralDiscount,
-              referralInfluencer: onboardingData.referralInfluencer
+              referralInfluencer: onboardingData.referralInfluencer,
+              referralPaywallType: onboardingData.referralPaywallType
             }
           );
       } else {
@@ -178,7 +181,8 @@ export default function SignUpScreen() {
             {
               referralCode: onboardingData.referralCode,
               referralDiscount: onboardingData.referralDiscount,
-              referralInfluencer: onboardingData.referralInfluencer
+              referralInfluencer: onboardingData.referralInfluencer,
+              referralPaywallType: onboardingData.referralPaywallType
             }
           );
         } catch (error) {

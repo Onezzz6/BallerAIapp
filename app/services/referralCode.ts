@@ -4,6 +4,7 @@ export interface ReferralCodeResult {
   isValid: boolean;
   discount?: number;
   influencer?: string;
+  paywallType?: string | null;
   error?: string;
 }
 
@@ -64,10 +65,14 @@ export const validateReferralCode = async (inputCode: string): Promise<ReferralC
                     data.discount || 
                     10; // Default discount
     
+    // Get paywall type for dynamic paywall selection
+    const paywallType = data.paywallType || null;
+    
     return {
       isValid: true,
       discount: discount,
-      influencer: influencerName
+      influencer: influencerName,
+      paywallType: paywallType
     };
 
   } catch (error) {

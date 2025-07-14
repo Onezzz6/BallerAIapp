@@ -1221,6 +1221,19 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
       const data = await response.json();
       console.log('Full API Response:', JSON.stringify(data, null, 2));
 
+      // Log token usage for training plan generation
+      const usage = data.usage;
+      if (usage) {
+        console.log('💪 TRAINING PLAN GENERATION TOKEN USAGE:', {
+          prompt_tokens: usage.prompt_tokens,
+          completion_tokens: usage.completion_tokens,
+          total_tokens: usage.total_tokens,
+          model: 'deepseek-chat',
+          feature: 'training_plan_generation',
+          timestamp: new Date().toISOString()
+        });
+      }
+
       if (!data.choices?.[0]?.message?.content) {
         throw new Error('Invalid response from API');
       }

@@ -22,6 +22,7 @@ type OnboardingData = {
   referralCode: string | null;
   referralDiscount: number | null;
   referralInfluencer: string | null;
+  referralPaywallType: string | null;
   motivation: string | null;
   fitnessLevel: string | null;
   activityLevel: string | null;
@@ -59,6 +60,7 @@ const defaultOnboardingData: OnboardingData = {
   referralCode: null,
   referralDiscount: null,
   referralInfluencer: null,
+  referralPaywallType: null,
   motivation: null,
   fitnessLevel: null,
   activityLevel: null,

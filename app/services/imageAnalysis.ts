@@ -74,6 +74,19 @@ const analyzeImage = async (imageUri: string) => {
     console.log('API Response status:', response.status);
     console.log('API Response headers:', JSON.stringify(response.headers));
     
+    // Log token usage for nutrition image analysis
+    const usage = data.usage;
+    if (usage) {
+      console.log('🍽️ NUTRITION IMAGE ANALYSIS TOKEN USAGE:', {
+        prompt_tokens: usage.prompt_tokens,
+        completion_tokens: usage.completion_tokens,
+        total_tokens: usage.total_tokens,
+        model: 'gpt-4o',
+        feature: 'nutrition_image_analysis',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
     if (data.error) {
       console.error('OpenAI API error:', JSON.stringify(data.error));
       throw new Error(data.error.message);
