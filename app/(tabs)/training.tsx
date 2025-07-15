@@ -1053,159 +1053,91 @@ export default function TrainingScreen() {
 
       if (!userData) throw new Error('User data not found');
 
-      const prompt = `You are BallerAI. Your job is to create a training plan for the user. ${
-        (() => {
-          const today = new Date();
-          const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-          
-          if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-            // Monday-Friday: plan for rest of current week
-            return "It should include the rest of this week until Sunday based on the following information";
-          } else {
-            // Saturday-Sunday: plan for full upcoming week
-            return "It should include the full upcoming week (Monday through Sunday) based on the following information";
-          }
-        })()
-      }
-this is an example of a plan for one day for this user.
-user onboarding answers:
-age ${userData.age}
-gender "${userData.gender}"
-height ${userData.height}
-weight ${userData.weight}
-injuryHistory "${userData.injuryHistory}"
-position "${userData.position}"
+      const prompt = `You are BallerAI. Your job is to create a training plan for the user. It should include the full week (Monday through Sunday) based on the following information.
 
-the user ${gymAccess === 'yes' ? 'has' : 'does not have'} access to the gym.
-assume the user will train alone.
-assume the user only has access to a ball, pitch, cones and a goal ${gymAccess === 'yes' ? 'and gym equipment' : ''}.
+User profile:
+- Age: ${userData.age}
+- Gender: ${userData.gender}
+- Height: ${userData.height}
+- Weight: ${userData.weight}
+- Injury history: ${userData.injuryHistory}
+- Position: ${userData.position}
 
-Users' extra focus for the week is ${selectedFocus}.
+Training setup:
+- The user ${gymAccess === 'yes' ? 'has' : 'does not have'} access to the gym
+- User will train alone
+- User has access to a ball, pitch, cones and a goal ${gymAccess === 'yes' ? 'and gym equipment' : ''}
+- User's focus for the week is ${selectedFocus}
 
-users team training amounts are just so u know their load from their team training the plan u make tho is just for individual training so dont mention a nything about team traininbgs in the plan:
+Team training schedule (for reference only - do not mention team training in the plan):
 ${Object.entries(schedule)
   .map(([day, data]) => ` ${day} ${data.type === 'off' ? '0' : data.type === 'game' ? 'GAME' : data.duration} mins`)
   .join('\n')}
 
-${lastPlan ? `Here is the full plan the user followed last week:
+CRITICAL: Only days explicitly marked as "GAME" above should be treated as game days. Days marked as "0" or with any other value are NOT game days - they are regular training days with no team obligations. Do not assume or create games on days that are not explicitly marked as "GAME".
+
+${lastPlan ? `Previous plan for reference:
 ===
 ${lastPlan}
 ===
 
 When writing the new week:
-• make sure not to change the whole structure if the users situation is very similar and optimal plan would be similar.
-• DO adjust at least one or two drills per day (exercise type, duration, intensity, order) so the text is not a verbatim copy.
-• Do NOT make arbitrary changes that would reduce training quality. Think progression, variation, or subtle shift in focus—not randomness.` : ''}
+• Maintain training quality and structure for similar situations
+• Adjust at least one or two drills per day (exercise type, duration, intensity, order) to provide variation
+• Do not make arbitrary changes that would reduce training quality` : ''}
 
-IMPORTANT: If the user is 14 years old or younger, do not suggest any weight training exercises. Only use bodyweight exercises for strength training.
+CRITICAL FORMATTING RULES:
 
-IMPORTANT SCHEDULE INTERPRETATION: Only consider a day as a game day if explicitly marked as "GAME" in the schedule. If a day is marked as "0" or has no game specified, assume there is no game on that day. Do not assume or hallucinate any games that aren't explicitly marked in the schedule.
-
-Perfect training plan example for BallerAI based on this user's info.
-monday: technique based training. start with a 15 minute warm up, 10 mins jogging then 5 minutes of active stretching. Then start to do wall passes for 15 minutes with different variables switching after 5 mins each.Then he will set up 8 cones and start to dribble through and between them using both feet for 15 mins. After that, finishing inside the box for 15 mins. if with a friend do passes before finishing and one time finishing if alone do game like situations where you get ur foot open and finish with precision. then a light 5 min jog to get the fluids mowing and ur done.
-don't copy that, just take the detail and style of the training as a guideline for creating similar training sessions adapting to each user's specific info. When the users awnsers are different make sure you adjust accordingly the most important questions are age and position. This example is just to get an idea of a good plan would be for this specific user, do not copy it just take the style and detail as guidance. The plan should be adjusted if the user has a game for example saturday. 2 days before a game has to frop the load a bit not a lot but noticably. 1 day before game has to be really light so only technical things and recovery based trainings.
-Keep the plan simple focus on the amount thats good for the player not so much on specific advice in terms of technique since its not correct from you. also remember if user chooses a focusd area it still dosent mean only that hes always a football player first so maximum 2 trainings unrelated to football per week.
-
-VERY IMPORTANT TRAINING GUIDELINES:
-1. IF A DAY IS FOR RECOVERY, WRITE ONLY THIS SINGLE LINE AS THE DAY'S CONTENT:
+1. IF A DAY IS FOR RECOVERY, WRITE ONLY THIS SINGLE LINE:
 "Focus on recovery today"
 DO NOT ADD DRILLS, NOTES, BULLETS, NUMBERS, OR ANY EXTRA TEXT.
-2. If the user has a game scheduled on any day, make the 2 days BEFORE that game much lighter in intensity. The day immediately before a game should be extremely light (technical work only) or recovery.
-3. If you include a gym session on any day, that should be the ONLY training for that day. Never mix gym and field work on the same day as users typically don't have access to both facilities at once.
-4. When a day is a pure gym session:
-   • List each lift on its own numbered line and include exact sets × reps, e.g. "Squats – 3 × 8", "Romanian deadlift – 3 × 10 each leg".
-   • Do not hide reps in parentheses or cram multiple lifts into one sentence.
-5. Only suggest gym-based training if the user has explicitly stated they have gym access.
-6. IF THE USER HAS AN INJURY HISTORY, ADJUST OR SUBSTITUTE EXERCISES AS NEEDED, BUT DO NOT KEEP REMINDING THEM OF THE INJURY INSIDE EVERY DRILL.  
-   • Only mention the injury when you are explicitly prescribing a rehab/pre-hab segment (e.g. "Ankle stability series – inversion / eversion with band").  
-   • Ordinary drills like passing or dribbling should NOT contain phrases such as "protect ACL" or "watch ankle".
 
-WHEN A DAY IS A PURE GYM SESSION
-• Do not pre-face the lifts with any header such as "Gym session", "Strength block", "Lower-body focus", etc.
-• Simply begin the list of lifts at 1. and continue:
- 1. Back squats – 4 × 6
- 2. Romanian deadlifts – 3 × 8 each leg
- …
-• Every lift must show exact sets × reps with the multiplication symbol (×) or the letter "x".
-• Do not mention ACL/ankle safety, "protect", "pre-hab", or similar inside the lift text. or anything else related to users injury history. take it into account but dont write it out
-• Treat the entire block as 60 min by default – you do not need to repeat the duration inside the text.
+2. IF A DAY IS A GAME DAY (marked as "GAME" in schedule), WRITE ONLY THIS SINGLE LINE:
+"Game day"
+DO NOT ADD DRILLS, NOTES, BULLETS, NUMBERS, OR ANY EXTRA TEXT.
+IMPORTANT: Only use this for days explicitly marked as "GAME" in the schedule above. Days with "0" or other values are NOT game days.
 
-IMPORTANT FORMAT INSTRUCTIONS:
-1. Format each day in FULL CAPS (example: "MONDAY"). Only the day header (MONDAY, TUESDAY…) must be in FULL CAPS. All drill text underneath should be normal sentence case (capitalise just the first letter; no shouting).
-2. Write the plan for that day directly below it
-3. Separate each day's plan with a line break
-4. The plan should be in simple text format, no markdown, bold, or fancy formatting
-5. Start with MONDAY and include all 7 days of the week in order
-6. WRITE EACH DRILL ON ITS OWN LINE AND NUMBER THEM SEQUENTIALLY:
-   "1. 15 min warm-up – light jog …"
-   "2. 20 min passing drills …"
-   No asterisks, dashes, or circles—just plain numbers and periods.
-   EXCEPTION: Do NOT number a recovery day; it must contain only the line above.
+3. If the user has a game scheduled on any day, make the 2 days BEFORE that game much lighter in intensity. The day immediately before a game should be extremely light (technical work only) or recovery.
 
-${(() => {
-  const today = new Date();
-  const dayOfWeek = today.getDay();
-  
-  if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-    // Monday-Friday: show example for rest of week
-    return `Example of correct format (for rest of current week):
-MONDAY
-1. 10 min warm up - light jog and stretching
-2. 15 min passing drills - wall passes varying distance
-3. 15 min dribbling - cone drills focusing on control
-4. 5 min cool down
+4. If you include a gym session on any day, that should be the ONLY training for that day. Never mix gym and field work on the same day.
 
-TUESDAY
-1. Gym session: 45 minutes of strength training focused on lower body
+5. NEVER mix training locations on the same day. Each day must be only one location:
+   - FIELD: for football drills, sprints, ball work
+   - GYM: for weight training, strength work  
+   - HOME: for bodyweight exercises, flexibility work
+   
+6. Exception: If user has no gym access, they can do bodyweight exercises on the field (still mark as FIELD).
 
-WEDNESDAY
-Focus on recovery today
+7. When a day is a pure gym session:
+   • List each lift on its own numbered line and include exact sets × reps, e.g. "Squats – 3 × 8", "Romanian deadlift – 3 × 10 each leg"
+   • Do not hide reps in parentheses or cram multiple lifts into one sentence
 
-THURSDAY (Light training - game in 2 days)
-1. 20 min very light technical work - focus on ball control
-2. 10 min stretching
+8. Only suggest gym-based training if the user has explicitly stated they have gym access.
 
-FRIDAY (Pre-game day)
-Focus on recovery today
-Light stretching only
+9. If the user is 14 years old or younger, do not suggest any weight training exercises. Only use bodyweight exercises for strength training.
 
-SATURDAY
-Game day
+10. If the user has an injury history, adjust or substitute exercises as needed, but do not keep reminding them of the injury inside every drill.
 
-SUNDAY
-Focus on recovery today`;
-  } else {
-    // Saturday-Sunday: show example for full week
-    return `Example of correct format (for full upcoming week):
-MONDAY
-1. 10 min warm up - light jog and stretching
-2. 15 min passing drills - wall passes varying distance
-3. 15 min dribbling - cone drills focusing on control
-4. 5 min cool down
+FORMAT INSTRUCTIONS:
+1. Format each day in FULL CAPS (example: "MONDAY"). Only the day header must be in FULL CAPS. All drill text underneath should be normal sentence case.
+2. For training days (not recovery or game days), immediately after the day header, write:
+   - Location: FIELD, GYM, or HOME (never mix locations - only one per day)
+   - Time: Total estimated completion time in minutes (e.g., "45 min")
+   Format: "Location: FIELD" on one line, "Time: 45 min" on the next line
+3. NEVER mix training locations on the same day. Each day must be either field, gym, or home training only.
+4. Exception: If user has no gym access, they can do bodyweight exercises on the field.
+5. Recovery and game days do not need location or time specifications.
+6. Write the plan for that day directly below the location/time info
+7. Separate each day's plan with a line break
+8. The plan should be in simple text format, no markdown, bold, or fancy formatting
+9. Start with MONDAY and include all 7 days of the week in order
+10. WRITE EACH DRILL ON ITS OWN LINE AND NUMBER THEM SEQUENTIALLY:
+    "1. 15 min warm-up – light jog …"
+    "2. 20 min passing drills …"
+    No asterisks, dashes, or circles—just plain numbers and periods.
+    EXCEPTION: Do NOT number a recovery day or game day; they must contain only the single line above.
 
-TUESDAY
-1. Gym session: 45 minutes of strength training focused on lower body
-
-WEDNESDAY
-Focus on recovery today
-
-THURSDAY (Light training - game in 2 days)
-1. 20 min very light technical work - focus on ball control
-2. 10 min stretching
-
-FRIDAY (Pre-game day)
-Focus on recovery today
-Light stretching only
-
-SATURDAY
-Game day
-
-SUNDAY
-Focus on recovery today`;
-  }
-})()}
-
-IMPORTANT: After the last day (Sunday), write a short summary section titled "NOTES:" that explains the weekly plan structure and why certain types of training were scheduled on specific days. This helps users understand the reasoning behind their training program.`;
+IMPORTANT: After the last day (Sunday), write a short summary section titled "NOTES:" that explains the weekly plan structure and why certain types of training were scheduled on specific days.`;
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -1276,6 +1208,13 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
             .replace(/\*\*/g, '') // Remove markdown formatting
             .replace(/[ \t]{2,}/g, ' ') // Remove extra spaces (but preserve newlines)
             .trim();
+          
+          // Handle game day variations - normalize to "Game day"
+          if (cleanedText.toLowerCase().includes('game day') || 
+              cleanedText.toLowerCase().includes('game') && 
+              (cleanedText.toLowerCase().includes('home') || cleanedText.toLowerCase().includes('away'))) {
+            cleanedText = 'Game day';
+          }
           
           dailyPlans[day] = cleanedText;
         } else {
@@ -1484,6 +1423,33 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
   };
 
   const DAYS_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+  
+  // Filter days from current day until Sunday
+  const getFilteredDays = () => {
+    const today = new Date();
+    const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    
+    // Convert to our day format (monday = 0, tuesday = 1, ..., sunday = 6)
+    const dayMapping = {
+      0: 6, // Sunday = 6
+      1: 0, // Monday = 0
+      2: 1, // Tuesday = 1
+      3: 2, // Wednesday = 2
+      4: 3, // Thursday = 3
+      5: 4, // Friday = 4
+      6: 5  // Saturday = 5
+    };
+    
+    const currentDayIndex = dayMapping[currentDay as keyof typeof dayMapping];
+    
+    // If it's Sunday, show all days (for next week)
+    if (currentDay === 0) {
+      return DAYS_ORDER;
+    }
+    
+    // Otherwise, show from current day until Sunday
+    return DAYS_ORDER.slice(currentDayIndex);
+  };
 
   // Helper function to safely format day headers
   const formatDayHeader = (day: string): string => {
@@ -1500,7 +1466,7 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
   };
 
   // Parse drills from plan text
-  const parseDrills = (content: string): { header?: string; drills: { index: number; text: string; subs: string[] }[]; isRecovery?: boolean; isGame?: boolean; isGymDay?: boolean; summaryNotes?: string[] } => {
+  const parseDrills = (content: string): { header?: string; drills: { index: number; text: string; subs: string[] }[]; isRecovery?: boolean; isGame?: boolean; isGymDay?: boolean; summaryNotes?: string[]; location?: string; time?: string } => {
     const lines = content.split('\n');
     const drills: { index: number; text: string; subs: string[] }[] = [];
     let currentDrill: { index: number; text: string; subs: string[] } | null = null;
@@ -1511,6 +1477,8 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
     const summaryNotes: string[] = [];
     let inSummarySection = false;
     let isGymDay = false;
+    let location: string | undefined = undefined;
+    let time: string | undefined = undefined;
     
     // Check if this is a recovery day first
     const firstNonEmptyLine = lines.find(line => line.trim());
@@ -1530,10 +1498,43 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
         header: 'Game day'
       };
     }
+
+    // Extract location and time from lines
+    const locationRegex = /^\s*location:\s*(field|gym|home)/i;
+    const timeRegex = /^\s*time:\s*(\d+\s*min)/i;
+    
+    for (const line of lines) {
+      const locationMatch = line.match(locationRegex);
+      const timeMatch = line.match(timeRegex);
+      
+      if (locationMatch) {
+        location = locationMatch[1].toUpperCase();
+        if (location === 'GYM') {
+          isGymDay = true;
+        }
+      }
+      
+      if (timeMatch) {
+        time = timeMatch[1];
+      }
+    }
     
     // Check if this is a gym day by looking at the first few lines
-    const firstFewLines = lines.slice(0, 3).join(' ').toLowerCase();
-    if (firstFewLines.includes('gym session')) {
+    const firstFewLines = lines.slice(0, 5).join(' ').toLowerCase();
+    
+    // Common gym exercise keywords to detect gym sessions
+    const gymExerciseKeywords = [
+      'gym session', 'squats', 'deadlift', 'bench press', 'press', 'rows', 'pull-ups', 'chin-ups',
+      'barbell', 'dumbbell', 'kettlebell', 'cable', 'lat pulldown', 'leg press', 'lunges',
+      'power clean', 'clean', 'snatch', 'romanian deadlift', 'trap bar', 'bulgarian split',
+      'calf raises', 'nordic curls', 'hip thrust', 'glute bridge', 'plank', 'burpees',
+      'box jumps', 'jump squats', 'mountain climbers', 'push-ups', 'pull-ups', 'shoulder press',
+      'overhead press', 'tricep', 'bicep', 'chest press', 'incline', 'decline'
+    ];
+    
+    // Check for gym session header or gym exercise keywords
+    if (firstFewLines.includes('gym session') || 
+        gymExerciseKeywords.some(keyword => firstFewLines.includes(keyword))) {
       isGymDay = true;
     }
     
@@ -1543,6 +1544,8 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
     const topLevelNumberRegex = /^(?:\s{0,1})(\d+)\.\s+(.+)$/;
     const indentedNumberRegex = /^\s{2,}\d+\.\s+(.+)$/;
     const dashBulletRegex = /^\s*[-–•]\s+(.+)$/;
+    const locationLineRegex = /^\s*location:\s*(field|gym|home)\s*$/i;
+    const timeLineRegex = /^\s*time:\s*\d+\s*min\s*$/i;
     
     // Regex to detect sets × reps patterns (e.g., 3×8, 4 x 10, 2 × 12)
     const SET_REP_REGEX = /\d+\s*[×xX]\s*\d+/;
@@ -1583,6 +1586,11 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
       if (gymSessionRegex.test(trimmedLine)) {
         // Skip this line entirely - don't store as header or drill
         drillIndex = 1; // Reset numbering for subsequent drills
+        continue;
+      }
+      
+      // Skip location and time lines
+      if (locationLineRegex.test(trimmedLine) || timeLineRegex.test(trimmedLine)) {
         continue;
       }
       
@@ -1672,7 +1680,7 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
           text: line,
           subs: []
         }));
-      return { drills: fallbackDrills, summaryNotes: summaryNotes.length > 0 ? summaryNotes : undefined };
+      return { drills: fallbackDrills, summaryNotes: summaryNotes.length > 0 ? summaryNotes : undefined, location, time };
     }
     
     return { 
@@ -1681,22 +1689,28 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
       isRecovery,
       isGame,
       isGymDay,
-      summaryNotes: summaryNotes.length > 0 ? summaryNotes : undefined
+      summaryNotes: summaryNotes.length > 0 ? summaryNotes : undefined,
+      location,
+      time
     };
   };
 
   // Calculate total duration from drills
-  const calculateTotalDuration = (parsedContent: { header?: string; drills: { text: string; subs: string[] }[]; isRecovery?: boolean; isGame?: boolean; isGymDay?: boolean }): number => {
+  const calculateTotalDuration = (parsedContent: { header?: string; drills: { text: string; subs: string[] }[]; isRecovery?: boolean; isGame?: boolean; isGymDay?: boolean; time?: string }): number => {
     // No duration for recovery days or game days
     if (parsedContent.isRecovery || parsedContent.isGame) {
       return 0;
     }
     
-    // Short-circuit for gym days - always 60 minutes
-    if (isGymDay(parsedContent)) {
-      return 60;
+    // Use parsed time if available
+    if (parsedContent.time) {
+      const timeMatch = parsedContent.time.match(/(\d+)\s*min/i);
+      if (timeMatch) {
+        return parseInt(timeMatch[1]);
+      }
     }
     
+    // Fallback to calculation if no time was specified
     let totalMinutes = 0;
     const durationRegex = /(\d+)\s*min/i;
     
@@ -1720,8 +1734,13 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
   };
 
   // Determine if it's a gym day
-  const isGymDay = (parsedContent: { header?: string; drills: { text: string; subs: string[] }[]; isGymDay?: boolean }): boolean => {
-    // Check the flag set during parsing (either from "gym session" header or sets × reps pattern)
+  const isGymDay = (parsedContent: { header?: string; drills: { text: string; subs: string[] }[]; isGymDay?: boolean; location?: string }): boolean => {
+    // Use parsed location if available
+    if (parsedContent.location) {
+      return parsedContent.location === 'GYM';
+    }
+    
+    // Fallback to flag set during parsing
     return parsedContent.isGymDay === true;
   };
 
@@ -1835,7 +1854,7 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
                 {(() => {
                   let allSummaryNotes: string[] = [];
                   
-                  const dayAccordions = DAYS_ORDER.map((day) => {
+                  const dayAccordions = getFilteredDays().map((day) => {
                     const dayContent = getDayContent(selectedPlan, day);
                     const parsed = parseDrills(dayContent);
                     
@@ -1868,13 +1887,17 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
                               </View>
                               <View style={[
                                 styles.typeChip, 
-                                isGym ? styles.gymChip : styles.fieldChip
+                                parsed.location === 'GYM' ? styles.gymChip : 
+                                parsed.location === 'HOME' ? styles.homeChip : 
+                                styles.fieldChip
                               ]}>
                                 <Text style={[
                                   styles.chipText, 
-                                  isGym ? styles.gymChipText : styles.fieldChipText
+                                  parsed.location === 'GYM' ? styles.gymChipText : 
+                                  parsed.location === 'HOME' ? styles.homeChipText : 
+                                  styles.fieldChipText
                                 ]}>
-                                  {isGym ? 'GYM' : 'FIELD'}
+                                  {parsed.location || (isGym ? 'GYM' : 'FIELD')}
                                 </Text>
                               </View>
                             </View>
