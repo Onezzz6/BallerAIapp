@@ -33,6 +33,7 @@ type UserData = {
   activityLevel?: string;
   profilePicture?: string;
   injuryHistory?: string;
+  preferMetricUnits?: boolean;
 };
 
 type ProfileDetail = {
@@ -40,7 +41,6 @@ type ProfileDetail = {
   label: string;
   value?: string;
   icon: keyof typeof Ionicons.glyphMap;
-  unit?: string;
 };
 
 export default function ProfileScreen() {
@@ -61,6 +61,9 @@ export default function ProfileScreen() {
   const [heightFeet, setHeightFeet] = useState(5);
   const [heightInches, setHeightInches] = useState(7);
   const [weightPounds, setWeightPounds] = useState(154);
+  
+  // User preference for display units (loaded from user data, defaults to metric)
+  const [preferMetricDisplay, setPreferMetricDisplay] = useState(true);
 
   // Conversion functions (from measurements.tsx)
   const cmToFeetInches = (cm: number) => {
@@ -80,6 +83,33 @@ export default function ProfileScreen() {
 
   const lbsToKg = (lbs: number) => {
     return Math.round(lbs / 2.20462);
+  };
+
+  // Format height and weight values for display based on user preference
+  const getDisplayValue = (field: string, value: string | undefined): { displayValue: string; unit: string } => {
+    if (!value) return { displayValue: 'Not set', unit: '' };
+    
+    if (field === 'height') {
+      const heightCm = parseFloat(value);
+      if (preferMetricDisplay) {
+        return { displayValue: `${heightCm}`, unit: 'cm' };
+      } else {
+        const { feet, inches } = cmToFeetInches(heightCm);
+        return { displayValue: `${feet}'${inches}"`, unit: '' };
+      }
+    } else if (field === 'weight') {
+      const weightKg = parseFloat(value);
+      if (preferMetricDisplay) {
+        return { displayValue: `${weightKg}`, unit: 'kg' };
+      } else {
+        const pounds = kgToLbs(weightKg);
+        return { displayValue: `${pounds}`, unit: 'lb' };
+      }
+    } else if (field === 'age') {
+      return { displayValue: value, unit: 'years' };
+    } else {
+      return { displayValue: value.charAt(0).toUpperCase() + value.slice(1), unit: '' };
+    }
   };
 
   const renderModalButtons = (onSave: () => void) => (
@@ -220,6 +250,9 @@ export default function ProfileScreen() {
           if (newUserData.profilePicture) {
             setProfileImage(newUserData.profilePicture);
           }
+          
+          // Set unit preference from user data (defaults to metric if not set)
+          setPreferMetricDisplay(newUserData.preferMetricUnits !== false); // true if undefined or true
 
           // Check if any of the fields that affect goals have changed
           const fieldsAffectingGoals = ['weight', 'height', 'activityLevel', 'gender', 'age', 'fitnessLevel'];
@@ -294,10 +327,10 @@ export default function ProfileScreen() {
 
   const profileDetails: ProfileDetail[] = [
     { field: 'username', label: 'Name', value: userData?.username, icon: 'person-outline' },
-    { field: 'age', label: 'Age', value: userData?.age, icon: 'calendar-outline', unit: 'years' },
+    { field: 'age', label: 'Age', value: userData?.age, icon: 'calendar-outline' },
     { field: 'gender', label: 'Gender', value: userData?.gender, icon: 'person-outline' },
-    { field: 'height', label: 'Height', value: userData?.height, icon: 'resize-outline', unit: 'cm' },
-    { field: 'weight', label: 'Weight', value: userData?.weight, icon: 'barbell-outline', unit: 'kg' },
+    { field: 'height', label: 'Height', value: userData?.height, icon: 'resize-outline' },
+    { field: 'weight', label: 'Weight', value: userData?.weight, icon: 'barbell-outline' },
     { field: 'position', label: 'Position', value: userData?.position, icon: 'people-outline' },
     { field: 'teamStatus', label: 'Team Status', value: userData?.teamStatus, icon: 'football-outline' },
     { field: 'injuryHistory', label: 'Injury History', value: userData?.injuryHistory, icon: 'bandage' },
@@ -712,6 +745,14 @@ export default function ProfileScreen() {
     if (editingField === 'height') {
       const handleUnitToggle = (value: boolean) => {
         setIsMetricHeight(value);
+        
+        // Save unit preference to user data
+        setPreferMetricDisplay(value);
+        if (user) {
+          updateDoc(doc(db, 'users', user.uid), {
+            preferMetricUnits: value
+          }).catch(error => console.error('Error updating unit preference:', error));
+        }
 
         console.log('=== UNIT TOGGLE DEBUG ===');
         console.log('Switching to:', value ? 'metric' : 'imperial');
@@ -857,6 +898,14 @@ export default function ProfileScreen() {
     if (editingField === 'weight') {
       const handleUnitToggle = (value: boolean) => {
         setIsMetricWeight(value);
+        
+        // Save unit preference to user data
+        setPreferMetricDisplay(value);
+        if (user) {
+          updateDoc(doc(db, 'users', user.uid), {
+            preferMetricUnits: value
+          }).catch(error => console.error('Error updating unit preference:', error));
+        }
 
         // Use setTimeout to ensure picker has time to process the unit change
         setTimeout(() => {
@@ -1183,6 +1232,8 @@ export default function ProfileScreen() {
                 </Pressable>
               </View>
 
+
+
               {profileDetails.map((detail, index) => (
                 <Pressable 
                   key={index} 
@@ -1196,9 +1247,9 @@ export default function ProfileScreen() {
                       setEditingField(detail.field);
                       setEditValue(detail.value?.toString() || '');
                       
-                      // Initialize imperial/metric state for height and weight
+                      // Initialize imperial/metric state for height and weight based on user preference
                       if (detail.field === 'height') {
-                        setIsMetricHeight(true); // Start with metric
+                        setIsMetricHeight(preferMetricDisplay); // Start with user preference
                         if (detail.value) {
                           const heightCm = parseFloat(detail.value);
                           const { feet, inches } = cmToFeetInches(heightCm);
@@ -1206,11 +1257,17 @@ export default function ProfileScreen() {
                           setHeightInches(inches);
                         }
                       } else if (detail.field === 'weight') {
-                        setIsMetricWeight(true); // Start with metric
+                        setIsMetricWeight(preferMetricDisplay); // Start with user preference
                         if (detail.value) {
                           const weightKg = parseFloat(detail.value);
                           const pounds = kgToLbs(weightKg);
-                          setWeightPounds(pounds);
+                          
+                          // Validate pounds is within picker range (88-309) - same safety as measurements.tsx
+                          const validPounds = Math.max(88, Math.min(309, pounds));
+                          if (pounds !== validPounds) {
+                            console.warn('⚠️  Pounds value', pounds, 'clamped to', validPounds);
+                          }
+                          setWeightPounds(validPounds);
                         }
                       }
                     }
@@ -1236,7 +1293,10 @@ export default function ProfileScreen() {
                       !isEditing && styles.disabledText,
                       isEditing && styles.editableValue
                     ]}>
-                      {detail.value ? detail.value.charAt(0).toUpperCase() + detail.value.slice(1) : ''} {detail.unit}
+                      {(() => {
+                        const { displayValue, unit } = getDisplayValue(detail.field, detail.value);
+                        return `${displayValue} ${unit}`.trim();
+                      })()}
                     </Text>
                   </View>
                   {isEditing && (

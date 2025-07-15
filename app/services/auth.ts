@@ -42,6 +42,7 @@ type UserOnboardingData = {
   activityLevel: string | null;
   sleepHours: string | null;
   nutrition: string | null;
+  preferMetricUnits: boolean | null;
 };
 
 const authService = {
@@ -208,7 +209,8 @@ const authService = {
           fitnessLevel: null,
           activityLevel: null,
           sleepHours: null,
-          nutrition: null
+          nutrition: null,
+          preferMetricUnits: null
         });
       }
       

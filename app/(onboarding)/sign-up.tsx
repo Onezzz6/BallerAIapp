@@ -49,7 +49,7 @@ export default function SignUpScreen() {
 
     setIsLoading(true);
     try {
-      // First try to create new account
+      // First try to create new account  
       const user = await authService.signUpWithEmail(email, password, onboardingData);
       if (user) {
         await analyticsService.logEvent('AA__32_signed_up');

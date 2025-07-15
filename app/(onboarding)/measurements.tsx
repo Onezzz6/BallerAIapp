@@ -116,7 +116,8 @@ export default function MeasurementsScreen() {
       await analyticsService.logEvent('AA__07_measurements_continue');
       await updateOnboardingData({ 
         height: finalHeight.toString(), 
-        weight: finalWeight.toString() 
+        weight: finalWeight.toString(),
+        preferMetricUnits: isMetric
       });
       // NEW: Use automatic navigation instead of hardcoded route
       goToNext();

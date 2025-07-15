@@ -31,6 +31,7 @@ type OnboardingData = {
   teamStatus: string | null;
   dominantFoot: string | null;
   hasGymAccess: boolean | null;
+  preferMetricUnits: boolean | null;
 };
 
 type OnboardingContextType = {
@@ -69,6 +70,7 @@ const defaultOnboardingData: OnboardingData = {
   teamStatus: null,
   dominantFoot: null,
   hasGymAccess: null,
+  preferMetricUnits: null,
 };
 
 const OnboardingContext = createContext<OnboardingContextType>({
