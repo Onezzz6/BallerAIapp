@@ -867,6 +867,12 @@ export default function TrainingScreen() {
     const checkPlanGenerationStatus = async () => {
       if (!user) return;
 
+      // ===== TESTING MODE: UNLIMITED PLAN GENERATION =====
+      // TODO: REMOVE THIS LINE WHEN TESTING IS COMPLETE
+      setCanGeneratePlan(true); return; // Force allow unlimited plan generation for testing
+
+      // ===== PRODUCTION CODE (COMMENTED OUT FOR TESTING) =====
+      /*
       // TODO: Remove debug code before production
       // DEBUG: Uncomment one of these lines to test different scenarios:
       // setCanGeneratePlan(true); return; // Force allow plan generation (simulate Sunday or no previous plan)
@@ -913,6 +919,7 @@ export default function TrainingScreen() {
         // Default to allowing generation on error
         setCanGeneratePlan(true);
       }
+      */
     };
 
     checkPlanGenerationStatus();
@@ -1075,7 +1082,7 @@ assume the user only has access to a ball, pitch, cones and a goal ${gymAccess =
 
 Users' extra focus for the week is ${selectedFocus}.
 
-users team training amounts are:
+users team training amounts are just so u know their load from their team training the plan u make tho is just for individual training so dont mention a nything about team traininbgs in the plan:
 ${Object.entries(schedule)
   .map(([day, data]) => ` ${day} ${data.type === 'off' ? '0' : data.type === 'game' ? 'GAME' : data.duration} mins`)
   .join('\n')}
@@ -1200,21 +1207,19 @@ Focus on recovery today`;
 
 IMPORTANT: After the last day (Sunday), write a short summary section titled "NOTES:" that explains the weekly plan structure and why certain types of training were scheduled on specific days. This helps users understand the reasoning behind their training program.`;
 
-      const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
         },
         body: JSON.stringify({
-          model: "deepseek-chat",
+          model: "o3",
           messages: [{
             role: "user",
             content: prompt
           }],
-          max_tokens: 8000,
-          temperature: 0.3,
-          top_p: 0.9
+          max_completion_tokens: 8000
         }),
       });
 
@@ -1228,7 +1233,7 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
           prompt_tokens: usage.prompt_tokens,
           completion_tokens: usage.completion_tokens,
           total_tokens: usage.total_tokens,
-          model: 'deepseek-chat',
+          model: 'o3',
           feature: 'training_plan_generation',
           timestamp: new Date().toISOString()
         });
@@ -1314,8 +1319,9 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
       }, { merge: true });
 
       // Update local state
-      setCanGeneratePlan(false);
-      setLastGeneratedDate(now);
+      // ===== TESTING MODE: COMMENTED OUT FOR UNLIMITED GENERATION =====
+      // setCanGeneratePlan(false); // TODO: UNCOMMENT THIS LINE WHEN TESTING IS COMPLETE
+      // setLastGeneratedDate(now); // TODO: UNCOMMENT THIS LINE WHEN TESTING IS COMPLETE
 
       // Navigate back to training tab plans view
       setCurrentStep('plans');
