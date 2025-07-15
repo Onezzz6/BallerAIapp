@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect, useRef } from 'react';
 import Slider from '@react-native-community/slider';
 import { format, differenceInHours, differenceInMinutes, parseISO, isSameDay, subDays, differenceInCalendarDays } from 'date-fns';
-import { doc, getDoc, setDoc, collection, Timestamp, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, Timestamp, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -289,7 +289,9 @@ export default function RecoveryScreen() {
         {
           text: 'Generate Plan',
           onPress: () => {
-            // If plan already exists for the day, ask for confirmation
+            // TESTING: Commented out one-plan-per-day restriction for testing
+            // To re-enable in production, uncomment the if/else block below
+            /*
             if (planExists) {
               Alert.alert(
                 'Plan Already Exists',
@@ -308,12 +310,45 @@ export default function RecoveryScreen() {
             } else {
               generatePlan();
             }
+            */
+            // Always generate plan (testing only)
+            generatePlan();
           }
         }
       ]
     );
   };
   
+  // Function to load last 4 days of recovery plans
+  const loadLastRecoveryPlans = async () => {
+    if (!user) return [];
+    
+    try {
+      const last4DaysPlans = [];
+      const today = new Date();
+      
+      for (let i = 1; i <= 4; i++) {
+        const pastDate = subDays(today, i);
+        const dateStr = format(pastDate, 'yyyy-MM-dd');
+        
+        const planDoc = await getDoc(doc(db, 'users', user.uid, 'recoveryPlans', dateStr));
+        if (planDoc.exists()) {
+          const planData = planDoc.data();
+          last4DaysPlans.push({
+            date: dateStr,
+            plan: planData.plan,
+            metrics: planData.metrics
+          });
+        }
+      }
+      
+      return last4DaysPlans;
+    } catch (error) {
+      console.error('Error loading last recovery plans:', error);
+      return [];
+    }
+  };
+
   const generatePlan = async () => {
     setLoading(true);
 
@@ -321,6 +356,13 @@ export default function RecoveryScreen() {
       const toolsAvailable = selectedTools.length > 0 
         ? `Available recovery tools: ${selectedTools.join(', ')}`
         : "No special recovery tools available. Suggest only bodyweight movements, walking, jogging, and other equipment-free activities.";
+
+      // Load last 4 days of recovery plans for context
+      const lastPlans = await loadLastRecoveryPlans();
+      const lastPlansContext = lastPlans.length > 0 
+        ? `Previous recovery plans (avoid repetition):
+${lastPlans.map(p => `${p.date}: ${p.plan}`).join('\n')}` 
+        : "No previous recovery plans available.";
 
       // Add recovery tool guidelines
       const recoveryToolGuidelines = `
@@ -331,28 +373,58 @@ Important guidelines for recovery tools:
 - DO NOT feel obligated to use all available tools - only suggest what is appropriate based on the metrics and time available
       `.trim();
 
-      const prompt = `Create a short, focused recovery plan based on these metrics:
+      const prompt = `Create a focused, concise recovery plan based on these metrics:
 
-Muscle Soreness Level: ${recoveryData.soreness}/10
-Overall Fatigue: ${recoveryData.fatigue}/10
-Sleep Quality: ${recoveryData.sleep}/10
-Mood: ${recoveryData.mood}/10
+Current Recovery Status:
+- Muscle Soreness Level: ${recoveryData.soreness}/10
+- Overall Fatigue: ${recoveryData.fatigue}/10  
+- Sleep Quality: ${recoveryData.sleep}/10
+- Mood: ${recoveryData.mood}/10
 
 ${toolsAvailable}
 
 Time Available: ${selectedTime}
 
+${lastPlansContext}
+
 ${recoveryToolGuidelines}
 
-The plan MUST:
-1. Be no longer than 5 lines total
-2. Include ONLY specific recovery exercises to perform today
-3. Do NOT include any nutrition, hydration, or sleep advice
-4. Focus only on physical recovery activities/exercises
-5. Be direct and easy to follow
-6. Only utilize tools listed as available, but DO NOT try to use all of them - select only the most appropriate ones
-7. Create a plan that fits within the ${selectedTime} timeframe
-8. Follow the safety guidelines for Cold Exposure, Sauna, and Compression`;
+CRITICAL TOOL SELECTION RULES:
+- Select ONLY 1-2 tools maximum from available tools
+- Choose tools that can be used in the SAME location (don't mix swimming + foam rolling, cycling + massage gun, etc.)
+- Prioritize tools based on recovery metrics (high soreness = foam rolling/massage, high fatigue = compression/cold exposure)
+- If multiple tools selected, ensure they complement each other
+
+Create a clean, scannable recovery plan with:
+1. MAXIMUM 5 activities total
+2. Focus on the most impactful recovery methods for today's metrics
+3. All activities must be compatible and doable in sequence
+4. Progressive structure: light warm-up → main recovery → brief cool-down
+5. Fit within ${selectedTime} timeframe
+6. Avoid repeating exact activities from previous plans
+
+Format each activity as a clean two-line bullet point:
+"• [Activity] [Duration]
+[Concise instruction]"
+
+Examples:
+• Joint mobility 5min
+Gentle circles and stretches
+• Foam rolling 10min
+Focus on tight areas, slow pressure
+• Cold shower 3min
+Gradual temperature decrease
+• Deep breathing 5min
+4-7-8 breathing pattern
+
+Keep instructions brief and actionable, under 8 words each.`;
+
+      console.log('Making recovery plan API request...');
+      
+      // Validate API key
+      if (!OPENAI_API_KEY) {
+        throw new Error('OpenAI API key not found');
+      }
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -361,38 +433,65 @@ The plan MUST:
           'Authorization': `Bearer ${OPENAI_API_KEY}`,
         },
         body: JSON.stringify({
-          model: 'gpt-4',
+          model: 'o3',
           messages: [
             {
               role: 'system',
-              content: `You are a professional sports recovery specialist focused on providing concise, exercise-only recovery plans that fit within a ${selectedTime} timeframe. Keep your response under 5 lines and focus only on recovery exercises. 
-              
+              content: `You are a professional sports recovery specialist creating focused, concise recovery plans. Your job is to be SELECTIVE and choose only the most impactful tools for each athlete's specific needs.
+
+CRITICAL SELECTION RULES:
+- Choose ONLY 1-2 recovery tools maximum per plan
+- Tools must be compatible and usable in the same location
+- Base selection on recovery metrics (high soreness = foam rolling/massage, high fatigue = compression/cold exposure)
+- Create SHORT, focused plans with 4-5 activities maximum
+
 IMPORTANT SAFETY GUIDELINES: 
 - Cold exposure must NEVER exceed 5 minutes in a row
 - Sauna sessions must ALWAYS be at least 10 minutes to be effective
 - Compression must ALWAYS be between 10-30 minutes (no more, no less)
 
 IMPORTANT USAGE GUIDELINES:
-- Do NOT try to use all available tools in a single plan
-- Select only the most appropriate tools based on the athlete's metrics
-- Your job is to determine which tools would be most beneficial today, not to use everything available`
+- Be highly selective - don't use all available tools
+- Prioritize impact over variety
+- Keep instructions brief but specific
+- Avoid repeating activities from previous plans`
             },
             {
               role: 'user',
               content: prompt
             }
           ],
-          temperature: 0.7,
-          max_tokens: 300
+          temperature: 1,
+          max_completion_tokens: 4000
         }),
       });
 
+      console.log('API Response Status:', response.status);
+      console.log('API Response Headers:', response.headers);
+
+      // Check if response is OK before parsing
       if (!response.ok) {
-        throw new Error(`API request failed with status ${response.status}`);
+        const errorText = await response.text();
+        console.error('API Error Response:', errorText);
+        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+      }
+
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const errorText = await response.text();
+        console.error('Non-JSON Response:', errorText);
+        throw new Error('API returned non-JSON response');
       }
 
       const data = await response.json();
       console.log('API Response:', data);
+
+      // Check for API errors in the response
+      if (data.error) {
+        console.error('OpenAI API Error:', data.error);
+        throw new Error(`OpenAI API Error: ${data.error.message || 'Unknown error'}`);
+      }
 
       // Log token usage for recovery plan generation
       const usage = data.usage;
@@ -401,7 +500,7 @@ IMPORTANT USAGE GUIDELINES:
           prompt_tokens: usage.prompt_tokens,
           completion_tokens: usage.completion_tokens,
           total_tokens: usage.total_tokens,
-          model: 'gpt-4',
+          model: 'o3',
           feature: 'recovery_plan_generation',
           timestamp: new Date().toISOString()
         });
@@ -452,7 +551,22 @@ IMPORTANT USAGE GUIDELINES:
 
     } catch (error) {
       console.error('Error generating recovery plan:', error);
-      Alert.alert('Error', 'Failed to generate a recovery plan. Please try again.');
+      
+      // Provide more specific error messages
+      let errorMessage = 'Failed to generate a recovery plan. Please try again.';
+      if (error instanceof Error) {
+        if (error.message.includes('API key')) {
+          errorMessage = 'API configuration error. Please check your settings.';
+        } else if (error.message.includes('network') || error.message.includes('fetch')) {
+          errorMessage = 'Network error. Please check your connection and try again.';
+        } else if (error.message.includes('OpenAI API Error')) {
+          errorMessage = 'AI service error. Please try again in a moment.';
+        } else if (error.message.includes('400')) {
+          errorMessage = 'Invalid request. Please check your recovery data and try again.';
+        }
+      }
+      
+      Alert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -648,21 +762,106 @@ IMPORTANT USAGE GUIDELINES:
     }
   };
 
-  // Add this helper function to format the recovery plan text
+  // Enhanced helper function to format the recovery plan text
   const formatPlanText = (planText: string) => {
     if (!planText) return [];
     
-    // Split by common delimiters and clean up
-    const lines = planText
-      .split(/[.\n]/)
+    // Split by lines and clean up
+    const rawLines = planText
+      .split('\n')
       .map(line => line.trim())
-      .filter(line => line.length > 0)
-      .map(line => {
-        // Remove any leading numbers or bullets
-        return line.replace(/^\d+\.\s*/, '').replace(/^[-•]\s*/, '');
-      });
+      .filter(line => line.length > 0 && !line.toLowerCase().includes('focused') && !line.toLowerCase().includes('recovery plan'));
     
-    return lines;
+    const processedItems: any[] = [];
+    
+    for (let i = 0; i < rawLines.length; i++) {
+      const line = rawLines[i];
+      
+      // Parse new two-line format: "• [Activity] [Duration]" followed by "[Instruction]"
+      const newBulletMatch = line.match(/^[•\-]\s*(.+?)\s+(\d+\s*min?)$/);
+      if (newBulletMatch) {
+        const [, activity, duration] = newBulletMatch;
+        const instruction = i + 1 < rawLines.length ? rawLines[i + 1] : '';
+        processedItems.push({
+          type: 'bullet',
+          activity: activity.trim(),
+          duration: duration.trim(),
+          instruction: instruction.trim()
+        });
+        i++; // Skip the next line as it's the instruction
+        continue;
+      }
+      
+      // Parse old bullet point format: "• [Activity] – [Duration] – [Instruction]"
+      const oldBulletMatch = line.match(/^[•\-]\s*(.+?)\s*[–-]\s*(.+?)\s*[–-]\s*(.+)$/);
+      if (oldBulletMatch) {
+        const [, activity, duration, instruction] = oldBulletMatch;
+        processedItems.push({
+          type: 'bullet',
+          activity: activity.trim(),
+          duration: duration.trim(),
+          instruction: instruction.trim()
+        });
+        continue;
+      }
+      
+      // Parse old structured format: "Activity Name - Duration: Instructions"
+      const structuredMatch = line.match(/^(\d+\.\s*)?(.+?)\s*-\s*(.+?):\s*(.+)$/);
+      if (structuredMatch) {
+        const [, , activityName, duration, instructions] = structuredMatch;
+        processedItems.push({
+          type: 'bullet',
+          activity: activityName.trim(),
+          duration: duration.trim(),
+          instruction: instructions.trim()
+        });
+        continue;
+      }
+      
+      // Handle numbered items
+      const numberedMatch = line.match(/^(\d+\.\s*)(.+)$/);
+      if (numberedMatch) {
+        const [, , content] = numberedMatch;
+        processedItems.push({
+          type: 'simple',
+          content: content.trim()
+        });
+        continue;
+      }
+      
+      // Handle simple bullet points
+      const simpleBulletMatch = line.match(/^[•\-]\s*(.+)$/);
+      if (simpleBulletMatch) {
+        const [, content] = simpleBulletMatch;
+        processedItems.push({
+          type: 'simple',
+          content: content.trim()
+        });
+        continue;
+      }
+      
+      // Plain text
+      processedItems.push({
+        type: 'simple',
+        content: line
+      });
+    }
+    
+    // Filter and re-number the bullets
+    const filteredItems = processedItems.filter(item => 
+      item.type === 'bullet' || (item.type === 'simple' && item.content && item.content.length > 0)
+    );
+    
+    let bulletNumber = 1;
+    return filteredItems.map(item => {
+      if (item.type === 'bullet') {
+        return {
+          ...item,
+          number: bulletNumber++
+        };
+      }
+      return item;
+    });
   };
 
   // Add this function to show streak explanation
@@ -1375,6 +1574,37 @@ IMPORTANT USAGE GUIDELINES:
     }
   };
 
+  const deletePlan = async () => {
+    if (!user) return;
+    
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    
+    try {
+      // Delete the plan from Firebase
+      const planRef = doc(db, 'users', user.uid, 'recoveryPlans', dateStr);
+      await deleteDoc(planRef);
+      
+      // Reset all state variables back to initial state
+      setTodaysPlan(null);
+      setPlanExists(false);
+      setPlanCompleted(false);
+      setToolsConfirmed(false);
+      setTimeConfirmed(false);
+      setSelectedTools([]);
+      setSelectedTime(null);
+      setRecoveryData(prev => ({
+        ...prev,
+        submitted: false
+      }));
+      setShowWorkflow(false);
+      setCurrentStep('welcome');
+      
+      console.log(`Recovery plan deleted for ${dateStr}`);
+    } catch (error) {
+      console.error('Error deleting recovery plan:', error);
+    }
+  };
+
   const handleScroll = (event: any) => {
     const offsetY = event.nativeEvent.contentOffset.y;
     
@@ -2047,7 +2277,20 @@ IMPORTANT USAGE GUIDELINES:
                     <Text style={styles.planHolderTitle} allowFontScaling={false}>
                       {isToday ? 'Your Plan for Today' : `Plan For ${format(selectedDate, 'MMM d')}`}
                     </Text>
-                    {/* Removed the Active/Historical badge as requested */}
+                    {/* X button to delete plan - TESTING ONLY */}
+                    <Pressable
+                      style={({ pressed }) => [
+                        {
+                          padding: 8,
+                          borderRadius: 20,
+                          backgroundColor: '#FF6B6B',
+                          opacity: pressed ? 0.8 : 1,
+                        }
+                      ]}
+                      onPress={() => deletePlan()}
+                    >
+                      <Ionicons name="close" size={16} color="#FFFFFF" />
+                    </Pressable>
                   </View>
                   
                   {planLoading ? (
@@ -2058,10 +2301,22 @@ IMPORTANT USAGE GUIDELINES:
                   ) : todaysPlan ? (
                     <View style={styles.planContentContainer}>
                       <View style={styles.formattedPlanContainer}>
-                        {formatPlanText(todaysPlan).map((line, index) => (
-                          <View key={index} style={styles.recoveryDrillRow}>
-                            <Text style={styles.recoveryDrillIndex}>{index + 1}.</Text>
-                            <Text style={styles.recoveryDrillText}>{line}</Text>
+                        {formatPlanText(todaysPlan).map((item, index) => (
+                          <View key={index} style={styles.recoveryBulletItem}>
+                            {item.type === 'bullet' ? (
+                              <View style={styles.bulletRow}>
+                                <Text style={styles.bulletNumber}>{item.number}.</Text>
+                                <View style={styles.bulletContent}>
+                                  <Text style={styles.bulletHeaderLine}>
+                                    <Text style={styles.bulletActivity}>{item.activity}</Text>
+                                    <Text style={styles.bulletDuration}> {item.duration}</Text>
+                                  </Text>
+                                  <Text style={styles.bulletInstruction}>{item.instruction}</Text>
+                                </View>
+                              </View>
+                            ) : (
+                              <Text style={styles.recoveryActivityText}>{item.content}</Text>
+                            )}
                           </View>
                         ))}
                       </View>
@@ -2625,7 +2880,7 @@ const styles = StyleSheet.create({
     color: '#999999',
   },
   planContentContainer: {
-    padding: 16, // Increased padding
+    padding: 20,
   },
   emptyPlanContainer: {
     alignItems: 'center',
@@ -3076,22 +3331,34 @@ const styles = StyleSheet.create({
   },
   recoveryDrillRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start', // Changed to flex-start for better alignment
-    marginBottom: 16, // Increased margin
+    alignItems: 'flex-start',
+    marginBottom: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 12,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
   recoveryDrillIndex: {
-    width: 30, // Fixed width like in training.tsx
     fontSize: 16,
-    color: '#4064F6', // Changed to blue to match training.tsx
     fontWeight: '600',
+    color: '#4064F6',
+    backgroundColor: 'rgba(64, 100, 246, 0.1)',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    textAlign: 'center',
+    lineHeight: 24,
     marginRight: 12,
   },
   recoveryDrillText: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#000000',
-    fontWeight: '500',
-    lineHeight: 22, // Added line height
-    flex: 1, // Take remaining space
+    lineHeight: 22,
+    flex: 1,
   },
   streakHeaderContainer: {
     flexDirection: 'row',
@@ -3102,5 +3369,92 @@ const styles = StyleSheet.create({
   infoIconButton: {
     padding: 8, // Make it easier to tap
     marginLeft: 8, // Space between title and icon
+  },
+  recoveryDrillContent: {
+    flex: 1,
+    marginLeft: 8,
+  },
+  activityHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  activityName: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#000000',
+    flex: 1,
+  },
+  activityDuration: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#4064F6',
+    backgroundColor: 'rgba(64, 100, 246, 0.1)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  activityInstructions: {
+    fontSize: 14,
+    color: '#555555',
+    lineHeight: 20,
+    marginTop: 2,
+  },
+  recoveryActivityCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+    borderLeftWidth: 3,
+    borderLeftColor: '#4064F6',
+  },
+  recoveryActivityText: {
+    fontSize: 15,
+    color: '#000000',
+    lineHeight: 22,
+    fontWeight: '500',
+  },
+  // Clean bullet point styles like training tab
+  recoveryBulletItem: {
+    marginBottom: 8,
+  },
+  bulletRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  bulletNumber: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4064F6',
+    marginRight: 12,
+    minWidth: 20,
+  },
+  bulletContent: {
+    flex: 1,
+  },
+  bulletHeaderLine: {
+    fontSize: 16,
+    lineHeight: 22,
+    marginBottom: 2,
+  },
+  bulletActivity: {
+    fontWeight: '600',
+    color: '#000000',
+  },
+  bulletDuration: {
+    fontWeight: '500',
+    color: '#4064F6',
+  },
+  bulletInstruction: {
+    fontSize: 16,
+    color: '#666666',
+    lineHeight: 22,
+    marginLeft: 0,
   },
 }); 

@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { format, addDays, getWeek } from 'date-fns';
 import analyticsService from '../services/analytics';
 import Accordion from '../components/Accordion';
+import TrainingPlanGenerationLoader from '../components/TrainingPlanGenerationLoader';
 
 type FocusArea = 'technique' | 'strength' | 'endurance' | 'speed' | 'overall';
 type GymAccess = 'yes' | 'no';
@@ -769,6 +770,7 @@ export default function TrainingScreen() {
     sunday: { type: 'off', duration: '' },
   });
   const [loading, setLoading] = useState(false);
+  const [planGenerationComplete, setPlanGenerationComplete] = useState(false);
   const [scheduleConfirmed, setScheduleConfirmed] = useState(false);
   const [canGeneratePlan, setCanGeneratePlan] = useState(true);
   const [lastGeneratedDate, setLastGeneratedDate] = useState<Date | null>(null);
@@ -1043,6 +1045,7 @@ export default function TrainingScreen() {
     }
 
     setLoading(true);
+    setPlanGenerationComplete(false);
 
     try {
       // Load the last plan text before generating new one
@@ -1074,7 +1077,9 @@ ${Object.entries(schedule)
   .map(([day, data]) => ` ${day} ${data.type === 'off' ? '0' : data.type === 'game' ? 'GAME' : data.duration} mins`)
   .join('\n')}
 
-CRITICAL: Only days explicitly marked as "GAME" above should be treated as game days. Days marked as "0" or with any other value are NOT game days - they are regular training days with no team obligations. Do not assume or create games on days that are not explicitly marked as "GAME".
+CRITICAL: Only days explicitly marked as "GAME" above should be treated as game days. Days marked as "0" or with any other value are NOT game days - they are regular training days with no team obligations. Do not assume or create games on days that are not explicitly marked as "GAME". 
+
+ABSOLUTELY FORBIDDEN: Writing "Game day" for any day that is not explicitly marked as "GAME" in the schedule above. This is a critical error that must never happen.
 
 ${lastPlan ? `Previous plan for reference:
 ===
@@ -1095,7 +1100,7 @@ DO NOT ADD DRILLS, NOTES, BULLETS, NUMBERS, OR ANY EXTRA TEXT.
 2. IF A DAY IS A GAME DAY (marked as "GAME" in schedule), WRITE ONLY THIS SINGLE LINE:
 "Game day"
 DO NOT ADD DRILLS, NOTES, BULLETS, NUMBERS, OR ANY EXTRA TEXT.
-IMPORTANT: Only use this for days explicitly marked as "GAME" in the schedule above. Days with "0" or other values are NOT game days.
+CRITICAL: Only use this for days explicitly marked as "GAME" in the schedule above. Days with "0" or other values are NOT game days. DO NOT create game days that are not explicitly marked as "GAME" - this is a serious error that must be avoided.
 
 3. If the user has a game scheduled on any day, make the 2 days BEFORE that game much lighter in intensity. The day immediately before a game should be extremely light (technical work only) or recovery.
 
@@ -1139,6 +1144,13 @@ FORMAT INSTRUCTIONS:
 
 IMPORTANT: After the last day (Sunday), write a short summary section titled "NOTES:" that explains the weekly plan structure and why certain types of training were scheduled on specific days.`;
 
+      console.log('Making API request to OpenAI...');
+      
+      // Validate API key
+      if (!OPENAI_API_KEY) {
+        throw new Error('OpenAI API key not found');
+      }
+      
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -1154,6 +1166,24 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
           max_completion_tokens: 8000
         }),
       });
+
+      console.log('API Response Status:', response.status);
+      console.log('API Response Headers:', response.headers);
+
+      // Check if response is OK before parsing
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API Error Response:', errorText);
+        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+      }
+
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const errorText = await response.text();
+        console.error('Non-JSON Response:', errorText);
+        throw new Error('API returned non-JSON response');
+      }
 
       const data = await response.json();
       console.log('Full API Response:', JSON.stringify(data, null, 2));
@@ -1171,8 +1201,15 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
         });
       }
 
+      // Check for API errors in the response
+      if (data.error) {
+        console.error('OpenAI API Error:', data.error);
+        throw new Error(`OpenAI API Error: ${data.error.message || 'Unknown error'}`);
+      }
+
       if (!data.choices?.[0]?.message?.content) {
-        throw new Error('Invalid response from API');
+        console.error('Invalid API response structure:', data);
+        throw new Error('Invalid response from API - no content found');
       }
 
       const planText = data.choices[0].message.content;
@@ -1186,7 +1223,7 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
       days.forEach(day => {
         // Updated regex to handle both plain and markdown formatted day headers (with **DAY**)
         const dayRegex = new RegExp(
-          `(?:\\*\\*)?${day.toUpperCase()}(?:\\*\\*)?\\s*(?:\\([^)]+\\))?\\s*\\n([\\s\\S]*?)(?=(?:\\*\\*)?(?:${days.join('|').toUpperCase()})(?:\\*\\*)?\\s*(?:\\([^)]+\\))?\\s*\\n|$|\\n---\\s*\\n|\\n\\*\\*Notes:|$)`,
+          `(?:\\*\\*)?${day.toUpperCase()}(?:\\*\\*)?\\s*(?:\\([^)]+\\))?\\s*\\n([\\s\\S]*?)(?=(?:\\*\\*)?(?:${days.join('|').toUpperCase()})(?:\\*\\*)?\\s*(?:\\([^)]+\\))?\\s*\\n|$|\\n---\\s*\\n|\\n(?:\\*\\*)?NOTES?:?|$)`,
           'i'
         );
         
@@ -1266,11 +1303,29 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
       setCurrentStep('plans');
       
       // The useEffect will automatically select the newly generated plan
+      
+      // Mark plan generation as complete
+      setPlanGenerationComplete(true);
     } catch (error) {
       console.error('Error generating plan:', error);
-      Alert.alert('Error', 'Failed to generate a training plan. Please try again.');
+      
+      // Provide more specific error messages
+      let errorMessage = 'Failed to generate a training plan. Please try again.';
+      if (error instanceof Error) {
+        if (error.message.includes('API key')) {
+          errorMessage = 'API configuration error. Please check your settings.';
+        } else if (error.message.includes('network') || error.message.includes('fetch')) {
+          errorMessage = 'Network error. Please check your connection and try again.';
+        } else if (error.message.includes('OpenAI API Error')) {
+          errorMessage = 'AI service error. Please try again in a moment.';
+        }
+      }
+      
+      Alert.alert('Error', errorMessage);
+      setPlanGenerationComplete(false);
+      setLoading(false); // Make sure loading is stopped on error
     } finally {
-      setLoading(false);
+      // setLoading(false) will be called by the animation completion for successful cases
     }
   };
 
@@ -2448,24 +2503,14 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
       </KeyboardAvoidingView>
       
       {loading && (
-        <Animated.View 
-          style={styles.loadingOverlay}
-          entering={FadeIn.duration(300)}
-        >
-          <Animated.View 
-            style={styles.loadingContent}
-            entering={FadeInDown.duration(400).springify()}
-          >
-            <View style={styles.loadingIconContainer}>
-              <Ionicons name="football" size={60} color="#4064F6" />
-            </View>
-            <Text style={styles.loadingTitle}>Generating Plan</Text>
-            <Text style={styles.loadingText}>
-              Please don't close the app while we generate your training plan.
-            </Text>
-            <ActivityIndicator size="large" color="#4064F6" />
-          </Animated.View>
-        </Animated.View>
+        <TrainingPlanGenerationLoader 
+          isComplete={planGenerationComplete}
+          onComplete={() => {
+            // This will be called when the animation completes
+            setLoading(false);
+            setPlanGenerationComplete(false);
+          }}
+        />
       )}
     </>
   );
