@@ -45,13 +45,15 @@ export default function RecoveryPlanGenerationLoader({ onComplete, isComplete }:
   const haptics = useHaptics();
   const scrollViewRef = useRef<ScrollView>(null);
   
-  const progress = useSharedValue(1);
-  const [currentPercentage, setCurrentPercentage] = useState(1);
+  const progress = useSharedValue(0);
+  const [currentPercentage, setCurrentPercentage] = useState(0);
   const [currentStatus, setCurrentStatus] = useState(STATUS_MESSAGES[0]);
   const [steps, setSteps] = useState(GENERATION_STEPS);
   const [startTime] = useState(Date.now());
   const [hasReached99, setHasReached99] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
+  const [maxPercentageReached, setMaxPercentageReached] = useState(0);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Function to scroll to a specific step
   const scrollToStep = (stepIndex: number) => {
@@ -64,24 +66,29 @@ export default function RecoveryPlanGenerationLoader({ onComplete, isComplete }:
 
   useEffect(() => {
     const startGeneration = async () => {
-      // Start progress animation immediately - will progress to 99% over 30 seconds, then wait for completion
-      progress.value = withTiming(99, { 
-        duration: 30000, // 30 seconds to reach 99%
+      // Start with 0% → 1% in 0.5 seconds, then continue to 99% over 30 seconds
+      progress.value = withTiming(1, { 
+        duration: 500, // 0.5 seconds to reach 1%
+      }, () => {
+        // After reaching 1%, continue to 99% over 30 seconds
+        progress.value = withTiming(99, { 
+          duration: 30000, // 30 seconds to reach 99%
+        });
       });
 
       // Update percentage display every 100ms
-      const percentageInterval = setInterval(() => {
+      intervalRef.current = setInterval(() => {
         const currentProgress = progress.value;
         
-        // Only show 99% max during animation, 100% only when completing
-        let displayPercentage;
-        if (isCompleting) {
-          displayPercentage = Math.floor(currentProgress); // Allow 100% during completion
-        } else {
-          displayPercentage = Math.min(99, Math.floor(currentProgress)); // Cap at 99% during animation
-        }
+        // Calculate display percentage (never go backwards)
+        const progressPercentage = Math.min(99, Math.floor(currentProgress)); // Cap at 99% during animation
+        const newPercentage = Math.max(maxPercentageReached, progressPercentage);
         
-        setCurrentPercentage(displayPercentage);
+        // Only update if we're moving forward
+        if (newPercentage > maxPercentageReached) {
+          setMaxPercentageReached(newPercentage);
+          setCurrentPercentage(newPercentage);
+        }
         
         // Track when we reach 99%
         if (currentProgress >= 99 && !hasReached99) {
@@ -109,10 +116,6 @@ export default function RecoveryPlanGenerationLoader({ onComplete, isComplete }:
           setCurrentStatus(STATUS_MESSAGES[8]); // Finalizing recovery protocol...
         } else if (currentProgress >= 99) {
           setCurrentStatus(STATUS_MESSAGES[9]); // Almost ready...
-        }
-        
-        if (currentProgress >= 100) {
-          clearInterval(percentageInterval);
         }
       }, 100);
 
@@ -191,7 +194,12 @@ export default function RecoveryPlanGenerationLoader({ onComplete, isComplete }:
     };
 
     const timer = setTimeout(startGeneration, 100);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
   }, []);
 
   // Handle completion when isComplete becomes true
@@ -215,20 +223,26 @@ export default function RecoveryPlanGenerationLoader({ onComplete, isComplete }:
       // Start the completion phase
       setIsCompleting(true);
       
-      // Show 100% immediately and clearly
-      progress.value = withTiming(100, { duration: 200 });
+      // Stop the interval to prevent any conflicts
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      
+      // Clean transition to 100%
       setCurrentPercentage(100);
+      setMaxPercentageReached(100);
       setCurrentStatus(STATUS_MESSAGES[9]); // Almost ready...
       
-      // Wait 0.5 seconds showing 100% clearly, then complete
+      // Stay at 100% for exactly 0.7 seconds, then complete
       setTimeout(() => {
         onComplete?.();
-      }, 500);
+      }, 700);
     }
   }, [isComplete, hasReached99, isCompleting, onComplete]);
 
   const progressStyle = useAnimatedStyle(() => ({
-    width: `${progress.value}%`,
+    width: `${currentPercentage}%`,
   }));
 
   return (
