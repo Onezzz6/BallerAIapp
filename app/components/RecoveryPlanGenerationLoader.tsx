@@ -13,9 +13,10 @@ import { useHaptics } from '../utils/haptics';
 
 const GENERATION_STEPS = [
   { text: 'Analyzing your recovery metrics', checked: false },
+  { text: 'Calculating your training load', checked: false },
   { text: 'Evaluating soreness and fatigue levels', checked: false },
   { text: 'Assessing available recovery tools', checked: false },
-  { text: 'Considering sleep quality and mood', checked: false },
+  { text: 'Considering sleep amount', checked: false },
   { text: 'Calculating optimal recovery duration', checked: false },
   { text: 'Selecting most effective tools', checked: false },
   { text: 'Designing recovery sequence', checked: false },
@@ -25,9 +26,10 @@ const GENERATION_STEPS = [
 
 const STATUS_MESSAGES = [
   'Reviewing your recovery metrics...',
+  'Calculating your training load...',
   'Analyzing soreness and fatigue levels...',
   'Checking available recovery tools...',
-  'Considering sleep quality and mood...',
+  'Considering sleep amount...',
   'Calculating optimal recovery duration...',
   'Selecting most effective tools...',
   'Designing recovery sequence...',
@@ -55,12 +57,18 @@ export default function RecoveryPlanGenerationLoader({ onComplete, isComplete }:
   const [maxPercentageReached, setMaxPercentageReached] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Function to scroll to a specific step
-  const scrollToStep = (stepIndex: number) => {
+  // Function to scroll smartly - only when needed to reveal new steps
+  const scrollToRevealStep = (stepIndex: number) => {
     if (scrollViewRef.current) {
       const itemHeight = 26; // Approximate height of each step item (text + margin)
-      const scrollPosition = stepIndex * itemHeight;
-      scrollViewRef.current.scrollTo({ y: scrollPosition, animated: true });
+      const containerHeight = 200; // Max height of the scroll container
+      const visibleItems = Math.floor(containerHeight / itemHeight); // About 7-8 items visible
+      
+      // Only scroll if the step is outside the visible area
+      if (stepIndex >= visibleItems) {
+        const scrollPosition = (stepIndex - visibleItems + 1) * itemHeight;
+        scrollViewRef.current.scrollTo({ y: scrollPosition, animated: true });
+      }
     }
   };
 
@@ -95,102 +103,54 @@ export default function RecoveryPlanGenerationLoader({ onComplete, isComplete }:
           setHasReached99(true);
         }
         
-        // Update status message based on progress (10 messages total)
-        if (currentProgress >= 0 && currentProgress < 11) {
+        // Update status message based on progress (11 messages total)
+        if (currentProgress >= 0 && currentProgress < 9) {
           setCurrentStatus(STATUS_MESSAGES[0]); // Reviewing your recovery metrics...
-        } else if (currentProgress >= 11 && currentProgress < 22) {
-          setCurrentStatus(STATUS_MESSAGES[1]); // Analyzing soreness and fatigue levels...
-        } else if (currentProgress >= 22 && currentProgress < 33) {
-          setCurrentStatus(STATUS_MESSAGES[2]); // Checking available recovery tools...
-        } else if (currentProgress >= 33 && currentProgress < 44) {
-          setCurrentStatus(STATUS_MESSAGES[3]); // Considering sleep quality and mood...
-        } else if (currentProgress >= 44 && currentProgress < 55) {
-          setCurrentStatus(STATUS_MESSAGES[4]); // Calculating optimal recovery duration...
-        } else if (currentProgress >= 55 && currentProgress < 66) {
-          setCurrentStatus(STATUS_MESSAGES[5]); // Selecting most effective tools...
-        } else if (currentProgress >= 66 && currentProgress < 77) {
-          setCurrentStatus(STATUS_MESSAGES[6]); // Designing recovery sequence...
-        } else if (currentProgress >= 77 && currentProgress < 88) {
-          setCurrentStatus(STATUS_MESSAGES[7]); // Optimizing tool compatibility...
-        } else if (currentProgress >= 88 && currentProgress < 99) {
-          setCurrentStatus(STATUS_MESSAGES[8]); // Finalizing recovery protocol...
+        } else if (currentProgress >= 9 && currentProgress < 18) {
+          setCurrentStatus(STATUS_MESSAGES[1]); // Calculating your training load...
+        } else if (currentProgress >= 18 && currentProgress < 27) {
+          setCurrentStatus(STATUS_MESSAGES[2]); // Analyzing soreness and fatigue levels...
+        } else if (currentProgress >= 27 && currentProgress < 36) {
+          setCurrentStatus(STATUS_MESSAGES[3]); // Checking available recovery tools...
+        } else if (currentProgress >= 36 && currentProgress < 45) {
+          setCurrentStatus(STATUS_MESSAGES[4]); // Considering sleep amount...
+        } else if (currentProgress >= 45 && currentProgress < 54) {
+          setCurrentStatus(STATUS_MESSAGES[5]); // Calculating optimal recovery duration...
+        } else if (currentProgress >= 54 && currentProgress < 63) {
+          setCurrentStatus(STATUS_MESSAGES[6]); // Selecting most effective tools...
+        } else if (currentProgress >= 63 && currentProgress < 72) {
+          setCurrentStatus(STATUS_MESSAGES[7]); // Designing recovery sequence...
+        } else if (currentProgress >= 72 && currentProgress < 81) {
+          setCurrentStatus(STATUS_MESSAGES[8]); // Optimizing tool compatibility...
+        } else if (currentProgress >= 81 && currentProgress < 99) {
+          setCurrentStatus(STATUS_MESSAGES[9]); // Finalizing recovery protocol...
         } else if (currentProgress >= 99) {
-          setCurrentStatus(STATUS_MESSAGES[9]); // Almost ready...
+          setCurrentStatus(STATUS_MESSAGES[10]); // Almost ready...
         }
       }, 100);
 
-      // Check off items at specific time intervals (every 3.3 seconds) with auto-scroll
-      setTimeout(() => {
-        // Step 1: Analyzing your recovery metrics
-        haptics.light();
-        scrollToStep(0);
-        setSteps(prev => prev.map((step, index) => 
-          index === 0 ? { ...step, checked: true } : step
-        ));
-      }, 3300);
+      // Complete steps in correct order with better timing distribution
+      const completeStep = (stepIndex: number, delay: number) => {
+        setTimeout(() => {
+          haptics.light();
+          scrollToRevealStep(stepIndex);
+          setSteps(prev => prev.map((step, index) => 
+            index === stepIndex ? { ...step, checked: true } : step
+          ));
+        }, delay);
+      };
 
-      setTimeout(() => {
-        // Step 2: Evaluating soreness and fatigue levels
-        haptics.light();
-        scrollToStep(1);
-        setSteps(prev => prev.map((step, index) => 
-          index === 1 ? { ...step, checked: true } : step
-        ));
-      }, 6600);
-
-      setTimeout(() => {
-        // Step 3: Assessing available recovery tools
-        haptics.light();
-        scrollToStep(2);
-        setSteps(prev => prev.map((step, index) => 
-          index === 2 ? { ...step, checked: true } : step
-        ));
-      }, 9900);
-
-      setTimeout(() => {
-        // Step 4: Considering sleep quality and mood
-        haptics.light();
-        scrollToStep(3);
-        setSteps(prev => prev.map((step, index) => 
-          index === 3 ? { ...step, checked: true } : step
-        ));
-      }, 13200);
-
-      setTimeout(() => {
-        // Step 5: Calculating optimal recovery duration
-        haptics.light();
-        scrollToStep(4);
-        setSteps(prev => prev.map((step, index) => 
-          index === 4 ? { ...step, checked: true } : step
-        ));
-      }, 16500);
-
-      setTimeout(() => {
-        // Step 6: Selecting most effective tools
-        haptics.light();
-        scrollToStep(5);
-        setSteps(prev => prev.map((step, index) => 
-          index === 5 ? { ...step, checked: true } : step
-        ));
-      }, 19800);
-
-      setTimeout(() => {
-        // Step 7: Designing recovery sequence
-        haptics.light();
-        scrollToStep(6);
-        setSteps(prev => prev.map((step, index) => 
-          index === 6 ? { ...step, checked: true } : step
-        ));
-      }, 23100);
-
-      setTimeout(() => {
-        // Step 8: Optimizing tool compatibility
-        haptics.light();
-        scrollToStep(7);
-        setSteps(prev => prev.map((step, index) => 
-          index === 7 ? { ...step, checked: true } : step
-        ));
-      }, 26400);
+      // Complete steps in sequence over 30 seconds (0.5s to 30s)
+      completeStep(0, 2000);   // Step 1: Analyzing your recovery metrics - 2s
+      completeStep(1, 4000);   // Step 2: Calculating your training load - 4s
+      completeStep(2, 7000);   // Step 3: Evaluating soreness and fatigue levels - 7s
+      completeStep(3, 10000);  // Step 4: Assessing available recovery tools - 10s
+      completeStep(4, 13000);  // Step 5: Considering sleep amount - 13s
+      completeStep(5, 16000);  // Step 6: Calculating optimal recovery duration - 16s
+      completeStep(6, 20000);  // Step 7: Selecting most effective tools - 20s
+      completeStep(7, 24000);  // Step 8: Designing recovery sequence - 24s
+      completeStep(8, 27000);  // Step 9: Optimizing tool compatibility - 27s
+      completeStep(9, 29000);  // Step 10: Finalizing recovery protocol - 29s (last step)
     };
 
     const timer = setTimeout(startGeneration, 100);
@@ -205,14 +165,8 @@ export default function RecoveryPlanGenerationLoader({ onComplete, isComplete }:
   // Handle completion when isComplete becomes true
   useEffect(() => {
     if (isComplete) {
-      // Complete the final step (step 9: Finalizing recovery protocol)
-      setTimeout(() => {
-        haptics.light();
-        scrollToStep(8);
-        setSteps(prev => prev.map((step, index) => 
-          index === 8 ? { ...step, checked: true } : step
-        ));
-      }, 500);
+      // Final step is already completed by the timed sequence
+      // No need to complete it again here
     }
   }, [isComplete]);
 

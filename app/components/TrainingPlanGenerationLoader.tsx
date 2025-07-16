@@ -48,32 +48,61 @@ export default function TrainingPlanGenerationLoader({ onComplete, isComplete }:
   const haptics = useHaptics();
   const scrollViewRef = useRef<ScrollView>(null);
   
-  const progress = useSharedValue(1);
-  const [currentPercentage, setCurrentPercentage] = useState(1);
+  const progress = useSharedValue(0);
+  const [currentPercentage, setCurrentPercentage] = useState(0);
   const [currentStatus, setCurrentStatus] = useState(STATUS_MESSAGES[0]);
   const [steps, setSteps] = useState(GENERATION_STEPS);
+  const [startTime] = useState(Date.now());
+  const [hasReached99, setHasReached99] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
+  const [maxPercentageReached, setMaxPercentageReached] = useState(0);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Function to scroll to a specific step
-  const scrollToStep = (stepIndex: number) => {
+  // Function to scroll smartly - only when needed to reveal new steps
+  const scrollToRevealStep = (stepIndex: number) => {
     if (scrollViewRef.current) {
       const itemHeight = 26; // Approximate height of each step item (text + margin)
-      const scrollPosition = stepIndex * itemHeight;
-      scrollViewRef.current.scrollTo({ y: scrollPosition, animated: true });
+      const containerHeight = 200; // Max height of the scroll container
+      const visibleItems = Math.floor(containerHeight / itemHeight); // About 7-8 items visible
+      
+      // Only scroll if the step is outside the visible area
+      if (stepIndex >= visibleItems) {
+        const scrollPosition = (stepIndex - visibleItems + 1) * itemHeight;
+        scrollViewRef.current.scrollTo({ y: scrollPosition, animated: true });
+      }
     }
   };
 
   useEffect(() => {
     const startGeneration = async () => {
-      // Start progress animation immediately - will progress to 95% over 70 seconds, then wait for completion
-      progress.value = withTiming(95, { 
-        duration: 70000,
+      // Start with 0% → 1% in 0.5 seconds, then continue to 99% over 42 seconds
+      progress.value = withTiming(1, { 
+        duration: 500, // 0.5 seconds to reach 1%
+      }, () => {
+        // After reaching 1%, continue to 99% over 42 seconds
+        progress.value = withTiming(99, { 
+          duration: 42000, // 42 seconds to reach 99%
+        });
       });
 
       // Update percentage display every 100ms
-      const percentageInterval = setInterval(() => {
+      intervalRef.current = setInterval(() => {
         const currentProgress = progress.value;
-        const displayPercentage = Math.min(100, Math.floor(currentProgress));
-        setCurrentPercentage(displayPercentage);
+        
+        // Calculate display percentage (never go backwards)
+        const progressPercentage = Math.min(99, Math.floor(currentProgress)); // Cap at 99% during animation
+        const newPercentage = Math.max(maxPercentageReached, progressPercentage);
+        
+        // Only update if we're moving forward
+        if (newPercentage > maxPercentageReached) {
+          setMaxPercentageReached(newPercentage);
+          setCurrentPercentage(newPercentage);
+        }
+        
+        // Track when we reach 99%
+        if (currentProgress >= 99 && !hasReached99) {
+          setHasReached99(true);
+        }
         
         // Update status message based on progress (12 messages total)
         if (currentProgress >= 0 && currentProgress < 8) {
@@ -96,132 +125,81 @@ export default function TrainingPlanGenerationLoader({ onComplete, isComplete }:
           setCurrentStatus(STATUS_MESSAGES[8]); // Optimizing recovery periods...
         } else if (currentProgress >= 72 && currentProgress < 80) {
           setCurrentStatus(STATUS_MESSAGES[9]); // Balancing training types...
-        } else if (currentProgress >= 80 && currentProgress < 95) {
+        } else if (currentProgress >= 80 && currentProgress < 99) {
           setCurrentStatus(STATUS_MESSAGES[10]); // Finalizing your personalized plan...
-        } else if (currentProgress >= 95) {
+        } else if (currentProgress >= 99) {
           setCurrentStatus(STATUS_MESSAGES[11]); // Almost ready...
-        }
-        
-        if (currentProgress >= 100) {
-          clearInterval(percentageInterval);
         }
       }, 100);
 
-      // Check off items at specific time intervals (every 7 seconds) with auto-scroll
-      setTimeout(() => {
-        // Step 1: Analyzing your profile and goals
-        haptics.light();
-        scrollToStep(0);
-        setSteps(prev => prev.map((step, index) => 
-          index === 0 ? { ...step, checked: true } : step
-        ));
-      }, 7000);
+      // Complete steps in correct order with better timing distribution
+      const completeStep = (stepIndex: number, delay: number) => {
+        setTimeout(() => {
+          haptics.light();
+          scrollToRevealStep(stepIndex);
+          setSteps(prev => prev.map((step, index) => 
+            index === stepIndex ? { ...step, checked: true } : step
+          ));
+        }, delay);
+      };
 
-      setTimeout(() => {
-        // Step 2: Evaluating your team schedule
-        haptics.light();
-        scrollToStep(1);
-        setSteps(prev => prev.map((step, index) => 
-          index === 1 ? { ...step, checked: true } : step
-        ));
-      }, 14000);
-
-      setTimeout(() => {
-        // Step 3: Assessing gym access and equipment
-        haptics.light();
-        scrollToStep(2);
-        setSteps(prev => prev.map((step, index) => 
-          index === 2 ? { ...step, checked: true } : step
-        ));
-      }, 21000);
-
-      setTimeout(() => {
-        // Step 4: Reviewing injury history and limitations
-        haptics.light();
-        scrollToStep(3);
-        setSteps(prev => prev.map((step, index) => 
-          index === 3 ? { ...step, checked: true } : step
-        ));
-      }, 28000);
-
-      setTimeout(() => {
-        // Step 5: Calculating training load distribution
-        haptics.light();
-        scrollToStep(4);
-        setSteps(prev => prev.map((step, index) => 
-          index === 4 ? { ...step, checked: true } : step
-        ));
-      }, 35000);
-
-      setTimeout(() => {
-        // Step 6: Designing Monday-Wednesday sessions
-        haptics.light();
-        scrollToStep(5);
-        setSteps(prev => prev.map((step, index) => 
-          index === 5 ? { ...step, checked: true } : step
-        ));
-      }, 42000);
-
-      setTimeout(() => {
-        // Step 7: Designing Thursday-Sunday sessions
-        haptics.light();
-        scrollToStep(6);
-        setSteps(prev => prev.map((step, index) => 
-          index === 6 ? { ...step, checked: true } : step
-        ));
-      }, 49000);
-
-      setTimeout(() => {
-        // Step 8: Optimizing recovery periods
-        haptics.light();
-        scrollToStep(7);
-        setSteps(prev => prev.map((step, index) => 
-          index === 7 ? { ...step, checked: true } : step
-        ));
-      }, 56000);
-
-      setTimeout(() => {
-        // Step 9: Balancing field vs gym training
-        haptics.light();
-        scrollToStep(8);
-        setSteps(prev => prev.map((step, index) => 
-          index === 8 ? { ...step, checked: true } : step
-        ));
-      }, 63000);
+      // Complete steps in sequence over 42 seconds (0.5s to 42s)
+      completeStep(0, 3000);   // Step 1: Analyzing your profile and goals - 3s
+      completeStep(1, 6000);   // Step 2: Evaluating your team schedule - 6s
+      completeStep(2, 9000);   // Step 3: Assessing gym access and equipment - 9s
+      completeStep(3, 13000);  // Step 4: Reviewing injury history and limitations - 13s
+      completeStep(4, 17000);  // Step 5: Calculating training load distribution - 17s
+      completeStep(5, 22000);  // Step 6: Designing Monday-Wednesday sessions - 22s
+      completeStep(6, 27000);  // Step 7: Designing Thursday-Sunday sessions - 27s
+      completeStep(7, 32000);  // Step 8: Optimizing recovery periods - 32s
+      completeStep(8, 37000);  // Step 9: Balancing field vs gym training - 37s
+      completeStep(9, 40000);  // Step 10: Finalizing weekly structure - 40s (last step)
     };
 
     const timer = setTimeout(startGeneration, 100);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
   }, []);
 
   // Handle completion when isComplete becomes true
   useEffect(() => {
     if (isComplete) {
-      // Complete the final step (step 10: Finalizing weekly structure)
-      setTimeout(() => {
-        haptics.light();
-        scrollToStep(9);
-        setSteps(prev => prev.map((step, index) => 
-          index === 9 ? { ...step, checked: true } : step
-        ));
-      }, 500);
+      // Final step is already completed by the timed sequence
+      // No need to complete it again here
+    }
+  }, [isComplete]);
 
-      // Complete the progress bar
-      setTimeout(() => {
-        progress.value = withTiming(100, { duration: 1000 });
-        setCurrentPercentage(100);
-        setCurrentStatus(STATUS_MESSAGES[11]); // Almost ready...
-      }, 700);
-
-      // Call onComplete after animation finishes
+  // Handle final completion when both conditions are met
+  useEffect(() => {
+    if (isComplete && hasReached99 && !isCompleting) {
+      // Both conditions met: plan is ready AND we've reached 99%
+      // Start the completion phase
+      setIsCompleting(true);
+      
+      // Stop the interval to prevent any conflicts
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      
+      // Clean transition to 100%
+      setCurrentPercentage(100);
+      setMaxPercentageReached(100);
+      setCurrentStatus(STATUS_MESSAGES[11]); // Almost ready...
+      
+      // Stay at 100% for exactly 0.7 seconds, then complete
       setTimeout(() => {
         onComplete?.();
-      }, 2000);
+      }, 700);
     }
-  }, [isComplete, onComplete]);
+  }, [isComplete, hasReached99, isCompleting, onComplete]);
 
   const progressStyle = useAnimatedStyle(() => ({
-    width: `${progress.value}%`,
+    width: `${currentPercentage}%`,
   }));
 
   return (
@@ -250,11 +228,10 @@ export default function TrainingPlanGenerationLoader({ onComplete, isComplete }:
         }}
         entering={FadeInDown.duration(400).springify()}
       >
-        {/* Football Icon */}
+        {/* Training Icon - Removed the football icon */}
         <View style={{
           marginBottom: 20,
         }}>
-          <Ionicons name="football" size={60} color="#4064F6" />
         </View>
 
         {/* Large Percentage Display */}
