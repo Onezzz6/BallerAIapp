@@ -13,6 +13,7 @@ import WeeklyOverview from '../components/WeeklyOverview';
 import Constants from 'expo-constants';
 import Animated, { FadeIn, FadeInDown, PinwheelIn, SlideInRight } from 'react-native-reanimated';
 import analyticsService from '../services/analytics';
+import RecoveryPlanGenerationLoader from '../components/RecoveryPlanGenerationLoader';
 
 // Add this line to get the API key from Constants.expoConfig.extra
 const OPENAI_API_KEY = Constants.expoConfig?.extra?.openaiApiKey;
@@ -67,6 +68,7 @@ export default function RecoveryScreen() {
   const [showWorkflow, setShowWorkflow] = useState(false);
   const [hasEverGeneratedPlan, setHasEverGeneratedPlan] = useState(false);
   const [headerOpacity, setHeaderOpacity] = useState(0);
+  const [planGenerationComplete, setPlanGenerationComplete] = useState(false);
   
   // Add back the missing refs
   const scrollViewRef = useRef<ScrollView>(null);
@@ -351,6 +353,7 @@ export default function RecoveryScreen() {
 
   const generatePlan = async () => {
     setLoading(true);
+    setPlanGenerationComplete(false);
 
     try {
       const toolsAvailable = selectedTools.length > 0 
@@ -547,7 +550,9 @@ IMPORTANT USAGE GUIDELINES:
 
       setPlanExists(true);
       setHasEverGeneratedPlan(true);
+      setPlanGenerationComplete(true);
       console.log(`Recovery plan saved to Firebase for ${dateStr}`);
+      // Note: setLoading(false) is handled by the loader's onComplete callback
 
     } catch (error) {
       console.error('Error generating recovery plan:', error);
@@ -567,7 +572,7 @@ IMPORTANT USAGE GUIDELINES:
       }
       
       Alert.alert('Error', errorMessage);
-    } finally {
+      setPlanGenerationComplete(false);
       setLoading(false);
     }
   };
@@ -2394,24 +2399,14 @@ IMPORTANT USAGE GUIDELINES:
       </KeyboardAvoidingView>
       
       {loading && (
-        <Animated.View 
-          style={styles.loadingOverlay}
-          entering={FadeIn.duration(300)}
-        >
-          <Animated.View 
-            style={styles.loadingContent}
-            entering={FadeInDown.duration(400).springify()}
-          >
-            <View style={styles.loadingIconContainer}>
-              <Ionicons name="fitness" size={60} color="#4064F6" />
-            </View>
-            <Text style={styles.loadingTitle}>Generating Plan</Text>
-            <Text style={styles.loadingText}>
-              Please don't close the app while we generate your recovery plan.
-            </Text>
-            <ActivityIndicator size="large" color="#4064F6" />
-          </Animated.View>
-        </Animated.View>
+        <RecoveryPlanGenerationLoader 
+          isComplete={planGenerationComplete}
+          onComplete={() => {
+            // This will be called when the animation completes
+            setLoading(false);
+            setPlanGenerationComplete(false);
+          }}
+        />
       )}
 
     </>
@@ -2924,53 +2919,7 @@ const styles = StyleSheet.create({
     color: '#000000',
     textAlign: 'center',
   },
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-    paddingHorizontal: 24,
-  },
-  loadingContent: {
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 5,
-    width: '100%',
-    maxWidth: 320,
-  },
-  loadingIconContainer: {
-    width: 100,
-    height: 100,
-    marginBottom: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(64, 100, 246, 0.1)',
-    borderRadius: 50,
-  },
-  loadingTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#000000',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#666666',
-    textAlign: 'center',
-    marginBottom: 24,
-  },
+
   toolsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
