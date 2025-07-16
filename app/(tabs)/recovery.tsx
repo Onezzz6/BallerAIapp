@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect, useRef } from 'react';
 import Slider from '@react-native-community/slider';
 import { format, differenceInHours, differenceInMinutes, parseISO, isSameDay, subDays, differenceInCalendarDays } from 'date-fns';
-import { doc, getDoc, setDoc, collection, Timestamp, query, where, getDocs, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, Timestamp, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -291,9 +291,6 @@ export default function RecoveryScreen() {
         {
           text: 'Generate Plan',
           onPress: () => {
-            // TESTING: Commented out one-plan-per-day restriction for testing
-            // To re-enable in production, uncomment the if/else block below
-            /*
             if (planExists) {
               Alert.alert(
                 'Plan Already Exists',
@@ -312,9 +309,6 @@ export default function RecoveryScreen() {
             } else {
               generatePlan();
             }
-            */
-            // Always generate plan (testing only)
-            generatePlan();
           }
         }
       ]
@@ -1579,36 +1573,7 @@ IMPORTANT USAGE GUIDELINES:
     }
   };
 
-  const deletePlan = async () => {
-    if (!user) return;
-    
-    const dateStr = format(selectedDate, 'yyyy-MM-dd');
-    
-    try {
-      // Delete the plan from Firebase
-      const planRef = doc(db, 'users', user.uid, 'recoveryPlans', dateStr);
-      await deleteDoc(planRef);
-      
-      // Reset all state variables back to initial state
-      setTodaysPlan(null);
-      setPlanExists(false);
-      setPlanCompleted(false);
-      setToolsConfirmed(false);
-      setTimeConfirmed(false);
-      setSelectedTools([]);
-      setSelectedTime(null);
-      setRecoveryData(prev => ({
-        ...prev,
-        submitted: false
-      }));
-      setShowWorkflow(false);
-      setCurrentStep('welcome');
-      
-      console.log(`Recovery plan deleted for ${dateStr}`);
-    } catch (error) {
-      console.error('Error deleting recovery plan:', error);
-    }
-  };
+
 
   const handleScroll = (event: any) => {
     const offsetY = event.nativeEvent.contentOffset.y;
@@ -2282,20 +2247,6 @@ IMPORTANT USAGE GUIDELINES:
                     <Text style={styles.planHolderTitle} allowFontScaling={false}>
                       {isToday ? 'Your Plan for Today' : `Plan For ${format(selectedDate, 'MMM d')}`}
                     </Text>
-                    {/* X button to delete plan - TESTING ONLY */}
-                    <Pressable
-                      style={({ pressed }) => [
-                        {
-                          padding: 8,
-                          borderRadius: 20,
-                          backgroundColor: '#FF6B6B',
-                          opacity: pressed ? 0.8 : 1,
-                        }
-                      ]}
-                      onPress={() => deletePlan()}
-                    >
-                      <Ionicons name="close" size={16} color="#FFFFFF" />
-                    </Pressable>
                   </View>
                   
                   {planLoading ? (
@@ -2852,6 +2803,7 @@ const styles = StyleSheet.create({
     fontSize: 22, // Increased font size
     fontWeight: '600',
     color: '#000000',
+    textAlign: 'center',
   },
   planStatusBadge: {
     backgroundColor: '#99E86C',

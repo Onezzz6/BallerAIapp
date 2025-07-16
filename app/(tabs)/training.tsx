@@ -813,10 +813,6 @@ export default function TrainingScreen() {
     const now = new Date();
     const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
     
-    // TODO: Remove debug code before production
-    // DEBUG: Uncomment the line below to simulate timer expiring (force generate button to show)
-    // return { days: 0, hours: 0, minutes: 0, nextDate: now }; // Force timer to show as expired
-    
     let nextAvailableDate = new Date(now);
     
     if (dayOfWeek >= 1 && dayOfWeek <= 5) {
@@ -869,17 +865,6 @@ export default function TrainingScreen() {
     const checkPlanGenerationStatus = async () => {
       if (!user) return;
 
-      // ===== TESTING MODE: UNLIMITED PLAN GENERATION =====
-      // TODO: REMOVE THIS LINE WHEN TESTING IS COMPLETE
-      setCanGeneratePlan(true); return; // Force allow unlimited plan generation for testing
-
-      // ===== PRODUCTION CODE (COMMENTED OUT FOR TESTING) =====
-      /*
-      // TODO: Remove debug code before production
-      // DEBUG: Uncomment one of these lines to test different scenarios:
-      // setCanGeneratePlan(true); return; // Force allow plan generation (simulate Sunday or no previous plan)
-      // setCanGeneratePlan(false); setLastGeneratedDate(new Date()); return; // Force show timer
-
       try {
         // Get the user document to check when they last generated a plan
         const userDoc = await getDoc(doc(db, 'users', user.uid));
@@ -921,7 +906,6 @@ export default function TrainingScreen() {
         // Default to allowing generation on error
         setCanGeneratePlan(true);
       }
-      */
     };
 
     checkPlanGenerationStatus();
@@ -1295,9 +1279,8 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
       }, { merge: true });
 
       // Update local state
-      // ===== TESTING MODE: COMMENTED OUT FOR UNLIMITED GENERATION =====
-      // setCanGeneratePlan(false); // TODO: UNCOMMENT THIS LINE WHEN TESTING IS COMPLETE
-      // setLastGeneratedDate(now); // TODO: UNCOMMENT THIS LINE WHEN TESTING IS COMPLETE
+      setCanGeneratePlan(false);
+      setLastGeneratedDate(now);
 
       // Navigate back to training tab plans view
       setCurrentStep('plans');
