@@ -10,6 +10,7 @@ type TrainingPlan = {
   schedule: {
     [key: string]: string;
   };
+  startingDay?: number; // 0 = Monday, 1 = Tuesday, etc.
 };
 
 type TrainingContextType = {
@@ -59,7 +60,8 @@ function TrainingProvider({ children }: { children: React.ReactNode }) {
           schedule: data.schedule,
           createdAt: data.createdAt instanceof Timestamp ? 
             data.createdAt.toDate() : 
-            new Date(data.createdAt)
+            new Date(data.createdAt),
+          startingDay: data.startingDay // If undefined, will show all days
         };
       }) as TrainingPlan[];
       

@@ -1250,19 +1250,23 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
       // Get the week number for plan naming
       const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
       let weekNumber;
+      let startingDayIndex;
       
-      if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-        // Monday-Friday: generate plan for current week
-        weekNumber = getWeek(now);
-      } else {
-        // Saturday-Sunday: generate plan for next week
+      if (dayOfWeek === 0) {
+        // Sunday: generate plan for next week starting from Monday
         weekNumber = getWeek(addDays(now, 1));
+        startingDayIndex = 0; // Monday
+      } else if (dayOfWeek >= 1 && dayOfWeek <= 6) {
+        // Monday-Saturday: generate plan for current week starting from current day
+        weekNumber = getWeek(now);
+        startingDayIndex = dayOfWeek - 1; // Monday = 0, Tuesday = 1, etc.
       }
       
       await addPlan({
         name: `Plan for Week ${weekNumber}`,
         createdAt: now,
         schedule: dailyPlans,
+        startingDay: startingDayIndex, // Store which day this plan should start from
       });
 
       // Save the raw plan text to Firestore for future reference
@@ -1462,31 +1466,15 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
 
   const DAYS_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
   
-  // Filter days from current day until Sunday
-  const getFilteredDays = () => {
-    const today = new Date();
-    const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-    
-    // Convert to our day format (monday = 0, tuesday = 1, ..., sunday = 6)
-    const dayMapping = {
-      0: 6, // Sunday = 6
-      1: 0, // Monday = 0
-      2: 1, // Tuesday = 1
-      3: 2, // Wednesday = 2
-      4: 3, // Thursday = 3
-      5: 4, // Friday = 4
-      6: 5  // Saturday = 5
-    };
-    
-    const currentDayIndex = dayMapping[currentDay as keyof typeof dayMapping];
-    
-    // If it's Sunday, show all days (for next week)
-    if (currentDay === 0) {
+  // Filter days based on when the plan was created
+  const getFilteredDays = (plan?: { startingDay?: number }) => {
+    // If no plan or no starting day info, show all days
+    if (!plan || plan.startingDay === undefined) {
       return DAYS_ORDER;
     }
     
-    // Otherwise, show from current day until Sunday
-    return DAYS_ORDER.slice(currentDayIndex);
+    // Show from the plan's starting day until Sunday
+    return DAYS_ORDER.slice(plan.startingDay);
   };
 
   // Helper function to safely format day headers
@@ -1892,7 +1880,7 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
                 {(() => {
                   let allSummaryNotes: string[] = [];
                   
-                  const dayAccordions = getFilteredDays().map((day) => {
+                  const dayAccordions = getFilteredDays(selectedPlan).map((day) => {
                     const dayContent = getDayContent(selectedPlan, day);
                     const parsed = parseDrills(dayContent);
                     

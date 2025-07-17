@@ -13,6 +13,7 @@ type TrainingPlan = {
   schedule: {
     [key: string]: string;
   };
+  startingDay?: number; // 0 = Monday, 1 = Tuesday, etc.
 };
 
 const DAYS_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -148,19 +149,32 @@ export default function TrainingPlansScreen() {
         {selectedPlan && (
           <View style={styles.planDetailsContainer}>
             {/* Days of the week */}
-            {DAYS_ORDER.map((day) => (
-              <Accordion 
-                key={day}
-                title={formatDayHeader(day)}
-                expanded={false}
-              >
-                <View style={styles.planContent}>
-                  <ScrollView style={{ maxHeight: 400 }}>
-                    <Text style={styles.planText}>{getDayContent(selectedPlan, day)}</Text>
-                  </ScrollView>
-                </View>
-              </Accordion>
-            ))}
+            {(() => {
+              // Filter days based on when the plan was created
+              const getFilteredDays = (plan?: { startingDay?: number }) => {
+                // If no plan or no starting day info, show all days
+                if (!plan || plan.startingDay === undefined) {
+                  return DAYS_ORDER;
+                }
+                
+                // Show from the plan's starting day until Sunday
+                return DAYS_ORDER.slice(plan.startingDay);
+              };
+              
+              return getFilteredDays(selectedPlan).map((day) => (
+                <Accordion 
+                  key={day}
+                  title={formatDayHeader(day)}
+                  expanded={false}
+                >
+                  <View style={styles.planContent}>
+                    <ScrollView style={{ maxHeight: 400 }}>
+                      <Text style={styles.planText}>{getDayContent(selectedPlan, day)}</Text>
+                    </ScrollView>
+                  </View>
+                </Accordion>
+              ));
+            })()}
           </View>
         )}
         
