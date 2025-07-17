@@ -68,13 +68,6 @@ export async function checkSubscriptionOnForeground(
 ): Promise<void> {
   console.log("\n======== APP FOREGROUND SUBSCRIPTION CHECK ========");
   console.log(`UserID: ${userId}, Current path: ${currentPath || 'undefined'}`);
-  console.log(`Authentication Status: ${hasUserCompletedAuthentication ? 'COMPLETED' : 'NOT COMPLETED'}`);
-  
-  // MOST IMPORTANT CHECK - Never show paywall if user hasn't completed sign-in/sign-up
-  if (!hasUserCompletedAuthentication) {
-    console.log("⚠️ User has not completed authentication - skipping subscription check");
-    return;
-  }
   
   // If a paywall is already being presented, skip this check entirely
   if (isPaywallCurrentlyPresented) {
@@ -82,7 +75,7 @@ export async function checkSubscriptionOnForeground(
     return;
   }
   
-  // If we're in the onboarding flow, skip the check entirely
+  // Skip check only if user is in onboarding flow
   if (currentPath) {
     console.log(`Current path for checking: "${currentPath}"`);
     const inOnboarding = isOnOnboardingScreen(currentPath);
@@ -128,17 +121,18 @@ export async function checkSubscriptionOnForeground(
     
     // Log subscription details for debugging
     console.log("\n======= FOREGROUND CHECK SUBSCRIPTION INFO =======");
+    
     const entitlement = customerInfo.entitlements.active[ENTITLEMENT_ID];
     
     if (entitlement) {
       console.log("✅ ACTIVE SUBSCRIPTION FOUND");
       console.log("📅 Expiration Date:", entitlement.expirationDate);
       console.log("🔄 Will Renew:", entitlement.willRenew ? "YES" : "NO");
-      // No need to show paywall for active subscriptions
+      console.log("🆔 Product ID:", entitlement.productIdentifier);
       console.log("Subscription active - no paywall needed");
       return;
     } else {
-      console.log("❌ No active subscription found - presenting paywall");
+      console.log("❌ No active subscription found for entitlement:", ENTITLEMENT_ID);
     }
     console.log("===============================================\n");
     
@@ -271,6 +265,7 @@ export async function runPostLoginSequence(
     
     // Log detailed subscription info for debugging
     console.log("\n=================== DETAILED SUBSCRIPTION INFO ===================");
+    
     const entitlement = customerInfo.entitlements.active[ENTITLEMENT_ID];
     
     if (entitlement) {

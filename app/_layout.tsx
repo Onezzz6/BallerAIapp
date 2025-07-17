@@ -1,7 +1,7 @@
 import React, { createContext, useContext } from 'react';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Slot } from 'expo-router';
+import { Slot, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
@@ -13,7 +13,7 @@ import { OnboardingProvider } from './context/OnboardingContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NutritionProvider } from './context/NutritionContext';
 import { TrainingProvider } from './context/TrainingContext';
-import { Alert, Platform } from 'react-native';
+import { Alert, Platform, AppState } from 'react-native';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import subscriptionService, { PRODUCT_IDS } from './services/subscription';
@@ -24,6 +24,7 @@ import { PAYWALL_RESULT } from 'react-native-purchases-ui';
 
 import { initializeAppsFlyer, cleanupAppsFlyer } from './config/appsflyer';
 import { configureRevenueCat, logInRevenueCatUser, setReferralCode } from './services/revenuecat';
+import { checkSubscriptionOnForeground } from './(onboarding)/paywall';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from './config/firebase';
 
@@ -49,6 +50,7 @@ SplashScreen.preventAutoHideAsync();
 function SubscriptionProvider({ children }: { children: React.ReactNode }) {
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
   const { user } = useAuth();
+  const router = useRouter();
   const customerInfoListenerSetup = useRef<boolean>(false);
   
   // Reset listener setup when user changes (including logout)
@@ -162,8 +164,71 @@ function SubscriptionProvider({ children }: { children: React.ReactNode }) {
     identifyUser();
   }, [user]);
   
-  // Note: Removed foreground subscription check - SortingScreen now handles initial routing
-  // Background/foreground subscription checks may be re-implemented in a future version
+  // Background subscription check with 45-second cooldown
+  useEffect(() => {
+    if (!user) {
+      console.log('🚫 Background check setup skipped - no user');
+      return;
+    }
+    
+    console.log('🔧 Setting up background subscription check for user:', user.uid);
+    console.log('📱 Current app state on setup:', AppState.currentState);
+    let lastBackgroundCheckTime = 0;
+    const BACKGROUND_CHECK_COOLDOWN = 45000; // 45 seconds in milliseconds
+    
+    const handleAppStateChange = (nextAppState: string) => {
+      console.log('📱 App state changed to:', nextAppState);
+      
+      if (nextAppState === 'background' || nextAppState === 'inactive') {
+        const currentTime = Date.now();
+        const timeSinceLastCheck = currentTime - lastBackgroundCheckTime;
+        
+        console.log('🔍 Background/inactive state detected:', {
+          currentTime: new Date(currentTime).toLocaleTimeString(),
+          lastCheckTime: lastBackgroundCheckTime === 0 ? 'never' : new Date(lastBackgroundCheckTime).toLocaleTimeString(),
+          timeSinceLastCheck: Math.floor(timeSinceLastCheck / 1000) + 's',
+          cooldownRequired: Math.floor(BACKGROUND_CHECK_COOLDOWN / 1000) + 's'
+        });
+        
+        // Check if 45 seconds have passed since last background check
+        if (timeSinceLastCheck >= BACKGROUND_CHECK_COOLDOWN) {
+          console.log('✅ COOLDOWN PASSED - Running background/inactive subscription check');
+          console.log('⏰ Time since last check:', Math.floor(timeSinceLastCheck / 1000) + ' seconds');
+          lastBackgroundCheckTime = currentTime;
+          
+          // Perform subscription check when app goes to background
+          checkSubscriptionOnForeground(
+            user.uid,
+            () => {
+              console.log('✅ Background check result: User has active subscription');
+            },
+            () => {
+              console.log('❌ Background check result: User subscription expired or cancelled - navigating to welcome');
+              // Navigate to welcome screen when paywall is cancelled
+              router.replace('/welcome');
+            }
+          );
+        } else {
+          const remainingTime = Math.ceil((BACKGROUND_CHECK_COOLDOWN - timeSinceLastCheck) / 1000);
+          console.log('⏳ COOLDOWN ACTIVE - Background/inactive check skipped');
+          console.log('⏰ Time remaining in cooldown:', remainingTime + ' seconds');
+          console.log('🔄 Next check available at:', new Date(lastBackgroundCheckTime + BACKGROUND_CHECK_COOLDOWN).toLocaleTimeString());
+        }
+      } else {
+        console.log('ℹ️ App state is', nextAppState, '- subscription check only runs on background/inactive state');
+      }
+    };
+    
+    // Add listener for app state changes
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    console.log('👂 AppState listener registered');
+    
+    // Cleanup listener on unmount or user change
+    return () => {
+      console.log('🧹 Cleaning up background check listener');
+      subscription?.remove();
+    };
+  }, [user]);
 
   return (
     <SubscriptionContext.Provider 

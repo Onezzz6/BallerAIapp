@@ -2,12 +2,14 @@ import { doc, getDoc, updateDoc, setDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../config/firebase';
 // import * as InAppPurchases from 'expo-in-app-purchases'; // Comment out InAppPurchases
 
-// Product IDs for subscription plans - includes both regular and referral products
+// Product IDs for subscription plans - includes regular, referral, and trial products
 export const PRODUCT_IDS = {
   '1month': 'BallerAIOneMonth',
   '12months': 'BallerAIOneYear',
   '1month_referral': 'BallerAIOneMonthReferral',
-  '12months_referral': 'BallerAIOneYearReferral'
+  '12months_referral': 'BallerAIOneYearReferral',
+  '3day_trial_monthly': 'BallerAIThreeDayTrial',
+  '3day_trial_yearly': 'BallerAIThreeDayTrialForYearly'
 };
 
 // All product IDs as an array for RevenueCat configuration
