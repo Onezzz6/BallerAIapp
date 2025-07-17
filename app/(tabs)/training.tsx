@@ -391,9 +391,11 @@ const styles = StyleSheet.create({
   welcomeCard: {
     backgroundColor: '#DCF4F5',
     borderRadius: 24,
-    padding: 40,
+    paddingTop: 40,
+    paddingBottom: 0,
+    paddingHorizontal: 32,
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -2073,8 +2075,8 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
                 >
                   <Ionicons name="football" size={60} color="#4064F6" />
                 </Animated.View>
-                <Text style={styles.welcomeTitle}>Welcome to Training</Text>
-                <Text style={styles.welcomeText}>
+                <Text style={styles.welcomeTitle} allowFontScaling={false}>Welcome to Training</Text>
+                <Text style={styles.welcomeText} allowFontScaling={false}>
                   We'll generate customized training plans for you based on your load and preferences. Let's get started!
                 </Text>
               </View>

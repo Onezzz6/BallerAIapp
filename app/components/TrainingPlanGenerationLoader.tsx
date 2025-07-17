@@ -14,28 +14,27 @@ import { useHaptics } from '../utils/haptics';
 const GENERATION_STEPS = [
   { text: 'Analyzing your profile and goals', checked: false },
   { text: 'Evaluating your team schedule', checked: false },
-  { text: 'Assessing gym access and equipment', checked: false },
-  { text: 'Reviewing injury history and limitations', checked: false },
-  { text: 'Calculating training load distribution', checked: false },
-  { text: 'Designing Monday-Wednesday sessions', checked: false },
-  { text: 'Designing Thursday-Sunday sessions', checked: false },
-  { text: 'Optimizing recovery periods', checked: false },
-  { text: 'Balancing field vs gym training', checked: false },
-  { text: 'Finalizing weekly structure', checked: false },
+  { text: 'Assessing gym access', checked: false },
+  { text: 'Reviewing injury history', checked: false },
+  { text: 'Calculating optimal load', checked: false },
+  { text: 'Designing sessions', checked: false },
+  { text: 'Optimizing recovery', checked: false },
+  { text: 'Balancing field vs gym', checked: false },
+  { text: 'Finalizing your plan', checked: false },
 ];
 
 const STATUS_MESSAGES = [
-  'Reviewing your profile and position...',
-  'Analyzing your team training schedule...',
-  'Checking available equipment and facilities...',
-  'Considering injury history and limitations...',
-  'Calculating optimal training load...',
+  'Reviewing your profile...',
+  'Analyzing your team schedule...',
+  'Checking available equipment...',
+  'Considering injury history...',
+  'Calculating optimal load...',
   'Designing early week sessions...',
   'Creating mid-week training...',
   'Planning weekend sessions...',
   'Optimizing recovery periods...',
   'Balancing training types...',
-  'Finalizing your personalized plan...',
+  'Finalizing your plan...',
   'Almost ready...'
 ];
 
@@ -145,15 +144,14 @@ export default function TrainingPlanGenerationLoader({ onComplete, isComplete }:
 
       // Complete steps in sequence over 42 seconds (0.5s to 42s)
       completeStep(0, 3000);   // Step 1: Analyzing your profile and goals - 3s
-      completeStep(1, 6000);   // Step 2: Evaluating your team schedule - 6s
-      completeStep(2, 9000);   // Step 3: Assessing gym access and equipment - 9s
-      completeStep(3, 13000);  // Step 4: Reviewing injury history and limitations - 13s
-      completeStep(4, 17000);  // Step 5: Calculating training load distribution - 17s
-      completeStep(5, 22000);  // Step 6: Designing Monday-Wednesday sessions - 22s
-      completeStep(6, 27000);  // Step 7: Designing Thursday-Sunday sessions - 27s
-      completeStep(7, 32000);  // Step 8: Optimizing recovery periods - 32s
-      completeStep(8, 37000);  // Step 9: Balancing field vs gym training - 37s
-      completeStep(9, 40000);  // Step 10: Finalizing weekly structure - 40s (last step)
+      completeStep(1, 8000);   // Step 2: Evaluating your team schedule - 6s
+      completeStep(2, 14000);   // Step 3: Assessing gym access and equipment - 9s
+      completeStep(3, 18000);  // Step 4: Reviewing injury history and limitations - 13s
+      completeStep(4, 22000);  // Step 5: Calculating training load distribution - 17s
+      completeStep(5, 26000);  // Step 6: Designing Monday-Wednesday sessions - 22s
+      completeStep(6, 30000);  // Step 7: Designing Thursday-Sunday sessions - 27s
+      completeStep(7, 35000);  // Step 8: Optimizing recovery periods - 32s
+      completeStep(8, 40000);  // Step 9: Balancing field vs gym training - 37s
     };
 
     const timer = setTimeout(startGeneration, 100);
@@ -221,19 +219,13 @@ export default function TrainingPlanGenerationLoader({ onComplete, isComplete }:
         style={{
           backgroundColor: '#FFFFFF',
           borderRadius: 20,
-          padding: 32,
+          padding: 24,
           width: '90%',
           maxWidth: 400,
           alignItems: 'center',
         }}
         entering={FadeInDown.duration(400).springify()}
       >
-        {/* Training Icon - Removed the football icon */}
-        <View style={{
-          marginBottom: 20,
-        }}>
-        </View>
-
         {/* Large Percentage Display */}
         <Text style={{
           fontSize: 48,
@@ -253,17 +245,7 @@ export default function TrainingPlanGenerationLoader({ onComplete, isComplete }:
           color: '#000',
           marginBottom: 8,
         }} allowFontScaling={false}>
-          Generating Your Training Plan
-        </Text>
-
-        {/* Warning Message */}
-        <Text style={{
-          fontSize: 14,
-          textAlign: 'center',
-          color: '#666',
-          marginBottom: 24,
-        }} allowFontScaling={false}>
-          This may take a few minutes
+          Generating Plan
         </Text>
 
         {/* Progress Bar */}
@@ -299,24 +281,14 @@ export default function TrainingPlanGenerationLoader({ onComplete, isComplete }:
         <View style={{
           backgroundColor: '#4064F6',
           borderRadius: 12,
-          padding: 20,
+          padding: 16,
           width: '100%',
-          marginBottom: 20,
-          maxHeight: 280, // Limit height to prevent overflow
+          marginBottom: 16,
+          maxHeight: 320, // Limit height to prevent overflow
         }}>
-          <Text style={{
-            fontSize: 16,
-            fontWeight: '600',
-            color: '#FFFFFF',
-            marginBottom: 16,
-            textAlign: 'center',
-          }} allowFontScaling={false}>
-            Creating your personalized plan
-          </Text>
-
           <ScrollView 
             ref={scrollViewRef}
-            style={{ maxHeight: 200 }}
+            style={{ maxHeight: 320 }}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 4 }}
           >
@@ -379,7 +351,7 @@ export default function TrainingPlanGenerationLoader({ onComplete, isComplete }:
           textAlign: 'center',
           color: '#666',
         }} allowFontScaling={false}>
-          Please don't close the app while we generate your plan
+          This may take a few minutes. Please don't close the app while we generate your training plan.
         </Text>
       </Animated.View>
     </Animated.View>

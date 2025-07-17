@@ -14,10 +14,9 @@ import { useHaptics } from '../utils/haptics';
 const GENERATION_STEPS = [
   { text: 'Analyzing your recovery metrics', checked: false },
   { text: 'Calculating your training load', checked: false },
-  { text: 'Evaluating soreness and fatigue levels', checked: false },
   { text: 'Assessing available recovery tools', checked: false },
   { text: 'Considering sleep amount', checked: false },
-  { text: 'Calculating optimal recovery duration', checked: false },
+  { text: 'Calculating recovery duration', checked: false },
   { text: 'Selecting most effective tools', checked: false },
   { text: 'Designing recovery sequence', checked: false },
   { text: 'Optimizing tool compatibility', checked: false },
@@ -27,10 +26,10 @@ const GENERATION_STEPS = [
 const STATUS_MESSAGES = [
   'Reviewing your recovery metrics...',
   'Calculating your training load...',
-  'Analyzing soreness and fatigue levels...',
-  'Checking available recovery tools...',
+  'Analyzing recovery questions...',
+  'Checking available equipment...',
   'Considering sleep amount...',
-  'Calculating optimal recovery duration...',
+  'Calculating recovery duration...',
   'Selecting most effective tools...',
   'Designing recovery sequence...',
   'Optimizing tool compatibility...',
@@ -218,19 +217,13 @@ export default function RecoveryPlanGenerationLoader({ onComplete, isComplete }:
         style={{
           backgroundColor: '#FFFFFF',
           borderRadius: 20,
-          padding: 32,
+          padding: 24,
           width: '90%',
           maxWidth: 400,
           alignItems: 'center',
         }}
         entering={FadeInDown.duration(400).springify()}
       >
-        {/* Recovery Icon - Removed the refresh icon */}
-        <View style={{
-          marginBottom: 20,
-        }}>
-        </View>
-
         {/* Large Percentage Display */}
         <Text style={{
           fontSize: 48,
@@ -250,17 +243,7 @@ export default function RecoveryPlanGenerationLoader({ onComplete, isComplete }:
           color: '#000',
           marginBottom: 8,
         }} allowFontScaling={false}>
-          Generating Your Recovery Plan
-        </Text>
-
-        {/* Warning Message */}
-        <Text style={{
-          fontSize: 14,
-          textAlign: 'center',
-          color: '#666',
-          marginBottom: 24,
-        }} allowFontScaling={false}>
-          This may take a moment
+          Generating Plan
         </Text>
 
         {/* Progress Bar */}
@@ -299,21 +282,11 @@ export default function RecoveryPlanGenerationLoader({ onComplete, isComplete }:
           padding: 20,
           width: '100%',
           marginBottom: 20,
-          maxHeight: 280, // Limit height to prevent overflow
+          maxHeight: 320, // Limit height to prevent overflow
         }}>
-          <Text style={{
-            fontSize: 16,
-            fontWeight: '600',
-            color: '#FFFFFF',
-            marginBottom: 16,
-            textAlign: 'center',
-          }} allowFontScaling={false}>
-            Creating your personalized recovery plan
-          </Text>
-
           <ScrollView 
             ref={scrollViewRef}
-            style={{ maxHeight: 200 }}
+            style={{ maxHeight: 320 }}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 4 }}
           >
@@ -376,7 +349,7 @@ export default function RecoveryPlanGenerationLoader({ onComplete, isComplete }:
           textAlign: 'center',
           color: '#666',
         }} allowFontScaling={false}>
-          Please don't close the app while we generate your plan
+          This may take a few minutes. Please don't close the app while we generate your recovery plan
         </Text>
       </Animated.View>
     </Animated.View>
