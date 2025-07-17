@@ -2256,26 +2256,24 @@ IMPORTANT USAGE GUIDELINES:
                     </View>
                   ) : todaysPlan ? (
                     <View style={styles.planContentContainer}>
-                      <View style={styles.formattedPlanContainer}>
-                        {formatPlanText(todaysPlan).map((item, index) => (
-                          <View key={index} style={styles.recoveryBulletItem}>
-                            {item.type === 'bullet' ? (
-                              <View style={styles.bulletRow}>
-                                <Text style={styles.bulletNumber}>{item.number}.</Text>
-                                <View style={styles.bulletContent}>
-                                  <Text style={styles.bulletHeaderLine}>
-                                    <Text style={styles.bulletActivity}>{item.activity}</Text>
-                                    <Text style={styles.bulletDuration}> {item.duration}</Text>
-                                  </Text>
-                                  <Text style={styles.bulletInstruction}>{item.instruction}</Text>
-                                </View>
+                      {formatPlanText(todaysPlan).map((item, index) => (
+                        <View key={index} style={styles.recoveryBulletItem}>
+                          {item.type === 'bullet' ? (
+                            <View style={styles.bulletRow}>
+                              <Text style={styles.bulletNumber}>{item.number}.</Text>
+                              <View style={styles.bulletContent}>
+                                <Text style={styles.bulletHeaderLine}>
+                                  <Text style={styles.bulletActivity}>{item.activity}</Text>
+                                  <Text style={styles.bulletDuration}> {item.duration}</Text>
+                                </Text>
+                                <Text style={styles.bulletInstruction}>{item.instruction}</Text>
                               </View>
-                            ) : (
-                              <Text style={styles.recoveryActivityText}>{item.content}</Text>
-                            )}
-                          </View>
-                        ))}
-                      </View>
+                            </View>
+                          ) : (
+                            <Text style={styles.recoveryActivityText}>{item.content}</Text>
+                          )}
+                        </View>
+                      ))}
                       <Text style={styles.planDateText}>
                         Generated on {format(selectedDate, 'MMMM d, yyyy')}
                       </Text>
@@ -2827,7 +2825,7 @@ const styles = StyleSheet.create({
     color: '#999999',
   },
   planContentContainer: {
-    padding: 20,
+    padding: 0,
   },
   emptyPlanContainer: {
     alignItems: 'center',

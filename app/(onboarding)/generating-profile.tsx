@@ -60,7 +60,9 @@ export default function GeneratingProfileScreen() {
        const percentageInterval = setInterval(() => {
          const currentProgress = progress.value;
          const displayPercentage = Math.min(100, Math.floor(currentProgress));
-         setCurrentPercentage(displayPercentage);
+         
+         // Ensure progress only moves forward
+         setCurrentPercentage(prev => Math.max(prev, displayPercentage));
          
          // Update status message based on progress
          if (currentProgress >= 0 && currentProgress < 25) {
@@ -113,10 +115,7 @@ export default function GeneratingProfileScreen() {
          ));
        }, 7200);
 
-       // Ensure we hit 100% at the very end
-       setTimeout(() => {
-         setCurrentPercentage(100);
-       }, totalDuration - 100);
+
     };
 
     const timer = setTimeout(startGeneration, 500);

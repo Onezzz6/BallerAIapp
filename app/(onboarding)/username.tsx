@@ -126,7 +126,6 @@ export default function UsernameScreen() {
                 <TextInput
                   value={username}
                   onChangeText={(text) => {
-                    haptics.light();
                     setUsername(text);
                   }}
                   placeholder="Enter your name"
