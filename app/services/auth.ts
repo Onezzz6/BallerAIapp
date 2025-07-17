@@ -12,6 +12,7 @@ import {
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import { resetPaywallPresentationFlag } from '../(onboarding)/paywall';
 
 type UserOnboardingData = {
   username: string | null;
@@ -97,6 +98,9 @@ const authService = {
 
   async signOut() {
     try {
+      // Reset paywall presentation flag on sign out
+      resetPaywallPresentationFlag();
+      
       await signOut(auth);
     } catch (error) {
       throw error;

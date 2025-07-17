@@ -33,21 +33,56 @@ export function resetAuthenticationStatus() {
   // RevenueCat state reset is handled in the signOut flow
 }
 
+// Function to check if user has completed authentication
+export function isAuthenticationComplete() {
+  return hasUserCompletedAuthentication;
+}
+
+// Function to reset the paywall presentation flag - use this if the paywall gets stuck
+export function resetPaywallPresentationFlag() {
+  console.log("🔄 Manually resetting paywall presentation flag");
+  isPaywallCurrentlyPresented = false;
+}
+
 // Local implementation of onboarding screen detection to avoid circular dependency
 // This is only used to prevent foreground-background paywall checks during onboarding
 // It is NOT used to skip paywall display after sign-in/sign-up
 const isOnOnboardingScreen = (path: string) => {
   return path.includes('/(onboarding)') || 
+    path.includes('/welcome') ||
+    path.includes('/gender') || 
+    path.includes('/training-frequency') ||
+    path.includes('/where-did-you-find-us') ||
+    path.includes('/tried-other-apps') ||
+    path.includes('/analyzing') ||
+    path.includes('/measurements') ||
+    path.includes('/age') ||
+    path.includes('/username') ||
+    path.includes('/improvement-focus') ||
+    path.includes('/goal-timeline') ||
+    path.includes('/motivation-confirmation') ||
+    path.includes('/holding-back') ||
+    path.includes('/training-accomplishment') ||
+    path.includes('/encouragement') ||
+    path.includes('/team-status') ||
+    path.includes('/position') ||
+    path.includes('/injury-history') ||
+    path.includes('/fitness-level') ||
+    path.includes('/activity-level') ||
+    path.includes('/sleep-hours') ||
+    path.includes('/nutrition') ||
+    path.includes('/referral-code') ||
+    path.includes('/social-proof') ||
+    path.includes('/motivation-reason') ||
+    path.includes('/profile-generation') ||
+    path.includes('/profile-complete') ||
+    path.includes('/generating-profile') ||
     path.includes('/paywall') || 
     path.includes('/sign') || 
     path.includes('/motivation') ||
     path.includes('/tracking') ||
     path.includes('/football-goal') ||
     path.includes('/smart-watch') ||
-    
-    path.includes('/training-frequency') ||
-    path.includes('/improvement-focus') ||
-    path.includes('/username') ||
     path === '/';
 };
 
@@ -326,62 +361,69 @@ export async function runPostLoginSequence(
     // Show appropriate paywall based on referral code status
     let paywallResult;
     
-    // First, get offerings to specify which one to show
-    console.log("STEP 7a: Fetching offerings...");
-    const offerings = await Purchases.getOfferings();
-    
-    if (hasReferralCode && paywallType === 'freetrial') {
-      // For free trial referral users, show the free trial paywall
-      console.log("🎁 Presenting FREE TRIAL paywall for free trial referral user");
-      const freeTrialOffering = offerings.all['free trial paywall'];
+    try {
+      // First, get offerings to specify which one to show
+      console.log("STEP 7a: Fetching offerings...");
+      const offerings = await Purchases.getOfferings();
       
-      if (freeTrialOffering) {
-        console.log("✅ Free trial offering found, presenting free trial paywall");
-        paywallResult = await RevenueCatUI.presentPaywall({
-          offering: freeTrialOffering
-        });
+      if (hasReferralCode && paywallType === 'freetrial') {
+        // For free trial referral users, show the free trial paywall
+        console.log("🎁 Presenting FREE TRIAL paywall for free trial referral user");
+        const freeTrialOffering = offerings.all['free trial paywall'];
+        
+        if (freeTrialOffering) {
+          console.log("✅ Free trial offering found, presenting free trial paywall");
+          paywallResult = await RevenueCatUI.presentPaywall({
+            offering: freeTrialOffering
+          });
+        } else {
+          console.warn("⚠️ Free trial offering not found, falling back to default paywall");
+          paywallResult = await RevenueCatUI.presentPaywallIfNeeded({
+            requiredEntitlementIdentifier: ENTITLEMENT_ID
+          });
+        }
+      } else if (hasReferralCode) {
+        // For discount referral users, show the referral offering with discounted products
+        console.log("🎁 Presenting DISCOUNT paywall for discount referral user");
+        const referralOffering = offerings.all['ReferralOffering'];
+        
+        if (referralOffering) {
+          console.log("✅ ReferralOffering found, presenting with discount");
+          paywallResult = await RevenueCatUI.presentPaywall({
+            offering: referralOffering
+          });
+        } else {
+          console.warn("⚠️ ReferralOffering not found, falling back to default paywall");
+          paywallResult = await RevenueCatUI.presentPaywallIfNeeded({
+            requiredEntitlementIdentifier: ENTITLEMENT_ID
+          });
+        }
       } else {
-        console.warn("⚠️ Free trial offering not found, falling back to default paywall");
-        paywallResult = await RevenueCatUI.presentPaywallIfNeeded({
-          requiredEntitlementIdentifier: ENTITLEMENT_ID
-        });
+        // Present regular paywall for non-referral users
+        console.log("💰 Presenting REGULAR paywall for non-referral user");
+        const regularOffering = offerings.all['NewOfferings'] || offerings.current;
+        
+        if (regularOffering) {
+          console.log("✅ Regular offering found, presenting standard paywall");
+          paywallResult = await RevenueCatUI.presentPaywall({
+            offering: regularOffering
+          });
+        } else {
+          console.warn("⚠️ Regular offering not found, using default paywall");
+          paywallResult = await RevenueCatUI.presentPaywallIfNeeded({
+            requiredEntitlementIdentifier: ENTITLEMENT_ID
+          });
+        }
       }
-    } else if (hasReferralCode) {
-      // For discount referral users, show the referral offering with discounted products
-      console.log("🎁 Presenting DISCOUNT paywall for discount referral user");
-      const referralOffering = offerings.all['ReferralOffering'];
-      
-      if (referralOffering) {
-        console.log("✅ ReferralOffering found, presenting with discount");
-        paywallResult = await RevenueCatUI.presentPaywall({
-          offering: referralOffering
-        });
-      } else {
-        console.warn("⚠️ ReferralOffering not found, falling back to default paywall");
-        paywallResult = await RevenueCatUI.presentPaywallIfNeeded({
-          requiredEntitlementIdentifier: ENTITLEMENT_ID
-        });
-      }
-    } else {
-      // Present regular paywall for non-referral users
-      console.log("💰 Presenting REGULAR paywall for non-referral user");
-      const regularOffering = offerings.all['NewOfferings'] || offerings.current;
-      
-      if (regularOffering) {
-        console.log("✅ Regular offering found, presenting standard paywall");
-        paywallResult = await RevenueCatUI.presentPaywall({
-          offering: regularOffering
-        });
-      } else {
-        console.warn("⚠️ Regular offering not found, using default paywall");
-        paywallResult = await RevenueCatUI.presentPaywallIfNeeded({
-          requiredEntitlementIdentifier: ENTITLEMENT_ID
-        });
-      }
+    } catch (paywallError) {
+      console.error("Error presenting paywall:", paywallError);
+      // If there's an error presenting the paywall, treat it as cancelled
+      paywallResult = PAYWALL_RESULT.CANCELLED;
+    } finally {
+      // Always reset paywall presented flag, regardless of success or error
+      console.log("🔄 Resetting paywall presentation flag");
+      isPaywallCurrentlyPresented = false;
     }
-    
-    // Reset paywall presented flag
-    isPaywallCurrentlyPresented = false;
     
     // 8. Handle paywall result with appropriate navigation
     if (paywallResult === PAYWALL_RESULT.PURCHASED || 

@@ -1,7 +1,7 @@
 import React, { createContext, useContext } from 'react';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Slot, useRouter } from 'expo-router';
+import { Slot, useRouter, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
@@ -24,7 +24,7 @@ import { PAYWALL_RESULT } from 'react-native-purchases-ui';
 
 import { initializeAppsFlyer, cleanupAppsFlyer } from './config/appsflyer';
 import { configureRevenueCat, logInRevenueCatUser, setReferralCode } from './services/revenuecat';
-import { checkSubscriptionOnForeground } from './(onboarding)/paywall';
+import { checkSubscriptionOnForeground, isAuthenticationComplete, resetPaywallPresentationFlag } from './(onboarding)/paywall';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from './config/firebase';
 
@@ -51,6 +51,7 @@ function SubscriptionProvider({ children }: { children: React.ReactNode }) {
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
   const { user } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const customerInfoListenerSetup = useRef<boolean>(false);
   
   // Reset listener setup when user changes (including logout)
@@ -98,6 +99,9 @@ function SubscriptionProvider({ children }: { children: React.ReactNode }) {
       if (user && user.uid) {
         try {
           console.log(`==== SETTING UP REVENUECAT FOR USER: ${user.uid} ====`);
+          
+          // Reset paywall presentation flag for new user session
+          resetPaywallPresentationFlag();
           
           // Reset listener setup flag for new user (in case previous user was signed out without cleanup)
           customerInfoListenerSetup.current = false;
@@ -196,6 +200,17 @@ function SubscriptionProvider({ children }: { children: React.ReactNode }) {
           console.log('⏰ Time since last check:', Math.floor(timeSinceLastCheck / 1000) + ' seconds');
           lastBackgroundCheckTime = currentTime;
           
+          // Get current pathname at the time of check
+          const currentPath = pathname;
+          const authComplete = isAuthenticationComplete();
+          console.log('📍 Current path during background check:', currentPath);
+          console.log('🔐 Authentication complete:', authComplete);
+          
+          // If user has completed authentication, don't consider them in onboarding
+          // This prevents the pathname from being stuck on /sign-up after successful auth
+          const effectivePath = authComplete ? '/(tabs)/home' : currentPath;
+          console.log('🎯 Effective path for onboarding check:', effectivePath);
+          
           // Perform subscription check when app goes to background
           checkSubscriptionOnForeground(
             user.uid,
@@ -206,7 +221,8 @@ function SubscriptionProvider({ children }: { children: React.ReactNode }) {
               console.log('❌ Background check result: User subscription expired or cancelled - navigating to welcome');
               // Navigate to welcome screen when paywall is cancelled
               router.replace('/welcome');
-            }
+            },
+            effectivePath // Pass effective path to enable proper onboarding check
           );
         } else {
           const remainingTime = Math.ceil((BACKGROUND_CHECK_COOLDOWN - timeSinceLastCheck) / 1000);
@@ -274,6 +290,7 @@ function RootLayoutContent() {
 // It is NOT used to skip paywall display after sign-in/sign-up
 export const isOnOnboardingScreen = (path: string) => {
   return path.includes('/(onboarding)') || 
+    path.includes('/welcome') ||
     path.includes('/gender') || 
     path.includes('/training-frequency') ||
     path.includes('/where-did-you-find-us') ||
@@ -301,14 +318,12 @@ export const isOnOnboardingScreen = (path: string) => {
     path.includes('/profile-generation') ||
     path.includes('/profile-complete') ||
     path.includes('/generating-profile') ||
-
     path.includes('/paywall') || 
     path.includes('/sign') || 
     path.includes('/motivation') ||
     path.includes('/tracking') ||
     path.includes('/football-goal') ||
     path.includes('/smart-watch') ||
-    path.includes('/improvement-focus') ||
     path === '/';
 };
 
