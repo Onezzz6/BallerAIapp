@@ -110,8 +110,10 @@ export async function checkSubscriptionOnForeground(
     return;
   }
   
-  // Skip check only if user is in onboarding flow
-  if (currentPath) {
+  // Skip onboarding checks if currentPath is undefined (indicates we should always check)
+  if (currentPath === undefined) {
+    console.log("🎯 No path provided - skipping onboarding checks and proceeding with subscription check");
+  } else if (currentPath) {
     console.log(`Current path for checking: "${currentPath}"`);
     const inOnboarding = isOnOnboardingScreen(currentPath);
     console.log(`Is in onboarding flow? ${inOnboarding ? 'YES' : 'NO'}`);
@@ -121,7 +123,7 @@ export async function checkSubscriptionOnForeground(
       return;
     }
   } else {
-    console.log("⚠️ No current path provided - continuing with subscription check");
+    console.log("⚠️ Empty path provided - continuing with subscription check");
   }
 
   try {

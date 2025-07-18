@@ -24,7 +24,7 @@ import { PAYWALL_RESULT } from 'react-native-purchases-ui';
 
 import { initializeAppsFlyer, cleanupAppsFlyer } from './config/appsflyer';
 import { configureRevenueCat, logInRevenueCatUser, setReferralCode } from './services/revenuecat';
-import { checkSubscriptionOnForeground, isAuthenticationComplete, resetPaywallPresentationFlag } from './(onboarding)/paywall';
+import { checkSubscriptionOnForeground, resetPaywallPresentationFlag } from './(onboarding)/paywall';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from './config/firebase';
 
@@ -202,28 +202,36 @@ function SubscriptionProvider({ children }: { children: React.ReactNode }) {
           
           // Get current pathname at the time of check
           const currentPath = pathname;
-          const authComplete = isAuthenticationComplete();
           console.log('📍 Current path during background check:', currentPath);
-          console.log('🔐 Authentication complete:', authComplete);
           
-          // If user has completed authentication, don't consider them in onboarding
-          // This prevents the pathname from being stuck on /sign-up after successful auth
-          const effectivePath = authComplete ? '/(tabs)/home' : currentPath;
-          console.log('🎯 Effective path for onboarding check:', effectivePath);
+          // Check if user is on one of the 5 main tabs
+          const isOnMainTabs = currentPath.includes('/home') || 
+                              currentPath.includes('/nutrition') || 
+                              currentPath.includes('/profile') || 
+                              currentPath.includes('/recovery') || 
+                              currentPath.includes('/training');
           
-          // Perform subscription check when app goes to background
-          checkSubscriptionOnForeground(
-            user.uid,
-            () => {
-              console.log('✅ Background check result: User has active subscription');
-            },
-            () => {
-              console.log('❌ Background check result: User subscription expired or cancelled - navigating to welcome');
-              // Navigate to welcome screen when paywall is cancelled
-              router.replace('/welcome');
-            },
-            effectivePath // Pass effective path to enable proper onboarding check
-          );
+          console.log('🎯 User is on main tabs:', isOnMainTabs);
+          
+          if (isOnMainTabs) {
+            console.log('🔍 User is on main tabs - performing subscription check');
+            
+            // Perform subscription check when app goes to background (no onboarding checks)
+            checkSubscriptionOnForeground(
+              user.uid,
+              () => {
+                console.log('✅ Background check result: User has active subscription');
+              },
+              () => {
+                console.log('❌ Background check result: User subscription expired or cancelled - navigating to welcome');
+                // Navigate to welcome screen when paywall is cancelled
+                router.replace('/welcome');
+              },
+              undefined // Pass undefined to skip onboarding checks entirely
+            );
+          } else {
+            console.log('🚫 User is not on main tabs - skipping background subscription check');
+          }
         } else {
           const remainingTime = Math.ceil((BACKGROUND_CHECK_COOLDOWN - timeSinceLastCheck) / 1000);
           console.log('⏳ COOLDOWN ACTIVE - Background/inactive check skipped');
