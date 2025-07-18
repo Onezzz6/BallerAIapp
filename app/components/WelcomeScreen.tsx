@@ -618,7 +618,7 @@ export default function WelcomeScreen() {
                   style={({ pressed }) => ({
                     flex: 1,
                     padding: spacing.md,
-                    borderRadius: 8,
+                    borderRadius: 32,
                     backgroundColor: colors.disabledBackground,
                     alignItems: 'center',
                     opacity: pressed ? 0.7 : 1,
@@ -639,7 +639,7 @@ export default function WelcomeScreen() {
                   style={({ pressed }) => ({
                     flex: 1,
                     padding: spacing.md,
-                    borderRadius: 8,
+                    borderRadius: 32,
                     backgroundColor: colors.brandBlue,
                     alignItems: 'center',
                     opacity: pressed || isLoading ? 0.7 : 1,
@@ -650,7 +650,7 @@ export default function WelcomeScreen() {
                     color: colors.white,
                     fontWeight: '600',
                   }}>
-                    {isLoading ? 'Sending...' : 'Send Reset Email'}
+                    {isLoading ? 'Sending Link...' : 'Reset'}
                   </Text>
                 </Pressable>
               </View>

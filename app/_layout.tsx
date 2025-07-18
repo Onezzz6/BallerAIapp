@@ -53,6 +53,12 @@ function SubscriptionProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const customerInfoListenerSetup = useRef<boolean>(false);
+  const pathnameRef = useRef<string>(pathname);
+  
+  // Update pathname ref whenever pathname changes
+  useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
   
   // Reset listener setup when user changes (including logout)
   useEffect(() => {
@@ -183,63 +189,67 @@ function SubscriptionProvider({ children }: { children: React.ReactNode }) {
     const handleAppStateChange = (nextAppState: string) => {
       console.log('📱 App state changed to:', nextAppState);
       
-      if (nextAppState === 'background' || nextAppState === 'inactive') {
+      if (nextAppState === 'active') {
         const currentTime = Date.now();
         const timeSinceLastCheck = currentTime - lastBackgroundCheckTime;
         
-        console.log('🔍 Background/inactive state detected:', {
+        console.log('🔍 App became active - checking if subscription check needed:', {
           currentTime: new Date(currentTime).toLocaleTimeString(),
           lastCheckTime: lastBackgroundCheckTime === 0 ? 'never' : new Date(lastBackgroundCheckTime).toLocaleTimeString(),
           timeSinceLastCheck: Math.floor(timeSinceLastCheck / 1000) + 's',
           cooldownRequired: Math.floor(BACKGROUND_CHECK_COOLDOWN / 1000) + 's'
         });
         
-        // Check if 45 seconds have passed since last background check
+        // Check if 45 seconds have passed since last foreground check
         if (timeSinceLastCheck >= BACKGROUND_CHECK_COOLDOWN) {
-          console.log('✅ COOLDOWN PASSED - Running background/inactive subscription check');
+          console.log('✅ COOLDOWN PASSED - Running foreground subscription check');
           console.log('⏰ Time since last check:', Math.floor(timeSinceLastCheck / 1000) + ' seconds');
           lastBackgroundCheckTime = currentTime;
           
-          // Get current pathname at the time of check
-          const currentPath = pathname;
-          console.log('📍 Current path during background check:', currentPath);
-          
-          // Check if user is on one of the 5 main tabs
-          const isOnMainTabs = currentPath.includes('/home') || 
-                              currentPath.includes('/nutrition') || 
-                              currentPath.includes('/profile') || 
-                              currentPath.includes('/recovery') || 
-                              currentPath.includes('/training');
-          
-          console.log('🎯 User is on main tabs:', isOnMainTabs);
-          
-          if (isOnMainTabs) {
-            console.log('🔍 User is on main tabs - performing subscription check');
+          // Add a small delay to let navigation state update before checking pathname
+          setTimeout(() => {
+            // Get current pathname at the time of check (fresh from ref)
+            const currentPath = pathnameRef.current;
+            console.log('📍 Current path during foreground check (from ref):', currentPath);
             
-            // Perform subscription check when app goes to background (no onboarding checks)
-            checkSubscriptionOnForeground(
-              user.uid,
-              () => {
-                console.log('✅ Background check result: User has active subscription');
-              },
-              () => {
-                console.log('❌ Background check result: User subscription expired or cancelled - navigating to welcome');
-                // Navigate to welcome screen when paywall is cancelled
-                router.replace('/welcome');
-              },
-              undefined // Pass undefined to skip onboarding checks entirely
-            );
-          } else {
-            console.log('🚫 User is not on main tabs - skipping background subscription check');
-          }
+            // Check if user is on one of the 5 main tabs (or settings)
+            const isOnMainTabs = currentPath === '/home' || 
+                                currentPath === '/nutrition' || 
+                                currentPath === '/profile' || 
+                                currentPath === '/settings' || 
+                                currentPath === '/recovery' || 
+                                currentPath === '/training';
+            
+            console.log('🎯 User is on main tabs:', isOnMainTabs);
+            
+            if (isOnMainTabs) {
+              console.log('🔍 User is on main tabs - performing subscription check');
+              
+              // Perform subscription check when app comes to foreground (no onboarding checks)
+              checkSubscriptionOnForeground(
+                user.uid,
+                () => {
+                  console.log('✅ Foreground check result: User has active subscription');
+                },
+                () => {
+                  console.log('❌ Foreground check result: User subscription expired or cancelled - navigating to welcome');
+                  // Navigate to welcome screen when paywall is cancelled
+                  router.replace('/welcome');
+                },
+                undefined // Pass undefined to skip onboarding checks entirely
+              );
+            } else {
+              console.log('🚫 User is not on main tabs - skipping foreground subscription check');
+            }
+          }, 100); // Small delay to let navigation state update
         } else {
           const remainingTime = Math.ceil((BACKGROUND_CHECK_COOLDOWN - timeSinceLastCheck) / 1000);
-          console.log('⏳ COOLDOWN ACTIVE - Background/inactive check skipped');
+          console.log('⏳ COOLDOWN ACTIVE - Foreground check skipped');
           console.log('⏰ Time remaining in cooldown:', remainingTime + ' seconds');
           console.log('🔄 Next check available at:', new Date(lastBackgroundCheckTime + BACKGROUND_CHECK_COOLDOWN).toLocaleTimeString());
         }
       } else {
-        console.log('ℹ️ App state is', nextAppState, '- subscription check only runs on background/inactive state');
+        console.log('ℹ️ App state is', nextAppState, '- subscription check only runs when app becomes active');
       }
     };
     
