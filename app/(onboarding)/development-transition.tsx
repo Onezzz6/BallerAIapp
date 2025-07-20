@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -26,7 +26,7 @@ import Svg, {
   Defs,
   LinearGradient,
   Stop,
-  ClipPath,
+  Mask,
 } from 'react-native-svg';
 import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
 import Button from '../components/Button';
@@ -94,20 +94,19 @@ function DevelopmentChart({
   const progress = useSharedValue(0);
   const hasCompleted = useSharedValue(false); // Guard to prevent multiple calls
 
-  // Label visibility state (React state for re-rendering)
-  const [showStart, setShowStart] = useState(false);
-  const [show3Days, setShow3Days] = useState(false);
-  const [show7Days, setShow7Days] = useState(false);
-  const [show30Days, setShow30Days] = useState(false);
-  
-  // Ball visibility state (same approach as labels)
-  const [showBall1, setShowBall1] = useState(false);
-  const [showBall2, setShowBall2] = useState(false);
-  const [showBall3, setShowBall3] = useState(false);
+  // Use animated values for everything to avoid React re-renders during animation
+  const startLabelOpacity = useSharedValue(0.001);
+  const label3DaysOpacity = useSharedValue(0.001);
+  const label7DaysOpacity = useSharedValue(0.001);
+  const label30DaysOpacity = useSharedValue(0.001);
+  const ball1Opacity = useSharedValue(0.001);
+  const ball2Opacity = useSharedValue(0.001);
+  const ball3Opacity = useSharedValue(0.001);
 
   // Animated components
   const AnimatedSvgText = Animated.createAnimatedComponent(SvgText);
   const AnimatedRect = Animated.createAnimatedComponent(Rect);
+  const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
   // Animated clipping that advances with the line (perfectly synchronized)
   const animatedClipWidth = useAnimatedProps(() => ({
@@ -124,24 +123,43 @@ function DevelopmentChart({
   const milestone2Progress = 0.65; // milestone2 is at 65% of the total line  
   const milestone3Progress = 0.9;  // milestone3 is at 90% of the total line
 
-  // Monitor progress and update both label and ball visibility using runOnJS
-  useDerivedValue(() => {
-    if (progress.value >= 0.05 && !showStart) {
-      runOnJS(setShowStart)(true);
-    }
-    if (progress.value >= milestone1Progress && !show3Days) {
-      runOnJS(setShow3Days)(true);
-      runOnJS(setShowBall1)(true);
-    }
-    if (progress.value >= milestone2Progress && !show7Days) {
-      runOnJS(setShow7Days)(true);
-      runOnJS(setShowBall2)(true);
-    }
-    if (progress.value >= milestone3Progress && !show30Days) {
-      runOnJS(setShow30Days)(true);
-      runOnJS(setShowBall3)(true);
-    }
-  });
+  // Use delays with animated values to avoid any React re-renders
+  useEffect(() => {
+    // Calculate timing based on animation duration and milestones
+    const animationDuration = 1750; // Same as progress animation
+    const delayStart = 200; // Same as progress animation delay
+    
+    // Account for Easing.in(Easing.quad) - need to find inverse of t^2
+    // For milestone at progress p, actual time t where t^2 = p, so t = sqrt(p)
+    const startTime = delayStart + (Math.sqrt(0.05) * animationDuration);
+    const milestone1Time = delayStart + (Math.sqrt(milestone1Progress) * animationDuration);
+    const milestone2Time = delayStart + (Math.sqrt(milestone2Progress) * animationDuration);
+    const milestone3Time = delayStart + (Math.sqrt(milestone3Progress) * animationDuration);
+    
+    // Use timeouts to animate opacity values instead of changing React state
+    const startTimer = setTimeout(() => {
+      startLabelOpacity.value = withTiming(1, { duration: 200 });
+    }, startTime);
+    const timer1 = setTimeout(() => {
+      label3DaysOpacity.value = withTiming(1, { duration: 200 });
+      ball1Opacity.value = withTiming(1, { duration: 200 });
+    }, milestone1Time);
+    const timer2 = setTimeout(() => {
+      label7DaysOpacity.value = withTiming(1, { duration: 200 });
+      ball2Opacity.value = withTiming(1, { duration: 200 });
+    }, milestone2Time);
+    const timer3 = setTimeout(() => {
+      label30DaysOpacity.value = withTiming(1, { duration: 200 });
+      ball3Opacity.value = withTiming(1, { duration: 200 });
+    }, milestone3Time);
+    
+    return () => {
+      clearTimeout(startTimer);
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearTimeout(timer3);
+    };
+  }, []);
 
   // Signal completion (only once)
   useDerivedValue(() => {
@@ -201,15 +219,17 @@ function DevelopmentChart({
            <Stop offset="100%" stopColor="rgba(153, 232, 108, 0.3)" />
          </LinearGradient>
 
-         {/* Clipping path that advances with progress */}
-         <ClipPath id="progressClip">
-           <AnimatedRect x="20" y="0" height={height} animatedProps={animatedClipWidth} />
-         </ClipPath>
+         {/* Mask that advances with progress - more reliable on Android */}
+         <Mask id="progressMask">
+           <Rect x="0" y="0" width={width} height={height} fill="black" />
+           <AnimatedRect x="20" y="0" height={height} fill="white" animatedProps={animatedClipWidth} />
+         </Mask>
          
-         {/* Separate clipping path for the line (same progression) */}
-         <ClipPath id="lineClip">
-           <AnimatedRect x="20" y="0" height={height} animatedProps={animatedPathClipWidth} />
-         </ClipPath>
+         {/* Separate mask for the line (same progression) */}
+         <Mask id="lineMask">
+           <Rect x="0" y="0" width={width} height={height} fill="black" />
+           <AnimatedRect x="20" y="0" height={height} fill="white" animatedProps={animatedPathClipWidth} />
+         </Mask>
        </Defs>
 
        {/* Bottom baseline - black line level with start */}
@@ -251,7 +271,7 @@ function DevelopmentChart({
          })()}
          fill="url(#curtain1Grad)"
          stroke="none"
-         clipPath="url(#progressClip)"
+         mask="url(#progressMask)"
        />
        
        {/* Section 2: 3 Days to 7 Days - Building momentum (blended gradient) */}
@@ -277,7 +297,7 @@ function DevelopmentChart({
          })()}
          fill="url(#curtain2Grad)"
          stroke="none"
-         clipPath="url(#progressClip)"
+         mask="url(#progressMask)"
        />
        
        {/* Section 3: 7 Days to End - Exponential growth (smooth green gradient) */}
@@ -307,7 +327,7 @@ function DevelopmentChart({
          })()}
          fill="url(#curtain3Grad)"
          stroke="none"
-         clipPath="url(#progressClip)"
+         mask="url(#progressMask)"
        />
 
       {/* Grid lines */}
@@ -321,9 +341,6 @@ function DevelopmentChart({
         />
       ))}
 
-                    {/* Start point */}
-       <Circle cx="20" cy={startY} r="5" fill={colors.white} stroke="#000000" strokeWidth="2" />
-
        {/* Animated progress path */}
        <Path
          d={progressPath}
@@ -331,86 +348,82 @@ function DevelopmentChart({
          strokeWidth="2"
          fill="none"
          strokeLinecap="butt"
-         //clipPath="url(#lineClip)"
+         mask="url(#lineMask)"
        />
 
-       {/* Progressive milestone markers - conditionally rendered */}
-       {showBall1 && (
-         <Circle 
-           cx={milestone1.x} 
-           cy={milestone1.y} 
-           r="4" 
-           fill={colors.white} 
-           stroke="#000000" 
-           strokeWidth="2" 
-         />
-       )}
-       {showBall2 && (
-         <Circle 
-           cx={milestone2.x} 
-           cy={milestone2.y} 
-           r="4" 
-           fill={colors.white} 
-           stroke="#000000" 
-           strokeWidth="2" 
-         />
-       )}
-       {showBall3 && (
-         <Circle 
-           cx={milestone3.x} 
-           cy={milestone3.y} 
-           r="5" 
-           fill={colors.white} 
-           stroke="#000000" 
-           strokeWidth="2" 
-         />
-       )}
+       {/* Start point */}
+       <Circle cx="20" cy={startY} r="5" fill={colors.white} stroke="#000000" strokeWidth="2" />
 
-                    {/* Labels below the baseline - conditionally rendered */}
-       {showStart && (
-         <SvgText
-           x="15"
-           y={startY + 20}
-           fontSize="12"
-           fontWeight="500"
-           fill={colors.mediumGray}
-         >
-           Start
-         </SvgText>
-       )}
-       {show3Days && (
-         <SvgText
-           x={milestone1.x - 12}
-           y={startY + 20}
-           fontSize="12"
-           fontWeight="500"
-           fill={colors.mediumGray}
-         >
-           3 Days
-         </SvgText>
-       )}
-       {show7Days && (
-         <SvgText
-           x={milestone2.x - 12}
-           y={startY + 20}
-           fontSize="12"
-           fontWeight="500"
-           fill={colors.mediumGray}
-         >
-           7 Days
-         </SvgText>
-       )}
-       {show30Days && (
-         <SvgText
-           x={milestone3.x - 15}
-           y={startY + 20}
-           fontSize="12"
-           fontWeight="500"
-           fill={colors.mediumGray}
-         >
-           30 Days
-         </SvgText>
-       )}
+       {/* Progressive milestone markers - animated opacity */}
+       <AnimatedCircle 
+         cx={milestone1.x} 
+         cy={milestone1.y} 
+         r="4" 
+         fill={colors.white} 
+         stroke="#000000" 
+         strokeWidth="2"
+         animatedProps={useAnimatedProps(() => ({ opacity: ball1Opacity.value }))}
+       />
+       <AnimatedCircle 
+         cx={milestone2.x} 
+         cy={milestone2.y} 
+         r="4" 
+         fill={colors.white} 
+         stroke="#000000" 
+         strokeWidth="2"
+         animatedProps={useAnimatedProps(() => ({ opacity: ball2Opacity.value }))}
+       />
+       <AnimatedCircle 
+         cx={milestone3.x} 
+         cy={milestone3.y} 
+         r="5" 
+         fill={colors.white} 
+         stroke="#000000" 
+         strokeWidth="2"
+         animatedProps={useAnimatedProps(() => ({ opacity: ball3Opacity.value }))}
+       />
+
+                    {/* Labels below the baseline - animated opacity */}
+       <AnimatedSvgText
+         x="15"
+         y={startY + 20}
+         fontSize="12"
+         fontWeight="500"
+         fill={colors.mediumGray}
+         animatedProps={useAnimatedProps(() => ({ opacity: startLabelOpacity.value }))}
+       >
+         Start
+       </AnimatedSvgText>
+       <AnimatedSvgText
+         x={milestone1.x - 12}
+         y={startY + 20}
+         fontSize="12"
+         fontWeight="500"
+         fill={colors.mediumGray}
+         animatedProps={useAnimatedProps(() => ({ opacity: label3DaysOpacity.value }))}
+       >
+         3 Days
+       </AnimatedSvgText>
+       <AnimatedSvgText
+         x={milestone2.x - 12}
+         y={startY + 20}
+         fontSize="12"
+         fontWeight="500"
+         fill={colors.mediumGray}
+         animatedProps={useAnimatedProps(() => ({ opacity: label7DaysOpacity.value }))}
+       >
+         7 Days
+       </AnimatedSvgText>
+       <AnimatedSvgText
+         x={milestone3.x - 15}
+         y={startY + 20}
+         fontSize="12"
+         fontWeight="500"
+         fill={colors.mediumGray}
+         animatedProps={useAnimatedProps(() => ({ opacity: label30DaysOpacity.value }))}
+       >
+         30 Days
+       </AnimatedSvgText>
 
 
      </Svg>
