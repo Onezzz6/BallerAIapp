@@ -331,7 +331,7 @@ function DevelopmentChart({
          strokeWidth="2"
          fill="none"
          strokeLinecap="butt"
-         clipPath="url(#lineClip)"
+         //clipPath="url(#lineClip)"
        />
 
        {/* Progressive milestone markers - conditionally rendered */}

@@ -18,6 +18,11 @@ import RecoveryPlanGenerationLoader from '../components/RecoveryPlanGenerationLo
 // Add this line to get the API key from Constants.expoConfig.extra
 const OPENAI_API_KEY = Constants.expoConfig?.extra?.openaiApiKey;
 
+// SCREENSHOT FEATURE: Toggle this to make header fixed for screenshots
+// When true: Header stays fixed at top when scrolling (perfect for screenshots)
+// When false: Header scrolls normally with content (default behavior)
+const FIXED_HEADER_FOR_SCREENSHOT = false; // Set to false to revert to normal behavior
+
 type RecoveryData = {
   soreness: number;
   fatigue: number;
@@ -1583,8 +1588,81 @@ IMPORTANT USAGE GUIDELINES:
     setHeaderOpacity(newOpacity);
   };
 
+  // Header component that can be reused
+  const renderHeader = () => (
+    <View style={[
+      {
+        paddingTop: 48,
+        paddingHorizontal: 24,
+        backgroundColor: '#ffffff',
+      },
+      FIXED_HEADER_FOR_SCREENSHOT && {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 1000,
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 5,
+      }
+    ]}>
+      {/* Header with Logo */}
+      <View style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        height: 92, // Same height as OnboardingHeader
+      }}>
+        {/* Title */}
+        <Text style={{
+          fontSize: 28,
+          fontWeight: '900',
+          color: '#000000',
+        }} 
+        allowFontScaling={false}
+        maxFontSizeMultiplier={1.2}>
+          Recovery
+        </Text>
+
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 6,
+        }}>
+          <Animated.View 
+            entering={PinwheelIn.duration(500)}
+          >
+          <Image 
+            source={require('../../assets/images/BallerAILogo.png')}
+            style={{
+              width: 32,
+              height: 32,
+            }}
+            resizeMode="contain"
+          />
+          </Animated.View>
+          <Text style={{
+            fontSize: 28,
+            fontWeight: '300',
+            color: '#000000',
+          }} 
+          allowFontScaling={false}
+          maxFontSizeMultiplier={1.2}>
+            BallerAI
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+
   return (
     <>
+      {/* Fixed header when FIXED_HEADER_FOR_SCREENSHOT is true */}
+      {FIXED_HEADER_FOR_SCREENSHOT && renderHeader()}
+      
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
@@ -1593,69 +1671,22 @@ IMPORTANT USAGE GUIDELINES:
       <ScrollView
         ref={scrollViewRef}
         style={styles.container}
-        contentContainerStyle={{
-          flexGrow: 1,
+        contentContainerStyle={[
+          {
+            flexGrow: 1,
             paddingBottom: 120,
-        }}
+          },
+          // Add top padding when header is fixed to prevent content overlap
+          FIXED_HEADER_FOR_SCREENSHOT && { paddingTop: 140 }
+        ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={true}
         bounces={true}
         overScrollMode="never"
         scrollEventThrottle={16} // Update scroll position at ~60fps
       >
-          {/* Header - Scrolls with content */}
-          <View style={{
-            paddingTop: 48,
-            paddingHorizontal: 24,
-            backgroundColor: '#ffffff',
-          }}>
-            {/* Header with Logo */}
-            <View style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              height: 92, // Same height as OnboardingHeader
-            }}>
-              {/* Title */}
-              <Text style={{
-                fontSize: 28,
-                fontWeight: '900',
-                color: '#000000',
-              }} 
-              allowFontScaling={false}
-              maxFontSizeMultiplier={1.2}>
-                Recovery
-              </Text>
-
-              <View style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-              }}>
-                <Animated.View 
-                  entering={PinwheelIn.duration(500)}
-                >
-                <Image 
-                  source={require('../../assets/images/BallerAILogo.png')}
-                  style={{
-                    width: 32,
-                    height: 32,
-                  }}
-                  resizeMode="contain"
-                />
-                </Animated.View>
-                <Text style={{
-                  fontSize: 28,
-                  fontWeight: '300',
-                  color: '#000000',
-                }} 
-                allowFontScaling={false}
-                maxFontSizeMultiplier={1.2}>
-                  BallerAI
-                </Text>
-              </View>
-            </View>
-          </View>
+          {/* Header - Only render when not fixed */}
+          {!FIXED_HEADER_FOR_SCREENSHOT && renderHeader()}
 
           <View style={styles.contentContainer}>
             {/* Weekly Overview */}

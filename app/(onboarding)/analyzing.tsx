@@ -146,12 +146,90 @@ function DevelopmentChart({
     }
   });
 
+  /* Red circle that follows the red path */
+  const animatedRedCircle = useAnimatedProps(() => {
+    'worklet';
+    try {
+      const t = progress.value;
+      
+      // Calculate position along the red path (cubic Bezier curves)
+      // Red path has 3 segments, so we need to determine which segment and position within it
+      let x, y;
+      
+      if (t <= 0.33) {
+        // First segment: M20,startY C(width*0.25),(startY+18) (width*0.35),(startY-12) (width*0.45),(startY+4)
+        const segmentT = t / 0.33;
+        const p0x = 20, p0y = startY;
+        const p1x = width * 0.25, p1y = startY + 18;
+        const p2x = width * 0.35, p2y = startY - 12;
+        const p3x = width * 0.45, p3y = startY + 4;
+        
+        // Cubic Bezier formula: B(t) = (1-t)³P₀ + 3(1-t)²tP₁ + 3(1-t)t²P₂ + t³P₃
+        const oneMinusT = 1 - segmentT;
+        const oneMinusT2 = oneMinusT * oneMinusT;
+        const oneMinusT3 = oneMinusT2 * oneMinusT;
+        const t2 = segmentT * segmentT;
+        const t3 = t2 * segmentT;
+        
+        x = oneMinusT3 * p0x + 3 * oneMinusT2 * segmentT * p1x + 3 * oneMinusT * t2 * p2x + t3 * p3x;
+        y = oneMinusT3 * p0y + 3 * oneMinusT2 * segmentT * p1y + 3 * oneMinusT * t2 * p2y + t3 * p3y;
+      } else if (t <= 0.66) {
+        // Second segment: S(width*0.65),(startY+26) (width*0.78),(startY+16)
+        const segmentT = (t - 0.33) / 0.33;
+        const p0x = width * 0.45, p0y = startY + 4;
+        // For S command, first control point is reflection of previous segment's last control point
+        const p1x = width * 0.55, p1y = startY + 20; // Reflected control point
+        const p2x = width * 0.65, p2y = startY + 26;
+        const p3x = width * 0.78, p3y = startY + 16;
+        
+        const oneMinusT = 1 - segmentT;
+        const oneMinusT2 = oneMinusT * oneMinusT;
+        const oneMinusT3 = oneMinusT2 * oneMinusT;
+        const t2 = segmentT * segmentT;
+        const t3 = t2 * segmentT;
+        
+        x = oneMinusT3 * p0x + 3 * oneMinusT2 * segmentT * p1x + 3 * oneMinusT * t2 * p2x + t3 * p3x;
+        y = oneMinusT3 * p0y + 3 * oneMinusT2 * segmentT * p1y + 3 * oneMinusT * t2 * p2y + t3 * p3y;
+      } else {
+        // Third segment: S(width*0.9),(startY+4) (width-20),(startY+20)
+        const segmentT = (t - 0.66) / 0.34;
+        const p0x = width * 0.78, p0y = startY + 16;
+        // For S command, first control point is reflection of previous segment's last control point
+        const p1x = width * 0.91, p1y = startY + 6; // Reflected control point
+        const p2x = width * 0.9, p2y = startY + 4;
+        const p3x = width - 20, p3y = startY + 20;
+        
+        const oneMinusT = 1 - segmentT;
+        const oneMinusT2 = oneMinusT * oneMinusT;
+        const oneMinusT3 = oneMinusT2 * oneMinusT;
+        const t2 = segmentT * segmentT;
+        const t3 = t2 * segmentT;
+        
+        x = oneMinusT3 * p0x + 3 * oneMinusT2 * segmentT * p1x + 3 * oneMinusT * t2 * p2x + t3 * p3x;
+        y = oneMinusT3 * p0y + 3 * oneMinusT2 * segmentT * p1y + 3 * oneMinusT * t2 * p2y + t3 * p3y;
+      }
+      
+      return {
+        cx: x,
+        cy: y,
+        opacity: progress.value > 0.02 ? 1 : 0,
+      };
+    } catch (error) {
+      console.log('[ANALYZING] Error in animatedRedCircle worklet:', error);
+      return {
+        cx: 20,
+        cy: startY,
+        opacity: 0,
+      };
+    }
+  });
+
   /* Label/logo opacity (start at 75% progress instead of 85% for faster appearance) */
   const labelAnimatedProps = useAnimatedProps(() => {
     'worklet';
     try {
       return {
-        opacity: interpolate(progress.value, [0.75, 0.9], [0, 1]),
+        opacity: progress.value < 0.8 ? 0.001 : (progress.value - 0.8) * 5.0,
       };
     } catch (error) {
       console.log('[ANALYZING] Error in labelAnimatedProps worklet:', error);
@@ -229,6 +307,13 @@ function DevelopmentChart({
         r="6" 
         fill={colors.white} 
         stroke="#7ED321" 
+        strokeWidth="2" 
+      />
+      <AnimatedCircle 
+        animatedProps={animatedRedCircle}
+        r="6" 
+        fill={colors.white} 
+        stroke="#F15B5B" 
         strokeWidth="2" 
       />
 
