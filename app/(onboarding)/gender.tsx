@@ -1,9 +1,9 @@
-import { View, Text, Pressable, SafeAreaView, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, Pressable, SafeAreaView, ScrollView, Platform } from 'react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
 import { useOnboarding } from '../context/OnboardingContext';
-import { useState, useEffect } from 'react';
 import analyticsService from '../services/analytics';
 import { colors, typography, spacing } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
@@ -18,6 +18,8 @@ export default function GenderScreen() {
 
   // NEW: Use automatic onboarding step system
   const { goToNext } = useOnboardingStep('gender');
+
+
 
   const handleGenderSelect = (gender: string) => {
     haptics.light();
@@ -43,13 +45,12 @@ export default function GenderScreen() {
         entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}
         style={{ flex: 1, backgroundColor: colors.backgroundColor }}
       >
-        {/* Scrollable Content Area */}
-        {/*<ScrollView 
+        <ScrollView 
           style={{ flex: 1 }}
           contentContainerStyle={{ flexGrow: 1 }}
           showsVerticalScrollIndicator={false}
         >
-          {/* Title Section - Same as measurements */}
+          {/* Title Section */}
           <View style={{
             paddingHorizontal: 24,
             paddingTop: headerHeight,
@@ -63,6 +64,7 @@ export default function GenderScreen() {
             ]} allowFontScaling={false}>
               Choose your gender
             </Text>
+
             <Text style={[
               typography.subtitle,
               {
@@ -74,7 +76,7 @@ export default function GenderScreen() {
             </Text>
           </View>
 
-          {/* Gender Options - Clean list with proper spacing */}
+          {/* Gender Options */}
           <View style={{
             paddingHorizontal: 24,
             paddingBottom: 64,
@@ -82,7 +84,7 @@ export default function GenderScreen() {
             justifyContent: 'center',
           }}>
             <View style={{
-              gap: 12, // Space between pills
+              gap: 12,
             }}>
               {[
                 { value: 'male', label: 'Male' },
@@ -92,7 +94,7 @@ export default function GenderScreen() {
                   key={option.value}
                   onPress={() => handleGenderSelect(option.value)}
                   style={({ pressed }) => ({
-                    height: 60, // Much thinner to match reference
+                    height: 60,
                     backgroundColor: selectedGender === option.value ? colors.selectedBackground : colors.white,
                     borderRadius: 12,
                     borderWidth: 2,
@@ -113,7 +115,7 @@ export default function GenderScreen() {
               ))}
             </View>
           </View>
-        {/*</ScrollView>*/}
+        </ScrollView>
       </Animated.View>
 
       {/* Fixed Continue Button - Always stays at bottom */}

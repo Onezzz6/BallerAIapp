@@ -81,47 +81,96 @@ function DevelopmentChart({
   const AnimatedSvgImage  = Animated.createAnimatedComponent(SvgImage);
   const AnimatedCircle    = Animated.createAnimatedComponent(Circle);
 
-  const animatedGreen = useAnimatedProps(() => ({
-    strokeDasharray: greenLen,
-    strokeDashoffset: greenLen * (1 - progress.value) + 2,
-  }));
-  const animatedRed = useAnimatedProps(() => ({
-    strokeDasharray: redLen,
-    strokeDashoffset: redLen * (1 - progress.value) + 2,
-  }));
+  const animatedGreen = useAnimatedProps(() => {
+    'worklet';
+    try {
+      const result = {
+        strokeDasharray: [greenLen, 0],
+        strokeDashoffset: greenLen * (1 - progress.value) + 2,
+      };
+      return result;
+    } catch (error) {
+      console.log('[ANALYZING] Error in animatedGreen worklet:', error);
+      return {
+        strokeDasharray: [greenLen, 0],
+        strokeDashoffset: greenLen,
+      };
+    }
+  });
+  const animatedRed = useAnimatedProps(() => {
+    'worklet';
+    try {
+      const result = {
+        strokeDasharray: [redLen, 0],
+        strokeDashoffset: redLen * (1 - progress.value) + 2,
+      };
+      return result;
+    } catch (error) {
+      console.log('[ANALYZING] Error in animatedRed worklet:', error);
+      return {
+        strokeDasharray: [redLen, 0],
+        strokeDashoffset: redLen,
+      };
+    }
+  });
 
   /* Green circle that follows the exact tip of the visible stroke */
   const animatedGreenCircle = useAnimatedProps(() => {
-    const t = progress.value;
-    
-    // Calculate position exactly at the visible stroke tip
-    const samples = 10;
-    const currentStep = t * samples;
-    const step = (width - 40) / samples;
-    const x = 20 + step * currentStep;
-    
-    // Use exact same exponential formula as the path
-    const a = startY - 20;
-    const k = 2.3;
-    const y = startY - (a * (Math.exp(k * t) - 1)) / (Math.exp(k) - 1);
-    
-    return {
-      cx: x,
-      cy: y,
-      opacity: progress.value > 0.02 ? 1 : 0,
-    };
+    'worklet';
+    try {
+      const t = progress.value;
+      
+      // Calculate position exactly at the visible stroke tip
+      const samples = 10;
+      const currentStep = t * samples;
+      const step = (width - 40) / samples;
+      const x = 20 + step * currentStep;
+      
+      // Use exact same exponential formula as the path
+      const a = startY - 20;
+      const k = 2.3;
+      const y = startY - (a * (Math.exp(k * t) - 1)) / (Math.exp(k) - 1);
+      
+      return {
+        cx: x,
+        cy: y,
+        opacity: progress.value > 0.02 ? 1 : 0,
+      };
+    } catch (error) {
+      console.log('[ANALYZING] Error in animatedGreenCircle worklet:', error);
+      return {
+        cx: 20,
+        cy: startY,
+        opacity: 0,
+      };
+    }
   });
 
   /* Label/logo opacity (start at 75% progress instead of 85% for faster appearance) */
-  const labelAnimatedProps = useAnimatedProps(() => ({
-    opacity: interpolate(progress.value, [0.75, 0.9], [0, 1]),
-  }));
+  const labelAnimatedProps = useAnimatedProps(() => {
+    'worklet';
+    try {
+      return {
+        opacity: interpolate(progress.value, [0.75, 0.9], [0, 1]),
+      };
+    } catch (error) {
+      console.log('[ANALYZING] Error in labelAnimatedProps worklet:', error);
+      return {
+        opacity: 0,
+      };
+    }
+  });
 
   /* Signal parent when lines essentially done (only once) */
   useDerivedValue(() => {
-    if (progress.value >= 0.95 && !hasCompleted.value) {
-      hasCompleted.value = true;
-      runOnJS(onLinesComplete)();
+    'worklet';
+    try {
+      if (progress.value >= 0.95 && !hasCompleted.value) {
+        hasCompleted.value = true;
+        runOnJS(onLinesComplete)();
+      }
+    } catch (error) {
+      console.log('[ANALYZING] Error in useDerivedValue worklet:', error);
     }
   });
 
@@ -131,6 +180,8 @@ function DevelopmentChart({
   }, []);
 
   const cardBg = '#F8F8F8';
+
+
 
   return (
     <Svg width={width} height={height}>
@@ -238,6 +289,8 @@ export default function AnalyzingScreen() {
 
   const CHART_W = Math.min(SCREEN_W - 48, 340);
   const CHART_H = 260;
+  
+
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>

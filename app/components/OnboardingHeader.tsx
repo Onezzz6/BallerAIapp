@@ -1,4 +1,4 @@
-import { View, Text, Image } from 'react-native';
+import { View, Text, Image, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import BackButton from './BackButton';
 import Animated, { FadeIn, FadeOut, PinwheelIn } from 'react-native-reanimated';
@@ -9,12 +9,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 /**
  * Custom hook to calculate the onboarding header height consistently across all screens
  * This includes the safe area insets plus the header content height
+ * Android gets reduced padding to prevent content being pushed off-screen
  */
 export function useOnboardingHeaderHeight() {
   const insets = useSafeAreaInsets();
   
-  // Calculate header height: safe area insets + header content height
-  const headerHeight = insets.top + 40;
+  // Calculate header height with Android-specific adjustment
+  // Android needs more padding to prevent title cutoff
+  const headerHeight = Platform.OS === 'android' 
+    ? insets.top + 88
+    : insets.top + 40; // Original iOS padding
   
   return headerHeight;
 }
