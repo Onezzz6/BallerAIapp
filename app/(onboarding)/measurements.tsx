@@ -1,4 +1,4 @@
-import { View, Text, SafeAreaView, Switch } from 'react-native';
+import { View, Text, SafeAreaView, Switch, Platform } from 'react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
@@ -216,7 +216,8 @@ export default function MeasurementsScreen() {
                 fontWeight: '600',
                 color: colors.black,
                 marginBottom: 8,
-                textAlign: 'center',
+                textAlign: Platform.OS === 'ios' ? 'center' : 'left',
+                ...(Platform.OS === 'android' && { paddingLeft: 9 }),
               }}>
                 Height
               </Text>
@@ -296,14 +297,15 @@ export default function MeasurementsScreen() {
             <View style={{
               flex: 1,
               marginHorizontal: -3,
-              maxWidth: '40%',
+              ...(Platform.OS === 'ios' && { maxWidth: '40%' }),
             }}>
               <Text style={{
                 fontSize: 18,
                 fontWeight: '600',
                 color: colors.black,
                 marginBottom: 8,
-                textAlign: 'center',
+                textAlign: Platform.OS === 'ios' ? 'center' : 'left',
+                ...(Platform.OS === 'android' && { paddingLeft: 9 }),
               }}>
                 Weight
               </Text>

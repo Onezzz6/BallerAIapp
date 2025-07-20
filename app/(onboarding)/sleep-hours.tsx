@@ -1,4 +1,4 @@
-import { View, Text, SafeAreaView } from 'react-native';
+import { View, Text, SafeAreaView, Platform } from 'react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
@@ -56,7 +56,7 @@ export default function SleepHoursScreen() {
         }}>
           <View style={{
             width: '100%',
-            height: 200,
+            height: Platform.OS === 'ios' ? 200 : 50,
             backgroundColor: '#F8F8F8',
             borderRadius: 16,
             overflow: 'hidden',
