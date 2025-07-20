@@ -72,28 +72,28 @@ function validateEvent(payload) {
     if (!payload.event.type || typeof payload.event.type !== 'string') {
         throw new Error('Invalid payload: missing or invalid event.type');
     }
-    // Handle both real webhooks and test events - app_user_id can be at top level or inside event
-    const appUserId = payload.app_user_id || payload.event.app_user_id;
-    if (!appUserId || typeof appUserId !== 'string') {
-        throw new Error('Invalid payload: missing or invalid app_user_id');
+    // RevenueCat webhook structure has all fields inside the event object
+    const event = payload.event;
+    if (!event.app_user_id || typeof event.app_user_id !== 'string') {
+        throw new Error('Invalid payload: missing or invalid event.app_user_id');
     }
-    // Handle both real webhooks and test events - product_id can be at top level or inside event  
-    const productId = payload.product_id || payload.event.product_id;
-    if (!productId || typeof productId !== 'string') {
-        throw new Error('Invalid payload: missing or invalid product_id');
+    if (!event.product_id || typeof event.product_id !== 'string') {
+        throw new Error('Invalid payload: missing or invalid event.product_id');
     }
-    // Handle both real webhooks and test events - expires_at_ms can be at top level or inside event
-    const expiresAtMs = payload.expires_at_ms !== undefined ? payload.expires_at_ms : payload.event.expiration_at_ms;
+    // expiration_at_ms is the correct field name in RevenueCat webhooks
+    const expiresAtMs = event.expiration_at_ms;
     if (expiresAtMs !== null && expiresAtMs !== undefined && (typeof expiresAtMs !== 'number' || expiresAtMs < 0)) {
-        throw new Error('Invalid payload: expires_at_ms must be null or a positive number');
+        throw new Error('Invalid payload: expiration_at_ms must be null or a positive number');
     }
     // Normalize the payload structure for consistent processing
     const normalizedPayload = {
-        event: payload.event,
-        app_user_id: appUserId,
-        product_id: productId,
+        event: {
+            type: event.type
+        },
+        app_user_id: event.app_user_id,
+        product_id: event.product_id,
         expires_at_ms: expiresAtMs || null,
-        attributes: payload.attributes || payload.event.subscriber_attributes || {}
+        attributes: event.subscriber_attributes || {}
     };
     return normalizedPayload;
 }
@@ -185,7 +185,7 @@ async function processWebhookEvent(payload, db) {
     }
     // Update Firestore
     const userRef = db.doc(`users/${payload.app_user_id}`);
-    await userRef.update(updateData);
+    await userRef.set(updateData, { merge: true });
     console.log('Successfully updated user subscription', {
         userId: payload.app_user_id,
         status: subscriptionData.status,

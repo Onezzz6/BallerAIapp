@@ -17,10 +17,10 @@ interface RevenueCatWebhookPayload {
     expires_at_ms: number | null;
     product_id: string;
     attributes?: {
-        referral_code?: {
+        [key: string]: {
             value: string;
+            updated_at_ms?: number;
         };
-        [key: string]: any;
     };
 }
 /**

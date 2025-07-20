@@ -8,14 +8,15 @@
  * npm run test:coverage
  */
 
-import * as crypto from 'crypto';
 import { validateEvent, processWebhookEvent, handleRevenueCatWebhook } from '../src/revenuecat';
 
 // Mock Firebase Admin
 const mockUpdate = jest.fn();
+const mockSet = jest.fn();
 const mockGet = jest.fn();
 const mockDoc = jest.fn(() => ({
   update: mockUpdate,
+  set: mockSet,
   get: mockGet,
 }));
 
@@ -26,13 +27,33 @@ const mockDb = {
 // Test data
 const TEST_AUTH_TOKEN = 'test-auth-token-12345';
 const TEST_PAYLOAD = {
-  event: { type: 'INITIAL_PURCHASE' },
+  event: { 
+    type: 'INITIAL_PURCHASE'
+  },
   app_user_id: 'firebase_uid_test_123',
   product_id: 'BallerAIOneMonth',
   expires_at_ms: 1734567890000, // Future date
   attributes: {
     referral_code: {
       value: 'TESTCODE',
+      updated_at_ms: 1591121853000
+    },
+  },
+};
+
+// Raw webhook payload for testing validateEvent
+const RAW_WEBHOOK_PAYLOAD = {
+  api_version: "1.0",
+  event: {
+    type: 'INITIAL_PURCHASE',
+    app_user_id: 'firebase_uid_test_123',
+    product_id: 'BallerAIOneMonth',
+    expiration_at_ms: 1734567890000,
+    subscriber_attributes: {
+      referral_code: {
+        value: 'TESTCODE',
+        updated_at_ms: 1591121853000
+      },
     },
   },
 };
@@ -60,16 +81,22 @@ function createMockResponse(): any {
 describe('RevenueCat Webhook', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockUpdate.mockClear();
+    mockSet.mockClear();
+    mockGet.mockClear();
   });
 
   describe('validateEvent', () => {
     it('should validate a correct payload', () => {
-      const result = validateEvent(TEST_PAYLOAD);
-      expect(result).toEqual(TEST_PAYLOAD);
+      const result = validateEvent(RAW_WEBHOOK_PAYLOAD);
+      expect(result.app_user_id).toBe('firebase_uid_test_123');
+      expect(result.product_id).toBe('BallerAIOneMonth');
+      expect(result.expires_at_ms).toBe(1734567890000);
+      expect(result.event.type).toBe('INITIAL_PURCHASE');
     });
 
     it('should throw error for missing event object', () => {
-      const invalidPayload = { ...TEST_PAYLOAD };
+      const invalidPayload = { ...RAW_WEBHOOK_PAYLOAD };
       delete (invalidPayload as any).event;
       
       expect(() => validateEvent(invalidPayload)).toThrow('missing or invalid event object');
@@ -77,7 +104,7 @@ describe('RevenueCat Webhook', () => {
 
     it('should throw error for missing event type', () => {
       const invalidPayload = {
-        ...TEST_PAYLOAD,
+        ...RAW_WEBHOOK_PAYLOAD,
         event: {},
       };
       
@@ -85,23 +112,36 @@ describe('RevenueCat Webhook', () => {
     });
 
     it('should throw error for missing app_user_id', () => {
-      const invalidPayload = { ...TEST_PAYLOAD };
-      delete (invalidPayload as any).app_user_id;
+      const invalidPayload = { 
+        ...RAW_WEBHOOK_PAYLOAD,
+        event: {
+          ...RAW_WEBHOOK_PAYLOAD.event
+        }
+      };
+      delete (invalidPayload.event as any).app_user_id;
       
-      expect(() => validateEvent(invalidPayload)).toThrow('missing or invalid app_user_id');
+      expect(() => validateEvent(invalidPayload)).toThrow('missing or invalid event.app_user_id');
     });
 
     it('should throw error for missing product_id', () => {
-      const invalidPayload = { ...TEST_PAYLOAD };
-      delete (invalidPayload as any).product_id;
+      const invalidPayload = { 
+        ...RAW_WEBHOOK_PAYLOAD,
+        event: {
+          ...RAW_WEBHOOK_PAYLOAD.event
+        }
+      };
+      delete (invalidPayload.event as any).product_id;
       
-      expect(() => validateEvent(invalidPayload)).toThrow('missing or invalid product_id');
+      expect(() => validateEvent(invalidPayload)).toThrow('missing or invalid event.product_id');
     });
 
     it('should accept null expires_at_ms', () => {
       const payloadWithNullExpiry = {
-        ...TEST_PAYLOAD,
-        expires_at_ms: null,
+        ...RAW_WEBHOOK_PAYLOAD,
+        event: {
+          ...RAW_WEBHOOK_PAYLOAD.event,
+          expiration_at_ms: null,
+        }
       };
       
       const result = validateEvent(payloadWithNullExpiry);
@@ -110,11 +150,14 @@ describe('RevenueCat Webhook', () => {
 
     it('should throw error for invalid expires_at_ms', () => {
       const invalidPayload = {
-        ...TEST_PAYLOAD,
-        expires_at_ms: -1,
+        ...RAW_WEBHOOK_PAYLOAD,
+        event: {
+          ...RAW_WEBHOOK_PAYLOAD.event,
+          expiration_at_ms: -1,
+        }
       };
       
-      expect(() => validateEvent(invalidPayload)).toThrow('expires_at_ms must be null or a positive number');
+      expect(() => validateEvent(invalidPayload)).toThrow('expiration_at_ms must be null or a positive number');
     });
   });
 
@@ -127,7 +170,7 @@ describe('RevenueCat Webhook', () => {
       await processWebhookEvent(TEST_PAYLOAD, mockDb);
 
       expect(mockDoc).toHaveBeenCalledWith('users/firebase_uid_test_123');
-      expect(mockUpdate).toHaveBeenCalledWith({
+      expect(mockSet).toHaveBeenCalledWith({
         subscription: {
           status: 'ACTIVE',
           productId: 'BallerAIOneMonth',
@@ -137,7 +180,7 @@ describe('RevenueCat Webhook', () => {
           updatedAt: expect.any(Date),
         },
         referralCode: 'TESTCODE',
-      });
+      }, { merge: true });
     });
 
     it('should process RENEWAL event correctly', async () => {
@@ -152,13 +195,13 @@ describe('RevenueCat Webhook', () => {
 
       await processWebhookEvent(renewalPayload, mockDb);
 
-      expect(mockUpdate).toHaveBeenCalledWith({
+      expect(mockSet).toHaveBeenCalledWith({
         subscription: expect.objectContaining({
           status: 'ACTIVE',
           lastEvent: 'RENEWAL',
         }),
         referralCode: 'TESTCODE',
-      });
+      }, { merge: true });
     });
 
     it('should process CANCELLATION event correctly', async () => {
@@ -173,13 +216,13 @@ describe('RevenueCat Webhook', () => {
 
       await processWebhookEvent(cancellationPayload, mockDb);
 
-      expect(mockUpdate).toHaveBeenCalledWith({
+      expect(mockSet).toHaveBeenCalledWith({
         subscription: expect.objectContaining({
           status: 'CANCELLED',
           lastEvent: 'CANCELLATION',
         }),
         referralCode: 'TESTCODE',
-      });
+      }, { merge: true });
     });
 
     it('should process EXPIRATION event correctly', async () => {
@@ -194,13 +237,13 @@ describe('RevenueCat Webhook', () => {
 
       await processWebhookEvent(expirationPayload, mockDb);
 
-      expect(mockUpdate).toHaveBeenCalledWith({
+      expect(mockSet).toHaveBeenCalledWith({
         subscription: expect.objectContaining({
           status: 'EXPIRED',
           lastEvent: 'EXPIRATION',
         }),
         referralCode: 'TESTCODE',
-      });
+      }, { merge: true });
     });
 
     it('should handle unknown event types gracefully', async () => {
@@ -222,12 +265,12 @@ describe('RevenueCat Webhook', () => {
 
       await processWebhookEvent(TEST_PAYLOAD, mockDb);
 
-      expect(mockUpdate).toHaveBeenCalledWith({
+      expect(mockSet).toHaveBeenCalledWith({
         subscription: expect.any(Object),
         // referralCode should not be included if it's the same
-      });
+      }, { merge: true });
       
-      const updateCall = mockUpdate.mock.calls[0][0];
+      const updateCall = mockSet.mock.calls[0][0];
       expect(updateCall).not.toHaveProperty('referralCode');
     });
 
@@ -243,18 +286,18 @@ describe('RevenueCat Webhook', () => {
 
       await processWebhookEvent(payloadWithoutReferral, mockDb);
 
-      expect(mockUpdate).toHaveBeenCalledWith({
+      expect(mockSet).toHaveBeenCalledWith({
         subscription: expect.any(Object),
-      });
+      }, { merge: true });
       
-      const updateCall = mockUpdate.mock.calls[0][0];
+      const updateCall = mockSet.mock.calls[0][0];
       expect(updateCall).not.toHaveProperty('referralCode');
     });
   });
 
   describe('handleRevenueCatWebhook', () => {
     it('should return 200 for valid webhook with correct authorization', async () => {
-      const req = createMockRequest(TEST_PAYLOAD, TEST_AUTH_TOKEN);
+      const req = createMockRequest(RAW_WEBHOOK_PAYLOAD, TEST_AUTH_TOKEN);
       const res = createMockResponse();
       const getSecret = () => TEST_AUTH_TOKEN;
 
@@ -269,7 +312,7 @@ describe('RevenueCat Webhook', () => {
     });
 
     it('should return 401 for invalid authorization', async () => {
-      const req = createMockRequest(TEST_PAYLOAD, 'invalid_token');
+      const req = createMockRequest(RAW_WEBHOOK_PAYLOAD, 'invalid_token');
       const res = createMockResponse();
       const getSecret = () => TEST_AUTH_TOKEN;
 
@@ -280,7 +323,7 @@ describe('RevenueCat Webhook', () => {
     });
 
     it('should return 401 for missing authorization', async () => {
-      const req = createMockRequest(TEST_PAYLOAD); // No auth header
+      const req = createMockRequest(RAW_WEBHOOK_PAYLOAD); // No auth header
       const res = createMockResponse();
       const getSecret = () => TEST_AUTH_TOKEN;
 
@@ -303,7 +346,7 @@ describe('RevenueCat Webhook', () => {
     });
 
     it('should return 405 for non-POST requests', async () => {
-      const req = { ...createMockRequest(TEST_PAYLOAD), method: 'GET' };
+      const req = { ...createMockRequest(RAW_WEBHOOK_PAYLOAD), method: 'GET' };
       const res = createMockResponse();
       const getSecret = () => TEST_AUTH_TOKEN;
 
@@ -314,7 +357,7 @@ describe('RevenueCat Webhook', () => {
     });
 
     it('should return 500 when token is not configured', async () => {
-      const req = createMockRequest(TEST_PAYLOAD, TEST_AUTH_TOKEN);
+      const req = createMockRequest(RAW_WEBHOOK_PAYLOAD, TEST_AUTH_TOKEN);
       const res = createMockResponse();
       const getSecret = () => ''; // Empty token
 
@@ -325,14 +368,14 @@ describe('RevenueCat Webhook', () => {
     });
 
     it('should return 500 when database update fails', async () => {
-      const req = createMockRequest(TEST_PAYLOAD, TEST_AUTH_TOKEN);
+      const req = createMockRequest(RAW_WEBHOOK_PAYLOAD, TEST_AUTH_TOKEN);
       const res = createMockResponse();
       const getSecret = () => TEST_AUTH_TOKEN;
 
       mockGet.mockResolvedValue({
         data: () => ({}),
       });
-      mockUpdate.mockRejectedValue(new Error('Database error'));
+      mockSet.mockRejectedValue(new Error('Database error'));
 
       await handleRevenueCatWebhook(req, res, mockDb, getSecret);
 
