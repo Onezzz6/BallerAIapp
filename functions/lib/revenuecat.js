@@ -74,6 +74,25 @@ function validateEvent(payload) {
     }
     // RevenueCat webhook structure has all fields inside the event object
     const event = payload.event;
+    // TRANSFER events have a different structure - they don't have app_user_id or product_id
+    if (event.type === 'TRANSFER') {
+        // For TRANSFER events, we need transferred_to array
+        if (!event.transferred_to || !Array.isArray(event.transferred_to) || event.transferred_to.length === 0) {
+            throw new Error('Invalid payload: TRANSFER event missing transferred_to');
+        }
+        // Use the first transferred_to ID as the app_user_id for processing
+        const normalizedPayload = {
+            event: {
+                type: event.type
+            },
+            app_user_id: event.transferred_to[0], // Use first transferred_to ID
+            product_id: 'TRANSFER', // Placeholder for transfer events
+            expires_at_ms: null,
+            attributes: event.subscriber_attributes || {}
+        };
+        return normalizedPayload;
+    }
+    // For all other events, require standard fields
     if (!event.app_user_id || typeof event.app_user_id !== 'string') {
         throw new Error('Invalid payload: missing or invalid event.app_user_id');
     }
@@ -146,7 +165,34 @@ async function processWebhookEvent(payload, db) {
         userId: payload.app_user_id,
         productId: payload.product_id,
     });
-    // Determine subscription status from event type
+    // Handle TRANSFER events differently - they don't have subscription status
+    if (payload.event.type === 'TRANSFER') {
+        // For TRANSFER events, we only update referral code if present
+        if (payload.attributes?.referral_code?.value) {
+            const referralCode = payload.attributes.referral_code.value.trim().toUpperCase();
+            const userRef = db.doc(`users/${payload.app_user_id}`);
+            try {
+                const userDoc = await userRef.get();
+                const existingReferralCode = userDoc.data()?.referralCode;
+                if (existingReferralCode !== referralCode) {
+                    await userRef.set({
+                        referralCode: referralCode,
+                        updatedAt: new Date(),
+                    }, { merge: true });
+                    console.log(`Updated referral code for transferred user ${payload.app_user_id}: ${referralCode}`);
+                }
+            }
+            catch (error) {
+                console.warn('Error updating referral code for TRANSFER event:', error);
+            }
+        }
+        console.log('Successfully processed TRANSFER event', {
+            userId: payload.app_user_id,
+            eventType: payload.event.type,
+        });
+        return;
+    }
+    // Handle regular subscription events
     const status = EVENT_STATUS_MAP[payload.event.type];
     if (!status) {
         console.warn(`Unknown event type: ${payload.event.type}`);

@@ -337,6 +337,7 @@ export const isOnOnboardingScreen = (path: string) => {
     path.includes('/profile-complete') ||
     path.includes('/generating-profile') ||
     path.includes('/paywall') || 
+    path.includes('/paywall-upsell') ||
     path.includes('/sign') || 
     path.includes('/motivation') ||
     path.includes('/tracking') ||

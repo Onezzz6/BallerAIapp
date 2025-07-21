@@ -16,6 +16,13 @@ import analyticsService from '../services/analytics';
 import { colors, typography } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
+import { useOnboarding } from '../context/OnboardingContext';
+import { useAuth } from '../context/AuthContext';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, db } from '../config/firebase';
+import { runPostLoginSequence, markAuthenticationComplete } from './paywall';
+import { usePathname } from 'expo-router';
 
 // Phone Carousel Component
 const PhoneCarousel: React.FC = () => {
@@ -140,6 +147,9 @@ const PhoneCarousel: React.FC = () => {
 export default function ProfileCompleteScreen() {
   const haptics = useHaptics();
   const router = useRouter();
+  const pathname = usePathname();
+  const { onboardingData } = useOnboarding();
+  const { user } = useAuth();
   
   // NEW: Use automatic onboarding step system
   const { goToNext } = useOnboardingStep('profile-complete');
@@ -160,8 +170,62 @@ export default function ProfileCompleteScreen() {
     }
     
     await analyticsService.logEvent('AA__31_profile_complete_get_started');
-    // Navigate to sign-up screen (profile-complete is the last onboarding step)
-    router.push('/(onboarding)/sign-up' as any);
+    
+    try {
+      // Create anonymous user account immediately with onboarding data
+      console.log('Creating user account with onboarding data...');
+      
+      // Generate a temporary email for the account creation
+      const tempEmail = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}@ballerai.temp`;
+      const tempPassword = Math.random().toString(36).substr(2, 15);
+      
+      // Create the Firebase Auth account
+      const userCredential = await createUserWithEmailAndPassword(auth, tempEmail, tempPassword);
+      const newUser = userCredential.user;
+      
+      console.log('User account created successfully:', newUser.uid);
+      
+      // Create Firestore document with all onboarding data
+      await setDoc(doc(db, 'users', newUser.uid), {
+        email: tempEmail, // Temporary email that will be replaced after sign-up
+        isTemporary: true, // Flag to indicate this is a temporary account
+        createdAt: new Date(),
+        ...onboardingData
+      });
+      
+      console.log('User document created with onboarding data');
+      
+      // Mark authentication as complete after account creation
+      markAuthenticationComplete();
+      
+      // Show paywall immediately after account creation
+      await runPostLoginSequence(
+        newUser.uid,
+        // If paywall successful → navigate to sign-up to attach real email
+        () => {
+          console.log('Paywall successful - navigating to sign-up to attach email');
+          router.replace('/(onboarding)/sign-up');
+        },
+        // If paywall cancelled → navigate to upsell screen
+        () => {
+          console.log('Paywall cancelled - navigating to upsell screen');
+          router.replace('/(onboarding)/paywall-upsell');
+        },
+        pathname,
+        // Pass referral code data for paywall selection
+        {
+          referralCode: onboardingData.referralCode,
+          referralDiscount: onboardingData.referralDiscount,
+          referralInfluencer: onboardingData.referralInfluencer,
+          referralPaywallType: onboardingData.referralPaywallType
+        }
+      );
+      
+    } catch (error) {
+      console.error('Error creating user account or showing paywall:', error);
+      // Fallback to old flow if there's an error
+      router.push('/(onboarding)/sign-up' as any);
+    }
   };
 
   return (

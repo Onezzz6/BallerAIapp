@@ -58,6 +58,27 @@ const RAW_WEBHOOK_PAYLOAD = {
   },
 };
 
+// Transfer event payload for testing
+const RAW_TRANSFER_PAYLOAD = {
+  api_version: "1.0",
+  event: {
+    type: 'TRANSFER',
+    app_id: "appb05155d574",
+    environment: "PRODUCTION",
+    event_timestamp_ms: 1753109152888,
+    id: "20797E17-66ED-4F4B-BB75-B4B8A212C58B",
+    store: "APP_STORE",
+    subscriber_attributes: {
+      referral_code: {
+        value: 'TRANSFERCODE',
+        updated_at_ms: 1752075758484
+      }
+    },
+    transferred_from: ["old_user_id"],
+    transferred_to: ["new_user_id"]
+  }
+};
+
 // Mock request/response objects
 function createMockRequest(payload: any, authHeader?: string): any {
   return {
@@ -158,6 +179,27 @@ describe('RevenueCat Webhook', () => {
       };
       
       expect(() => validateEvent(invalidPayload)).toThrow('expiration_at_ms must be null or a positive number');
+    });
+
+    it('should validate TRANSFER events correctly', () => {
+      const result = validateEvent(RAW_TRANSFER_PAYLOAD);
+      expect(result.app_user_id).toBe('new_user_id'); // Should use first transferred_to ID
+      expect(result.product_id).toBe('TRANSFER');
+      expect(result.expires_at_ms).toBeNull();
+      expect(result.event.type).toBe('TRANSFER');
+      expect(result.attributes?.referral_code?.value).toBe('TRANSFERCODE');
+    });
+
+    it('should throw error for TRANSFER event missing transferred_to', () => {
+      const invalidTransferPayload = {
+        ...RAW_TRANSFER_PAYLOAD,
+        event: {
+          ...RAW_TRANSFER_PAYLOAD.event,
+          transferred_to: []
+        }
+      };
+      
+      expect(() => validateEvent(invalidTransferPayload)).toThrow('TRANSFER event missing transferred_to');
     });
   });
 
@@ -293,6 +335,33 @@ describe('RevenueCat Webhook', () => {
       const updateCall = mockSet.mock.calls[0][0];
       expect(updateCall).not.toHaveProperty('referralCode');
     });
+
+    it('should process TRANSFER events correctly', async () => {
+      const transferPayload = {
+        event: { type: 'TRANSFER' },
+        app_user_id: 'new_user_id',
+        product_id: 'TRANSFER',
+        expires_at_ms: null,
+        attributes: {
+          referral_code: {
+            value: 'TRANSFERCODE',
+            updated_at_ms: 1752075758484
+          }
+        }
+      };
+
+      mockGet.mockResolvedValue({
+        data: () => ({ referralCode: 'OLDCODE' }),
+      });
+
+      await processWebhookEvent(transferPayload, mockDb);
+
+      expect(mockDoc).toHaveBeenCalledWith('users/new_user_id');
+      expect(mockSet).toHaveBeenCalledWith({
+        referralCode: 'TRANSFERCODE',
+        updatedAt: expect.any(Date),
+      }, { merge: true });
+    });
   });
 
   describe('handleRevenueCatWebhook', () => {
@@ -381,6 +450,21 @@ describe('RevenueCat Webhook', () => {
 
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({ error: 'Internal server error' });
+    });
+
+    it('should handle TRANSFER events successfully', async () => {
+      const req = createMockRequest(RAW_TRANSFER_PAYLOAD, TEST_AUTH_TOKEN);
+      const res = createMockResponse();
+      const getSecret = () => TEST_AUTH_TOKEN;
+
+      mockGet.mockResolvedValue({
+        data: () => ({}),
+      });
+
+      await handleRevenueCatWebhook(req, res, mockDb, getSecret);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({ success: true });
     });
   });
 }); 

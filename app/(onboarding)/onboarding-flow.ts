@@ -68,6 +68,10 @@ export const ONBOARDING_FLOW: OnboardingStep[] = [
   { id: 'profile-generation', route: '/profile-generation', title: 'Profile Generation' },
   { id: 'generating-profile', route: '/generating-profile', title: 'Generating Profile', skipOnBack: true },
   { id: 'profile-complete', route: '/profile-complete', title: 'Profile Complete' },
+  
+  // New post-paywall screens (not part of normal onboarding flow)
+  { id: 'paywall-upsell', route: '/paywall-upsell', title: 'Unlock Full Potential', skipOnBack: true },
+  { id: 'sign-up', route: '/sign-up', title: 'Create Account', skipOnBack: true },
 ];
 
 /**

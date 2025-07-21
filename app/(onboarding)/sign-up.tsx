@@ -8,13 +8,14 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import CustomButton from '../components/CustomButton';
 import analyticsService from '../services/analytics';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, getDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { runPostLoginSequence, markAuthenticationComplete } from './paywall';
 import { PAYWALL_RESULT } from 'react-native-purchases-ui';
 import { usePathname } from 'expo-router';
 import ScrollIfNeeded from '../components/ScrollIfNeeded';
 import BackButton from '../components/BackButton';
+import { useAuth } from '../context/AuthContext';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -25,6 +26,7 @@ export default function SignUpScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isAppleAvailable, setIsAppleAvailable] = useState(false);
   const { onboardingData } = useOnboarding();
+  const { user } = useAuth();
 
   // Check if Apple authentication is available on this device
   useEffect(() => {
@@ -48,10 +50,70 @@ export default function SignUpScreen() {
     }
 
     setIsLoading(true);
+    
     try {
-      // First try to create new account  
-      const user = await authService.signUpWithEmail(email, password, onboardingData);
-      if (user) {
+      // Check if we already have a user (from the new flow)
+      if (user?.uid) {
+        console.log('User already exists, creating real account and transferring data:', user.uid);
+        console.log('User email:', email, 'User ID:', user.uid);
+         
+         try {
+           // Get the current user's data from Firestore
+           const tempUserDocRef = doc(db, 'users', user.uid);
+           const tempUserDoc = await getDoc(tempUserDocRef);
+           
+           if (!tempUserDoc.exists()) {
+             throw new Error('Temporary user document not found');
+           }
+           
+           const tempUserData = tempUserDoc.data();
+           
+           // Create a new Firebase Auth account with the real email and password
+           const newUserCredential = await authService.signUpWithEmail(email, password, tempUserData as any);
+           
+           if (newUserCredential) {
+             // Delete the temporary user document
+             await deleteDoc(tempUserDocRef);
+             
+             // Sign out the temporary user (happens automatically when new user signs up)
+             console.log('Temporary account cleaned up, new real account created');
+             
+             await analyticsService.logEvent('AA__32_signed_up_after_paywall');
+             console.log('Real account created successfully, navigating to home');
+             router.replace('/(tabs)/home');
+             return;
+           }
+         } catch (error) {
+           console.error('Error creating real account:', error);
+           
+           // If creating new account failed but we have temp user, update temp user with real email
+           if (error && (error as any).code === 'auth/email-already-in-use') {
+             try {
+               console.log('Falling back to updating temporary user with real email');
+               const userDocRef = doc(db, 'users', user.uid);
+               await updateDoc(userDocRef, {
+                 email: email, // Store the real email in Firestore
+                 isTemporary: false,
+                 updatedAt: new Date()
+               });
+               
+               await analyticsService.logEvent('AA__32_signed_up_after_paywall_fallback');
+               console.log('Temporary user updated with real email, navigating to home');
+               router.replace('/(tabs)/home');
+               return;
+             } catch (updateError) {
+               console.error('Error updating temporary user:', updateError);
+               // Continue to normal flow as final fallback
+             }
+           }
+           
+           // Fall through to normal flow as backup if all else fails
+         }
+       }
+      
+      // Fallback to original flow if no existing user
+      const newUser = await authService.signUpWithEmail(email, password, onboardingData);
+      if (newUser) {
         await analyticsService.logEvent('AA__32_signed_up');
         
         // Mark authentication as complete after successful sign-up
@@ -59,9 +121,9 @@ export default function SignUpScreen() {
         
         // Run the definitive post-login sequence with current path and referral data
         await runPostLoginSequence(
-          user.uid,
+          newUser.uid,
           () => router.replace('/(tabs)/home'),
-          () => router.replace('/(onboarding)/sign-up'),  // Navigate to sign-up screen on cancellation
+          () => router.replace('/(onboarding)/paywall-upsell'),
           pathname,
           // Pass referral code data for paywall selection
           {
@@ -73,41 +135,63 @@ export default function SignUpScreen() {
         );
       }
     } catch (error: any) {
-      // If email exists, prompt for sign in
+      console.error('Sign-up error:', error);
+      
+      // If email exists, provide better options
       if (error.code === 'auth/email-already-in-use') {
         Alert.alert(
-          'Existing Account',
-          'Looks like you already have an account. Would you like to sign in?',
+          'Email Already Exists',
+          'This email is already associated with an account. What would you like to do?',
           [
-            { text: 'Cancel', style: 'cancel' },
+            { text: 'Try Different Email', style: 'cancel' },
             { 
               text: 'Sign In', 
               onPress: async () => {
                 try {
-                  const user = await authService.signInWithEmail(email, password);
-                  if (user) {
+                  const signedInUser = await authService.signInWithEmail(email, password);
+                  if (signedInUser) {
                     await analyticsService.logEvent('AA__32_sign_in_complete');
                     
-                    // Mark authentication as complete after successful sign-in
-                    markAuthenticationComplete();
-                    
-                    // Run the definitive post-login sequence with current path and referral data
-                    await runPostLoginSequence(
-                      user.uid,
-                      () => router.replace('/(tabs)/home'),
-                      () => router.replace('/'),  // Navigate to welcome on cancellation
-                      pathname,
-                      // Pass referral code data for paywall selection
-                      {
-                        referralCode: onboardingData.referralCode,
-                        referralDiscount: onboardingData.referralDiscount,
-                        referralInfluencer: onboardingData.referralInfluencer,
-                        referralPaywallType: onboardingData.referralPaywallType
+                    // Check if we have a temporary user to clean up
+                    if (user?.uid && user.uid !== signedInUser.uid) {
+                      try {
+                        // Transfer any subscription/purchase data if needed and clean up temp user
+                        const tempUserDocRef = doc(db, 'users', user.uid);
+                        const tempUserDoc = await getDoc(tempUserDocRef);
+                        
+                        if (tempUserDoc.exists()) {
+                          // Clean up temporary user document
+                          await deleteDoc(tempUserDocRef);
+                          console.log('Temporary user cleaned up after successful sign-in');
+                        }
+                      } catch (cleanupError) {
+                        console.error('Error cleaning up temporary user:', cleanupError);
+                        // Continue anyway - this is not critical
                       }
-                    );
+                    }
+                    
+                    console.log('User signed in successfully, navigating to home');
+                    router.replace('/(tabs)/home');
                   }
                 } catch (signInError: any) {
-                  Alert.alert('Error', 'Invalid password. Please try again.');
+                  console.error('Sign-in error:', signInError);
+                  Alert.alert(
+                    'Sign In Failed', 
+                    'The password you entered doesn\'t match this email. Would you like to reset your password?',
+                    [
+                      { text: 'Try Again', style: 'cancel' },
+                      { 
+                        text: 'Reset Password', 
+                        onPress: () => {
+                          Alert.alert(
+                            'Reset Password',
+                            'Please go to the sign-in screen to reset your password, then come back to complete your account setup.',
+                            [{ text: 'OK' }]
+                          );
+                        }
+                      }
+                    ]
+                  );
                 }
               }
             }
@@ -129,9 +213,21 @@ export default function SignUpScreen() {
     try {
       console.log("Starting Apple Sign-Up process...");
       
-      const { user, hasDocument, isValidDocument, appleInfo } = await authService.authenticateWithApple();
+      // Check if we already have a user (from the new flow)
+      if (user?.uid) {
+        console.log('User already exists, handling Apple sign-in for existing account:', user.uid);
+        
+        // For existing users in new flow, we'll just navigate to home
+        // The Apple authentication would be complex to merge with existing account
+        await analyticsService.logEvent('AA__32_apple_sign_up_after_paywall');
+        router.replace('/(tabs)/home');
+        return;
+      }
       
-      if (!user) {
+      // Fallback to original Apple flow if no existing user
+      const { user: appleUser, hasDocument, isValidDocument, appleInfo } = await authService.authenticateWithApple();
+      
+      if (!appleUser) {
         console.log("No user returned from Apple authentication");
         setIsLoading(false);
         return;
@@ -143,41 +239,35 @@ export default function SignUpScreen() {
         console.log("User has valid document, navigating to home");
         await analyticsService.logEvent('AA__32_apple_sign_in_complete');
         
-        // Mark authentication as complete after successful Apple sign-in
         markAuthenticationComplete();
         
-                  // Run the definitive post-login sequence with current path and referral data
-          await runPostLoginSequence(
-            user.uid,
-            () => router.replace('/(tabs)/home'),
-            () => router.replace('/(onboarding)/sign-up'),  // Navigate to sign-up on cancellation
-            pathname,
-            // Pass referral code data for paywall selection
-            {
-              referralCode: onboardingData.referralCode,
-              referralDiscount: onboardingData.referralDiscount,
-              referralInfluencer: onboardingData.referralInfluencer,
-              referralPaywallType: onboardingData.referralPaywallType
-            }
-          );
+        await runPostLoginSequence(
+          appleUser.uid,
+          () => router.replace('/(tabs)/home'),
+          () => router.replace('/(onboarding)/paywall-upsell'),
+          pathname,
+          {
+            referralCode: onboardingData.referralCode,
+            referralDiscount: onboardingData.referralDiscount,
+            referralInfluencer: onboardingData.referralInfluencer,
+            referralPaywallType: onboardingData.referralPaywallType
+          }
+        );
       } else {
         console.log("User needs a document created before going through paywall");
 
         try {
-          const userDocRef = doc(db, "users", user.uid);
+          const userDocRef = doc(db, "users", appleUser.uid);
           await setDoc(userDocRef, onboardingData);
           console.log("User document created successfully");
           
-          // Mark authentication as complete after successful Apple sign-up
           markAuthenticationComplete();
           
-          // Run the definitive post-login sequence with current path and referral data
           await runPostLoginSequence(
-            user.uid,
+            appleUser.uid,
             () => router.replace('/(tabs)/home'),
-            () => router.replace('/(onboarding)/sign-up'),  // Navigate to sign-up on cancellation
+            () => router.replace('/(onboarding)/paywall-upsell'),
             pathname,
-            // Pass referral code data for paywall selection
             {
               referralCode: onboardingData.referralCode,
               referralDiscount: onboardingData.referralDiscount,
