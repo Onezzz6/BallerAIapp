@@ -9,13 +9,15 @@ import CustomButton from '../components/CustomButton';
 import analyticsService from '../services/analytics';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { doc, setDoc, updateDoc, getDoc, deleteDoc } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { updateEmail, updatePassword, EmailAuthProvider, linkWithCredential } from 'firebase/auth';
+import { db, auth } from '../config/firebase';
 import { runPostLoginSequence, markAuthenticationComplete } from './paywall';
 import { PAYWALL_RESULT } from 'react-native-purchases-ui';
 import { usePathname } from 'expo-router';
 import ScrollIfNeeded from '../components/ScrollIfNeeded';
 import BackButton from '../components/BackButton';
 import { useAuth } from '../context/AuthContext';
+import Purchases from 'react-native-purchases';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -57,82 +59,174 @@ export default function SignUpScreen() {
         console.log('User already exists, creating real account and transferring data:', user.uid);
         console.log('User email:', email, 'User ID:', user.uid);
          
-         try {
-           // Get the current user's data from Firestore
-           const tempUserDocRef = doc(db, 'users', user.uid);
-           const tempUserDoc = await getDoc(tempUserDocRef);
-           
-           if (!tempUserDoc.exists()) {
-             throw new Error('Temporary user document not found');
-           }
-           
-           const tempUserData = tempUserDoc.data();
-           
-           // Create a new Firebase Auth account with the real email and password
-           const newUserCredential = await authService.signUpWithEmail(email, password, tempUserData as any);
-           
-           if (newUserCredential) {
-             // Delete the temporary user document
-             await deleteDoc(tempUserDocRef);
-             
-             // Sign out the temporary user (happens automatically when new user signs up)
-             console.log('Temporary account cleaned up, new real account created');
-             
-             await analyticsService.logEvent('AA__32_signed_up_after_paywall');
-             console.log('Real account created successfully, navigating to home');
-             router.replace('/(tabs)/home');
-             return;
-           }
-         } catch (error) {
-           console.error('Error creating real account:', error);
-           
-           // If creating new account failed but we have temp user, update temp user with real email
-           if (error && (error as any).code === 'auth/email-already-in-use') {
-             try {
-               console.log('Falling back to updating temporary user with real email');
-               const userDocRef = doc(db, 'users', user.uid);
-               await updateDoc(userDocRef, {
-                 email: email, // Store the real email in Firestore
-                 isTemporary: false,
-                 updatedAt: new Date()
-               });
-               
-               await analyticsService.logEvent('AA__32_signed_up_after_paywall_fallback');
-               console.log('Temporary user updated with real email, navigating to home');
-               router.replace('/(tabs)/home');
-               return;
-             } catch (updateError) {
-               console.error('Error updating temporary user:', updateError);
-               // Continue to normal flow as final fallback
-             }
-           }
-           
-           // Fall through to normal flow as backup if all else fails
-         }
-       }
+        // IMPORTANT: Get the temporary user's data FIRST, while we're still authenticated as them
+        const tempUserDocRef = doc(db, 'users', user.uid);
+        let tempUserData;
+        
+        try {
+          const tempUserDoc = await getDoc(tempUserDocRef);
+          
+          if (!tempUserDoc.exists()) {
+            throw new Error('Temporary user document not found');
+          }
+          
+          tempUserData = tempUserDoc.data();
+          console.log('Successfully retrieved temporary user data');
+        } catch (dataError) {
+          console.error('Error reading temporary user data:', dataError);
+          // Fallback: try to update current user instead of creating new one
+          try {
+            console.log('Fallback: updating temporary user with real email');
+            
+            // Ensure RevenueCat is set up with current user ID
+            try {
+              console.log('Ensuring RevenueCat subscription is properly linked in fallback...');
+              await Purchases.logIn(user.uid);
+              console.log('RevenueCat user logged in successfully in fallback');
+            } catch (revenueCatError) {
+              console.error('Error logging in RevenueCat user in fallback (non-critical):', revenueCatError);
+            }
+            
+            await updateDoc(tempUserDocRef, {
+              email: email,
+              isTemporary: false,
+              updatedAt: new Date()
+            });
+            
+            await analyticsService.logEvent('AA__32_signed_up_after_paywall_fallback');
+            console.log('Temporary user updated with real email, navigating to home');
+            router.replace('/(tabs)/home');
+            return;
+          } catch (updateError) {
+            console.error('Error updating temporary user:', updateError);
+            throw updateError;
+          }
+        }
+        
+        try {
+          // Check if this is an anonymous user or temp email user
+          const isAnonymousUser = tempUserData.isAnonymous === true;
+          
+          if (isAnonymousUser) {
+            // GUARANTEED SINGLE ACCOUNT: Convert anonymous user to real email/password user
+            console.log('Converting anonymous user to real email/password account');
+            
+            if (!auth.currentUser) {
+              throw new Error('No current user to convert');
+            }
+            
+            // Create email/password credential
+            const credential = EmailAuthProvider.credential(email, password);
+            
+            // Link the credential to the existing anonymous user
+            const linkedUser = await linkWithCredential(auth.currentUser, credential);
+            
+            console.log('Successfully converted anonymous user to email/password user');
+            console.log('Same Firebase Auth UID maintained:', linkedUser.user.uid);
+            
+            // Update the SAME Firestore document with real email (no new document created)
+            await updateDoc(tempUserDocRef, {
+              email: email, // Store real email
+              isTemporary: false,
+              isAnonymous: false,
+              hasEmailPassword: true,
+              updatedAt: new Date()
+            });
+            
+            console.log('GUARANTEED: Only 1 Firebase Auth user, only 1 Firestore document');
+            
+            await analyticsService.logEvent('AA__32_signed_up_after_paywall_converted');
+            console.log('Account conversion complete! Navigating to home...');
+            router.replace('/(tabs)/home');
+            return;
+          } else {
+            // Fallback: Handle temporary email user (old system)
+            console.log('Handling temporary email user with fallback system');
+            
+            const updatedUserData = {
+              ...tempUserData,
+              email: email, // Use real email
+              isTemporary: false,
+              updatedAt: new Date()
+            };
+            
+            const newUserCredential = await authService.signUpWithEmail(email, password, updatedUserData as any);
+            
+            if (newUserCredential) {
+              console.log('New account created successfully! Transferring subscription and cleaning up...');
+              
+              // Transfer RevenueCat subscription to new user
+              try {
+                await Purchases.logIn(newUserCredential.uid);
+                console.log('RevenueCat subscription transferred to new user');
+              } catch (rcError) {
+                console.error('RevenueCat transfer error (non-critical):', rcError);
+              }
+              
+              // Clean up old temporary document (best effort)
+              try {
+                await deleteDoc(tempUserDocRef);
+                console.log('Old temporary document cleaned up successfully');
+              } catch (cleanupError) {
+                console.log('Old document cleanup skipped (expected due to permissions)');
+              }
+              
+              await analyticsService.logEvent('AA__32_signed_up_after_paywall');
+              console.log('Account creation complete! Navigating to home...');
+              router.replace('/(tabs)/home');
+              return;
+            }
+          }
+        } catch (createError: any) {
+          console.error('Error creating real account:', createError);
+          
+          // If email already exists, update the temporary user instead
+          if (createError.code === 'auth/email-already-in-use') {
+            try {
+              console.log('Email already exists, updating temporary user with real email instead');
+              
+              // Ensure RevenueCat is set up with current user ID
+              try {
+                console.log('Ensuring RevenueCat subscription is properly linked...');
+                await Purchases.logIn(user.uid);
+                console.log('RevenueCat user logged in successfully');
+              } catch (revenueCatError) {
+                console.error('Error logging in RevenueCat user (non-critical):', revenueCatError);
+              }
+              
+              await updateDoc(tempUserDocRef, {
+                email: email, // Store the real email in Firestore
+                isTemporary: false,
+                updatedAt: new Date()
+              });
+              
+              await analyticsService.logEvent('AA__32_signed_up_after_paywall_fallback');
+              console.log('Temporary user updated with real email, navigating to home');
+              router.replace('/(tabs)/home');
+              return;
+            } catch (updateError) {
+              console.error('Error updating temporary user:', updateError);
+              // This error will propagate and be handled by outer catch
+              throw updateError;
+            }
+          } else {
+            // For other errors (not email-already-in-use), re-throw
+            throw createError;
+          }
+        }
+      }
       
-      // Fallback to original flow if no existing user
+      // Fallback to original flow if no existing user (shouldn't happen in new flow)
+      console.log('No temporary user found, using fallback flow');
       const newUser = await authService.signUpWithEmail(email, password, onboardingData);
       if (newUser) {
-        await analyticsService.logEvent('AA__32_signed_up');
+        await analyticsService.logEvent('AA__32_signed_up_fallback_flow');
         
         // Mark authentication as complete after successful sign-up
         markAuthenticationComplete();
         
-        // Run the definitive post-login sequence with current path and referral data
-        await runPostLoginSequence(
-          newUser.uid,
-          () => router.replace('/(tabs)/home'),
-          () => router.replace('/(onboarding)/paywall-upsell'),
-          pathname,
-          // Pass referral code data for paywall selection
-          {
-            referralCode: onboardingData.referralCode,
-            referralDiscount: onboardingData.referralDiscount,
-            referralInfluencer: onboardingData.referralInfluencer,
-            referralPaywallType: onboardingData.referralPaywallType
-          }
-        );
+        // Navigate directly to home since this is post-paywall
+        router.replace('/(tabs)/home');
       }
     } catch (error: any) {
       console.error('Sign-up error:', error);
@@ -402,8 +496,11 @@ export default function SignUpScreen() {
             {isAppleAvailable && (
               <View style={{ 
                 opacity: isLoading ? 0.5 : 1,
-                width: '100%',
+                flex: 1,
                 marginTop: 24,
+                alignItems: 'center',
+                maxWidth: 375,
+                alignSelf: 'center',
               }}>
                 {isLoading ? (
                   <View
@@ -412,6 +509,7 @@ export default function SignUpScreen() {
                       height: 55,
                       backgroundColor: 'black',
                       borderRadius: 36,
+                      maxWidth: 375,
                     }}
                   />
                 ) : (
@@ -514,6 +612,7 @@ const styles = StyleSheet.create({
   },
   appleButton: {
     height: 55,
-    width: '100%',
+    flex: 1,
+    maxWidth: 375,
   }
 }); 

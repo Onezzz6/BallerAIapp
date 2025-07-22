@@ -9,7 +9,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
-import * as StoreReview from 'expo-store-review';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import analyticsService from '../services/analytics';
@@ -18,7 +17,7 @@ import { useHaptics } from '../utils/haptics';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useAuth } from '../context/AuthContext';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { signInAnonymously } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import { runPostLoginSequence, markAuthenticationComplete } from './paywall';
@@ -150,45 +149,37 @@ export default function ProfileCompleteScreen() {
   const pathname = usePathname();
   const { onboardingData } = useOnboarding();
   const { user } = useAuth();
+  const [isCreatingAccount, setIsCreatingAccount] = useState(false);
   
   // NEW: Use automatic onboarding step system
   const { goToNext } = useOnboardingStep('profile-complete');
 
   const handleGetStarted = async () => {
-    haptics.light();
-    
-    // Request App Store rating instantly
-    try {
-      if (await StoreReview.hasAction()) {
-        await StoreReview.requestReview();
-        await analyticsService.logEvent('AA__99_app_store_review_requested');
-        // Small delay to let review dialog appear
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-    } catch (error) {
-      console.log('Store review request failed:', error);
+    // Prevent double-clicking
+    if (isCreatingAccount) {
+      console.log('Account creation already in progress, ignoring click');
+      return;
     }
+    
+    haptics.light();
+    setIsCreatingAccount(true);
     
     await analyticsService.logEvent('AA__31_profile_complete_get_started');
     
     try {
-      // Create anonymous user account immediately with onboarding data
-      console.log('Creating user account with onboarding data...');
+      // Create anonymous Firebase Auth user (guaranteed single account)
+      console.log('Creating anonymous user account with onboarding data...');
       
-      // Generate a temporary email for the account creation
-      const tempEmail = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}@ballerai.temp`;
-      const tempPassword = Math.random().toString(36).substr(2, 15);
-      
-      // Create the Firebase Auth account
-      const userCredential = await createUserWithEmailAndPassword(auth, tempEmail, tempPassword);
+      const userCredential = await signInAnonymously(auth);
       const newUser = userCredential.user;
       
-      console.log('User account created successfully:', newUser.uid);
+      console.log('Anonymous user created successfully:', newUser.uid);
       
       // Create Firestore document with all onboarding data
       await setDoc(doc(db, 'users', newUser.uid), {
-        email: tempEmail, // Temporary email that will be replaced after sign-up
-        isTemporary: true, // Flag to indicate this is a temporary account
+        email: null, // Anonymous user has no email until sign-up
+        isAnonymous: true,
+        isTemporary: true, // Will be set to false after email/password linking
         createdAt: new Date(),
         ...onboardingData
       });
@@ -223,6 +214,8 @@ export default function ProfileCompleteScreen() {
       
     } catch (error) {
       console.error('Error creating user account or showing paywall:', error);
+      // Reset loading state on error
+      setIsCreatingAccount(false);
       // Fallback to old flow if there's an error
       router.push('/(onboarding)/sign-up' as any);
     }
@@ -299,8 +292,9 @@ export default function ProfileCompleteScreen() {
         </Text>
         
         <Button 
-          title="Let's Get Started!" 
+          title={isCreatingAccount ? "Creating Account..." : "Let's Get Started!"} 
           onPress={handleGetStarted}
+          disabled={isCreatingAccount}
         />
       </View>
     </SafeAreaView>

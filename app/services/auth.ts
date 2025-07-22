@@ -66,9 +66,9 @@ const authService = {
       const user = userCredential.user;
 
       await setDoc(doc(db, 'users', user.uid), {
-        email: user.email,
+        ...onboardingData,
+        email: user.email, // Ensure the real email from Firebase Auth overrides any temporary email
         createdAt: new Date(),
-        ...onboardingData
       });
 
       return user;

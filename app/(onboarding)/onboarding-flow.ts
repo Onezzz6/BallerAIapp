@@ -63,6 +63,7 @@ export const ONBOARDING_FLOW: OnboardingStep[] = [
   // Social proof and motivation
   { id: 'social-proof', route: '/social-proof', title: 'Social Proof' },
   { id: 'motivation-reason', route: '/motivation-reason', title: 'Motivation' },
+  { id: 'app-review', route: '/app-review', title: 'App Review' },
   
   // Final steps
   { id: 'profile-generation', route: '/profile-generation', title: 'Profile Generation' },
