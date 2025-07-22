@@ -9,7 +9,9 @@ import CustomButton from '../components/CustomButton';
 import analyticsService from '../services/analytics';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { doc, setDoc, updateDoc, getDoc, deleteDoc } from 'firebase/firestore';
-import { updateEmail, updatePassword, EmailAuthProvider, linkWithCredential } from 'firebase/auth';
+import { updateEmail, updatePassword, EmailAuthProvider, linkWithCredential, OAuthProvider, GoogleAuthProvider } from 'firebase/auth';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import Constants from 'expo-constants';
 import { db, auth } from '../config/firebase';
 import { runPostLoginSequence, markAuthenticationComplete } from './paywall';
 import { PAYWALL_RESULT } from 'react-native-purchases-ui';
@@ -27,17 +29,36 @@ export default function SignUpScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAppleAvailable, setIsAppleAvailable] = useState(false);
+  const [isGoogleAvailable, setIsGoogleAvailable] = useState(false);
   const { onboardingData } = useOnboarding();
   const { user } = useAuth();
 
-  // Check if Apple authentication is available on this device
+  // Check if social authentication methods are available on this device
   useEffect(() => {
-    const checkAppleAuthAvailability = async () => {
-      const isAvailable = await AppleAuthentication.isAvailableAsync();
-      setIsAppleAvailable(isAvailable);
+    const checkSocialAuthAvailability = async () => {
+      const appleAvailable = await AppleAuthentication.isAvailableAsync();
+      setIsAppleAvailable(appleAvailable);
+      
+      // Configure Google Sign In
+      try {
+        const webClientId = Constants.expoConfig?.extra?.googleWebClientId;
+        if (webClientId) {
+          GoogleSignin.configure({
+            webClientId: webClientId,
+          });
+          setIsGoogleAvailable(true);
+          console.log('Google Sign In configured successfully');
+        } else {
+          console.log('Google Web Client ID not found in configuration');
+          setIsGoogleAvailable(false);
+        }
+      } catch (error) {
+        console.error('Error configuring Google Sign In:', error);
+        setIsGoogleAvailable(false);
+      }
     };
     
-    checkAppleAuthAvailability();
+    checkSocialAuthAvailability();
   }, []);
 
   const handleSubmit = async () => {
@@ -305,82 +326,130 @@ export default function SignUpScreen() {
   const handleAppleSignUp = async () => {
     setIsLoading(true);
     try {
-      console.log("Starting Apple Sign-Up process...");
+      console.log("Starting Apple Sign-Up conversion...");
       
-      // Check if we already have a user (from the new flow)
-      if (user?.uid) {
-        console.log('User already exists, handling Apple sign-in for existing account:', user.uid);
-        
-        // For existing users in new flow, we'll just navigate to home
-        // The Apple authentication would be complex to merge with existing account
-        await analyticsService.logEvent('AA__32_apple_sign_up_after_paywall');
-        router.replace('/(tabs)/home');
-        return;
-      }
-      
-      // Fallback to original Apple flow if no existing user
-      const { user: appleUser, hasDocument, isValidDocument, appleInfo } = await authService.authenticateWithApple();
-      
-      if (!appleUser) {
-        console.log("No user returned from Apple authentication");
-        setIsLoading(false);
+      if (!auth.currentUser) {
+        Alert.alert('Error', 'Please complete onboarding first.');
         return;
       }
 
-      console.log(`User authenticated. Has document: ${hasDocument}, Is valid: ${isValidDocument}`);
-      
-      if (hasDocument && isValidDocument) {
-        console.log("User has valid document, navigating to home");
-        await analyticsService.logEvent('AA__32_apple_sign_in_complete');
-        
-        markAuthenticationComplete();
-        
-        await runPostLoginSequence(
-          appleUser.uid,
-          () => router.replace('/(tabs)/home'),
-          () => router.replace('/(onboarding)/paywall-upsell'),
-          pathname,
-          {
-            referralCode: onboardingData.referralCode,
-            referralDiscount: onboardingData.referralDiscount,
-            referralInfluencer: onboardingData.referralInfluencer,
-            referralPaywallType: onboardingData.referralPaywallType
-          }
-        );
-      } else {
-        console.log("User needs a document created before going through paywall");
-
-        try {
-          const userDocRef = doc(db, "users", appleUser.uid);
-          await setDoc(userDocRef, onboardingData);
-          console.log("User document created successfully");
-          
-          markAuthenticationComplete();
-          
-          await runPostLoginSequence(
-            appleUser.uid,
-            () => router.replace('/(tabs)/home'),
-            () => router.replace('/(onboarding)/paywall-upsell'),
-            pathname,
-            {
-              referralCode: onboardingData.referralCode,
-              referralDiscount: onboardingData.referralDiscount,
-              referralInfluencer: onboardingData.referralInfluencer,
-              referralPaywallType: onboardingData.referralPaywallType
-            }
-          );
-        } catch (error) {
-          console.error("Error creating user document:", error);
-          setIsLoading(false);
-          throw error;
-        }
+      // Check if current user is anonymous
+      if (!auth.currentUser.isAnonymous) {
+        Alert.alert('Error', 'User already has credentials.');
+        return;
       }
-    } catch (error) {
-      console.error("Apple sign-up error:", error);
+
+      // Get Apple credential
+      const appleAuthResult = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      if (!appleAuthResult.identityToken) {
+        throw new Error('Apple Sign In failed - no identity token');
+      }
+
+      // Create Apple credential for linking
+      const provider = new OAuthProvider('apple.com');
+      const credential = provider.credential({
+        idToken: appleAuthResult.identityToken,
+        rawNonce: undefined, // You might want to add nonce for production
+      });
+
+      // Link Apple credential to existing anonymous user
+      const linkedUser = await linkWithCredential(auth.currentUser, credential);
+      console.log('Successfully linked Apple credentials to anonymous user:', linkedUser.user.uid);
+
+      // Update Firestore document with Apple email
+      const tempUserDocRef = doc(db, 'users', linkedUser.user.uid);
+      await updateDoc(tempUserDocRef, {
+        email: linkedUser.user.email || appleAuthResult.email || null,
+        isAnonymous: false,
+        hasAppleSignIn: true,
+        updatedAt: new Date()
+      });
+
+      await analyticsService.logEvent('AA__32_apple_sign_up_converted');
+      console.log('Apple conversion complete! Navigating to home...');
+      router.replace('/(tabs)/home');
+      
+    } catch (error: any) {
+      console.error('Apple Sign-Up conversion error:', error);
+      Alert.alert('Error', error.message || 'Apple Sign-In failed');
+    } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSignUp = async () => {
+    setIsLoading(true);
+    try {
+      console.log("Starting Google Sign-Up conversion...");
       
-      if ((error as any)?.code !== 'ERR_CANCELED') {
-        Alert.alert('Error', 'Failed to sign up with Apple. Please try again.');
+      if (!auth.currentUser) {
+        Alert.alert('Error', 'Please complete onboarding first.');
+        return;
+      }
+
+      // Check if current user is anonymous
+      if (!auth.currentUser.isAnonymous) {
+        Alert.alert('Error', 'User already has credentials.');
+        return;
+      }
+
+      // Check if Google Play Services are available (Android only)
+      if (Platform.OS === 'android') {
+        await GoogleSignin.hasPlayServices();
+      }
+
+      // Sign in with Google
+      console.log('Attempting Google Sign In...');
+      const userInfo = await GoogleSignin.signIn();
+      console.log('Google Sign In successful, received user info:', userInfo.data?.user?.email);
+      const idToken = userInfo.data?.idToken;
+      console.log('ID Token received:', !!idToken);
+      
+      if (!idToken) {
+        console.error('No ID token in response:', userInfo);
+        throw new Error('Google Sign In failed - no ID token received');
+      }
+
+      // Create Google credential for linking
+      console.log('Creating Google credential...');
+      const credential = GoogleAuthProvider.credential(idToken);
+
+      // Link Google credential to existing anonymous user
+      const linkedUser = await linkWithCredential(auth.currentUser, credential);
+      console.log('Successfully linked Google credentials to anonymous user:', linkedUser.user.uid);
+
+      // Update Firestore document with Google email
+      const tempUserDocRef = doc(db, 'users', linkedUser.user.uid);
+      await updateDoc(tempUserDocRef, {
+        email: linkedUser.user.email || null,
+        isAnonymous: false,
+        hasGoogleSignIn: true,
+        updatedAt: new Date()
+      });
+
+      await analyticsService.logEvent('AA__32_google_sign_up_converted');
+      console.log('Google conversion complete! Navigating to home...');
+      router.replace('/(tabs)/home');
+      
+    } catch (error: any) {
+      console.error('Google Sign-Up conversion error:', error);
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
+      
+      if (error.code === 'sign_in_cancelled' || error.code === '-5') {
+        // User cancelled the sign-in flow
+        console.log('Google Sign In was cancelled by user');
+      } else if (error.code === 'sign_in_required') {
+        console.log('User needs to sign in again');
+        Alert.alert('Error', 'Please try signing in with Google again.');
+      } else {
+        Alert.alert('Error', error.message || 'Google Sign-In failed. Please try again.');
       }
     } finally {
       setIsLoading(false);
@@ -492,35 +561,44 @@ export default function SignUpScreen() {
               }}
             />
 
-            {/* Apple Sign In */}
-            {isAppleAvailable && (
-              <View style={{ 
-                opacity: isLoading ? 0.5 : 1,
-                flex: 1,
-                marginTop: 24,
-                alignItems: 'center',
-                maxWidth: 375,
-                alignSelf: 'center',
-              }}>
-                {isLoading ? (
-                  <View
-                    style={{
-                      width: '100%',
-                      height: 55,
-                      backgroundColor: 'black',
-                      borderRadius: 36,
-                      maxWidth: 375,
-                    }}
-                  />
-                ) : (
-                  <AppleAuthentication.AppleAuthenticationButton
-                    buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
-                    buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-                    cornerRadius={36}
-                    style={styles.appleButton}
-                    onPress={handleAppleSignUp}
-                  />
-                )}
+            {/* Social Sign In Options */}
+            {(isAppleAvailable || isGoogleAvailable) && (
+              <View style={styles.socialButtonsContainer}>
+                <Text style={styles.orText}>or continue with</Text>
+                
+                <View style={styles.socialButtons}>
+                  {/* Apple Sign In */}
+                  {isAppleAvailable && (
+                    <View style={styles.socialButtonWrapper}>
+                      {isLoading ? (
+                        <View style={[styles.socialButton, { backgroundColor: 'black' }]} />
+                      ) : (
+                        <AppleAuthentication.AppleAuthenticationButton
+                          buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+                          buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                          cornerRadius={36}
+                          style={styles.socialButton}
+                          onPress={handleAppleSignUp}
+                        />
+                      )}
+                    </View>
+                  )}
+                  
+                  {/* Google Sign In */}
+                  {isGoogleAvailable && (
+                    <Pressable 
+                      style={[styles.socialButton, styles.googleButton, { opacity: isLoading ? 0.5 : 1 }]}
+                      onPress={handleGoogleSignUp}
+                      disabled={isLoading}
+                    >
+                      <Image 
+                        source={{ uri: 'https://developers.google.com/identity/images/g-logo.png' }}
+                        style={styles.googleIcon}
+                      />
+                      <Text style={styles.googleButtonText}>Continue with Google</Text>
+                    </Pressable>
+                  )}
+                </View>
               </View>
             )}
           </View>
@@ -614,5 +692,46 @@ const styles = StyleSheet.create({
     height: 55,
     flex: 1,
     maxWidth: 375,
+  },
+  socialButtonsContainer: {
+    marginTop: 24,
+    alignItems: 'center',
+  },
+  orText: {
+    color: '#666666',
+    fontSize: 14,
+    marginBottom: 16,
+  },
+  socialButtons: {
+    gap: 12,
+    width: '100%',
+    maxWidth: 375,
+  },
+  socialButtonWrapper: {
+    width: '100%',
+  },
+  socialButton: {
+    height: 55,
+    borderRadius: 36,
+    width: '100%',
+  },
+  googleButton: {
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  googleIcon: {
+    width: 20,
+    height: 20,
+    marginRight: 12,
+  },
+  googleButtonText: {
+    color: '#333333',
+    fontSize: 16,
+    fontWeight: '500',
   }
 }); 

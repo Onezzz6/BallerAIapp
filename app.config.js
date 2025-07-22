@@ -55,7 +55,7 @@ export default {
     },
     jsEngine: "hermes",
     newArchEnabled: true,
-    plugins: [
+          plugins: [
       "@react-native-firebase/app",
       [
         "expo-build-properties",
@@ -63,6 +63,12 @@ export default {
           "ios": {
             "useFrameworks": "static"
           }
+        }
+      ],
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          iosUrlScheme: "com.googleusercontent.apps.764862532296-fkvrcavkkultnmks81lbq7nqv4d4682i"
         }
       ],
       'expo-font',
@@ -93,6 +99,7 @@ export default {
       openaiApiKey: process.env.OPENAI_API_KEY,
       googleApiKey: process.env.GOOGLE_API_KEY,
       deepseekApiKey: process.env.DEEPSEEK_API_KEY,
+      googleWebClientId: process.env.GOOGLE_WEB_CLIENT_ID,
       eas: {
         projectId: "eca84105-519c-4832-902e-d87afe59e858"
       }
