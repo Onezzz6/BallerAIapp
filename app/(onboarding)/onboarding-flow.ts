@@ -71,7 +71,7 @@ export const ONBOARDING_FLOW: OnboardingStep[] = [
   { id: 'profile-complete', route: '/profile-complete', title: 'Profile Complete' },
   
   // New post-paywall screens (not part of normal onboarding flow)
-  { id: 'paywall-upsell', route: '/paywall-upsell', title: 'Unlock Full Potential', skipOnBack: true },
+  // { id: 'paywall-upsell', route: '/paywall-upsell', title: 'Unlock Full Potential', skipOnBack: true }, // REMOVED: No longer used in new flow
   { id: 'sign-up', route: '/sign-up', title: 'Create Account', skipOnBack: true },
 ];
 

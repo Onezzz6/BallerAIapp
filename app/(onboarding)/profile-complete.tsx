@@ -197,10 +197,10 @@ export default function ProfileCompleteScreen() {
           console.log('Paywall successful - navigating to sign-up to attach email');
           router.replace('/(onboarding)/sign-up');
         },
-        // If paywall cancelled → navigate to upsell screen
+        // If paywall cancelled → navigate to one-time offer screen
         () => {
-          console.log('Paywall cancelled - navigating to upsell screen');
-          router.replace('/(onboarding)/paywall-upsell');
+          console.log('Paywall cancelled - navigating to one-time offer screen');
+          router.replace('/(onboarding)/one-time-offer');
         },
         pathname,
         // Pass referral code data for paywall selection

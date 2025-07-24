@@ -135,6 +135,12 @@ export default function PaywallUpsellScreen() {
   const { user } = useAuth();
   const { onboardingData } = useOnboarding();
 
+  // This screen is obsolete - redirect users if they somehow get here
+  useEffect(() => {
+    console.log('⚠️ PaywallUpsellScreen is obsolete, redirecting to home');
+    router.replace('/(tabs)/home');
+  }, []);
+
   const handleGoPro = async () => {
     haptics.light();
     
