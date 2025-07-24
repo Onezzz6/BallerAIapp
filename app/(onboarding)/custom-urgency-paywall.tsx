@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, SafeAreaView, StyleSheet, ScrollView, Pressable, Image, Alert } from 'react-native';
 import Animated, { 
-  FadeInRight, 
+  FadeInRight,
+  FadeInDown,
+  FadeOutUp,
   useSharedValue, 
   useAnimatedStyle, 
   withTiming,
@@ -43,27 +45,20 @@ export default function CustomUrgencyPaywall({
   const [isRestoring, setIsRestoring] = useState(false);
   
   // UI state
-  const [showMonthly, setShowMonthly] = useState(false);
+  const [showAllPlans, setShowAllPlans] = useState(false);
   const [countryDiscount, setCountryDiscount] = useState('80');
 
-  // Auto-switch selected package when toggling between monthly/yearly
+  // Auto-select yearly package by default
   useEffect(() => {
     if (packages.length > 0) {
-      if (showMonthly) {
-        // Switch to monthly package
-        const monthlyPackage = packages.find(pkg => 
-          pkg.identifier.toLowerCase().includes('month') || pkg.packageType === 'MONTHLY'
-        );
-        if (monthlyPackage) setSelectedPackage(monthlyPackage);
-      } else {
-        // Switch to yearly package
-        const yearlyPackage = packages.find(pkg => 
-          pkg.identifier.toLowerCase().includes('year') || pkg.packageType === 'ANNUAL'
-        );
-        if (yearlyPackage) setSelectedPackage(yearlyPackage);
-      }
+      // Always default to yearly package
+      const yearlyPackage = packages.find(pkg => 
+        pkg.identifier.toLowerCase().includes('year') || pkg.packageType === 'ANNUAL'
+      ) || packages[0];
+      
+      if (yearlyPackage) setSelectedPackage(yearlyPackage);
     }
-  }, [showMonthly, packages]);
+  }, [packages]);
 
   // Animation
   const pulseValue = useSharedValue(1);
@@ -322,33 +317,28 @@ export default function CustomUrgencyPaywall({
           colors={['rgba(0, 180, 80, 0.1)', 'rgba(0, 153, 168, 0.4)', 'rgba(25, 118, 210, 0.7)', 'rgba(0, 50, 100, 0.9)']} 
           style={styles.fixedFooter}
         >
-          {/* Plan Toggle */}
-          <View style={styles.planToggleContainer}>
-            <Pressable 
-              style={styles.toggleSwitch}
-              onPress={() => setShowMonthly(!showMonthly)}
-            >
-              <View style={[styles.toggleTrack, showMonthly && styles.toggleTrackActive]}>
-                <View style={[styles.toggleThumb, showMonthly && styles.toggleThumbActive]} />
-              </View>
-              <Text style={styles.toggleText}>
-                {showMonthly ? 'Show Yearly (Recommended)' : 'Show Monthly'}
-              </Text>
-            </Pressable>
-          </View>
+                                  {/* Pricing Card */}
+        <View style={styles.pricingContainer}>
+          {/* Yearly Plan (Always show first) */}
+          {packages
+            .filter(pkg => pkg.identifier.toLowerCase().includes('year') || pkg.packageType === 'ANNUAL')
+            .map((pkg) => {
+              const isSelected = selectedPackage?.identifier === pkg.identifier;
+              
+              return (
+                <View key={pkg.identifier} style={styles.cardContainer}>
+                  {/* Discount % Badge (Top Right) */}
+                  {discount && (
+                    <View style={styles.yearlyDiscountBadge}>
+                      <Text style={styles.yearlyDiscountText}>{discount}% OFF</Text>
+                    </View>
+                  )}
 
-          {/* Pricing Card */}
-          <View style={styles.pricingContainer}>
-            {packages
-              .filter(pkg => {
-                const isYearly = pkg.identifier.toLowerCase().includes('year') || pkg.packageType === 'ANNUAL';
-                return showMonthly ? !isYearly : isYearly;
-              })
-              .map((pkg, index) => {
-                const isYearly = pkg.identifier.toLowerCase().includes('year') || pkg.packageType === 'ANNUAL';
-                
-                return (
-                  <Pressable key={pkg.identifier} style={styles.productCard} onPress={() => setSelectedPackage(pkg)}>
+                  <Pressable 
+                    style={[styles.productCard, isSelected && styles.selectedProductCard]} 
+                    onPress={() => setSelectedPackage(pkg)}
+                  >
+
                     {/* "LOWEST PRICE EVER" Badge */}
                     <LinearGradient 
                       colors={['#00E676', '#00BCD4']} 
@@ -362,29 +352,82 @@ export default function CustomUrgencyPaywall({
                     {/* Product Details */}
                     <View style={styles.productDetails}>
                       <View style={styles.productLeft}>
-                        <Text style={styles.productTitle}>
-                          {isYearly ? 'Yearly' : 'Monthly'}
-                        </Text>
+                        <Text style={styles.productTitle}>Yearly</Text>
                         <Text style={styles.productSubtitle}>
-                          {isYearly ? '12mo • ' + pkg.product.priceString : '1mo • ' + pkg.product.priceString}
+                          12mo • {pkg.product.priceString}
                         </Text>
                       </View>
                       <View style={styles.productRight}>
                         <Text style={styles.productPrice}>
-                          {isYearly ? (parseFloat(pkg.product.priceString.replace(/[^0-9.]/g, '')) / 12).toFixed(2) + ' €/mo' : pkg.product.priceString}
+                          {(parseFloat(pkg.product.priceString.replace(/[^0-9.]/g, '')) / 12).toFixed(2)} €/mo
                         </Text>
-                        {isYearly && (
-                          <Text style={styles.billedText}>
-                            Billed at {pkg.product.priceString}/yr.
-                          </Text>
-                        )}
+                        <Text style={styles.billedText}>
+                          Billed at {pkg.product.priceString}/yr.
+                        </Text>
+                      </View>
+                    </View>
+
+                  </Pressable>
+                </View>
+              );
+            })
+          }
+
+          {/* View All Plans Button */}
+          {!showAllPlans && (
+            <Animated.View 
+              entering={FadeInDown.duration(300)}
+              exiting={FadeOutUp.duration(200)}
+              style={styles.planToggleContainer}
+            >
+              <Pressable 
+                style={styles.viewAllPlansButton}
+                onPress={() => setShowAllPlans(true)}
+              >
+                <Text style={styles.viewAllPlansText}>View All Plans</Text>
+                <Text style={styles.viewAllPlansIcon}>▼</Text>
+              </Pressable>
+            </Animated.View>
+          )}
+
+          {/* Monthly Plan (Show when expanded) */}
+          {showAllPlans && packages
+            .filter(pkg => pkg.identifier.toLowerCase().includes('month') || pkg.packageType === 'MONTHLY')
+            .map((pkg) => {
+              const isSelected = selectedPackage?.identifier === pkg.identifier;
+              
+              return (
+                <Animated.View 
+                  key={pkg.identifier}
+                  entering={FadeInDown.duration(400).delay(100)}
+                  exiting={FadeOutUp.duration(300)}
+                >
+                  <View style={styles.cardContainer}>
+                    <Pressable 
+                      style={[styles.productCard, isSelected && styles.selectedProductCard]} 
+                      onPress={() => setSelectedPackage(pkg)}
+                    >
+                    {/* Product Details */}
+                    <View style={[styles.productDetails, styles.monthlyProductDetails]}>
+                      <View style={styles.productLeft}>
+                        <Text style={styles.productTitle}>Monthly</Text>
+                        <Text style={styles.productSubtitle}>
+                          1mo • {pkg.product.priceString}
+                        </Text>
+                      </View>
+                      <View style={styles.productRight}>
+                        <Text style={styles.productPrice}>
+                          {pkg.product.priceString}
+                        </Text>
                       </View>
                     </View>
                   </Pressable>
-                );
-              })
-            }
-          </View>
+                  </View>
+                </Animated.View>
+              );
+            })
+          }
+        </View>
 
           {/* CTA Button */}
           <Pressable 
@@ -427,7 +470,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContentContainer: {
-    paddingBottom: 300,
+    paddingBottom: 320,
   },
   content: {
     paddingHorizontal: 20,
@@ -572,7 +615,7 @@ const styles = StyleSheet.create({
 
   pricingContainer: {
     width: '100%',
-    marginBottom: 16,
+    marginBottom: 8,
   },
   pricingCard: {
     flex: 1,
@@ -712,37 +755,28 @@ const styles = StyleSheet.create({
   },
   planToggleContainer: {
     alignItems: 'center',
-    marginBottom: 24,
-    marginTop: 0,
+    marginBottom: 8,
+    marginTop: 4,
+    paddingVertical: 4,
   },
-  toggleSwitch: {
+  viewAllPlansButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
   },
-  toggleTrack: {
-    width: 50,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: '#333333',
-    marginRight: 12,
-    padding: 2,
-  },
-  toggleTrackActive: {
-    backgroundColor: '#4CAF50',
-  },
-  toggleThumb: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#ffffff',
-  },
-  toggleThumbActive: {
-    marginLeft: 24,
-  },
-  toggleText: {
+  viewAllPlansText: {
     fontSize: 14,
     fontWeight: '600',
     color: '#ffffff',
+    textDecorationLine: 'underline',
+    marginRight: 8,
+  },
+  viewAllPlansIcon: {
+    fontSize: 12,
+    color: '#ffffff',
+    fontWeight: 'bold',
   },
   singlePricingCard: {
     position: 'relative',
@@ -836,7 +870,7 @@ const styles = StyleSheet.create({
   
   discountCard: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 20,
   },
   discountCardGradient: {
     borderRadius: 20,
@@ -871,7 +905,8 @@ const styles = StyleSheet.create({
   
   timerSection: {
     alignItems: 'center',
-    paddingBottom: 40,
+    paddingBottom: 15,
+    paddingTop: 5,
   },
   timerDescription: {
     fontSize: 16,
@@ -894,11 +929,15 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: 20,
     paddingBottom: 40,
-    paddingTop: 20,
+    paddingTop: 25,
+    minHeight: 280,
   },
   
+  cardContainer: {
+    position: 'relative',
+    marginBottom: 8,
+  },
   productCard: {
-    marginBottom: 16,
     borderRadius: 12,
     overflow: 'hidden',
     shadowColor: '#000',
@@ -907,6 +946,13 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
     width: '100%',
+    position: 'relative',
+  },
+  selectedProductCard: {
+    borderWidth: 2,
+    borderColor: '#00E676',
+    shadowColor: '#00E676',
+    shadowOpacity: 0.5,
   },
   priceBadge: {
     paddingVertical: 12,
@@ -927,6 +973,31 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     minHeight: 80,
+  },
+  monthlyProductDetails: {
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+  },
+
+  yearlyDiscountBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: '#FF6B35',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    zIndex: 50,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 15,
+  },
+  yearlyDiscountText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '800',
+    textAlign: 'center',
   },
   productLeft: {
     flex: 1,
@@ -964,7 +1035,7 @@ const styles = StyleSheet.create({
   
   claimButton: {
     marginBottom: 8,
-    marginTop: 8,
+    marginTop: 4,
     borderRadius: 25,
     overflow: 'hidden',
     shadowColor: '#000',
