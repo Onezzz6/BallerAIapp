@@ -20,6 +20,12 @@ service firebase.storage {
       allow read: if isSignedIn();
       allow write: if isOwner(userId) && isValidImage();
     }
+
+    // Meal photos for nutrition tracking
+    match /meal-photos/{userId}/{fileName} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId) && isValidImage();
+    }
     
     // User's training media
     match /training_media/{userId}/{fileName} {

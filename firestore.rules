@@ -14,6 +14,7 @@ service cloud.firestore {
     match /meals/{mealId} {
       allow read, delete: if request.auth != null && request.auth.uid == resource.data.userId;
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null && request.auth.uid == resource.data.userId;
       allow list: if request.auth != null && request.query.limit <= 100;
     }
 
