@@ -5,6 +5,9 @@ type OnboardingData = {
   username: string | null;
   gender: string | null;
   age: string | null;
+  birthYear: string | null;
+  birthMonth: string | null;
+  birthDay: string | null;
   height: string | null;
   weight: string | null;
   injuryHistory: string | null;
@@ -44,6 +47,9 @@ const defaultOnboardingData: OnboardingData = {
   username: null,
   gender: null,
   age: null,
+  birthYear: null,
+  birthMonth: null,
+  birthDay: null,
   height: null,
   weight: null,
   injuryHistory: null,

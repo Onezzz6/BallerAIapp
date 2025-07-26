@@ -18,16 +18,22 @@ export default function AgeScreen() {
   // NEW: Use automatic onboarding step system
   const { goToNext } = useOnboardingStep('age');
   
-  // Parse existing age or set defaults
-  const existingAge = onboardingData.age ? parseInt(onboardingData.age) : null;
+  // Parse existing birth date or set defaults
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
   const currentDay = new Date().getDate();
   
-  // Calculate birth year from age or use current date
-  const initialYear = existingAge ? currentYear - existingAge : currentYear - 18;
-  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
-  const [selectedDay, setSelectedDay] = useState(currentDay);
+  // Use saved birth date if available, otherwise default values
+  const savedBirthYear = onboardingData.birthYear ? parseInt(onboardingData.birthYear) : null;
+  const savedBirthMonth = onboardingData.birthMonth ? parseInt(onboardingData.birthMonth) : null;
+  const savedBirthDay = onboardingData.birthDay ? parseInt(onboardingData.birthDay) : null;
+  
+  const initialYear = savedBirthYear || currentYear - 18;
+  const initialMonth = savedBirthMonth || currentMonth;
+  const initialDay = savedBirthDay || currentDay;
+  
+  const [selectedMonth, setSelectedMonth] = useState(initialMonth);
+  const [selectedDay, setSelectedDay] = useState(initialDay);
   const [selectedYear, setSelectedYear] = useState(initialYear);
 
   const months = [
@@ -53,7 +59,15 @@ export default function AgeScreen() {
 
     haptics.light();
     await analyticsService.logEvent('AA__08_age_continue');
-    await updateOnboardingData({ age: age.toString() });
+    
+    // Save both the calculated age and the exact birth date
+    await updateOnboardingData({ 
+      age: age.toString(),
+      birthYear: selectedYear.toString(),
+      birthMonth: selectedMonth.toString(),
+      birthDay: selectedDay.toString()
+    });
+    
     // NEW: Use automatic navigation instead of hardcoded route
     goToNext();
   };
