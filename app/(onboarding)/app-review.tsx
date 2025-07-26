@@ -80,13 +80,13 @@ export default function AppReviewScreen() {
                 marginBottom: 24,
               }
             ]} allowFontScaling={false}>
-              Give us a rating
+              Give us a rating!
             </Text>
           </View>
 
           <View style={{
             paddingHorizontal: 24,
-            paddingTop: 32,
+            paddingTop: 12,
             paddingBottom: 120,
           }}>
             {/* Clean Lottie Animation - No container or text */}
@@ -99,8 +99,8 @@ export default function AppReviewScreen() {
                 autoPlay
                 loop
                 style={{
-                  width: 150,
-                  height: 150,
+                  width: 140,
+                  height: 140,
                 }}
               />
             </View>
@@ -108,12 +108,12 @@ export default function AppReviewScreen() {
             {/* Social proof section */}
             <Text style={{
               fontSize: 24,
-              fontWeight: 'bold',
+              fontWeight: '600',
               color: colors.black,
               textAlign: 'center',
-              marginBottom: 24,
+              marginBottom: 16,
             }}>
-              BallerAI was made for people        like you
+              BallerAI was made{'\n'}for people like you
             </Text>
 
             {/* Profile pictures - young footballers */}
@@ -121,7 +121,7 @@ export default function AppReviewScreen() {
               flexDirection: 'row',
               justifyContent: 'center',
               alignItems: 'center',
-              marginBottom: 16,
+              marginBottom: 32,
             }}>
               <Image
                 source={require('../../assets/images/onni.jpg')}
@@ -160,22 +160,14 @@ export default function AppReviewScreen() {
               />
             </View>
 
-            <Text style={{
-              fontSize: 16,
-              color: '#666',
-              textAlign: 'center',
-              marginBottom: 40,
-            }}>
-              + 500,000 people
-            </Text>
-
             {/* Testimonials - Only 2, improved design */}
             <View style={{ marginBottom: 40 }}>
               {/* First Testimonial - Rebecca */}
               <View style={{
                 flexDirection: 'row',
-                padding: 20,
-                backgroundColor: '#F8F9FA',
+                paddingVertical: 20,
+                paddingHorizontal: 16,
+                backgroundColor: '#F7F7F7',
                 borderRadius: 16,
                 marginBottom: 16,
                 alignItems: 'flex-start',
@@ -183,10 +175,10 @@ export default function AppReviewScreen() {
                 <Image
                   source={require('../../assets/images/rebe.png')}
                   style={{
-                    width: 48,
-                    height: 48,
+                    width: 42,
+                    height: 42,
                     borderRadius: 24,
-                    marginRight: 16,
+                    marginRight: 12,
                   }}
                 />
                 <View style={{ flex: 1 }}>
@@ -197,15 +189,15 @@ export default function AppReviewScreen() {
                     marginBottom: 8,
                   }}>
                     <Text style={{
-                      fontSize: 16,
-                      fontWeight: 'bold',
+                      fontSize: 15,
+                      fontWeight: '600',
                       color: colors.black,
-                    }}>
+                    }} allowFontScaling={false}>
                       Rebecca Viljamaa
                     </Text>
                     <View style={{ flexDirection: 'row' }}>
                       {[1, 2, 3, 4, 5].map((star) => (
-                        <Text key={star} style={{ fontSize: 16, color: '#FFD700' }}>⭐</Text>
+                        <Text key={star} style={{ fontSize: 14, color: '#FFD700' }} allowFontScaling={false}>⭐</Text>
                       ))}
                     </View>
                   </View>
@@ -213,7 +205,7 @@ export default function AppReviewScreen() {
                     fontSize: 14,
                     color: '#666',
                     lineHeight: 20,
-                  }}>
+                  }} allowFontScaling={false}>
                     I’ve been injury-free ever since I started using BallerAI’s load management tools! It’s been amazing so far and I feel better than ever on the pitch. :)
                   </Text>
                 </View>
@@ -222,18 +214,19 @@ export default function AppReviewScreen() {
               {/* Second Testimonial - Young footballer */}
               <View style={{
                 flexDirection: 'row',
-                padding: 20,
-                backgroundColor: '#F8F9FA',
+                paddingVertical: 20,
+                paddingHorizontal: 16,
+                backgroundColor: '#F7F7F7',
                 borderRadius: 16,
                 alignItems: 'flex-start',
               }}>
                 <Image
                   source={{ uri: 'https://images.unsplash.com/photo-1612198188060-c7c2a3b66eae?w=150&h=150&fit=crop&crop=face' }}
                   style={{
-                    width: 48,
-                    height: 48,
+                    width: 42,
+                    height: 42,
                     borderRadius: 24,
-                    marginRight: 16,
+                    marginRight: 12,
                   }}
                 />
                 <View style={{ flex: 1 }}>
@@ -244,15 +237,15 @@ export default function AppReviewScreen() {
                     marginBottom: 8,
                   }}>
                     <Text style={{
-                      fontSize: 16,
-                      fontWeight: 'bold',
+                      fontSize: 15,
+                      fontWeight: '600',
                       color: colors.black,
-                    }}>
+                    }} allowFontScaling={false}>
                       Alex Chen
                     </Text>
                     <View style={{ flexDirection: 'row' }}>
                       {[1, 2, 3, 4, 5].map((star) => (
-                        <Text key={star} style={{ fontSize: 16, color: '#FFD700' }}>⭐</Text>
+                        <Text key={star} style={{ fontSize: 14, color: '#FFD700' }} allowFontScaling={false}>⭐</Text>
                       ))}
                     </View>
                   </View>
@@ -260,7 +253,7 @@ export default function AppReviewScreen() {
                     fontSize: 14,
                     color: '#666',
                     lineHeight: 20,
-                  }}>
+                  }} allowFontScaling={false}>
                     My coach says my performance has improved dramatically since using BallerAI. The training plans are perfect for my level!
                   </Text>
                 </View>

@@ -285,8 +285,8 @@ export default function CustomUrgencyPaywall({
 
           {/* Main Title */}
           <View style={styles.titleContainer}>
-            <Text style={styles.mainTitle}>ONE TIME OFFER</Text>
-            <Text style={styles.subtitle}>You will never see this again.</Text>
+            <Text style={styles.mainTitle} allowFontScaling={false}>ONE TIME OFFER</Text>
+            <Text style={styles.subtitle} allowFontScaling={false}>You will never see this again.</Text>
           </View>
 
           {/* Discount Card */}
@@ -298,16 +298,16 @@ export default function CustomUrgencyPaywall({
               end={{ x: 1, y: 1 }}
             >
               <View style={styles.discountCardInner}>
-                <Text style={styles.discountPercentage}>{discount || countryDiscount}% OFF</Text>
-                <Text style={styles.discountLabel}>FOREVER</Text>
+                <Text style={styles.discountPercentage} allowFontScaling={false}>{discount || countryDiscount}% OFF</Text>
+                <Text style={styles.discountLabel} allowFontScaling={false}>FOREVER</Text>
               </View>
             </LinearGradient>
           </View>
 
           {/* Timer Section */}
           <View style={styles.timerSection}>
-            <Text style={styles.timerDescription}>This offer will expire in</Text>
-            <Text style={styles.timerDisplay}>{formatTime(timeLeft)}</Text>
+            <Text style={styles.timerDescription} allowFontScaling={false}>This offer will expire in</Text>
+            <Text style={styles.timerDisplay} allowFontScaling={false}>{formatTime(timeLeft)}</Text>
           </View>
         </Animated.View>
         </ScrollView>
@@ -330,7 +330,7 @@ export default function CustomUrgencyPaywall({
                   {/* Discount % Badge (Top Right) */}
                   {discount && (
                     <View style={styles.yearlyDiscountBadge}>
-                      <Text style={styles.yearlyDiscountText}>{discount}% OFF</Text>
+                      <Text style={styles.yearlyDiscountText} allowFontScaling={false}>{discount}% OFF</Text>
                     </View>
                   )}
 
@@ -442,7 +442,7 @@ export default function CustomUrgencyPaywall({
               end={{ x: 1, y: 0 }}
             >
               <Text style={styles.claimButtonText}>
-                {isPurchasing ? 'Processing...' : 'CLAIM YOUR OFFER NOW'}
+                {isPurchasing ? 'Processing...' : 'BECOME A BALLER!'}
               </Text>
             </LinearGradient>
           </Pressable>
@@ -859,7 +859,6 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#ffffff',
     textAlign: 'center',
-    marginBottom: 8,
     letterSpacing: 1,
   },
   subtitle: {
@@ -870,7 +869,7 @@ const styles = StyleSheet.create({
   
   discountCard: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 10,
   },
   discountCardGradient: {
     borderRadius: 20,
@@ -884,15 +883,16 @@ const styles = StyleSheet.create({
   discountCardInner: {
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 18,
-    paddingVertical: 30,
-    paddingHorizontal: 40,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
     alignItems: 'center',
   },
   discountPercentage: {
-    fontSize: 60,
+    fontSize: 42,
     fontWeight: '900',
     color: '#ffffff',
     textAlign: 'center',
+    marginTop: -2,
     marginBottom: -8,
   },
   discountLabel: {
@@ -905,21 +905,20 @@ const styles = StyleSheet.create({
   
   timerSection: {
     alignItems: 'center',
-    paddingBottom: 15,
-    paddingTop: 5,
+    paddingBottom: 12,
   },
   timerDescription: {
     fontSize: 16,
     color: '#ffffff',
     textAlign: 'center',
-    marginBottom: 8,
   },
   timerDisplay: {
-    fontSize: 48,
+    fontSize: 42,
     fontWeight: '900',
     color: '#ffffff',
     textAlign: 'center',
     fontVariant: ['tabular-nums'],
+    marginTop: -2,
   },
   
   fixedFooter: {
@@ -968,7 +967,7 @@ const styles = StyleSheet.create({
   },
   productDetails: {
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    padding: 20,
+    padding: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
@@ -1036,7 +1035,7 @@ const styles = StyleSheet.create({
   claimButton: {
     marginBottom: 8,
     marginTop: 4,
-    borderRadius: 25,
+    borderRadius: 36,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },

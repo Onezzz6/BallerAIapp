@@ -404,7 +404,9 @@ export async function runPostLoginSequence(
       } else {
         // Present regular paywall for non-referral users
         console.log("💰 Presenting REGULAR paywall for non-referral user");
-        const regularOffering = offerings.all['NewOfferings'] || offerings.current;
+        // TODO: Once we verify the new paywall works in production, remove this hardcoding 
+        // and change to: offerings.current (to use dashboard default setting)
+        const regularOffering = offerings.all['StandardOffering'] || offerings.current;
         
         if (regularOffering) {
           console.log("✅ Regular offering found, presenting standard paywall");
