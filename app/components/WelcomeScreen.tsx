@@ -1,4 +1,4 @@
-import { Dimensions, View, Text, Image, Pressable, TextInput, Alert, Keyboard, TouchableWithoutFeedback, Modal } from 'react-native';
+import { Dimensions, View, Text, Image, Pressable, TextInput, Alert, Keyboard, TouchableWithoutFeedback, Modal, Platform } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import Animated, { 
   useSharedValue, 
@@ -19,6 +19,10 @@ import { colors, typography, spacing } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import analyticsService from '../services/analytics';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import Constants from 'expo-constants';
+import { GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
+import { auth } from '../config/firebase';
 
 // Default empty onboarding data
 const defaultOnboardingData = {
@@ -166,8 +170,10 @@ export default function WelcomeScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAppleAvailable, setIsAppleAvailable] = useState(false);
+  const [isGoogleAvailable, setIsGoogleAvailable] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [showResetModal, setShowResetModal] = useState(false);
+  const [showEmailForm, setShowEmailForm] = useState(false);
   
   // Use onboarding navigation system
   const { goToNext } = useOnboardingStep('welcome');
@@ -204,16 +210,36 @@ export default function WelcomeScreen() {
     return () => clearTimeout(trackTimer);
   }, []);
 
-  // Check Apple auth availability
+  // Check social auth availability
   useEffect(() => {
-    (async () => {
+    const checkSocialAuthAvailability = async () => {
       try {
         setIsAppleAvailable(await AppleAuthentication.isAvailableAsync());
       } catch (e) {
         console.error('Apple auth availability error', e);
         setIsAppleAvailable(false);
       }
-    })();
+
+      // Configure Google Sign In
+      try {
+        const webClientId = Constants.expoConfig?.extra?.googleWebClientId;
+        if (webClientId) {
+          GoogleSignin.configure({
+            webClientId: webClientId,
+          });
+          setIsGoogleAvailable(true);
+          console.log('Google Sign In configured successfully');
+        } else {
+          console.log('Google Web Client ID not found in configuration');
+          setIsGoogleAvailable(false);
+        }
+      } catch (error) {
+        console.error('Error configuring Google Sign In:', error);
+        setIsGoogleAvailable(false);
+      }
+    };
+    
+    checkSocialAuthAvailability();
   }, []);
 
   // ------------------------------------------------------- helper handlers
@@ -322,6 +348,61 @@ export default function WelcomeScreen() {
     );
   };
 
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    try {
+      console.log("Starting Google Sign-In...");
+      
+      // Check if Google Play Services are available (Android only)
+      if (Platform.OS === 'android') {
+        await GoogleSignin.hasPlayServices();
+      }
+
+      // Sign in with Google
+      console.log('Attempting Google Sign In...');
+      const userInfo = await GoogleSignin.signIn();
+      console.log('Google Sign In successful, received user info:', userInfo.data?.user?.email);
+      
+      const idToken = userInfo.data?.idToken;
+      console.log('ID Token received:', !!idToken);
+      
+      if (!idToken) {
+        console.error('No ID token in response:', userInfo);
+        throw new Error('Google Sign In failed - no ID token received');
+      }
+
+      // Create Google credential for Firebase
+      console.log('Creating Google credential...');
+      const credential = GoogleAuthProvider.credential(idToken);
+
+      // Sign in with Firebase using Google credentials
+      const userCredential = await signInWithCredential(auth, credential);
+      const user = userCredential.user;
+      
+      if (user) {
+        haptics.success();
+        markAuthenticationComplete();
+        await runPostLoginSequence(
+          user.uid,
+          () => router.replace('/(tabs)/home'),
+          () => router.replace('/'),
+          pathname
+        );
+      }
+    } catch (error: any) {
+      console.error('Google Sign-In error:', error);
+      haptics.error();
+      
+      if (error.code === 'auth/user-not-found') {
+        Alert.alert('Account Not Found', 'No account found with this Google account. Please create an account first.');
+      } else if (error.code !== 'SIGN_IN_CANCELLED') {
+        Alert.alert('Error', error.message || 'Google Sign-In failed');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleForgotPassword = () => {
     setResetEmail(email);
     setShowResetModal(true);
@@ -373,151 +454,240 @@ export default function WelcomeScreen() {
                     typography.largeTitle,
                     {
                       textAlign: 'center',
-                      marginBottom: spacing.lg,
+                      marginBottom: spacing.xl,
                     }
                   ]}>
                     Welcome Back!
                   </Text>
 
-                  <TextInput
-                    value={email}
-                    onChangeText={setEmail}
-                    placeholder="Enter your email"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    style={{
-                      width: '100%',
-                      borderWidth: 1,
-                      borderColor: colors.borderColor,
-                      borderRadius: 12,
-                      padding: spacing.md,
-                      fontSize: 16,
-                      backgroundColor: colors.inputBackground,
-                    }}
-                  />
+                  {!showEmailForm ? (
+                    // Show three uniform buttons initially
+                    <View style={{ gap: spacing.md }}>
+                      {/* Email Sign In Button */}
+                      <Pressable 
+                        style={{
+                          height: 56,
+                          width: '100%',
+                          borderRadius: 28,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          paddingHorizontal: 16,
+                          backgroundColor: colors.white,
+                          borderWidth: 1,
+                          borderColor: colors.brandBlue,
+                          opacity: isLoading ? 0.5 : 1,
+                        }}
+                        onPress={() => {
+                          haptics.light();
+                          setShowEmailForm(true);
+                        }}
+                        disabled={isLoading}
+                      >
+                        <Ionicons name="mail-outline" size={24} color={colors.brandBlue} />
+                        <Text style={{
+                          fontSize: 16,
+                          fontWeight: '600',
+                          color: colors.brandBlue,
+                          marginLeft: 12,
+                        }}>
+                          Continue with Email
+                        </Text>
+                      </Pressable>
 
-                  <View style={{ width: '100%' }}>
-                    <TextInput
-                      value={password}
-                      onChangeText={setPassword}
-                      placeholder="Enter your password"
-                      secureTextEntry={!showPassword}
-                      style={{
-                        width: '100%',
-                        borderWidth: 1,
-                        borderColor: colors.borderColor,
-                        borderRadius: 12,
-                        padding: spacing.md,
-                        paddingRight: 50,
-                        fontSize: 16,
-                        backgroundColor: colors.inputBackground,
-                      }}
-                    />
-                    <Pressable
-                      onPress={() => {
-                        haptics.light();
-                        setShowPassword(!showPassword);
-                      }}
-                      style={{
-                        position: 'absolute',
-                        right: 12,
-                        top: '50%',
-                        transform: [{ translateY: -12 }]
-                      }}
-                    >
-                      <Ionicons
-                        name={showPassword ? 'eye-off' : 'eye'}
-                        size={24}
-                        color={colors.mediumGray}
-                      />
-                    </Pressable>
-                  </View>
-
-                  <Pressable
-                    onPress={handleForgotPassword}
-                    style={({ pressed }) => ({
-                      opacity: pressed ? 0.7 : 1,
-                      alignItems: 'center',
-                      marginTop: -8,
-                      marginBottom: 8,
-                    })}
-                  >
-                    <Text style={{
-                      fontSize: 14,
-                      color: colors.mediumGray,
-                      textDecorationLine: 'underline',
-                    }}>
-                      Forgot password?
-                    </Text>
-                  </Pressable>
-
-                  <Button 
-                    title={isLoading ? "Signing In..." : "Sign In"}
-                    onPress={handleSignIn}
-                    disabled={isLoading}
-                    buttonStyle={{
-                      backgroundColor: colors.brandBlue,
-                      paddingVertical: 16,
-                      borderRadius: 25,
-                      marginTop: spacing.md,
-                      marginBottom: spacing.sm,
-                      opacity: isLoading ? 0.5 : 1,
-                    }}
-                    textStyle={{
-                      fontSize: 18,
-                      fontWeight: '600',
-                    }}
-                  />
-
-                  {isAppleAvailable && (
-                    <View style={{ 
-                      opacity: isLoading ? 0.5 : 1,
-                      width: '100%'
-                    }}>
-                      {isLoading ? (
-                        <View
-                          style={{
-                            width: '100%',
-                            height: 55,
-                            marginBottom: spacing.md,
-                            backgroundColor: colors.black,
-                            borderRadius: 25,
-                          }}
-                        />
-                      ) : (
-                        <AppleAuthentication.AppleAuthenticationButton
-                          buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
-                          buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-                          cornerRadius={25}
-                          style={{
-                            width: '100%',
-                            height: 55,
-                            marginBottom: spacing.md,
-                          }}
-                          onPress={handleAppleSignIn}
-                        />
+                      {/* Apple Sign In */}
+                      {isAppleAvailable && (
+                        <View style={{ opacity: isLoading ? 0.5 : 1 }}>
+                          {isLoading ? (
+                            <View
+                              style={{
+                                height: 56,
+                                width: '100%',
+                                backgroundColor: colors.black,
+                                borderRadius: 28,
+                              }}
+                            />
+                          ) : (
+                            <AppleAuthentication.AppleAuthenticationButton
+                              buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+                              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                              cornerRadius={28}
+                              style={{
+                                height: 56,
+                                width: '100%',
+                              }}
+                              onPress={handleAppleSignIn}
+                            />
+                          )}
+                        </View>
                       )}
+                      
+                      {/* Google Sign In */}
+                      {isGoogleAvailable && (
+                        <Pressable 
+                          style={{
+                            height: 56,
+                            width: '100%',
+                            borderRadius: 28,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            paddingHorizontal: 16,
+                            backgroundColor: colors.white,
+                            borderWidth: 1,
+                            borderColor: colors.borderColor,
+                            opacity: isLoading ? 0.5 : 1,
+                          }}
+                          onPress={handleGoogleSignIn}
+                          disabled={isLoading}
+                        >
+                          <Image 
+                            source={{ uri: 'https://developers.google.com/identity/images/g-logo.png' }}
+                            style={{ width: 24, height: 24, marginRight: 12 }}
+                          />
+                          <Text style={{
+                            fontSize: 16,
+                            fontWeight: '600',
+                            color: colors.black,
+                          }}>
+                            Continue with Google
+                          </Text>
+                        </Pressable>
+                      )}
+                    </View>
+                  ) : (
+                    // Show email form when email button is pressed
+                    <View style={{ width: '100%' }}>
+                      <View style={{ gap: spacing.md, marginBottom: spacing.md }}>
+                        <TextInput
+                          value={email}
+                          onChangeText={setEmail}
+                          placeholder="Enter your email"
+                          keyboardType="email-address"
+                          autoCapitalize="none"
+                          autoFocus
+                          style={{
+                            borderWidth: 1,
+                            borderColor: colors.borderColor,
+                            borderRadius: 12,
+                            padding: spacing.md,
+                            fontSize: 16,
+                            backgroundColor: colors.inputBackground,
+                          }}
+                        />
+
+                        <View style={{ position: 'relative' }}>
+                          <TextInput
+                            value={password}
+                            onChangeText={setPassword}
+                            placeholder="Enter your password"
+                            secureTextEntry={!showPassword}
+                            style={{
+                              borderWidth: 1,
+                              borderColor: colors.borderColor,
+                              borderRadius: 12,
+                              padding: spacing.md,
+                              paddingRight: 50,
+                              fontSize: 16,
+                              backgroundColor: colors.inputBackground,
+                            }}
+                          />
+                          <Pressable
+                            onPress={() => {
+                              haptics.light();
+                              setShowPassword(!showPassword);
+                            }}
+                            style={{
+                              position: 'absolute',
+                              right: 16,
+                              top: 16,
+                            }}
+                          >
+                            <Ionicons
+                              name={showPassword ? 'eye-off' : 'eye'}
+                              size={24}
+                              color={colors.mediumGray}
+                            />
+                          </Pressable>
+                        </View>
+                      </View>
+
+                      <Pressable
+                        onPress={handleForgotPassword}
+                        style={({ pressed }) => ({
+                          opacity: pressed ? 0.7 : 1,
+                          alignItems: 'center',
+                          marginBottom: spacing.md,
+                        })}
+                      >
+                        <Text style={{
+                          fontSize: 14,
+                          color: colors.mediumGray,
+                          textDecorationLine: 'underline',
+                        }}>
+                          Forgot password?
+                        </Text>
+                      </Pressable>
+
+                      <Button 
+                        title={isLoading ? "Signing In..." : "Sign In"}
+                        onPress={handleSignIn}
+                        disabled={isLoading}
+                        buttonStyle={{
+                          backgroundColor: colors.brandBlue,
+                          paddingVertical: 16,
+                          borderRadius: 25,
+                          marginBottom: spacing.lg,
+                          opacity: isLoading ? 0.5 : 1,
+                        }}
+                        textStyle={{
+                          fontSize: 18,
+                          fontWeight: '600',
+                        }}
+                      />
+
+                      <Pressable
+                        onPress={() => {
+                          haptics.light();
+                          setShowEmailForm(false);
+                          setEmail('');
+                          setPassword('');
+                        }}
+                        style={({ pressed }) => ({
+                          opacity: pressed ? 0.7 : 1,
+                          alignItems: 'center',
+                        })}
+                      >
+                        <Text style={{
+                          fontSize: 16,
+                          color: colors.mediumGray,
+                        }}>
+                          Back
+                        </Text>
+                      </Pressable>
                     </View>
                   )}
 
-                  <Pressable
-                    onPress={() => {
-                      haptics.light();
-                      setShowSignIn(false);
-                    }}
-                    style={({ pressed }) => ({
-                      opacity: pressed ? 0.7 : 1,
-                      alignItems: 'center',
-                      marginTop: spacing.md,
-                    })}
-                  >
-                    <Text style={{
-                      fontSize: 16,
-                      color: colors.mediumGray,
-                    }}>
-                      Back
-                    </Text>
-                  </Pressable>
+                  {!showEmailForm && (
+                    <Pressable
+                      onPress={() => {
+                        haptics.light();
+                        setShowSignIn(false);
+                      }}
+                      style={({ pressed }) => ({
+                        opacity: pressed ? 0.7 : 1,
+                        alignItems: 'center',
+                        marginTop: spacing.lg,
+                      })}
+                    >
+                      <Text style={{
+                        fontSize: 16,
+                        color: colors.mediumGray,
+                      }}>
+                        Back
+                      </Text>
+                    </Pressable>
+                  )}
                 </View>
               </View>
             )}
