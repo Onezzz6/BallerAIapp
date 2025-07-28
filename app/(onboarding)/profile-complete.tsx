@@ -170,19 +170,36 @@ export default function ProfileCompleteScreen() {
       // Configure RevenueCat to check device subscription status
       await configureRevenueCat();
       
+      // CRITICAL: Clear cache to ensure fresh subscription data
+      console.log('🔥 SUBSCRIPTION_DEBUG - Clearing RevenueCat cache before subscription check');
+      try {
+        if (typeof Purchases.invalidateCustomerInfoCache === 'function') {
+          await Purchases.invalidateCustomerInfoCache();
+        }
+      } catch (cacheError) {
+        console.log('🔥 SUBSCRIPTION_DEBUG - Cache clear failed (non-critical):', cacheError);
+      }
+      
       // Check if this device already has an active subscription
       const customerInfo = await Purchases.getCustomerInfo();
       const hasActiveSubscription = !!customerInfo.entitlements.active["BallerAISubscriptionGroup"];
       
+      // DEBUG: Log detailed subscription info
+      console.log('🔥 SUBSCRIPTION_DEBUG - Profile complete subscription check:', {
+        hasActiveSubscription,
+        originalAppUserId: customerInfo.originalAppUserId,
+        entitlements: Object.keys(customerInfo.entitlements.active),
+        allPurchasedProductIdentifiers: customerInfo.allPurchasedProductIdentifiers,
+      });
+      
       if (hasActiveSubscription) {
-        console.log('✅ Found existing subscription on device - skipping paywall');
-        console.log('User probably purchased but didn\'t complete sign-up, navigating directly to sign-up');
+        console.log('🔥 SUBSCRIPTION_DEBUG - Found existing subscription, going directly to sign-up (skipping paywall)');
         await analyticsService.logEvent('AA__31_existing_subscription_found');
         router.replace('/(onboarding)/sign-up');
         return;
       }
       
-      console.log('❌ No existing subscription found on device - showing paywall first');
+      console.log('🔥 SUBSCRIPTION_DEBUG - No subscription found, showing paywall first');
       await analyticsService.logEvent('AA__31_no_subscription_showing_paywall');
       router.replace('/(onboarding)/paywall');
       
@@ -268,7 +285,7 @@ export default function ProfileCompleteScreen() {
         </Text>
         
         <Button 
-          title={isCreatingAccount ? "Creating Account..." : "Let's Get Started!"} 
+          title={"Let's Get Started!"} 
           onPress={handleGetStarted}
           disabled={isCreatingAccount}
         />

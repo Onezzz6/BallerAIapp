@@ -256,11 +256,74 @@ export async function processWebhookEvent(payload: RevenueCatWebhookPayload, db:
   const userRef = db.doc(`users/${payload.app_user_id}`);
   await userRef.set(updateData, { merge: true });
   
+  // CRITICAL: Clean up duplicate active subscriptions
+  // When a subscription becomes ACTIVE for a user, ensure no other users have this subscription active
+  if (subscriptionData.status === 'ACTIVE') {
+    await cleanupDuplicateActiveSubscriptions(db, payload.app_user_id, payload.product_id);
+  }
+  
   console.log('Successfully updated user subscription', {
     userId: payload.app_user_id,
     status: subscriptionData.status,
     productId: subscriptionData.productId,
   });
+}
+
+/**
+ * Clean up duplicate active subscriptions across different user accounts
+ * This handles the case where RevenueCat transfers a subscription but Firestore documents are out of sync
+ */
+async function cleanupDuplicateActiveSubscriptions(
+  db: any, 
+  currentUserId: string, 
+  productId: string
+): Promise<void> {
+  try {
+    console.log(`Cleaning up duplicate active subscriptions for product: ${productId}, current user: ${currentUserId}`);
+    
+    // Query for all users who have this product as active (excluding current user)
+    const usersQuery = await db.collection('users')
+      .where('subscription.productId', '==', productId)
+      .where('subscription.status', '==', 'ACTIVE')
+      .get();
+    
+    const duplicateUsers: string[] = [];
+    
+    usersQuery.forEach((doc: any) => {
+      const userId = doc.id;
+      // Skip the current user who should keep the active subscription
+      if (userId !== currentUserId) {
+        duplicateUsers.push(userId);
+      }
+    });
+    
+    if (duplicateUsers.length === 0) {
+      console.log('No duplicate active subscriptions found');
+      return;
+    }
+    
+    console.log(`Found ${duplicateUsers.length} duplicate active subscriptions to clean up:`, duplicateUsers);
+    
+    // Mark all duplicate subscriptions as CANCELLED
+    const batch = db.batch();
+    
+    for (const userId of duplicateUsers) {
+      const userRef = db.doc(`users/${userId}`);
+      batch.update(userRef, {
+        'subscription.status': 'CANCELLED',
+        'subscription.lastEvent': 'TRANSFER_CLEANUP',
+        'subscription.updatedAt': new Date(),
+      });
+    }
+    
+    await batch.commit();
+    
+    console.log(`Successfully cleaned up ${duplicateUsers.length} duplicate active subscriptions`);
+    
+  } catch (error) {
+    console.error('Error cleaning up duplicate subscriptions:', error);
+    // Don't throw error - this is cleanup, shouldn't break the main webhook processing
+  }
 }
 
 /**

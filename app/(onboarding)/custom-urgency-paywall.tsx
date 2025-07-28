@@ -353,16 +353,16 @@ export default function CustomUrgencyPaywall({
                     <View style={styles.productDetails}>
                       <View style={styles.productLeft}>
                         <Text style={styles.productTitle}>Yearly</Text>
-                        <Text style={styles.productSubtitle}>
-                          12mo • {pkg.product.priceString}
+                        <Text style={styles.billedText}>
+                          Billed at {pkg.product.priceString}/yr.
                         </Text>
                       </View>
                       <View style={styles.productRight}>
                         <Text style={styles.productPrice}>
-                          {(parseFloat(pkg.product.priceString.replace(/[^0-9.]/g, '')) / 12).toFixed(2)} €/mo
+                          {pkg.product.pricePerMonthString}/mo
                         </Text>
-                        <Text style={styles.billedText}>
-                          Billed at {pkg.product.priceString}/yr.
+                        <Text style={styles.productSubtitle}>
+                          12mo • {pkg.product.priceString}
                         </Text>
                       </View>
                     </View>
@@ -411,13 +411,16 @@ export default function CustomUrgencyPaywall({
                     <View style={[styles.productDetails, styles.monthlyProductDetails]}>
                       <View style={styles.productLeft}>
                         <Text style={styles.productTitle}>Monthly</Text>
-                        <Text style={styles.productSubtitle}>
-                          1mo • {pkg.product.priceString}
+                        <Text style={styles.billedText}>
+                          Billed at {pkg.product.priceString}/mo.
                         </Text>
                       </View>
                       <View style={styles.productRight}>
                         <Text style={styles.productPrice}>
-                          {pkg.product.priceString}
+                          {pkg.product.priceString}/mo
+                        </Text>
+                        <Text style={styles.productSubtitle}>
+                          1mo • {pkg.product.priceString}
                         </Text>
                       </View>
                     </View>
@@ -852,7 +855,7 @@ const styles = StyleSheet.create({
   
   titleContainer: {
     alignItems: 'center',
-    paddingBottom: 30,
+    paddingBottom: 16,
   },
   mainTitle: {
     fontSize: 32,
@@ -1006,12 +1009,11 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: '#ffffff',
-    marginBottom: 6,
   },
   productSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
-    lineHeight: 20,
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.7)',
+    lineHeight: 16,
   },
   productRight: {
     alignItems: 'flex-end',
@@ -1019,16 +1021,13 @@ const styles = StyleSheet.create({
     minWidth: 120,
   },
   productPrice: {
-    fontSize: 24,
-    fontWeight: '900',
+    fontSize: 20,
+    fontWeight: '700',
     color: '#ffffff',
-    marginBottom: 2,
   },
   billedText: {
     fontSize: 12,
     color: 'rgba(255, 255, 255, 0.7)',
-    textAlign: 'right',
-    marginTop: 2,
     lineHeight: 16,
   },
   

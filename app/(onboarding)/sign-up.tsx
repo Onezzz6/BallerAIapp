@@ -16,6 +16,7 @@ import { auth } from '../config/firebase';
 import ScrollIfNeeded from '../components/ScrollIfNeeded';
 import BackButton from '../components/BackButton';
 import Purchases from 'react-native-purchases';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -72,19 +73,295 @@ export default function SignUpScreen() {
       console.log('Creating new account with email/password after paywall purchase');
       console.log('Email:', email);
       
+      // CRITICAL: Check if device subscription belongs to another account
+      await checkAndHandleSubscriptionTransfer();
+      
+    } catch (error: any) {
+      console.error('Error creating account:', error);
+      let errorMessage = 'Failed to create account. Please try again.';
+      
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'An account with this email already exists. Please sign in instead.';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Please enter a valid email address.';
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = 'Password should be at least 6 characters long.';
+      }
+      
+      Alert.alert('Sign Up Failed', errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const checkAndHandleSubscriptionTransfer = async () => {
+    try {
+      console.log('🔥 SUBSCRIPTION_DEBUG - Checking if subscription transfer is needed...');
+      
+      // Get current RevenueCat customer info
+      const customerInfo = await Purchases.getCustomerInfo();
+      const hasSubscription = !!customerInfo.entitlements.active["BallerAISubscriptionGroup"];
+      
+      // DEBUG: Log full customer info to understand what we're dealing with
+      console.log('🔥 SUBSCRIPTION_DEBUG - Sign-up transfer check:', {
+        hasSubscription,
+        originalAppUserId: customerInfo.originalAppUserId,
+        appUserId: customerInfo.originalPurchaseDate,
+        entitlements: Object.keys(customerInfo.entitlements.active),
+        allPurchasedProductIdentifiers: customerInfo.allPurchasedProductIdentifiers,
+      });
+      
+      if (!hasSubscription) {
+        console.log('🔥 SUBSCRIPTION_DEBUG - No subscription found, proceeding with normal account creation');
+        await createAccount();
+        return;
+      }
+      
+      // Check if subscription belongs to another Firebase account
+      const originalAppUserId = customerInfo.originalAppUserId;
+      
+      // IMPORTANT: $RCAnonymousID could be either:
+      // 1. Interrupted purchase (user just bought, creating their first account) 
+      // 2. Account transfer (user bought on different account, creating second account)
+      const isDeviceSubscription = !originalAppUserId;
+      const isAnonymousAccount = originalAppUserId?.startsWith('$RCAnonymousID');
+      
+      console.log('🔥 SUBSCRIPTION_DEBUG - Transfer detection logic:', {
+        originalAppUserId,
+        isDeviceSubscription,
+        hasOriginalId: !!originalAppUserId,
+        isAnonymousAccount,
+      });
+      
+      // If no originalAppUserId, it's truly a device subscription
+      if (isDeviceSubscription) {
+        console.log('🔥 SUBSCRIPTION_DEBUG - Device subscription detected, proceeding with normal account creation');
+        await createAccount();
+        return;
+      }
+      
+      // If it's an anonymous account, this could be an interrupted purchase
+      // In the new account-first flow, this is actually EXPECTED behavior
+      if (isAnonymousAccount) {
+        console.log('🔥 SUBSCRIPTION_DEBUG - Anonymous account detected (likely interrupted purchase from paywall)');
+        
+        // CRITICAL: Check if this anonymous subscription has already been claimed
+        const subscriptionKey = `claimed_subscription_${originalAppUserId}`;
+        const alreadyClaimed = await AsyncStorage.getItem(subscriptionKey);
+        
+        console.log('🔥 SUBSCRIPTION_DEBUG - Checking if anonymous subscription already claimed:', {
+          subscriptionKey,
+          alreadyClaimed: !!alreadyClaimed,
+          originalAppUserId
+        });
+        
+        if (alreadyClaimed) {
+          console.log('🔥 SUBSCRIPTION_DEBUG - ❌ SUBSCRIPTION ALREADY CLAIMED by another account');
+          console.log('🔥 SUBSCRIPTION_DEBUG - This is account transfer scenario, showing transfer prompt');
+          
+          const claimData = JSON.parse(alreadyClaimed);
+          Alert.alert(
+            'Subscription Already Used',
+            `This subscription has already been used to create another account on this device.\n\nCreating this account will transfer the subscription from the previous account.`,
+            [
+              { 
+                text: 'Cancel', 
+                style: 'cancel',
+                onPress: () => {
+                  console.log('🔥 SUBSCRIPTION_DEBUG - User cancelled transfer of already-claimed subscription');
+                  setIsLoading(false);
+                }
+              },
+              { 
+                text: 'Transfer Subscription', 
+                style: 'destructive',
+                onPress: async () => {
+                  console.log('🔥 SUBSCRIPTION_DEBUG - User confirmed transfer of already-claimed subscription');
+                  await createAccount();
+                }
+              }
+            ]
+          );
+          return;
+        }
+        
+        console.log('🔥 SUBSCRIPTION_DEBUG - Anonymous subscription not yet claimed, proceeding with normal account creation');
+        console.log('🔥 SUBSCRIPTION_DEBUG - Will mark as claimed immediately to prevent double-claiming');
+        
+        // CRITICAL: Mark as claimed IMMEDIATELY to prevent race conditions
+        await AsyncStorage.setItem(subscriptionKey, JSON.stringify({
+          claimedBy: 'PENDING_TRANSFER',
+          attemptedAt: new Date().toISOString(),
+          status: 'ATTEMPTING'
+        }));
+        console.log('🔥 SUBSCRIPTION_DEBUG - ✅ Pre-marked anonymous subscription to prevent double-claiming');
+        
+        await createAccount();
+        return;
+      }
+      
+      // Only show transfer prompt for actual Firebase UIDs (real account transfers)
+      console.log('🔥 SUBSCRIPTION_DEBUG - FOUND SUBSCRIPTION FROM REAL FIREBASE ACCOUNT, SHOULD SHOW TRANSFER PROMPT');
+      console.log('🔥 SUBSCRIPTION_DEBUG - Other Firebase account ID:', originalAppUserId);
+      
+      Alert.alert(
+        'Transfer Subscription?',
+        `This device has an active subscription from another account.\n\nCreating this new account will transfer the subscription to it.\n\nThe previous account will lose access to the subscription.`,
+        [
+          { 
+            text: 'Cancel', 
+            style: 'cancel',
+            onPress: () => {
+              console.log('🔥 SUBSCRIPTION_DEBUG - User cancelled subscription transfer');
+              setIsLoading(false);
+            }
+          },
+          { 
+            text: 'Transfer Subscription', 
+            style: 'destructive',
+            onPress: async () => {
+              console.log('🔥 SUBSCRIPTION_DEBUG - User confirmed subscription transfer');
+              await createAccount();
+            }
+          }
+        ]
+      );
+      
+    } catch (error) {
+      console.error('Error checking subscription transfer:', error);
+      // Fallback to normal account creation
+      console.log('Subscription check failed, proceeding with normal account creation');
+      await createAccount();
+    }
+  };
+
+  const createAccount = async () => {
+    try {
+      // DEBUG: Check subscription state BEFORE account creation
+      console.log('🔥 SUBSCRIPTION_DEBUG - BEFORE account creation:');
+      const beforeInfo = await Purchases.getCustomerInfo();
+      console.log('🔥 SUBSCRIPTION_DEBUG - Before Original App User ID:', beforeInfo.originalAppUserId);
+      console.log('🔥 SUBSCRIPTION_DEBUG - Before Has subscription:', !!beforeInfo.entitlements.active["BallerAISubscriptionGroup"]);
+      
       // Create Firebase Auth account with email/password and onboarding data
       const newUserCredential = await authService.signUpWithEmail(email, password, onboardingData as any);
       
       if (newUserCredential) {
-        console.log('✅ New Firebase account created:', newUserCredential.uid);
+        console.log('🔥 SUBSCRIPTION_DEBUG - New Firebase account created:', newUserCredential.uid);
         
-        // Transfer RevenueCat subscription from device ID to user account
+        // Transfer RevenueCat subscription from device/previous account to new user account
         try {
-          console.log('Transferring RevenueCat subscription from device to user account...');
-          await Purchases.logIn(newUserCredential.uid);
-          console.log('✅ RevenueCat subscription transferred successfully');
+          console.log('🔥 SUBSCRIPTION_DEBUG - CALLING Purchases.logIn to transfer subscription');
+          
+          // CRITICAL: Clear cache before transfer to ensure fresh state
+          console.log('🔥 SUBSCRIPTION_DEBUG - Clearing RevenueCat cache before transfer');
+          try {
+            if (typeof Purchases.invalidateCustomerInfoCache === 'function') {
+              await Purchases.invalidateCustomerInfoCache();
+            }
+          } catch (cacheError) {
+            console.log('🔥 SUBSCRIPTION_DEBUG - Cache clear failed (non-critical):', cacheError);
+          }
+          
+          // Retry logic for RevenueCat transfer
+          let transferWorked = false;
+          let hasSubscription = false;
+          let finalCustomerInfo = null;
+          
+          for (let attempt = 1; attempt <= 3; attempt++) {
+            console.log(`🔥 SUBSCRIPTION_DEBUG - Transfer attempt ${attempt}/3`);
+            
+            try {
+              // This should transfer the subscription
+              console.log('🔥 SUBSCRIPTION_DEBUG - Calling logIn with Firebase UID:', newUserCredential.uid);
+              await Purchases.logIn(newUserCredential.uid);
+              console.log('🔥 SUBSCRIPTION_DEBUG - Purchases.logIn completed');
+              
+              // CRITICAL: Sync purchases to ensure transfer is reflected immediately
+              console.log('🔥 SUBSCRIPTION_DEBUG - Syncing purchases to complete transfer');
+              await Purchases.syncPurchases();
+              console.log('🔥 SUBSCRIPTION_DEBUG - Purchase sync completed');
+              
+              // Wait for server sync
+              console.log(`🔥 SUBSCRIPTION_DEBUG - Waiting for server sync (attempt ${attempt})...`);
+              await new Promise(resolve => setTimeout(resolve, 2000 * attempt)); // Longer wait on retries
+              
+              // Force fresh fetch after transfer
+              console.log('🔥 SUBSCRIPTION_DEBUG - Forcing fresh customer info fetch');
+              const customerInfo = await Purchases.getCustomerInfo();
+              
+              // Check if transfer worked
+              transferWorked = customerInfo.originalAppUserId === newUserCredential.uid;
+              hasSubscription = !!customerInfo.entitlements.active["BallerAISubscriptionGroup"];
+              finalCustomerInfo = customerInfo;
+              
+              console.log(`🔥 SUBSCRIPTION_DEBUG - Attempt ${attempt} result:`, {
+                transferWorked,
+                hasSubscription,
+                expectedUID: newUserCredential.uid,
+                actualUID: customerInfo.originalAppUserId
+              });
+              
+              if (transferWorked && hasSubscription) {
+                console.log(`🔥 SUBSCRIPTION_DEBUG - ✅ Transfer succeeded on attempt ${attempt}`);
+                break;
+              } else if (attempt < 3) {
+                console.log(`🔥 SUBSCRIPTION_DEBUG - ❌ Transfer failed on attempt ${attempt}, retrying...`);
+              }
+              
+            } catch (attemptError) {
+              console.error(`🔥 SUBSCRIPTION_DEBUG - Attempt ${attempt} error:`, attemptError);
+              if (attempt === 3) throw attemptError;
+            }
+          }
+          
+          console.log('🔥 SUBSCRIPTION_DEBUG - FINAL TRANSFER RESULT:');
+          console.log('🔥 SUBSCRIPTION_DEBUG - Transfer worked:', transferWorked);
+          console.log('🔥 SUBSCRIPTION_DEBUG - Has subscription:', hasSubscription);
+          console.log('🔥 SUBSCRIPTION_DEBUG - Final Original App User ID:', finalCustomerInfo?.originalAppUserId);
+          
+          if (!transferWorked) {
+            console.error('🔥 SUBSCRIPTION_DEBUG - ❌ TRANSFER FAILED after 3 attempts - originalAppUserId did not change');
+          }
+          
+          if (!hasSubscription) {
+            console.error('🔥 SUBSCRIPTION_DEBUG - ❌ SUBSCRIPTION LOST - user has no active entitlement');
+          }
+          
+          // Update AsyncStorage with final result
+          if (beforeInfo.originalAppUserId?.startsWith('$RCAnonymousID')) {
+            const subscriptionKey = `claimed_subscription_${beforeInfo.originalAppUserId}`;
+            await AsyncStorage.setItem(subscriptionKey, JSON.stringify({
+              claimedBy: newUserCredential.uid,
+              claimedAt: new Date().toISOString(),
+              status: transferWorked ? 'SUCCESS' : 'FAILED',
+              transferWorked,
+              hasSubscription,
+              attempts: 3
+            }));
+            console.log('🔥 SUBSCRIPTION_DEBUG - ✅ Updated anonymous subscription claim status:', {
+              subscriptionKey,
+              status: transferWorked ? 'SUCCESS' : 'FAILED'
+            });
+          }
+          
         } catch (rcError) {
-          console.error('❌ RevenueCat transfer error (non-critical):', rcError);
+          console.error('🔥 SUBSCRIPTION_DEBUG - RevenueCat transfer ERROR:', rcError);
+          
+          // Update AsyncStorage with error result
+          if (beforeInfo.originalAppUserId?.startsWith('$RCAnonymousID')) {
+            const subscriptionKey = `claimed_subscription_${beforeInfo.originalAppUserId}`;
+            await AsyncStorage.setItem(subscriptionKey, JSON.stringify({
+              claimedBy: newUserCredential.uid,
+              claimedAt: new Date().toISOString(),
+              status: 'ERROR',
+              error: rcError instanceof Error ? rcError.message : String(rcError),
+              transferWorked: false,
+              hasSubscription: false
+            }));
+            console.log('🔥 SUBSCRIPTION_DEBUG - ✅ Updated anonymous subscription claim status with error');
+          }
+          
           // Continue even if RevenueCat transfer fails
         }
         
@@ -105,20 +382,8 @@ export default function SignUpScreen() {
       }
       
     } catch (error: any) {
-      console.error('Error creating account:', error);
-      let errorMessage = 'Failed to create account. Please try again.';
-      
-      if (error.code === 'auth/email-already-in-use') {
-        errorMessage = 'An account with this email already exists. Please sign in instead.';
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = 'Please enter a valid email address.';
-      } else if (error.code === 'auth/weak-password') {
-        errorMessage = 'Password should be at least 6 characters long.';
-      }
-      
-      Alert.alert('Sign Up Failed', errorMessage);
-    } finally {
-      setIsLoading(false);
+      console.error('Error in createAccount:', error);
+      throw error; // Re-throw to be handled by outer catch
     }
   };
 
@@ -133,6 +398,87 @@ export default function SignUpScreen() {
     try {
       console.log('Starting Google Sign Up after paywall...');
       
+      // CRITICAL: Check if device subscription belongs to another account
+      await checkAndHandleGoogleSubscriptionTransfer();
+      
+    } catch (error: any) {
+      console.error('Google Sign Up error:', error);
+      
+      if (error.code === 'auth/account-exists-with-different-credential') {
+        Alert.alert('Account Exists', 'An account already exists with this email address.');
+      } else {
+        Alert.alert('Sign Up Failed', 'Failed to sign up with Google. Please try again.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const checkAndHandleGoogleSubscriptionTransfer = async () => {
+    try {
+      // Get current RevenueCat customer info
+      const customerInfo = await Purchases.getCustomerInfo();
+      const hasSubscription = !!customerInfo.entitlements.active["BallerAISubscriptionGroup"];
+      
+      if (!hasSubscription) {
+        console.log('🔥 SUBSCRIPTION_DEBUG - Google sign-up: No subscription, proceeding normally');
+        await createGoogleAccount();
+        return;
+      }
+      
+      // Check if subscription belongs to another Firebase account
+      const originalAppUserId = customerInfo.originalAppUserId;
+      const isDeviceSubscription = !originalAppUserId;
+      const isAnonymousAccount = originalAppUserId?.startsWith('$RCAnonymousID');
+      
+      // If no originalAppUserId, it's truly a device subscription
+      if (isDeviceSubscription) {
+        console.log('🔥 SUBSCRIPTION_DEBUG - Google sign-up: Device subscription, proceeding normally');
+        await createGoogleAccount();
+        return;
+      }
+      
+      // If it's an anonymous account, this is likely an interrupted purchase
+      if (isAnonymousAccount) {
+        console.log('🔥 SUBSCRIPTION_DEBUG - Google sign-up: Anonymous account (interrupted purchase), proceeding normally');
+        await createGoogleAccount();
+        return;
+      }
+      
+      console.log('🔥 SUBSCRIPTION_DEBUG - Google sign-up: FOUND SUBSCRIPTION FROM REAL FIREBASE ACCOUNT');
+      
+      // Only show transfer prompt for actual Firebase UIDs
+      Alert.alert(
+        'Transfer Subscription?',
+        'This device has an active subscription from another account. Signing up with Google will transfer the subscription to your Google account.\n\nThe previous account will lose access.',
+        [
+          { 
+            text: 'Cancel', 
+            style: 'cancel',
+            onPress: () => {
+              console.log('🔥 SUBSCRIPTION_DEBUG - Google transfer cancelled');
+              setIsLoading(false);
+            }
+          },
+          { 
+            text: 'Transfer Subscription', 
+            style: 'destructive',
+            onPress: async () => {
+              console.log('🔥 SUBSCRIPTION_DEBUG - Google transfer confirmed');
+              await createGoogleAccount();
+            }
+          }
+        ]
+      );
+      
+    } catch (error) {
+      console.error('🔥 SUBSCRIPTION_DEBUG - Google transfer check error:', error);
+      await createGoogleAccount();
+    }
+  };
+
+  const createGoogleAccount = async () => {
+    try {
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
       const userInfo = await GoogleSignin.signIn();
       
@@ -167,15 +513,8 @@ export default function SignUpScreen() {
         }
       }
     } catch (error: any) {
-      console.error('Google Sign Up error:', error);
-      
-      if (error.code === 'auth/account-exists-with-different-credential') {
-        Alert.alert('Account Exists', 'An account already exists with this email address.');
-      } else {
-        Alert.alert('Sign Up Failed', 'Failed to sign up with Google. Please try again.');
-      }
-    } finally {
-      setIsLoading(false);
+      console.error('Error in createGoogleAccount:', error);
+      throw error;
     }
   };
 
@@ -190,6 +529,88 @@ export default function SignUpScreen() {
     try {
       console.log('Starting Apple Sign Up after paywall...');
       
+      // CRITICAL: Check if device subscription belongs to another account
+      await checkAndHandleAppleSubscriptionTransfer();
+      
+    } catch (error: any) {
+      console.error('Apple Sign Up error:', error);
+      
+      if (error.code === 'ERR_REQUEST_CANCELED') {
+        console.log('User canceled Apple Sign In');
+        return;
+      }
+      
+      Alert.alert('Sign Up Failed', 'Failed to sign up with Apple. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const checkAndHandleAppleSubscriptionTransfer = async () => {
+    try {
+      // Get current RevenueCat customer info
+      const customerInfo = await Purchases.getCustomerInfo();
+      const hasSubscription = !!customerInfo.entitlements.active["BallerAISubscriptionGroup"];
+      
+      if (!hasSubscription) {
+        console.log('🔥 SUBSCRIPTION_DEBUG - Apple sign-up: No subscription, proceeding normally');
+        await createAppleAccount();
+        return;
+      }
+      
+      // Check if subscription belongs to another Firebase account
+      const originalAppUserId = customerInfo.originalAppUserId;
+      const isDeviceSubscription = !originalAppUserId;
+      const isAnonymousAccount = originalAppUserId?.startsWith('$RCAnonymousID');
+      
+      // If no originalAppUserId, it's truly a device subscription
+      if (isDeviceSubscription) {
+        console.log('🔥 SUBSCRIPTION_DEBUG - Apple sign-up: Device subscription, proceeding normally');
+        await createAppleAccount();
+        return;
+      }
+      
+      // If it's an anonymous account, this is likely an interrupted purchase
+      if (isAnonymousAccount) {
+        console.log('🔥 SUBSCRIPTION_DEBUG - Apple sign-up: Anonymous account (interrupted purchase), proceeding normally');
+        await createAppleAccount();
+        return;
+      }
+      
+      console.log('🔥 SUBSCRIPTION_DEBUG - Apple sign-up: FOUND SUBSCRIPTION FROM REAL FIREBASE ACCOUNT');
+      
+      // Only show transfer prompt for actual Firebase UIDs
+      Alert.alert(
+        'Transfer Subscription?',
+        'This device has an active subscription from another account. Signing up with Apple will transfer the subscription to your Apple account.\n\nThe previous account will lose access.',
+        [
+          { 
+            text: 'Cancel', 
+            style: 'cancel',
+            onPress: () => {
+              console.log('🔥 SUBSCRIPTION_DEBUG - Apple transfer cancelled');
+              setIsLoading(false);
+            }
+          },
+          { 
+            text: 'Transfer Subscription', 
+            style: 'destructive',
+            onPress: async () => {
+              console.log('🔥 SUBSCRIPTION_DEBUG - Apple transfer confirmed');
+              await createAppleAccount();
+            }
+          }
+        ]
+      );
+      
+    } catch (error) {
+      console.error('🔥 SUBSCRIPTION_DEBUG - Apple transfer check error:', error);
+      await createAppleAccount();
+    }
+  };
+
+  const createAppleAccount = async () => {
+    try {
       const appleAuthResult = await AppleAuthentication.signInAsync({
         requestedScopes: [
           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
@@ -222,16 +643,8 @@ export default function SignUpScreen() {
         router.replace('/(tabs)/home');
       }
     } catch (error: any) {
-      console.error('Apple Sign Up error:', error);
-      
-      if (error.code === 'ERR_REQUEST_CANCELED') {
-        console.log('User canceled Apple Sign In');
-        return;
-      }
-      
-      Alert.alert('Sign Up Failed', 'Failed to sign up with Apple. Please try again.');
-    } finally {
-      setIsLoading(false);
+      console.error('Error in createAppleAccount:', error);
+      throw error;
     }
   };
 
