@@ -903,7 +903,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#ffffff',
     textAlign: 'center',
-    letterSpacing: 2,
+    letterSpacing: 4,
   },
   
   timerSection: {
