@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, Alert, StyleSheet } from 'react-native';
-import Purchases, { LOG_LEVEL, CustomerInfo } from 'react-native-purchases';
+import Purchases, { LOG_LEVEL, CustomerInfo, PurchasesOfferings } from 'react-native-purchases';
 import RevenueCatUI, { PAYWALL_RESULT } from "react-native-purchases-ui";
 import CustomButton from '../components/CustomButton';
-import { usePathname } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import { setReferralCode, configureRevenueCat, logInRevenueCatUser } from '../services/revenuecat';
+import { useOnboarding } from '../context/OnboardingContext';
 // Remove import from _layout to fix circular dependency
 // import { isOnOnboardingScreen } from '../_layout';
 
@@ -535,5 +536,143 @@ const styles = StyleSheet.create({
   },
 });
 
-// Export the legacy function for backward compatibility
-export default presentPaywallIfNeeded;
+// Export the new PaywallScreen component as default
+export default PaywallScreen;
+
+// New PaywallScreen component for account-first flow
+export function PaywallScreen() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [offerings, setOfferings] = useState<PurchasesOfferings | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const { onboardingData } = useOnboarding();
+
+  useEffect(() => {
+    setupPaywall();
+  }, []);
+
+  const setupPaywall = async () => {
+    try {
+      console.log('Setting up paywall without user account (using device ID)');
+      
+      // Configure RevenueCat with device ID (no user ID yet)
+      await configureRevenueCat();
+      
+      // Set referral code if available
+      if (onboardingData.referralCode) {
+        console.log(`Setting referral code: ${onboardingData.referralCode}`);
+        await setReferralCode(onboardingData.referralCode);
+      }
+      
+      // Get offerings
+      const offeringsResult = await Purchases.getOfferings();
+      setOfferings(offeringsResult);
+      setIsLoading(false);
+      
+      // Immediately show paywall
+      showPaywall(offeringsResult);
+      
+    } catch (error) {
+      console.error('Error setting up paywall:', error);
+      setError('Failed to load paywall. Please try again.');
+      setIsLoading(false);
+    }
+  };
+
+  const showPaywall = async (offeringsResult: any) => {
+    try {
+      console.log('Showing paywall based on referral code status');
+      
+      const hasReferralCode = onboardingData.referralCode;
+      const paywallType = onboardingData.referralPaywallType;
+      let paywallResult;
+
+      if (hasReferralCode && paywallType === 'freetrial') {
+        console.log('🎁 Showing FREE TRIAL paywall for referral user');
+        const freeTrialOffering = offeringsResult.all['FreeTrialOffering'];
+        
+        if (freeTrialOffering) {
+          paywallResult = await RevenueCatUI.presentPaywall({
+            offering: freeTrialOffering
+          });
+        } else {
+          console.warn('FreeTrialOffering not found, using default');
+          paywallResult = await RevenueCatUI.presentPaywallIfNeeded({
+            requiredEntitlementIdentifier: ENTITLEMENT_ID
+          });
+        }
+      } else if (hasReferralCode) {
+        console.log('🎁 Showing DISCOUNT paywall for referral user');
+        const referralOffering = offeringsResult.all['ReferralOffering'];
+        
+        if (referralOffering) {
+          paywallResult = await RevenueCatUI.presentPaywall({
+            offering: referralOffering
+          });
+        } else {
+          console.warn('ReferralOffering not found, using default');
+          paywallResult = await RevenueCatUI.presentPaywallIfNeeded({
+            requiredEntitlementIdentifier: ENTITLEMENT_ID
+          });
+        }
+      } else {
+        console.log('💰 Showing STANDARD paywall for regular user');
+        const regularOffering = offeringsResult.all['StandardOffering'] || offeringsResult.current;
+        
+        if (regularOffering) {
+          paywallResult = await RevenueCatUI.presentPaywall({
+            offering: regularOffering
+          });
+        } else {
+          console.warn('StandardOffering not found, using default');
+          paywallResult = await RevenueCatUI.presentPaywallIfNeeded({
+            requiredEntitlementIdentifier: ENTITLEMENT_ID
+          });
+        }
+      }
+
+      // Handle paywall result
+      if (paywallResult === PAYWALL_RESULT.PURCHASED || 
+          paywallResult === PAYWALL_RESULT.RESTORED) {
+        console.log('✅ Purchase/restore successful - navigating to sign-up');
+        router.replace('/(onboarding)/sign-up');
+      } else {
+        console.log('❌ Paywall cancelled - showing one-time offer');
+        router.replace('/(onboarding)/one-time-offer');
+      }
+      
+    } catch (error) {
+      console.error('Error showing paywall:', error);
+      router.replace('/(onboarding)/one-time-offer');
+    }
+  };
+
+  const handleRetry = () => {
+    setError(null);
+    setIsLoading(true);
+    setupPaywall();
+  };
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>{error}</Text>
+        <CustomButton
+          title="Retry"
+          onPress={handleRetry}
+          buttonStyle={{ backgroundColor: '#007AFF' }}
+          textStyle={{ color: '#FFFFFF' }}
+        />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <ActivityIndicator size="large" color="#007AFF" />
+      <Text style={styles.loadingText}>
+        {isLoading ? 'Loading offers...' : 'Opening paywall...'}
+      </Text>
+    </View>
+  );
+}

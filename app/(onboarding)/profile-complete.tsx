@@ -1,27 +1,26 @@
+import React, { useState, useEffect } from 'react';
 import { View, Text, SafeAreaView, Image, Dimensions } from 'react-native';
 import Animated, { 
   FadeInRight, 
-  useSharedValue, 
-  useAnimatedStyle, 
-  withTiming,
+  FadeInDown, 
+  FadeInUp,
+  useSharedValue,
+  useAnimatedStyle,
   withRepeat,
-  Easing,
+  withTiming,
+  Easing
 } from 'react-native-reanimated';
-import { useState, useEffect } from 'react';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useHaptics } from '../utils/haptics';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
 import analyticsService from '../services/analytics';
 import { colors, typography } from '../utils/theme';
-import { useHaptics } from '../utils/haptics';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
 import { useOnboarding } from '../context/OnboardingContext';
-import { useAuth } from '../context/AuthContext';
-import { signInAnonymously } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../config/firebase';
-import { runPostLoginSequence, markAuthenticationComplete } from './paywall';
-import { usePathname } from 'expo-router';
+import { configureRevenueCat } from '../services/revenuecat';
+import Purchases from 'react-native-purchases';
 
 // Phone Carousel Component
 const PhoneCarousel: React.FC = () => {
@@ -148,7 +147,6 @@ export default function ProfileCompleteScreen() {
   const router = useRouter();
   const pathname = usePathname();
   const { onboardingData } = useOnboarding();
-  const { user } = useAuth();
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
   
   // NEW: Use automatic onboarding step system
@@ -157,7 +155,7 @@ export default function ProfileCompleteScreen() {
   const handleGetStarted = async () => {
     // Prevent double-clicking
     if (isCreatingAccount) {
-      console.log('Account creation already in progress, ignoring click');
+      console.log('Profile complete already in progress, ignoring click');
       return;
     }
     
@@ -167,57 +165,35 @@ export default function ProfileCompleteScreen() {
     await analyticsService.logEvent('AA__31_profile_complete_get_started');
     
     try {
-      // Create anonymous Firebase Auth user (guaranteed single account)
-      console.log('Creating anonymous user account with onboarding data...');
+      console.log('Profile complete - checking if device already has subscription...');
       
-      const userCredential = await signInAnonymously(auth);
-      const newUser = userCredential.user;
+      // Configure RevenueCat to check device subscription status
+      await configureRevenueCat();
       
-      console.log('Anonymous user created successfully:', newUser.uid);
+      // Check if this device already has an active subscription
+      const customerInfo = await Purchases.getCustomerInfo();
+      const hasActiveSubscription = !!customerInfo.entitlements.active["BallerAISubscriptionGroup"];
       
-      // Create Firestore document with all onboarding data
-      await setDoc(doc(db, 'users', newUser.uid), {
-        email: null, // Anonymous user has no email until sign-up
-        isAnonymous: true,
-        isTemporary: true, // Will be set to false after email/password linking
-        createdAt: new Date(),
-        ...onboardingData
-      });
+      if (hasActiveSubscription) {
+        console.log('✅ Found existing subscription on device - skipping paywall');
+        console.log('User probably purchased but didn\'t complete sign-up, navigating directly to sign-up');
+        await analyticsService.logEvent('AA__31_existing_subscription_found');
+        router.replace('/(onboarding)/sign-up');
+        return;
+      }
       
-      console.log('User document created with onboarding data');
-      
-      // Mark authentication as complete after account creation
-      markAuthenticationComplete();
-      
-      // Show paywall immediately after account creation
-      await runPostLoginSequence(
-        newUser.uid,
-        // If paywall successful → navigate to sign-up to attach real email
-        () => {
-          console.log('Paywall successful - navigating to sign-up to attach email');
-          router.replace('/(onboarding)/sign-up');
-        },
-        // If paywall cancelled → navigate to one-time offer screen
-        () => {
-          console.log('Paywall cancelled - navigating to one-time offer screen');
-          router.replace('/(onboarding)/one-time-offer');
-        },
-        pathname,
-        // Pass referral code data for paywall selection
-        {
-          referralCode: onboardingData.referralCode,
-          referralDiscount: onboardingData.referralDiscount,
-          referralInfluencer: onboardingData.referralInfluencer,
-          referralPaywallType: onboardingData.referralPaywallType
-        }
-      );
+      console.log('❌ No existing subscription found on device - showing paywall first');
+      await analyticsService.logEvent('AA__31_no_subscription_showing_paywall');
+      router.replace('/(onboarding)/paywall');
       
     } catch (error) {
-      console.error('Error creating user account or showing paywall:', error);
-      // Reset loading state on error
+      console.error('Error checking subscription status:', error);
+      // Fallback to paywall if subscription check fails
+      console.log('Subscription check failed, defaulting to paywall flow');
+      await analyticsService.logEvent('AA__31_subscription_check_failed');
+      router.replace('/(onboarding)/paywall');
+    } finally {
       setIsCreatingAccount(false);
-      // Fallback to old flow if there's an error
-      router.push('/(onboarding)/sign-up' as any);
     }
   };
 
