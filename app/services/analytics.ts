@@ -79,7 +79,7 @@ const analyticsService = {
     }
     
     try {
-      await analyticsService.logEvent('AA__99_screen_view', {
+      await analyticsService.logEvent('A0_99_screen_view', {
         screen_name: screenName,
         screen_class: screenClass || screenName,
       });

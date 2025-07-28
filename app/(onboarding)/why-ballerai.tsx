@@ -12,7 +12,7 @@ import analyticsService from '../services/analytics';
 
 export default function WhyBallerAIScreen() {
   const haptics = useHaptics();
-  const { onboardingData } = useOnboarding();
+  const { onboardingData, updateOnboardingData } = useOnboarding();
   
   // NEW: Use the automatic onboarding step system
   const { goToNext, goToStep } = useOnboardingStep('why-ballerai');
@@ -31,7 +31,7 @@ export default function WhyBallerAIScreen() {
     haptics.light();
     
     try {
-      await analyticsService.logEvent('AA__24_why_ballerai_continue', {
+      await analyticsService.logEvent('A0_24_why_ballerai_continue', {
         holding_back_reason: holdingBack
       });
     } catch (error) {

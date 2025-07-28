@@ -1,4 +1,4 @@
-import { View, Text, SafeAreaView, Switch, Platform } from 'react-native';
+import { View, Text, SafeAreaView, Switch, Platform, Alert } from 'react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
@@ -113,7 +113,7 @@ export default function MeasurementsScreen() {
 
     if (finalHeight && finalWeight) {
       haptics.light();
-      await analyticsService.logEvent('AA__07_measurements_continue');
+      await analyticsService.logEvent('A0_07_measurements_continue');
       await updateOnboardingData({ 
         height: finalHeight.toString(), 
         weight: finalWeight.toString(),

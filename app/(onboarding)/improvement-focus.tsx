@@ -40,6 +40,16 @@ export default function ImprovementFocusScreen() {
   // NEW: Use automatic onboarding step system
   const { goToNext } = useOnboardingStep('improvement-focus');
 
+  const handleContinue = async () => {
+    if (selected) {
+      haptics.light();
+      await analyticsService.logEvent('A0_11_improvement_focus_continue');
+      await updateOnboardingData({ improvementFocus: selected });
+      // NEW: Use automatic navigation instead of hardcoded route
+      goToNext();
+    }
+  };
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       {/* NEW: Automatic step detection */}
@@ -125,15 +135,7 @@ export default function ImprovementFocusScreen() {
       }}>
         <Button 
           title="Continue" 
-          onPress={async () => {
-            if (selected) {
-              haptics.light();
-              await analyticsService.logEvent('AA__11_improvement_focus_continue');
-              await updateOnboardingData({ improvementFocus: selected });
-              // NEW: Use automatic navigation instead of hardcoded route
-              goToNext();
-            }
-          }}
+          onPress={handleContinue}
           disabled={!selected}
         />
       </View>

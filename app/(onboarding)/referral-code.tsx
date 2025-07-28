@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, TouchableWithoutFeedback, Keyboard, SafeAreaView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableWithoutFeedback, Keyboard, SafeAreaView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import { Animated as RNAnimated } from 'react-native';
 import Button from '../components/Button';
@@ -92,7 +92,7 @@ export default function ReferralCodeScreen() {
         
         const validatedCode = referralCode.trim().toUpperCase();
         
-        await analyticsService.logEvent('AA__99_onboarding_referral_code_valid', {
+        await analyticsService.logEvent('A0_99_onboarding_referral_code_valid', {
           code: validatedCode,
           discount: result.discount,
           influencer: result.influencer
@@ -114,7 +114,7 @@ export default function ReferralCodeScreen() {
         setIsValid(false);
         setValidationMessage(result.error || 'Invalid referral code');
         
-        await analyticsService.logEvent('AA__99_onboarding_referral_code_invalid', {
+        await analyticsService.logEvent('A0_99_onboarding_referral_code_invalid', {
           code: referralCode.trim().toUpperCase(),
           error: result.error
         });
@@ -128,17 +128,14 @@ export default function ReferralCodeScreen() {
     }
   };
 
-  const handleContinue = async () => {
-    haptics.light();
-    
-    // If no referral code entered or validation failed, continue without saving
-    if (!referralCode.trim() || isValid === false) {
-      await analyticsService.logEvent('AA__26_referral_code_skip');
-      await updateOnboardingData({ referralCode: '' });
-    }
+  const handleSkip = async () => {
+    console.log('Skip button pressed');
+    await analyticsService.logEvent('A0_26_referral_code_skip');
+    goToNext();
+  };
 
-    await analyticsService.logEvent('AA__26_referral_code_continue');
-    // NEW: Use automatic navigation instead of hardcoded route
+  const handleContinue = async () => {
+    await analyticsService.logEvent('A0_26_referral_code_continue');
     goToNext();
   };
 

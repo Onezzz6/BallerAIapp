@@ -140,7 +140,7 @@ export default function ActivityLevelScreen() {
           onPress={async () => {
             if (selected) {
               haptics.light();
-              await analyticsService.logEvent('AA__21_activity_level_continue');
+              await analyticsService.logEvent('A0_21_activity_level_continue');
               await updateOnboardingData({ activityLevel: selected });
               // NEW: Use automatic navigation instead of hardcoded route
               goToNext();

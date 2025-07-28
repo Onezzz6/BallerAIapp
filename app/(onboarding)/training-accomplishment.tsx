@@ -41,7 +41,7 @@ export default function TrainingAccomplishmentScreen() {
   const handleContinue = async () => {
     if (selected) {
       haptics.light();
-      await analyticsService.logEvent('AA__22_training_accomplishment_continue');
+      await analyticsService.logEvent('A0_22_training_accomplishment_continue');
       await updateOnboardingData({ trainingAccomplishment: selected });
       // NEW: Use automatic navigation instead of hardcoded route
       goToNext();

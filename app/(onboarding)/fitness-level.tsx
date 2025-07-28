@@ -124,7 +124,7 @@ export default function FitnessLevelScreen() {
           onPress={async () => {
             if (selected) {
               haptics.light();
-              await analyticsService.logEvent('AA__20_fitness_level_continue');
+              await analyticsService.logEvent('A0_20_fitness_level_continue');
               await updateOnboardingData({ fitnessLevel: selected });
               // NEW: Use automatic navigation instead of hardcoded route
               goToNext();

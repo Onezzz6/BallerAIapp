@@ -17,6 +17,16 @@ export default function NutritionScreen() {
   // NEW: Use automatic onboarding step system
   const { goToNext } = useOnboardingStep('nutrition');
 
+  const handleContinue = async () => {
+    if (selectedNutritionGoals.length > 0) {
+      haptics.light();
+      await analyticsService.logEvent('A0_17_nutrition_continue');
+      await updateOnboardingData({ nutritionGoals: selectedNutritionGoals });
+      // NEW: Use automatic navigation instead of hardcoded route
+      goToNext();
+    }
+  };
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
       {/* NEW: Automatic step detection */}
@@ -111,7 +121,7 @@ export default function NutritionScreen() {
           onPress={async () => {
             if (focusedOnNutrition !== null) {
               haptics.light();
-              await analyticsService.logEvent('AA__17_nutrition_continue');
+              await analyticsService.logEvent('A0_17_nutrition_continue');
               await updateOnboardingData({ nutrition: focusedOnNutrition.toString() });
               // NEW: Use automatic navigation instead of hardcoded route
               goToNext();

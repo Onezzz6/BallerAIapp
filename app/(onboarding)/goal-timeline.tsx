@@ -39,7 +39,7 @@ export default function GoalTimelineScreen() {
   const handleContinue = async () => {
     if (selected) {
       haptics.light();
-      await analyticsService.logEvent('AA__12_goal_timeline_continue');
+      await analyticsService.logEvent('A0_12_goal_timeline_continue');
       await updateOnboardingData({ goalTimeline: selected });
       // NEW: Use automatic navigation instead of hardcoded route
       goToNext();

@@ -506,9 +506,8 @@ export default function DevelopmentTransition() {
           title="Continue"
           onPress={async () => {
             haptics.light();
-            try {
-              await analyticsService.logEvent('AA__14_development_transition_continue');
-            } catch (_) {}
+            await analyticsService.logEvent('A0_14_development_transition_continue');
+            // NEW: Use automatic navigation instead of hardcoded route
             goToNext();
           }}
         />

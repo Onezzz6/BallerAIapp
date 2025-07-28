@@ -82,7 +82,7 @@ export default function SignUpScreen() {
       // Create new Firebase account directly  
       const user = await authService.signUpWithEmail(email, password, onboardingData as any);
       if (user) {
-        await analyticsService.logEvent('AA__32_signed_up');
+        await analyticsService.logEvent('A0_34_signed_up');
         
         // Mark authentication as complete after successful sign-up
         markAuthenticationComplete();
@@ -125,7 +125,7 @@ export default function SignUpScreen() {
     try {
       const result = await authService.signUpWithApple(onboardingData as any);
       if (result && result.user) {
-        await analyticsService.logEvent('AA__32_signed_up_apple');
+        await analyticsService.logEvent('A0_34_signed_up_apple');
         
         // Mark authentication as complete after successful sign-up
         markAuthenticationComplete();
@@ -189,7 +189,7 @@ export default function SignUpScreen() {
           const userRef = doc(db, 'users', userCredential.user.uid);
           await setDoc(userRef, userData);
 
-          await analyticsService.logEvent('AA__32_signed_up_google');
+          await analyticsService.logEvent('A0_34_signed_up_google');
           
           // Mark authentication as complete after successful sign-up
           markAuthenticationComplete();

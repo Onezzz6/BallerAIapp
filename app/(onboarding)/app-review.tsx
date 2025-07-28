@@ -38,7 +38,7 @@ export default function AppReviewScreen() {
     try {
       if (await StoreReview.hasAction()) {
         await StoreReview.requestReview();
-        await analyticsService.logEvent('AA__99_app_store_review_requested');
+        await analyticsService.logEvent('A0_99_app_store_review_requested');
         // Small delay to let review dialog appear
         await new Promise(resolve => setTimeout(resolve, 500));
       }
@@ -52,7 +52,7 @@ export default function AppReviewScreen() {
 
   const handleContinue = async () => {
     haptics.light();
-    await analyticsService.logEvent('AA__review_page_completed');
+    await analyticsService.logEvent('A0_review_page_completed');
     goToNext();
   };
 

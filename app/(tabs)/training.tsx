@@ -1364,7 +1364,7 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
   const handleGoToPlans = async () => {
     // Log analytics event before navigating
     try {
-      await analyticsService.logEvent('AA__99_view_training_plans');
+      await analyticsService.logEvent('A0_99_view_training_plans');
       console.log("Analytics event 'view_training_plans' logged.");
     } catch (error) {
       console.error("Error logging 'view_training_plans' event:", error);

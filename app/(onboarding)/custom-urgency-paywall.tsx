@@ -96,8 +96,8 @@ export default function CustomUrgencyPaywall({
     try {
       console.log('🔥 Loading CustomUrgencyPaywall offerings...');
       
-      // Log paywall presented analytics
-      await analyticsService.logEvent('AA__33_urgency_paywall_presented');
+      // Log that paywall was presented
+      await analyticsService.logEvent('A0_35_urgency_paywall_presented');
       
       const offerings = await Purchases.getOfferings();
       const oneTimeOffer = offerings.all['OneTimeYearlyOffer'];
@@ -167,7 +167,7 @@ export default function CustomUrgencyPaywall({
       console.log('🛒 Starting purchase for package:', selectedPackage.identifier);
       
       // Log purchase attempt
-      await analyticsService.logEvent('AA__33_urgency_paywall_purchase_started', {
+      await analyticsService.logEvent('A0_35_urgency_paywall_purchase_started', {
         package_id: selectedPackage.identifier,
         price: selectedPackage.product.price,
         currency: selectedPackage.product.currencyCode,
@@ -178,7 +178,7 @@ export default function CustomUrgencyPaywall({
       console.log('✅ Purchase successful:', result.customerInfo.entitlements.active);
       
       // Log successful purchase
-      await analyticsService.logEvent('AA__33_urgency_paywall_purchased', {
+      await analyticsService.logEvent('A0_35_urgency_paywall_purchased', {
         package_id: selectedPackage.identifier,
         price: selectedPackage.product.price,
         currency: selectedPackage.product.currencyCode,
@@ -191,7 +191,7 @@ export default function CustomUrgencyPaywall({
       console.log('❌ Purchase failed or cancelled:', error.message);
       
       // Log cancellation/failure
-      await analyticsService.logEvent('AA__33_urgency_paywall_cancelled', {
+      await analyticsService.logEvent('A0_35_urgency_paywall_cancelled', {
         error: error.message,
         package_id: selectedPackage.identifier,
       });
@@ -217,7 +217,7 @@ export default function CustomUrgencyPaywall({
       console.log('🔄 Restoring purchases...');
       
       // Log restore attempt
-      await analyticsService.logEvent('AA__33_urgency_paywall_restore_started');
+      await analyticsService.logEvent('A0_35_urgency_paywall_restore_started');
 
       const result = await Purchases.restorePurchases();
       
@@ -226,7 +226,7 @@ export default function CustomUrgencyPaywall({
       // Check if user has active subscription
       if (Object.keys(result.entitlements.active).length > 0) {
         // Log successful restore
-        await analyticsService.logEvent('AA__33_urgency_paywall_restored');
+        await analyticsService.logEvent('A0_35_urgency_paywall_restored');
         
         Alert.alert('Restore Successful', 'Your subscription has been restored!');
         onRestoreSuccess();

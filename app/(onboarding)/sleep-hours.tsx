@@ -1,4 +1,4 @@
-import { View, Text, SafeAreaView, Platform } from 'react-native';
+import { View, Text, SafeAreaView, Platform, Alert } from 'react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
@@ -17,6 +17,18 @@ export default function SleepHoursScreen() {
   const headerHeight = useOnboardingHeaderHeight();
   // NEW: Use automatic onboarding step system
   const { goToNext } = useOnboardingStep('sleep-hours');
+
+  const handleContinue = async () => {
+    if (sleepHours >= 4 && sleepHours <= 12) {
+      haptics.light();
+      await analyticsService.logEvent('A0_16_sleep_hours_continue');
+      await updateOnboardingData({ sleepHours: sleepHours.toString() });
+      // NEW: Use automatic navigation instead of hardcoded route
+      goToNext();
+    } else {
+      Alert.alert('Please select between 4-12 hours');
+    }
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.backgroundColor }}>
@@ -102,7 +114,7 @@ export default function SleepHoursScreen() {
           onPress={async () => {
             if (selected) {
               haptics.light();
-              await analyticsService.logEvent('AA__16_sleep_hours_continue');
+              await analyticsService.logEvent('A0_16_sleep_hours_continue');
               await updateOnboardingData({ sleepHours: selected });
               // NEW: Use automatic navigation instead of hardcoded route
               goToNext();

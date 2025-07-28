@@ -95,7 +95,7 @@ export default function DevelopmentComparisonScreen() {
     haptics.light();
     
     try {
-      await analyticsService.logEvent('AA__25_development_comparison_continue', {
+      await analyticsService.logEvent('A0_25_development_comparison_continue', {
         screen_name: 'development_comparison'
       });
     } catch (error) {

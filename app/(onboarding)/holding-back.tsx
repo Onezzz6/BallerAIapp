@@ -39,7 +39,7 @@ export default function HoldingBackScreen() {
   const handleContinue = async () => {
     if (selected) {
       haptics.light();
-      await analyticsService.logEvent('AA__23_holding_back_continue');
+      await analyticsService.logEvent('A0_23_holding_back_continue');
       await updateOnboardingData({ holdingBack: selected });
       // NEW: Automatic navigation to the next step
       goToNext();

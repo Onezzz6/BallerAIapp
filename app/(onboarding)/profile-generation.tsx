@@ -140,7 +140,7 @@ export default function ProfileGenerationScreen() {
 
   const handleContinue = async () => {
     haptics.light();
-    await analyticsService.logEvent('AA__29_profile_generation_continue');
+    await analyticsService.logEvent('A0_29_profile_generation_continue');
     // NEW: Use automatic navigation instead of hardcoded route
     goToNext();
   };

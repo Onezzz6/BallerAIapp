@@ -17,17 +17,9 @@ export default function MotivationConfirmationScreen() {
   const { goToNext } = useOnboardingStep('motivation-confirmation');
 
   const handleContinue = async () => {
-    console.log('Continue button pressed on motivation-confirmation');
     haptics.light();
-    
-    try {
-      await analyticsService.logEvent('AA__13_motivation_confirmation_continue');
-    } catch (error) {
-      console.log('Analytics error:', error);
-    }
-    
+    await analyticsService.logEvent('A0_13_motivation_confirmation_continue');
     // NEW: Use automatic navigation instead of hardcoded route
-    console.log('Using automatic navigation to next screen');
     goToNext();
   };
 

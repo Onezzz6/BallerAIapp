@@ -37,7 +37,7 @@ export default function TriedOtherAppsScreen() {
   const handleContinue = async () => {
     if (selected) {
       haptics.light();
-      await analyticsService.logEvent('AA__05_tried_other_apps_continue');
+      await analyticsService.logEvent('A0_05_tried_other_apps_continue');
       await updateOnboardingData({ triedOtherApps: selected });
       // NEW: Use automatic navigation instead of hardcoded route
       goToNext();

@@ -123,7 +123,7 @@ export default function SocialProofScreen() {
           title="Continue" 
           onPress={async () => {
             haptics.light();
-            await analyticsService.logEvent('AA__27_social_proof_continue');
+            await analyticsService.logEvent('A0_27_social_proof_continue');
             // NEW: Use automatic navigation instead of hardcoded route
             goToNext();
           }}

@@ -165,7 +165,7 @@ export default function ProfileCompleteScreen() {
     haptics.light();
     setIsCreatingAccount(true);
     
-    await analyticsService.logEvent('AA__31_profile_complete_get_started');
+    await analyticsService.logEvent('A0_31_profile_complete_get_started');
     
     try {
       console.log('Profile complete - checking if device already has subscription...');
@@ -186,41 +186,36 @@ export default function ProfileCompleteScreen() {
       // Check if this device already has an active subscription
       const customerInfo = await Purchases.getCustomerInfo();
       const hasActiveSubscription = !!customerInfo.entitlements.active[ENTITLEMENT_ID];
-      
-      // DEBUG: Log detailed subscription info
+
       console.log('🔥 SUBSCRIPTION_DEBUG - Profile complete subscription check:', {
         hasActiveSubscription,
         originalAppUserId: customerInfo.originalAppUserId,
         entitlements: Object.keys(customerInfo.entitlements.active),
         allPurchasedProductIdentifiers: customerInfo.allPurchasedProductIdentifiers,
       });
-      
+
       if (hasActiveSubscription) {
-        console.log('🔥 SUBSCRIPTION_DEBUG - Found existing subscription, going directly to sign-up (skipping paywall)');
-        await analyticsService.logEvent('AA__31_existing_subscription_found');
+        console.log('✅ Found existing subscription on device - skipping paywall');
+        console.log('🎯 DEBUG - This will go directly to sign-up, bypassing paywall');
+        console.log('User probably purchased but didn\'t complete sign-up, navigating directly to sign-up');
+        await analyticsService.logEvent('A0_31_existing_subscription_found');
         router.replace('/(onboarding)/sign-up');
         return;
       }
+
+      console.log('❌ No existing subscription found on device - showing paywall first');
+      console.log('🎯 DEBUG - This will show paywall for new purchase');
+      await analyticsService.logEvent('A0_31_no_subscription_showing_paywall');
       
-      console.log('🔥 SUBSCRIPTION_DEBUG - No subscription found, presenting paywall modally');
-      await analyticsService.logEvent('AA__31_no_subscription_showing_paywall');
-      
-      // Set referral code if available before showing paywall
-      if (onboardingData.referralCode) {
-        console.log(`Setting referral code: ${onboardingData.referralCode}`);
-        await setReferralCode(onboardingData.referralCode);
-      }
-      
-      // Get offerings and present paywall modally
+      // Fetch offerings for paywall modal
       const offeringsResult = await Purchases.getOfferings();
       await presentPaywallModal(offeringsResult);
-      
+
     } catch (error) {
-      console.error('Error in profile complete flow:', error);
-      // On error, try to show one-time offer
-      console.log('Error occurred, navigating to one-time offer');
-      await analyticsService.logEvent('AA__31_profile_complete_error');
-      router.replace('/(onboarding)/one-time-offer');
+      console.error('Error checking subscription status:', error);
+      console.log('Subscription check failed, defaulting to paywall flow');
+      await analyticsService.logEvent('A0_31_profile_complete_error');
+      router.replace('/(onboarding)/paywall');
     } finally {
       setIsCreatingAccount(false);
     }
@@ -228,7 +223,11 @@ export default function ProfileCompleteScreen() {
 
   const presentPaywallModal = async (offeringsResult: PurchasesOfferings) => {
     try {
-      console.log('Presenting paywall modally based on referral code status');
+      console.log('Showing paywall based on referral code status');
+      
+      // Log when paywall is presented
+      await analyticsService.logEvent('A0_32_paywall_presented');
+      
       const hasReferralCode = onboardingData.referralCode;
       const paywallType = onboardingData.referralPaywallType;
       let paywallResult;
@@ -268,6 +267,7 @@ export default function ProfileCompleteScreen() {
         router.replace('/(onboarding)/sign-up');
       } else {
         console.log('❌ Paywall cancelled - navigating to one-time offer');
+        await analyticsService.logEvent('A0_33_one_time_offer_presented');
         // User cancelled paywall, show one-time offer
         router.replace('/(onboarding)/one-time-offer');
       }

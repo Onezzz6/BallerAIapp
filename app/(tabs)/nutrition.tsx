@@ -2255,7 +2255,7 @@ export default function NutritionScreen() {
       
       // Log analytics event after successful logging
       try {
-        await analyticsService.logEvent('AA__99_log_meal');
+        await analyticsService.logEvent('A0_99_log_meal');
         console.log("Analytics event 'log_meal' logged.");
       } catch (error) {
         console.error("Error logging 'log_meal' event:", error);

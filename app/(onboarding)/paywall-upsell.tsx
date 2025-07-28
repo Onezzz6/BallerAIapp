@@ -135,49 +135,11 @@ export default function PaywallUpsellScreen() {
   const { user } = useAuth();
   const { onboardingData } = useOnboarding();
 
-  // This screen is obsolete - redirect users if they somehow get here
+  // This screen is obsolete - redirect to home
   useEffect(() => {
     console.log('⚠️ PaywallUpsellScreen is obsolete, redirecting to home');
     router.replace('/(tabs)/home');
   }, []);
-
-  const handleGoPro = async () => {
-    haptics.light();
-    
-    await analyticsService.logEvent('AA__32_paywall_upsell_go_pro');
-    
-    if (!user?.uid) {
-      console.error('No user found for paywall retry');
-      return;
-    }
-    
-    try {
-      // Show paywall again with same referral code status
-      await runPostLoginSequence(
-        user.uid,
-        // If paywall successful → navigate to sign-up to attach real email
-        () => {
-          console.log('Paywall retry successful - navigating to sign-up to attach email');
-          router.replace('/(onboarding)/sign-up');
-        },
-        // If paywall cancelled again → stay on this screen (show alert or just remain)
-        () => {
-          console.log('Paywall cancelled again - staying on upsell screen');
-          // Could show an alert or just remain on the screen
-        },
-        pathname,
-        // Pass referral code data for paywall selection (same as before)
-        {
-          referralCode: onboardingData.referralCode,
-          referralDiscount: onboardingData.referralDiscount,
-          referralInfluencer: onboardingData.referralInfluencer,
-          referralPaywallType: onboardingData.referralPaywallType
-        }
-      );
-    } catch (error) {
-      console.error('Error showing paywall retry:', error);
-    }
-  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -235,7 +197,10 @@ export default function PaywallUpsellScreen() {
       <View style={styles.buttonContainer}>
         <Button 
           title="Go Pro" 
-          onPress={handleGoPro}
+          onPress={async () => {
+            await analyticsService.logEvent('A0_35_paywall_upsell_go_pro');
+            router.push('/(onboarding)/paywall');
+          }}
           buttonStyle={styles.button}
         />
       </View>

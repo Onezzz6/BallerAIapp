@@ -1,4 +1,4 @@
-import { View, Text, SafeAreaView } from 'react-native';
+import { View, Text, SafeAreaView, Alert } from 'react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
@@ -57,19 +57,20 @@ export default function AgeScreen() {
       age--;
     }
 
-    haptics.light();
-    await analyticsService.logEvent('AA__08_age_continue');
-    
-    // Save both the calculated age and the exact birth date
-    await updateOnboardingData({ 
-      age: age.toString(),
-      birthYear: selectedYear.toString(),
-      birthMonth: selectedMonth.toString(),
-      birthDay: selectedDay.toString()
-    });
-    
-    // NEW: Use automatic navigation instead of hardcoded route
-    goToNext();
+    if (age >= 13 && age <= 80) {
+      haptics.light();
+      await analyticsService.logEvent('A0_08_age_continue');
+      await updateOnboardingData({ 
+        age: age.toString(),
+        birthYear: selectedYear.toString(),
+        birthMonth: selectedMonth.toString(),
+        birthDay: selectedDay.toString()
+      });
+      // NEW: Use automatic navigation instead of hardcoded route
+      goToNext();
+    } else {
+      Alert.alert('Please enter a valid age');
+    }
   };
 
   return (
