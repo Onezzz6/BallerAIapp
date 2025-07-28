@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, SafeAreaView, StyleSheet, ScrollView, Pressable, Image, Alert } from 'react-native';
+import { View, Text, SafeAreaView, StyleSheet, ScrollView, Pressable, Image, Alert, ActivityIndicator, Dimensions, Platform } from 'react-native';
 import Animated, { 
   FadeInRight,
   FadeInDown,
@@ -8,6 +8,7 @@ import Animated, {
   useAnimatedStyle, 
   withTiming,
   withRepeat,
+  withSequence,
   Easing,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,6 +18,18 @@ import { useOnboarding } from '../context/OnboardingContext';
 import analyticsService from '../services/analytics';
 import { useHaptics } from '../utils/haptics';
 import Purchases, { PurchasesPackage } from 'react-native-purchases';
+
+// Session-based event tracking to prevent duplicates (shared across paywall components)
+let sessionEventTracker = {
+  paywallPresented: false,
+  paywallPurchased: false,
+  oneTimeOfferPurchased: false,
+  reset: () => {
+    sessionEventTracker.paywallPresented = false;
+    sessionEventTracker.paywallPurchased = false;
+    sessionEventTracker.oneTimeOfferPurchased = false;
+  }
+};
 
 interface CustomUrgencyPaywallProps {
   onPurchaseSuccess: () => void;
@@ -41,7 +54,7 @@ export default function CustomUrgencyPaywall({
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
   const [selectedPackage, setSelectedPackage] = useState<PurchasesPackage | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isPurchasing, setIsPurchasing] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   
   // UI state
@@ -95,9 +108,6 @@ export default function CustomUrgencyPaywall({
   const loadOfferings = async () => {
     try {
       console.log('🔥 Loading CustomUrgencyPaywall offerings...');
-      
-      // Log that paywall was presented
-      await analyticsService.logEvent('A0_35_urgency_paywall_presented');
       
       const offerings = await Purchases.getOfferings();
       const oneTimeOffer = offerings.all['OneTimeYearlyOffer'];
@@ -158,83 +168,70 @@ export default function CustomUrgencyPaywall({
   };
 
   const handlePurchase = async () => {
-    if (!selectedPackage || isPurchasing) return;
-
-    haptics.light();
-    setIsPurchasing(true);
-
+    if (!selectedPackage || isProcessing) return;
+    
+    setIsProcessing(true);
+    
     try {
-      console.log('🛒 Starting purchase for package:', selectedPackage.identifier);
+      console.log('🔄 Starting purchase process...');
       
-      // Log purchase attempt
-      await analyticsService.logEvent('A0_35_urgency_paywall_purchase_started', {
-        package_id: selectedPackage.identifier,
-        price: selectedPackage.product.price,
-        currency: selectedPackage.product.currencyCode,
-      });
-
       const result = await Purchases.purchasePackage(selectedPackage);
       
-      console.log('✅ Purchase successful:', result.customerInfo.entitlements.active);
-      
-      // Log successful purchase
-      await analyticsService.logEvent('A0_35_urgency_paywall_purchased', {
-        package_id: selectedPackage.identifier,
-        price: selectedPackage.product.price,
-        currency: selectedPackage.product.currencyCode,
-        transaction_id: result.customerInfo.originalPurchaseDate,
-      });
-
-      onPurchaseSuccess();
-      
+      if (result.customerInfo.entitlements.active['BallerAISubscriptionGroup']) {
+        console.log('✅ Purchase successful!');
+        
+        // Prevent duplicate one-time offer purchase events
+        if (!sessionEventTracker.oneTimeOfferPurchased) {
+          await analyticsService.logEvent('A0_35_one_time_offer_purchased', {
+            product_id: selectedPackage.identifier,
+            price: selectedPackage.product.price,
+            currency: selectedPackage.product.currencyCode
+          });
+          
+          sessionEventTracker.oneTimeOfferPurchased = true;
+          console.log('🔥 ANALYTICS: A0_35_one_time_offer_purchased logged (first time this session)');
+        } else {
+          console.log('🔥 ANALYTICS: A0_35_one_time_offer_purchased SKIPPED (already logged this session)');
+        }
+        
+        onPurchaseSuccess();
+      } else {
+        console.log('❌ Purchase completed but no active entitlement found');
+        Alert.alert('Purchase Error', 'Purchase completed but subscription not activated. Please contact support.');
+      }
     } catch (error: any) {
-      console.log('❌ Purchase failed or cancelled:', error.message);
+      console.error('❌ Purchase failed:', error);
       
-      // Log cancellation/failure
-      await analyticsService.logEvent('A0_35_urgency_paywall_cancelled', {
-        error: error.message,
-        package_id: selectedPackage.identifier,
-      });
-
       if (error.userCancelled) {
         console.log('User cancelled purchase');
-        onPurchaseCancel();
       } else {
-        Alert.alert('Purchase Failed', 'Unable to complete purchase. Please try again.');
+        Alert.alert('Purchase Failed', error.message || 'Unable to complete purchase. Please try again.');
       }
     } finally {
-      setIsPurchasing(false);
+      setIsProcessing(false);
     }
   };
 
   const handleRestore = async () => {
     if (isRestoring) return;
-
+    
     haptics.light();
     setIsRestoring(true);
-
+    
     try {
       console.log('🔄 Restoring purchases...');
       
-      // Log restore attempt
-      await analyticsService.logEvent('A0_35_urgency_paywall_restore_started');
-
       const result = await Purchases.restorePurchases();
       
-      console.log('✅ Restore successful:', result.entitlements.active);
-      
-      // Check if user has active subscription
       if (Object.keys(result.entitlements.active).length > 0) {
-        // Log successful restore
-        await analyticsService.logEvent('A0_35_urgency_paywall_restored');
-        
+        console.log('✅ Restore successful');
         Alert.alert('Restore Successful', 'Your subscription has been restored!');
         onRestoreSuccess();
       } else {
-        Alert.alert('No Purchases Found', 'No previous purchases found to restore.');
+        console.log('❌ No purchases to restore');
+        Alert.alert('No Purchases Found', 'No active subscriptions found to restore.');
       }
-      
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Restore failed:', error);
       Alert.alert('Restore Failed', 'Unable to restore purchases. Please try again.');
     } finally {
@@ -434,9 +431,9 @@ export default function CustomUrgencyPaywall({
 
           {/* CTA Button */}
           <Pressable 
-            style={[styles.claimButton, (isPurchasing || !selectedPackage) && styles.disabledButton]}
+            style={[styles.claimButton, (isProcessing || !selectedPackage) && styles.disabledButton]}
             onPress={handlePurchase}
-            disabled={isPurchasing || !selectedPackage}
+            disabled={isProcessing || !selectedPackage}
           >
             <LinearGradient 
               colors={['#00E676', '#00BCD4']} 
@@ -445,7 +442,7 @@ export default function CustomUrgencyPaywall({
               end={{ x: 1, y: 0 }}
             >
               <Text style={styles.claimButtonText}>
-                {isPurchasing ? 'Processing...' : 'BECOME A BALLER!'}
+                {isProcessing ? 'Processing...' : 'BECOME A BALLER!'}
               </Text>
             </LinearGradient>
           </Pressable>

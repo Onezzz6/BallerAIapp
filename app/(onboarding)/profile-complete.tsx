@@ -14,16 +14,28 @@ import { useRouter, usePathname } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useHaptics } from '../utils/haptics';
 import Button from '../components/Button';
-import OnboardingHeader from '../components/OnboardingHeader';
+import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
 import analyticsService from '../services/analytics';
 import { colors, typography } from '../utils/theme';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
 import { useOnboarding } from '../context/OnboardingContext';
-import { configureRevenueCat, setReferralCode } from '../services/revenuecat';
 import Purchases, { PurchasesOfferings } from 'react-native-purchases';
+import { configureRevenueCat, setReferralCode } from '../services/revenuecat';
 import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
 
 const ENTITLEMENT_ID = "BallerAISubscriptionGroup";
+
+// Session-based event tracking to prevent duplicates
+let sessionEventTracker = {
+  paywallPresented: false,
+  paywallPurchased: false,
+  oneTimeOfferPurchased: false,
+  reset: () => {
+    sessionEventTracker.paywallPresented = false;
+    sessionEventTracker.paywallPurchased = false;
+    sessionEventTracker.oneTimeOfferPurchased = false;
+  }
+};
 
 // Phone Carousel Component
 const PhoneCarousel: React.FC = () => {
@@ -165,6 +177,10 @@ export default function ProfileCompleteScreen() {
     haptics.light();
     setIsCreatingAccount(true);
     
+    // Reset session event tracker for new onboarding session
+    sessionEventTracker.reset();
+    console.log('🔥 ANALYTICS: Session event tracker reset for new onboarding session');
+    
     await analyticsService.logEvent('A0_31_profile_complete_get_started');
     
     try {
@@ -225,55 +241,111 @@ export default function ProfileCompleteScreen() {
     try {
       console.log('Showing paywall based on referral code status');
       
-      // Log when paywall is presented
-      await analyticsService.logEvent('A0_32_paywall_presented');
+      // Prevent duplicate paywall presented events
+      if (!sessionEventTracker.paywallPresented) {
+        await analyticsService.logEvent('A0_32_paywall_presented');
+        sessionEventTracker.paywallPresented = true;
+        console.log('🔥 ANALYTICS: A0_32_paywall_presented logged (first time this session)');
+      } else {
+        console.log('🔥 ANALYTICS: A0_32_paywall_presented SKIPPED (already logged this session)');
+      }
       
       const hasReferralCode = onboardingData.referralCode;
       const paywallType = onboardingData.referralPaywallType;
       let paywallResult;
+      let offeringUsed = null;
 
       if (hasReferralCode && paywallType === 'freetrial') {
         console.log('🎁 Showing FREE TRIAL paywall for referral user');
         const freeTrialOffering = offeringsResult.all['FreeTrialOffering'];
+        offeringUsed = freeTrialOffering;
         if (freeTrialOffering) {
           paywallResult = await RevenueCatUI.presentPaywall({ offering: freeTrialOffering });
         } else {
-          console.warn('FreeTrialOffering not found, using default');
-          paywallResult = await RevenueCatUI.presentPaywallIfNeeded({ requiredEntitlementIdentifier: ENTITLEMENT_ID });
+          console.warn('FreeTrialOffering not found, falling back to StandardOffering');
+          const standardOffering = offeringsResult.all['StandardOffering'];
+          if (standardOffering) {
+            paywallResult = await RevenueCatUI.presentPaywall({ offering: standardOffering });
+          } else {
+            console.warn('StandardOffering also not found, using presentPaywallIfNeeded');
+            paywallResult = await RevenueCatUI.presentPaywallIfNeeded({ requiredEntitlementIdentifier: ENTITLEMENT_ID });
+          }
         }
       } else if (hasReferralCode) {
         console.log('🎁 Showing DISCOUNT paywall for referral user');
         const referralOffering = offeringsResult.all['ReferralOffering'];
+        offeringUsed = referralOffering;
         if (referralOffering) {
           paywallResult = await RevenueCatUI.presentPaywall({ offering: referralOffering });
         } else {
-          console.warn('ReferralOffering not found, using default');
-          paywallResult = await RevenueCatUI.presentPaywallIfNeeded({ requiredEntitlementIdentifier: ENTITLEMENT_ID });
+          console.warn('ReferralOffering not found, falling back to StandardOffering');
+          const standardOffering = offeringsResult.all['StandardOffering'];
+          if (standardOffering) {
+            paywallResult = await RevenueCatUI.presentPaywall({ offering: standardOffering });
+          } else {
+            console.warn('StandardOffering also not found, using presentPaywallIfNeeded');
+            paywallResult = await RevenueCatUI.presentPaywallIfNeeded({ requiredEntitlementIdentifier: ENTITLEMENT_ID });
+          }
         }
       } else {
         console.log('💰 Showing STANDARD paywall for regular user');
         const regularOffering = offeringsResult.all['StandardOffering'] || offeringsResult.current;
+        offeringUsed = regularOffering;
         if (regularOffering) {
           paywallResult = await RevenueCatUI.presentPaywall({ offering: regularOffering });
         } else {
-          console.warn('StandardOffering not found, using default');
+          console.warn('StandardOffering not found, using presentPaywallIfNeeded as final fallback');
           paywallResult = await RevenueCatUI.presentPaywallIfNeeded({ requiredEntitlementIdentifier: ENTITLEMENT_ID });
         }
       }
 
-      // Handle paywall result
       if (paywallResult === PAYWALL_RESULT.PURCHASED || paywallResult === PAYWALL_RESULT.RESTORED) {
         console.log('✅ Purchase/restore successful - navigating to sign-up');
+        
+        // Prevent duplicate purchase events
+        if (paywallResult === PAYWALL_RESULT.PURCHASED && !sessionEventTracker.paywallPurchased) {
+          try {
+            // Get fresh customer info to find the actual purchased product
+            const customerInfo = await Purchases.getCustomerInfo();
+            const activeEntitlements = customerInfo.entitlements.active;
+            
+            // Only log if user actually has active subscription (prevents false positives)
+            if (activeEntitlements[ENTITLEMENT_ID]) {
+              const purchasedProduct = activeEntitlements[ENTITLEMENT_ID].productIdentifier;
+              
+              // Determine paywall type based on offering used
+              let analyticsPaywallType = 'standard';
+              if (hasReferralCode && paywallType === 'freetrial') {
+                analyticsPaywallType = 'free_trial';
+              } else if (hasReferralCode) {
+                analyticsPaywallType = 'referral';
+              }
+              
+              await analyticsService.logEvent('A0_32_paywall_purchased', {
+                product_id: purchasedProduct,
+                paywall_type: analyticsPaywallType,
+                offering_identifier: offeringUsed?.identifier || 'default'
+              });
+              
+              sessionEventTracker.paywallPurchased = true;
+              console.log('🔥 ANALYTICS: A0_32_paywall_purchased logged (first time this session)');
+            } else {
+              console.log('🔥 ANALYTICS: A0_32_paywall_purchased SKIPPED (no active subscription found)');
+            }
+          } catch (error) {
+            console.error('Error logging paywall purchase:', error);
+          }
+        } else if (paywallResult === PAYWALL_RESULT.PURCHASED) {
+          console.log('🔥 ANALYTICS: A0_32_paywall_purchased SKIPPED (already logged this session)');
+        }
+        
         router.replace('/(onboarding)/sign-up');
       } else {
         console.log('❌ Paywall cancelled - navigating to one-time offer');
-        await analyticsService.logEvent('A0_33_one_time_offer_presented');
-        // User cancelled paywall, show one-time offer
         router.replace('/(onboarding)/one-time-offer');
       }
     } catch (error) {
-      console.error('Error presenting paywall modal:', error);
-      // On paywall error, show one-time offer
+      console.error('Error presenting paywall:', error);
       router.replace('/(onboarding)/one-time-offer');
     }
   };

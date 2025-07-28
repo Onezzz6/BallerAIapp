@@ -184,9 +184,23 @@ export async function checkSubscriptionOnForeground(
     // Important: we don't want to show the paywall twice, so we wrap this in a try/catch
     // and ensure we only navigate once when necessary
     try {
-      const paywallResult = await RevenueCatUI.presentPaywallIfNeeded({
-        requiredEntitlementIdentifier: ENTITLEMENT_ID
-      });
+      // Fetch offerings to specify StandardOffering instead of using dashboard default
+      console.log("STEP 5a: Fetching offerings for background check...");
+      const offerings = await Purchases.getOfferings();
+      const standardOffering = offerings.all['StandardOffering'];
+      
+      let paywallResult;
+      if (standardOffering) {
+        console.log("✅ StandardOffering found, presenting hardcoded paywall");
+        paywallResult = await RevenueCatUI.presentPaywall({
+          offering: standardOffering
+        });
+      } else {
+        console.warn("⚠️ StandardOffering not found, falling back to presentPaywallIfNeeded");
+        paywallResult = await RevenueCatUI.presentPaywallIfNeeded({
+          requiredEntitlementIdentifier: ENTITLEMENT_ID
+        });
+      }
       
       // Reset paywall presented flag
       isPaywallCurrentlyPresented = false;
@@ -381,10 +395,18 @@ export async function runPostLoginSequence(
             offering: freeTrialOffering
           });
         } else {
-          console.warn("⚠️ Free trial offering not found, falling back to default paywall");
-          paywallResult = await RevenueCatUI.presentPaywallIfNeeded({
-            requiredEntitlementIdentifier: ENTITLEMENT_ID
-          });
+          console.warn("⚠️ Free trial offering not found, falling back to StandardOffering");
+          const standardOffering = offerings.all['StandardOffering'];
+          if (standardOffering) {
+            paywallResult = await RevenueCatUI.presentPaywall({
+              offering: standardOffering
+            });
+          } else {
+            console.warn("⚠️ StandardOffering also not found, using presentPaywallIfNeeded");
+            paywallResult = await RevenueCatUI.presentPaywallIfNeeded({
+              requiredEntitlementIdentifier: ENTITLEMENT_ID
+            });
+          }
         }
       } else if (hasReferralCode) {
         // For discount referral users, show the referral offering with discounted products
@@ -397,10 +419,18 @@ export async function runPostLoginSequence(
             offering: referralOffering
           });
         } else {
-          console.warn("⚠️ ReferralOffering not found, falling back to default paywall");
-          paywallResult = await RevenueCatUI.presentPaywallIfNeeded({
-            requiredEntitlementIdentifier: ENTITLEMENT_ID
-          });
+          console.warn("⚠️ ReferralOffering not found, falling back to StandardOffering");
+          const standardOffering = offerings.all['StandardOffering'];
+          if (standardOffering) {
+            paywallResult = await RevenueCatUI.presentPaywall({
+              offering: standardOffering
+            });
+          } else {
+            console.warn("⚠️ StandardOffering also not found, using presentPaywallIfNeeded");
+            paywallResult = await RevenueCatUI.presentPaywallIfNeeded({
+              requiredEntitlementIdentifier: ENTITLEMENT_ID
+            });
+          }
         }
       } else {
         // Present regular paywall for non-referral users
@@ -415,7 +445,9 @@ export async function runPostLoginSequence(
             offering: regularOffering
           });
         } else {
-          console.warn("⚠️ Regular offering not found, using default paywall");
+          console.warn("⚠️ Regular offering not found, using StandardOffering fallback");
+          // This should never happen since we're already trying StandardOffering above,
+          // but keeping for safety
           paywallResult = await RevenueCatUI.presentPaywallIfNeeded({
             requiredEntitlementIdentifier: ENTITLEMENT_ID
           });
@@ -596,10 +628,18 @@ export function PaywallScreen() {
             offering: freeTrialOffering
           });
         } else {
-          console.warn('FreeTrialOffering not found, using default');
-          paywallResult = await RevenueCatUI.presentPaywallIfNeeded({
-            requiredEntitlementIdentifier: ENTITLEMENT_ID
-          });
+          console.warn('FreeTrialOffering not found, falling back to StandardOffering');
+          const standardOffering = offeringsResult.all['StandardOffering'];
+          if (standardOffering) {
+            paywallResult = await RevenueCatUI.presentPaywall({
+              offering: standardOffering
+            });
+          } else {
+            console.warn('StandardOffering also not found, using presentPaywallIfNeeded');
+            paywallResult = await RevenueCatUI.presentPaywallIfNeeded({
+              requiredEntitlementIdentifier: ENTITLEMENT_ID
+            });
+          }
         }
       } else if (hasReferralCode) {
         console.log('🎁 Showing DISCOUNT paywall for referral user');
@@ -610,10 +650,18 @@ export function PaywallScreen() {
             offering: referralOffering
           });
         } else {
-          console.warn('ReferralOffering not found, using default');
-          paywallResult = await RevenueCatUI.presentPaywallIfNeeded({
-            requiredEntitlementIdentifier: ENTITLEMENT_ID
-          });
+          console.warn('ReferralOffering not found, falling back to StandardOffering');
+          const standardOffering = offeringsResult.all['StandardOffering'];
+          if (standardOffering) {
+            paywallResult = await RevenueCatUI.presentPaywall({
+              offering: standardOffering
+            });
+          } else {
+            console.warn('StandardOffering also not found, using presentPaywallIfNeeded');
+            paywallResult = await RevenueCatUI.presentPaywallIfNeeded({
+              requiredEntitlementIdentifier: ENTITLEMENT_ID
+            });
+          }
         }
       } else {
         console.log('💰 Showing STANDARD paywall for regular user');
@@ -624,7 +672,7 @@ export function PaywallScreen() {
             offering: regularOffering
           });
         } else {
-          console.warn('StandardOffering not found, using default');
+          console.warn('StandardOffering not found, using presentPaywallIfNeeded as final fallback');
           paywallResult = await RevenueCatUI.presentPaywallIfNeeded({
             requiredEntitlementIdentifier: ENTITLEMENT_ID
           });
