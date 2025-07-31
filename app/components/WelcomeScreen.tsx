@@ -19,7 +19,7 @@ import { colors, typography, spacing } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
 import analyticsService from '../services/analytics';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import Constants from 'expo-constants';
 import { GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
 import { auth } from '../config/firebase';
@@ -246,6 +246,7 @@ export default function WelcomeScreen() {
   const dismissKeyboard = () => Keyboard.dismiss();
 
   const handleGetStarted = async () => {
+    haptics.light();
     analyticsService.logEvent('A0_01_welcome_get_started');
     goToNext();
   };
@@ -366,8 +367,10 @@ export default function WelcomeScreen() {
       console.log('ID Token received:', !!idToken);
       
       if (!idToken) {
-        console.error('No ID token in response:', userInfo);
-        throw new Error('Google Sign In failed - no ID token received');
+        console.log('No ID token received - likely user cancelled:', userInfo);
+        // This usually means the user cancelled the sign-in process
+        // Don't show error - treat as cancellation
+        return;
       }
 
       // Create Google credential for Firebase
@@ -390,12 +393,28 @@ export default function WelcomeScreen() {
       }
     } catch (error: any) {
       console.error('Google Sign-In error:', error);
-      haptics.error();
       
-      if (error.code === 'auth/user-not-found') {
-        Alert.alert('Account Not Found', 'No account found with this Google account. Please create an account first.');
-      } else if (error.code !== 'SIGN_IN_CANCELLED') {
-        Alert.alert('Error', error.message || 'Google Sign-In failed');
+      // Check if user cancelled the sign-in process
+      if (error.code === statusCodes.SIGN_IN_CANCELLED || 
+          error.code === 'SIGN_IN_CANCELLED' ||
+          error.code === statusCodes.IN_PROGRESS ||
+          error.message?.includes('SIGN_IN_CANCELLED') ||
+          error.message?.includes('cancelled') ||
+          error.message?.includes('canceled') ||
+          error.message?.includes('The user canceled') ||
+          error.message?.includes('User cancelled') ||
+          error.toString().includes('cancelled')) {
+        console.log('User cancelled Google Sign-In:', error.code || error.message);
+        // Don't show error - user cancelled intentionally
+      } else {
+        // Only show error for actual failures, not cancellations
+        haptics.error();
+        
+        if (error.code === 'auth/user-not-found') {
+          Alert.alert('Account Not Found', 'No account found with this Google account. Please create an account first.');
+        } else {
+          Alert.alert('Error', error.message || 'Google Sign-In failed');
+        }
       }
     } finally {
       setIsLoading(false);

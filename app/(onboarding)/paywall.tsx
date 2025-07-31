@@ -308,12 +308,54 @@ export async function runPostLoginSequence(
     // 5. Force-fetch the latest entitlement state with a true network request
     console.log("STEP 5: Forcing network fetch of subscription data...");
     
-    // Adding a small delay to ensure the cache clear has propagated
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Adding a longer delay to ensure RevenueCat receipt processing completes
+    console.log("⏳ Waiting for RevenueCat receipt processing to complete...");
+    await new Promise(resolve => setTimeout(resolve, 2000)); // Increased from 100ms to 2000ms
     
-    // Get freshest possible data directly from server
-    // We MUST wait for this network request to complete before proceeding
-    const customerInfo = await Purchases.getCustomerInfo();
+    // Attempt multiple fetches with backoff to handle receipt processing delays
+    let customerInfo: CustomerInfo = await Purchases.getCustomerInfo(); // Initialize with current state
+    let attempts = 0;
+    const maxAttempts = 3;
+    
+    while (attempts < maxAttempts) {
+      attempts++;
+      console.log(`🔄 Attempt ${attempts}/${maxAttempts}: Fetching customer info...`);
+      
+      try {
+        // Force fresh network request each time
+        await Purchases.invalidateCustomerInfoCache();
+        customerInfo = await Purchases.getCustomerInfo();
+        
+        // Check if we have any entitlements or purchases (indicates receipt processed)
+        const hasEntitlements = Object.keys(customerInfo.entitlements.active).length > 0;
+        const hasPurchases = Object.keys(customerInfo.allPurchaseDates).length > 0;
+        
+        if (hasEntitlements || hasPurchases || attempts >= maxAttempts) {
+          console.log(`✅ Customer info fetch complete (attempt ${attempts})`);
+          console.log(`📊 Found ${Object.keys(customerInfo.entitlements.active).length} active entitlements`);
+          console.log(`🛒 Found ${Object.keys(customerInfo.allPurchaseDates).length} purchase records`);
+          break;
+        }
+        
+        console.log(`⏳ No purchases detected yet, waiting before retry... (attempt ${attempts})`);
+        await new Promise(resolve => setTimeout(resolve, 1500)); // Wait 1.5s between retries
+        
+      } catch (error) {
+        console.error(`❌ Customer info fetch failed (attempt ${attempts}):`, error);
+        if (attempts >= maxAttempts) {
+          // Fallback: get whatever customer info is available
+          try {
+            customerInfo = await Purchases.getCustomerInfo();
+          } catch (fallbackError) {
+            console.error("❌ Final fallback failed, throwing error:", fallbackError);
+            throw new Error("Unable to fetch customer info after multiple attempts");
+          }
+        } else {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+    }
+    
     console.log("Network fetch complete");
     
     // Log detailed subscription info for debugging

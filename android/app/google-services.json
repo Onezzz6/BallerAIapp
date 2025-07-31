@@ -42,6 +42,43 @@
           ]
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:764862532296:android:b446a9d4a4c514ef40f3fd",
+        "android_client_info": {
+          "package_name": "com.ballerbizoy.ballerai"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "764862532296-c1oavev62d62lu7j4peecmdvm1t9ls7k.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB1nlhRex0syuROZxLLgeTqAJHz7D5GwJQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "764862532296-c1oavev62d62lu7j4peecmdvm1t9ls7k.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "764862532296-fkvrcavkkultnmks81lbq7nqv4d4682i.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.ballerbizoy.ballerai",
+                "app_store_id": "6742112516"
+              }
+            }
+          ]
+        }
+      }
     }
   ],
   "configuration_version": "1"

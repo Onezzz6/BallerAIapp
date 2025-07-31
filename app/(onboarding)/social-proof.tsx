@@ -15,12 +15,12 @@ export default function SocialProofScreen() {
   const { goToNext } = useOnboardingStep('social-proof');
 
   const socialProofImages = [
-    require('../../assets/images/r1.png'),
-    require('../../assets/images/r2.png'),
-    require('../../assets/images/r3.png'),
-    require('../../assets/images/r4.png'),
-    require('../../assets/images/r5.png'),
-    require('../../assets/images/r6.png'),
+    require('../../assets/images/r1.jpg'),
+    require('../../assets/images/r2.jpg'),
+    require('../../assets/images/r3.jpg'),
+    require('../../assets/images/r4.jpg'),
+    require('../../assets/images/r5.jpg'),
+    require('../../assets/images/r6.jpg'),
   ];
 
   return (

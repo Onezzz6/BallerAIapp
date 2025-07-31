@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TextInput, Alert, StyleSheet, Pressable, Platform, Image, Keyboard, TouchableWithoutFeedback, SafeAreaView, KeyboardAvoidingView } from 'react-native';
+import { View, Text, TextInput, Alert, StyleSheet, Pressable, Platform, Image, Keyboard, TouchableWithoutFeedback, SafeAreaView, KeyboardAvoidingView, ScrollView, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,6 +20,9 @@ import { PAYWALL_RESULT } from 'react-native-purchases-ui';
 import { usePathname } from 'expo-router';
 import { colors, typography, spacing, borderRadius } from '../utils/theme';
 import { useHaptics } from '../utils/haptics';
+
+// Get screen dimensions for responsive design
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -222,131 +225,115 @@ export default function SignUpScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <TouchableWithoutFeedback onPress={dismissKeyboard}>
-        <SafeAreaView style={styles.container}>
-          <Animated.View 
-            entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}
-            style={styles.content}
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoidingView}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <TouchableWithoutFeedback onPress={dismissKeyboard}>
+          <ScrollView 
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
-            {/* Logo Section */}
-            <View style={styles.logoSection}>
-              <Image
-                source={require('../../assets/images/BallerAILogo.png')}
-                style={styles.logo}
-                resizeMode="contain"
+            <Animated.View 
+              entering={FadeInRight.duration(200).withInitialValues({ transform: [{ translateX: 400 }] })}
+              style={styles.content}
+            >
+              {/* Logo Section */}
+              <View style={styles.logoSection}>
+                <Image
+                  source={require('../../assets/images/BallerAILogo.png')}
+                  style={styles.logo}
+                  resizeMode="contain"
+                />
+              </View>
+
+              {/* Title Section */}
+              <View style={styles.titleSection}>
+                <Text style={styles.title}>Create Your Account</Text>
+              </View>
+
+              {/* Email and Password Form */}
+              <View style={styles.form}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Email"
+                  placeholderTextColor={colors.lightGray}
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!isLoading}
+                />
+
+                <TextInput
+                  style={styles.input}
+                  placeholder="Password"
+                  placeholderTextColor={colors.lightGray}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!isLoading}
+                />
+              </View>
+
+              {/* Continue Button */}
+              <Button
+                title={isLoading ? "Creating..." : "Continue"}
+                onPress={handleEmailSignUp}
+                disabled={isLoading || !email || !password}
+                containerStyle={styles.continueButton}
               />
-            </View>
 
-            {/* Title Section */}
-            <View style={styles.titleSection}>
-              <Text style={styles.title}>Create Your Account</Text>
-            </View>
-
-            {/* Email and Password Form */}
-            <View style={styles.form}>
-              <TextInput
-                style={styles.input}
-                placeholder="Email"
-                placeholderTextColor={colors.lightGray}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!isLoading}
-              />
-
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                placeholderTextColor={colors.lightGray}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!isLoading}
-              />
-            </View>
-
-            {/* Continue Button */}
-            <Button
-              title={isLoading ? "Creating..." : "Continue"}
-              onPress={handleEmailSignUp}
-              disabled={isLoading || !email || !password}
-              containerStyle={styles.continueButton}
-            />
-
-            {/* Social Sign In Buttons */}
-            <View style={styles.socialButtonsContainer}>
-              {/* Apple Sign In */}
-              {isAppleAvailable && (
-                <View style={{ opacity: isLoading ? 0.5 : 1, marginBottom: spacing.md }}>
-                  {isLoading ? (
-                    <View
-                      style={{
-                        height: 56,
-                        width: '100%',
-                        backgroundColor: colors.black,
-                        borderRadius: 28,
-                      }}
+              {/* Social Sign In Buttons */}
+              <View style={styles.socialButtonsContainer}>
+                {/* Apple Sign In */}
+                {isAppleAvailable && (
+                  <View style={styles.socialButtonWrapper}>
+                    {isLoading ? (
+                      <View style={styles.socialButtonPlaceholder} />
+                    ) : (
+                      <View style={styles.appleButtonContainer}>
+                        <AppleAuthentication.AppleAuthenticationButton
+                          buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+                          buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                          cornerRadius={28}
+                          style={styles.appleButton}
+                          onPress={handleAppleSignUp}
+                        />
+                      </View>
+                    )}
+                  </View>
+                )}
+                
+                {/* Google Sign In */}
+                {isGoogleAvailable && (
+                  <Pressable 
+                    style={[styles.googleButton, { opacity: isLoading ? 0.5 : 1 }]}
+                    onPress={handleGoogleSignUp}
+                    disabled={isLoading}
+                  >
+                    <Image 
+                      source={{ uri: 'https://developers.google.com/identity/images/g-logo.png' }}
+                      style={styles.googleIcon}
                     />
-                  ) : (
-                    <AppleAuthentication.AppleAuthenticationButton
-                      buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
-                      buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-                      cornerRadius={28}
-                      style={{
-                        height: 56,
-                        width: '100%',
-                      }}
-                      onPress={handleAppleSignUp}
-                    />
-                  )}
-                </View>
-              )}
-              
-              {/* Google Sign In */}
-              {isGoogleAvailable && (
-                <Pressable 
-                  style={{
-                    height: 56,
-                    width: '100%',
-                    borderRadius: 28,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    paddingHorizontal: 16,
-                    backgroundColor: colors.white,
-                    borderWidth: 1,
-                    borderColor: colors.borderColor,
-                    opacity: isLoading ? 0.5 : 1,
-                  }}
-                  onPress={handleGoogleSignUp}
-                  disabled={isLoading}
-                >
-                  <Image 
-                    source={{ uri: 'https://developers.google.com/identity/images/g-logo.png' }}
-                    style={{ width: 24, height: 24, marginRight: 12 }}
-                  />
-                  <Text style={{
-                    fontSize: 16,
-                    fontWeight: '600',
-                    color: colors.black,
-                  }}>
-                    Continue with Google
-                  </Text>
-                </Pressable>
-              )}
-            </View>
-          </Animated.View>
-        </SafeAreaView>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
+                    <Text style={styles.googleButtonText}>
+                      Continue with Google
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
+            </Animated.View>
+          </ScrollView>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -355,49 +342,107 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.backgroundColor,
   },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    minHeight: screenHeight - 100, // Ensure content takes full height minus safe areas
+  },
   content: {
     flex: 1,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: Math.max(spacing.lg, screenWidth * 0.05), // Responsive horizontal padding
     paddingBottom: spacing.lg,
+    justifyContent: 'center', // Center content vertically
   },
   logoSection: {
     alignItems: 'center',
-    marginTop: spacing.xxxl * 2,
-    marginBottom: spacing.xl * 2,
+    marginTop: Math.max(spacing.xl, screenHeight * 0.08), // Responsive top margin
+    marginBottom: Math.max(spacing.xl, screenHeight * 0.05), // Responsive bottom margin
   },
   logo: {
-    width: 120,
-    height: 120,
+    width: Math.min(120, screenWidth * 0.3), // Responsive logo size
+    height: Math.min(120, screenWidth * 0.3),
   },
   titleSection: {
     alignItems: 'center',
-    marginBottom: spacing.xl,
+    marginBottom: Math.max(spacing.lg, screenHeight * 0.04), // Responsive margin
   },
   title: {
-    fontSize: 28,
+    fontSize: Math.min(28, screenWidth * 0.08), // Responsive font size
     fontWeight: 'bold',
     color: colors.black,
     textAlign: 'center',
   },
   form: {
-    marginBottom: spacing.xl,
+    marginBottom: Math.max(spacing.lg, screenHeight * 0.03), // Responsive margin
   },
   input: {
     borderWidth: 1,
     borderColor: colors.borderColor,
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md + 4,
+    paddingVertical: Platform.OS === 'ios' ? spacing.md + 4 : spacing.md + 2, // Platform-specific padding
     fontSize: 16,
     color: colors.black,
     backgroundColor: colors.inputBackground,
     marginBottom: spacing.md,
+    minHeight: 50, // Ensure minimum touch target
   },
   continueButton: {
-    marginBottom: spacing.lg,
+    marginBottom: Math.max(spacing.lg, screenHeight * 0.025), // Responsive margin
   },
   socialButtonsContainer: {
     marginTop: spacing.md,
+    paddingBottom: spacing.xl, // Extra bottom padding for scrolling
+  },
+  socialButtonWrapper: {
+    opacity: 1,
+    marginBottom: spacing.md,
+  },
+  socialButtonPlaceholder: {
+    width: '100%',
+    height: 54, // Exact same total height as Button component
+    backgroundColor: colors.black,
+    borderRadius: 28, // Match Button component
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  appleButtonContainer: {
+    width: '100%',
+    height: 54, // Exact same total height as Button component (16+22+16)
+    borderRadius: 28, // Match Button component
+    overflow: 'hidden', // Ensure rounded corners
+  },
+  appleButton: {
+    width: '100%',
+    height: 54, // Fill the container completely
+  },
+  googleButton: {
+    padding: 16, // Match Button component
+    width: '100%',
+    height: 54, // Exact same total height as Button component
+    borderRadius: 28, // Match Button component
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.borderColor,
+  },
+  googleIcon: {
+    width: 20, // Slightly smaller to match proportions
+    height: 20,
+    marginRight: 8, // Reduced spacing to fit better with padding: 16
+  },
+  googleButtonText: {
+    fontSize: 18, // Match Button component
+    fontWeight: '600', // Match Button component
+    color: colors.black,
+    textAlign: 'center',
   },
   termsText: {
     fontSize: 12,

@@ -130,11 +130,13 @@ export default function ReferralCodeScreen() {
 
   const handleSkip = async () => {
     console.log('Skip button pressed');
+    haptics.light();
     await analyticsService.logEvent('A0_26_referral_code_skip');
     goToNext();
   };
 
   const handleContinue = async () => {
+    haptics.light();
     await analyticsService.logEvent('A0_26_referral_code_continue');
     goToNext();
   };

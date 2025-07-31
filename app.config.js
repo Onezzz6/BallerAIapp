@@ -100,6 +100,8 @@ export default {
       googleApiKey: process.env.GOOGLE_API_KEY,
       deepseekApiKey: process.env.DEEPSEEK_API_KEY,
       googleWebClientId: process.env.GOOGLE_WEB_CLIENT_ID,
+      revenueCatIosApiKey: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY,
+      revenueCatAndroidApiKey: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY,
       eas: {
         projectId: "eca84105-519c-4832-902e-d87afe59e858"
       }

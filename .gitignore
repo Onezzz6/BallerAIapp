@@ -41,4 +41,8 @@ app-example
 .env
 .env.*
 !.env.example
+
+# Android keystore properties
+android/keystore.properties
+
 eas.json

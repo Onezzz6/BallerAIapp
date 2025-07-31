@@ -88,8 +88,8 @@ function SubscriptionProvider({ children }: { children: React.ReactNode }) {
   // Check API key availability on startup
   useEffect(() => {
     const apiKey = Platform.OS === 'ios' 
-      ? process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY
-      : process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY;
+      ? Constants.expoConfig?.extra?.revenueCatIosApiKey
+      : Constants.expoConfig?.extra?.revenueCatAndroidApiKey;
       
     if (!apiKey) {
       console.error(`RevenueCat ${Platform.OS} API key not found in environment variables.`);

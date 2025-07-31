@@ -136,7 +136,7 @@ export default function AppReviewScreen() {
                 resizeMode="cover"
               />
               <Image
-                source={require('../../assets/images/girl.png')}
+                source={require('../../assets/images/girl.jpg')}
                 style={{
                   width: 70,
                   height: 70,
@@ -173,7 +173,7 @@ export default function AppReviewScreen() {
                 alignItems: 'flex-start',
               }}>
                 <Image
-                  source={require('../../assets/images/rebe.png')}
+                  source={require('../../assets/images/rebe.webp')}
                   style={{
                     width: 42,
                     height: 42,
