@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import LoadingScreen from './LoadingScreen';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import { useSubscription } from '../_layout';
-import authService from '../services/auth';
+import authService from '../../services/auth';
 
 /**
  * SortingScreen - The invisible router that determines where users should go
@@ -32,6 +32,7 @@ export default function SortingScreen() {
       navigationReady,
       minLoadingComplete,
       user: !!user,
+      userUid: user?.uid || 'none',
       hasCheckedSubscription,
       shouldFadeOut
     });
@@ -114,14 +115,17 @@ export default function SortingScreen() {
         // Case 2: User exists - need to wait for RevenueCat to initialize
         console.log('SortingScreen: User found, waiting for RevenueCat initialization...');
         
-        // Get user document to ensure they exist in our system
-        const userDoc = await authService.getUserDocument(user.uid);
+        // Verify user has a valid, complete account (not just a document)
+        console.log('SortingScreen: Verifying user account completion for UID:', user.uid);
+        const isValidUser = await authService.verifyUserAccount(user);
         
-        if (!userDoc) {
-          console.log('SortingScreen: User document not found, navigating to welcome screen');
+        if (!isValidUser) {
+          console.log('SortingScreen: User account is invalid or incomplete, navigating to welcome screen');
           performNavigation('/welcome');
           return;
         }
+        
+        console.log('SortingScreen: User account verified, proceeding with subscription check');
 
         // Wait for RevenueCat to initialize and fetch fresh subscription status
         // We'll wait a bit longer to ensure RevenueCat has time to sync

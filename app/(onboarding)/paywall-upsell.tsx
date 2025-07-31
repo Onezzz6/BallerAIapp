@@ -10,13 +10,13 @@ import Animated, {
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import Button from '../components/Button';
-import { useAuth } from '../context/AuthContext';
-import { useOnboarding } from '../context/OnboardingContext';
+import { useAuth } from '../../context/AuthContext';
+import { useOnboarding } from '../../context/OnboardingContext';
 import { runPostLoginSequence, markAuthenticationComplete } from './paywall';
 import { usePathname } from 'expo-router';
-import analyticsService from '../services/analytics';
-import { colors, typography } from '../utils/theme';
-import { useHaptics } from '../utils/haptics';
+import analyticsService from '../../services/analytics';
+import { colors, typography } from '../../utils/theme';
+import { useHaptics } from '../../utils/haptics';
 
 // Phone Carousel Component (same as profile-complete)
 const PhoneCarousel: React.FC = () => {

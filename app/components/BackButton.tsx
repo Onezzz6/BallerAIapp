@@ -1,7 +1,7 @@
 import { Pressable, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInRight } from 'react-native-reanimated';
-import { useOnboardingStep } from '../hooks/useOnboardingStep';
+import { useOnboardingStep } from '../../hooks/useOnboardingStep';
 
 interface BackButtonProps {
   customBackPath?: string;

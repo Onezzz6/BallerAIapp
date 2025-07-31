@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { SafeAreaView, Text, View, StyleSheet } from 'react-native';
-import firebaseApp, { auth, db } from './app/config/firebase';
+import firebaseApp, { auth, db } from './config/firebase';
 
 export default function App() {
   useEffect(() => {

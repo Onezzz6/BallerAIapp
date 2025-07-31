@@ -3,10 +3,10 @@ import Animated, { FadeInRight, FadeInUp } from 'react-native-reanimated';
 import { useEffect } from 'react';
 import Button from '../components/Button';
 import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
-import { colors, typography } from '../utils/theme';
-import { useHaptics } from '../utils/haptics';
-import { useOnboardingStep } from '../hooks/useOnboardingStep';
-import analyticsService from '../services/analytics';
+import { colors, typography } from '../../utils/theme';
+import { useHaptics } from '../../utils/haptics';
+import { useOnboardingStep } from '../../hooks/useOnboardingStep';
+import analyticsService from '../../services/analytics';
 
 export default function SocialProofScreen() {
   const haptics = useHaptics();

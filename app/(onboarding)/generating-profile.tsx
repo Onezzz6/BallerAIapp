@@ -8,10 +8,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useEffect, useState } from 'react';
 
-import analyticsService from '../services/analytics';
-import { colors, typography } from '../utils/theme';
-import { useHaptics } from '../utils/haptics';
-import { useOnboardingStep } from '../hooks/useOnboardingStep';
+import analyticsService from '../../services/analytics';
+import { colors, typography } from '../../utils/theme';
+import { useHaptics } from '../../utils/haptics';
+import { useOnboardingStep } from '../../hooks/useOnboardingStep';
 
 const GENERATION_STEPS = [
   { text: 'Creating your macro goals', checked: false },

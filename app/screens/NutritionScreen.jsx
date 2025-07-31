@@ -1,7 +1,7 @@
-import { calculateNutritionGoals } from '../utils/nutritionCalculator';
+import { calculateNutritionGoals } from '../../utils/nutritionCalculator';
 import { useEffect, useState } from 'react';
-import { getAuth } from 'firebase/auth';
-import { getDatabase, ref, onValue } from 'firebase/database';
+import auth from '@react-native-firebase/auth';
+import database from '@react-native-firebase/database';
 
 const NutritionScreen = () => {
   const [loading, setLoading] = useState(true);
@@ -13,18 +13,18 @@ const NutritionScreen = () => {
     const fetchUserData = async () => {
       try {
         setLoading(true);
-        const auth = getAuth();
-        const userId = auth.currentUser?.uid;
+        const currentUser = auth().currentUser;
+        const userId = currentUser?.uid;
         
         if (!userId) {
           setLoading(false);
           return;
         }
         
-        const db = getDatabase();
-        const userRef = ref(db, `users/${userId}`);
+        const db = database();
+        const userRef = db.ref(`users/${userId}`);
         
-        onValue(userRef, (snapshot) => {
+        userRef.on('value', (snapshot) => {
           const data = snapshot.val();
           if (data) {
             setUserData(data);

@@ -2,14 +2,14 @@ import { View, Text, Pressable, SafeAreaView, ScrollView } from 'react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
-import { useOnboarding } from '../context/OnboardingContext';
+import { useOnboarding } from '../../context/OnboardingContext';
 import { useState, useEffect } from 'react';
 import analytics from '@react-native-firebase/analytics';
-import { colors, typography } from '../utils/theme';
-import { useHaptics } from '../utils/haptics';
+import { colors, typography } from '../../utils/theme';
+import { useHaptics } from '../../utils/haptics';
 import { Ionicons } from '@expo/vector-icons';
-import { useOnboardingStep } from '../hooks/useOnboardingStep';
-import analyticsService from '../services/analytics';
+import { useOnboardingStep } from '../../hooks/useOnboardingStep';
+import analyticsService from '../../services/analytics';
 
 const OPTIONS = [
   {

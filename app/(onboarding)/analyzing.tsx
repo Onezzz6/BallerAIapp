@@ -16,7 +16,7 @@ import Animated, {
   withDelay,
 } from 'react-native-reanimated';
 import { useEffect } from 'react';
-import analyticsService from '../services/analytics';
+import analyticsService from '../../services/analytics';
 import Svg, {
   Path,
   Rect,
@@ -27,9 +27,9 @@ import Svg, {
 
 import Button from '../components/Button';
 import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
-import { colors, typography } from '../utils/theme';
-import { useHaptics } from '../utils/haptics';
-import { useOnboardingStep } from '../hooks/useOnboardingStep';
+import { colors, typography } from '../../utils/theme';
+import { useHaptics } from '../../utils/haptics';
+import { useOnboardingStep } from '../../hooks/useOnboardingStep';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const generousLen = (d: string) => (d.length + 200) * 2;

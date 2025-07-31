@@ -9,11 +9,11 @@ import Animated, {
 } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
-import { colors, typography } from '../utils/theme';
-import { useHaptics } from '../utils/haptics';
+import { colors, typography } from '../../utils/theme';
+import { useHaptics } from '../../utils/haptics';
 import { useEffect } from 'react';
-import { useOnboardingStep } from '../hooks/useOnboardingStep';
-import analyticsService from '../services/analytics';
+import { useOnboardingStep } from '../../hooks/useOnboardingStep';
+import analyticsService from '../../services/analytics';
 
 export default function ProfileGenerationScreen() {
   const haptics = useHaptics();

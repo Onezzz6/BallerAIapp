@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { auth, db } from '../../../config/firebase';
-import { collection, addDoc, doc, getDoc, updateDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import firestore from '@react-native-firebase/firestore';
 import { Alert } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons'; // Make sure this is imported
 
@@ -14,10 +14,10 @@ const MealLogger: React.FC = () => {
     fat: 0
   });
 
-  const handleLogMeal = async (meal) => {
+  const handleLogMeal = async (meal: any) => {
     try {
       // Get the current user
-      const user = auth.currentUser;
+      const user = auth().currentUser;
       if (!user) {
         console.error("No user is signed in");
         return;
@@ -27,38 +27,38 @@ const MealLogger: React.FC = () => {
       const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
       
       // First, log the meal to the logged meals collection
-      const mealRef = collection(db, 'users', userId, 'loggedMeals');
-      await addDoc(mealRef, {
+      const mealRef = db.collection('users').doc(userId).collection('loggedMeals');
+      await mealRef.add({
         ...meal,
-        timestamp: serverTimestamp(),
+        timestamp: firestore.FieldValue.serverTimestamp(),
         date: today
       });
 
       // Then, update the nutrition progress for today
-      const nutritionProgressRef = doc(db, 'users', userId, 'nutritionProgress', today);
+      const nutritionProgressRef = db.collection('users').doc(userId).collection('nutritionProgress').doc(today);
       
       // Get the current progress document if it exists
-      const progressSnapshot = await getDoc(nutritionProgressRef);
+      const progressSnapshot = await nutritionProgressRef.get();
       
-      if (progressSnapshot.exists()) {
+      if (progressSnapshot.exists) {
         // Update existing progress
         const currentProgress = progressSnapshot.data();
-        await updateDoc(nutritionProgressRef, {
-          calories: (currentProgress.calories || 0) + (meal.calories || 0),
-          protein: (currentProgress.protein || 0) + (meal.protein || 0),
-          carbs: (currentProgress.carbs || 0) + (meal.carbs || 0),
-          fat: (currentProgress.fat || 0) + (meal.fat || 0),
-          lastUpdated: serverTimestamp()
+        await nutritionProgressRef.update({
+          calories: (currentProgress?.calories || 0) + (meal.calories || 0),
+          protein: (currentProgress?.protein || 0) + (meal.protein || 0),
+          carbs: (currentProgress?.carbs || 0) + (meal.carbs || 0),
+          fat: (currentProgress?.fat || 0) + (meal.fat || 0),
+          lastUpdated: firestore.FieldValue.serverTimestamp()
         });
       } else {
         // Create new progress document for today
-        await setDoc(nutritionProgressRef, {
+        await nutritionProgressRef.set({
           calories: meal.calories || 0,
           protein: meal.protein || 0,
           carbs: meal.carbs || 0,
           fat: meal.fat || 0,
           date: today,
-          lastUpdated: serverTimestamp()
+          lastUpdated: firestore.FieldValue.serverTimestamp()
         });
       }
 

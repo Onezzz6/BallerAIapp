@@ -2,18 +2,18 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, useColorScheme, Dimensions, RefreshControl, Platform, Share } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AntDesign, Feather, Ionicons } from '@expo/vector-icons';
-import { getDoc, doc, onSnapshot, setDoc, updateDoc, addDoc, increment, serverTimestamp, collection, query, where, orderBy, getDocs } from 'firebase/firestore';
-import { useAuth } from '../context/AuthContext';
-import { db } from '../config/firebase';
-import { useNutrition } from '../context/NutritionContext';
+import firestore from '@react-native-firebase/firestore';
+import { useAuth } from '../../context/AuthContext';
+import { db } from '../../config/firebase';
+import { useNutrition } from '../../context/NutritionContext';
 import { useIsFocused } from '@react-navigation/native';
 import CalorieProgress, { showCalorieInfoAlert } from '../components/CalorieProgress';
 import { router } from 'expo-router';
 import { BlurView } from 'expo-blur';
-import { calculateNutritionGoals } from '../utils/nutritionCalculations';
+import { calculateNutritionGoals } from '../../utils/nutritionCalculations';
 import { format, startOfWeek, addDays, subDays } from 'date-fns';
 import { TextInput, ActivityIndicator, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard, Pressable, Modal, Alert, Animated, Linking, NativeModules, ActionSheetIOS } from 'react-native';
-import { askOpenAI } from '../utils/openai';
+import { askOpenAI } from '../../utils/openai';
 import Svg, { Circle } from 'react-native-svg';
 import ReanimatedAnimated, { PinwheelIn } from 'react-native-reanimated';
 import analytics from '@react-native-firebase/analytics'; // Add analytics import
@@ -158,13 +158,13 @@ export default function HomeScreen() {
           }));
           
           // Fetch user profile data
-          const userDocRef = doc(db, 'users', user.uid);
-          const userDoc = await getDoc(userDocRef);
-          if (userDoc.exists()) {
+          const userDocRef = db.collection('users').doc(user.uid);
+          const userDoc = await userDocRef.get();
+          if (userDoc.exists) {
             const userData = userDoc.data();
             
             // Set profile picture if available
-            if (userData.profilePicture) {
+            if (userData?.profilePicture) {
               setProfilePicture(userData.profilePicture);
             }
             
@@ -177,7 +177,7 @@ export default function HomeScreen() {
             let goalsUpdated = false;
             
             // First check if goals already exist in the user document
-            if (userData.calorieGoal && userData.macroGoals) {
+            if (userData?.calorieGoal && userData?.macroGoals) {
               //console.log('DEBUG - Using existing calorie goal from user document:', userData.calorieGoal);
               calculatedGoals = {
                 calorieGoal: userData.calorieGoal,
@@ -194,7 +194,7 @@ export default function HomeScreen() {
               if (calculatedGoals && calculatedGoals.calorieGoal > 0) {
                 try {
                   //console.log('DEBUG - Saving calculated goals to user document');
-                  await updateDoc(userDocRef, {
+                  await userDocRef.update({
                     calorieGoal: calculatedGoals.calorieGoal,
                     macroGoals: calculatedGoals.macroGoals
                   });
@@ -266,8 +266,8 @@ export default function HomeScreen() {
       const isToday = format(new Date(), 'yyyy-MM-dd') === dateStr;
       
       // Use the same path as the nutrition tab to access dailyMacros
-      const docRef = doc(db, 'users', user.uid, 'dailyMacros', dateStr);
-      const docSnap = await getDoc(docRef);
+      const docRef = db.collection('users').doc(user.uid).collection('dailyMacros').doc(dateStr);
+      const docSnap = await docRef.get();
       
       // Get goal from macros context or from Firebase
       let calorieGoal = 0;
@@ -279,10 +279,10 @@ export default function HomeScreen() {
       } else {
         try {
           // For other days or if context doesn't have the goal, fetch from Firebase
-          const userMacrosDoc = await getDoc(doc(db, 'users', user.uid, 'macros', 'goals'));
-          if (userMacrosDoc.exists()) {
+          const userMacrosDoc = await db.collection('users').doc(user.uid).collection('macros').doc('goals').get();
+          if (userMacrosDoc.exists) {
             const macrosData = userMacrosDoc.data();
-            if (macrosData.calories && macrosData.calories > 0) {
+            if (macrosData?.calories && macrosData.calories > 0) {
               calorieGoal = macrosData.calories;
               //console.log(`DEBUG - Using calorie goal from Firebase: ${calorieGoal}`);
             }
@@ -298,12 +298,12 @@ export default function HomeScreen() {
         console.log(`DEBUG - Using default calorie goal: ${calorieGoal}`);
       }
       
-      if (docSnap.exists()) {
+      if (docSnap.exists) {
         const data = docSnap.data();
         //console.log(`DEBUG - Found data for ${dateStr}:`, JSON.stringify(data));
         
         setTodayCalories({
-          current: data.calories || 0,
+          current: data?.calories || 0,
           goal: calorieGoal,
           lastUpdated: new Date().toISOString(),
           isLoading: false
@@ -349,28 +349,28 @@ export default function HomeScreen() {
     }
     
     // Reference to the dailyMacros document for the selected date
-    const docRef = doc(db, 'users', user.uid, 'dailyMacros', dateStr);
+    const docRef = db.collection('users').doc(user.uid).collection('dailyMacros').doc(dateStr);
     
-    // Set up the listener with error handling
-    const unsubscribe = onSnapshot(docRef, (docSnap) => {
-      //console.log(`DEBUG - Real-time update for date: ${dateStr}`);
-      
-      // Get goal from macros context for today, or use stored goal for other days
-      let calorieGoal;
-      
-      if (isToday && macros.calories.goal > 0) {
-        calorieGoal = macros.calories.goal;
-      } else {
-        // For non-today dates, use the existing goal or default to 2000
-        calorieGoal = todayCalories.goal > 0 ? todayCalories.goal : 2000;
-      }
-      
-      if (docSnap.exists()) {
+          // Set up the listener with error handling
+      const unsubscribe = docRef.onSnapshot((docSnap) => {
+        //console.log(`DEBUG - Real-time update for date: ${dateStr}`);
+        
+        // Get goal from macros context for today, or use stored goal for other days
+        let calorieGoal;
+        
+        if (isToday && macros.calories.goal > 0) {
+          calorieGoal = macros.calories.goal;
+        } else {
+          // For non-today dates, use the existing goal or default to 2000
+          calorieGoal = todayCalories.goal > 0 ? todayCalories.goal : 2000;
+        }
+        
+        if (docSnap.exists) {
         const data = docSnap.data();
         //console.log(`DEBUG - Document data: ${JSON.stringify(data)}`);
         
         setTodayCalories({
-          current: data.calories || 0,
+          current: data?.calories || 0,
           goal: calorieGoal,
           lastUpdated: new Date().toISOString(),
           isLoading: false
@@ -454,15 +454,12 @@ export default function HomeScreen() {
       const endDate = new Date();
       const startDate = subDays(endDate, 10);
       
-      const nutritionRef = collection(db, 'users', user.uid, 'nutrition');
-      const q = query(
-        nutritionRef,
-        where('date', '>=', format(startDate, 'yyyy-MM-dd')),
-        where('date', '<=', format(endDate, 'yyyy-MM-dd')),
-        orderBy('date', 'desc')
-      );
-
-      const querySnapshot = await getDocs(q);
+      const nutritionRef = db.collection('users').doc(user.uid).collection('nutrition');
+      const querySnapshot = await nutritionRef
+        .where('date', '>=', format(startDate, 'yyyy-MM-dd'))
+        .where('date', '<=', format(endDate, 'yyyy-MM-dd'))
+        .orderBy('date', 'desc')
+        .get();
       const dailyScores: number[] = [];
 
       querySnapshot.forEach(doc => {
@@ -593,13 +590,13 @@ export default function HomeScreen() {
     const fetchNutritionHistory = async () => {
       try {
         // Reference to the dailyMacros collection
-        const dailyMacrosRef = collection(db, 'users', user.uid, 'dailyMacros');
+        const dailyMacrosRef = db.collection('users').doc(user.uid).collection('dailyMacros');
         
         // Get all documents (we'll filter in memory)
-        const querySnapshot = await getDocs(dailyMacrosRef);
+        const querySnapshot = await dailyMacrosRef.get();
         
         // Get the user's macro goals document to use as backup if goals aren't stored with daily entries
-        const userMacrosDoc = await getDoc(doc(db, 'users', user.uid, 'macros', 'goals'));
+        const userMacrosDoc = await db.collection('users').doc(user.uid).collection('macros').doc('goals').get();
         let defaultGoals = {
           calories: 2000,
           protein: 150,
@@ -607,13 +604,13 @@ export default function HomeScreen() {
           fats: 55
         };
         
-        if (userMacrosDoc.exists()) {
+        if (userMacrosDoc.exists) {
           const goalsData = userMacrosDoc.data();
           defaultGoals = {
-            calories: goalsData.calories || 2000,
-            protein: goalsData.protein || 150,
-            carbs: goalsData.carbs || 200,
-            fats: goalsData.fats || 55
+            calories: goalsData?.calories || 2000,
+            protein: goalsData?.protein || 150,
+            carbs: goalsData?.carbs || 200,
+            fats: goalsData?.fats || 55
           };
         }
         
@@ -692,8 +689,8 @@ export default function HomeScreen() {
     
     // Also set up a listener for any changes to the dailyMacros collection
     // that should trigger a recalculation, but only when documents in our date range change
-    const dailyMacrosRef = collection(db, 'users', user.uid, 'dailyMacros');
-    const unsubscribe = onSnapshot(dailyMacrosRef, (snapshot) => {
+    const dailyMacrosRef = db.collection('users').doc(user.uid).collection('dailyMacros');
+    const unsubscribe = dailyMacrosRef.onSnapshot((snapshot) => {
       // Check if any of the changed documents are within our date range (excluding today)
       const needsRecalculation = snapshot.docChanges().some(change => {
         const dateId = change.doc.id;
@@ -726,26 +723,26 @@ export default function HomeScreen() {
     //console.log(`DEBUG - Setting up dedicated listener for today's data: ${todayStr}`);
     
     // Reference to today's dailyMacros document
-    const docRef = doc(db, 'users', user.uid, 'dailyMacros', todayStr);
+    const docRef = db.collection('users').doc(user.uid).collection('dailyMacros').doc(todayStr);
     
     // Set up the listener with error handling
-    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+    const unsubscribe = docRef.onSnapshot((docSnap) => {
       // Only process if we're on the today view (not viewing a past date)
       if (!selectedDate) {
         //console.log(`DEBUG - Real-time update for today's nutrition data`);
         
-        if (docSnap.exists()) {
+        if (docSnap.exists) {
           const data = docSnap.data();
           //console.log(`DEBUG - Today's data updated: ${JSON.stringify(data)}`);
           
           // If we have macros in the context but they don't match what's in Firebase
           // then update the calorie card (ensures sync with nutrition tab)
-          if (data.calories !== macros.calories.current) {
+          if (data?.calories !== macros.calories.current) {
             //console.log(`DEBUG - Syncing calories: Firebase=${data.calories}, Context=${macros.calories.current}`);
             
             setTodayCalories(prev => ({
               ...prev,
-              current: data.calories || 0,
+              current: data?.calories || 0,
               lastUpdated: new Date().toISOString()
             }));
           }
@@ -884,11 +881,11 @@ export default function HomeScreen() {
     const todayStr = format(today, 'yyyy-MM-dd');
     
     // Reference to today's recovery document
-    const recoveryRef = doc(db, 'users', user.uid, 'recovery', todayStr);
+    const recoveryRef = db.collection('users').doc(user.uid).collection('recovery').doc(todayStr);
     
     // Set up the listener
-    const unsubscribe = onSnapshot(recoveryRef, (doc) => {
-      if (doc.exists()) {
+    const unsubscribe = recoveryRef.onSnapshot((doc) => {
+      if (doc.exists) {
         const data = doc.data();
         setRecoveryData(data);
         calculateReadinessScore(data);
@@ -917,15 +914,12 @@ export default function HomeScreen() {
       const todayStr = format(today, 'yyyy-MM-dd');
       const sevenDaysAgoStr = format(sevenDaysAgo, 'yyyy-MM-dd');
       
-      const nutritionRef = collection(db, 'users', user.uid, 'nutrition');
-      const q = query(
-        nutritionRef,
-        where('date', '>=', sevenDaysAgoStr),
-        where('date', '<=', todayStr),
-        orderBy('date', 'desc')
-      );
-      
-      const querySnapshot = await getDocs(q);
+      const nutritionRef = db.collection('users').doc(user.uid).collection('nutrition');
+      const querySnapshot = await nutritionRef
+        .where('date', '>=', sevenDaysAgoStr)
+        .where('date', '<=', todayStr)
+        .orderBy('date', 'desc')
+        .get();
       const data = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -964,8 +958,8 @@ export default function HomeScreen() {
       const todayStr = format(new Date(), 'yyyy-MM-dd');
       
       // Reference to today's dailyMacros document
-      const docRef = doc(db, 'users', user.uid, 'dailyMacros', todayStr);
-      const docSnap = await getDoc(docRef);
+      const docRef = db.collection('users').doc(user.uid).collection('dailyMacros').doc(todayStr);
+      const docSnap = await docRef.get();
       
       // Get goal from macros context or from Firebase
       let calorieGoal = 0;
@@ -977,10 +971,10 @@ export default function HomeScreen() {
       } else {
         try {
           // If context doesn't have the goal, fetch from Firebase
-          const userMacrosDoc = await getDoc(doc(db, 'users', user.uid, 'macros', 'goals'));
-          if (userMacrosDoc.exists()) {
+          const userMacrosDoc = await db.collection('users').doc(user.uid).collection('macros').doc('goals').get();
+          if (userMacrosDoc.exists) {
             const macrosData = userMacrosDoc.data();
-            if (macrosData.calories && macrosData.calories > 0) {
+            if (macrosData?.calories && macrosData.calories > 0) {
               calorieGoal = macrosData.calories;
               //console.log(`DEBUG - Using calorie goal from Firebase: ${calorieGoal}`);
             }
@@ -996,12 +990,12 @@ export default function HomeScreen() {
         //console.log(`DEBUG - Using default calorie goal: ${calorieGoal}`);
       }
       
-      if (docSnap.exists()) {
+      if (docSnap.exists) {
         const data = docSnap.data();
         //console.log(`DEBUG - Found today's data:`, JSON.stringify(data));
         
         setTodayCalories({
-          current: data.calories || 0,
+          current: data?.calories || 0,
           goal: calorieGoal,
           lastUpdated: new Date().toISOString(),
           isLoading: false
@@ -1039,21 +1033,21 @@ export default function HomeScreen() {
     //console.log(`DEBUG - Setting up real-time listener for today's calories: ${todayStr}`);
     
     // Reference to today's dailyMacros document
-    const docRef = doc(db, 'users', user.uid, 'dailyMacros', todayStr);
+    const docRef = db.collection('users').doc(user.uid).collection('dailyMacros').doc(todayStr);
     
     // Set up the listener
-    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+    const unsubscribe = docRef.onSnapshot((docSnap) => {
       //console.log(`DEBUG - Real-time update for today's calories`);
       
       // Get goal from macros context
       let calorieGoal = macros.calories.goal > 0 ? macros.calories.goal : todayCalories.goal;
       
-      if (docSnap.exists()) {
+      if (docSnap.exists) {
         const data = docSnap.data();
         //console.log(`DEBUG - Today's data updated: ${JSON.stringify(data)}`);
         
         setTodayCalories({
-          current: data.calories || 0,
+          current: data?.calories || 0,
           goal: calorieGoal,
           lastUpdated: new Date().toISOString(),
           isLoading: false
@@ -1091,8 +1085,8 @@ export default function HomeScreen() {
       if (!user) return;
       
       try {
-        const userProfileDoc = await getDoc(doc(db, 'users', user.uid, 'profile', 'details'));
-        if (userProfileDoc.exists()) {
+        const userProfileDoc = await db.collection('users').doc(user.uid).collection('profile').doc('details').get();
+        if (userProfileDoc.exists) {
           setUserProfile(userProfileDoc.data());
         } else {
           // Create a default profile if none exists
@@ -1108,7 +1102,7 @@ export default function HomeScreen() {
           setUserProfile(defaultProfile);
           
           // Save default profile to Firestore
-          await setDoc(doc(db, 'users', user.uid, 'profile', 'details'), defaultProfile);
+          await db.collection('users').doc(user.uid).collection('profile').doc('details').set(defaultProfile);
         }
       } catch (error) {
         console.error('Error fetching user profile:', error);
@@ -1148,21 +1142,21 @@ export default function HomeScreen() {
       
       try {
         const currentSession = getCurrentChatSession();
-        const questionLimitDoc = await getDoc(doc(db, 'users', user.uid, 'aiQuestions', 'counter'));
+        const questionLimitDoc = await db.collection('users').doc(user.uid).collection('aiQuestions').doc('counter').get();
         
-        if (questionLimitDoc.exists()) {
+        if (questionLimitDoc.exists) {
           const data = questionLimitDoc.data();
           
           // If data is from current session, use it
-          if (data.sessionKey === currentSession) {
+          if (data?.sessionKey === currentSession) {
             setQuestionCount(data.count || 0);
           } else {
             // Reset counter for new session (daily at noon)
-            await setDoc(doc(db, 'users', user.uid, 'aiQuestions', 'counter'), {
+            await db.collection('users').doc(user.uid).collection('aiQuestions').doc('counter').set({
               count: 0,
               sessionKey: currentSession,
               maxQuestions: 10,
-              lastReset: serverTimestamp()
+              lastReset: firestore.FieldValue.serverTimestamp()
             });
             setQuestionCount(0);
             // Clear conversation history for new session
@@ -1170,14 +1164,14 @@ export default function HomeScreen() {
           }
           
           // Set max questions from stored value
-          setMaxQuestions(data.maxQuestions || 10);
+          setMaxQuestions(data?.maxQuestions || 10);
         } else {
           // Initialize counter document
-          await setDoc(doc(db, 'users', user.uid, 'aiQuestions', 'counter'), {
+          await db.collection('users').doc(user.uid).collection('aiQuestions').doc('counter').set({
             count: 0,
             sessionKey: currentSession,
             maxQuestions: 10,
-            lastReset: serverTimestamp()
+            lastReset: firestore.FieldValue.serverTimestamp()
           });
           setQuestionCount(0);
         }
@@ -1185,14 +1179,11 @@ export default function HomeScreen() {
         // Try to fetch current session's conversation history - handling the case where index might be missing
         try {
           // First attempt with the optimal query (requires composite index)
-          const questionsRef = collection(db, `users/${user.uid}/aiQuestions`);
-          const q = query(
-            questionsRef,
-            where('sessionKey', '==', currentSession),
-            orderBy('timestamp', 'asc')
-          );
-          
-          const querySnapshot = await getDocs(q);
+          const questionsRef = db.collection(`users/${user.uid}/aiQuestions`);
+          const querySnapshot = await questionsRef
+            .where('sessionKey', '==', currentSession)
+            .orderBy('timestamp', 'asc')
+            .get();
           const history = querySnapshot.docs.map(doc => {
             const data = doc.data();
             return {
@@ -1209,13 +1200,10 @@ export default function HomeScreen() {
           // Fallback method if index doesn't exist
           try {
             // Get all questions for current session without ordering (doesn't require composite index)
-            const questionsRef = collection(db, `users/${user.uid}/aiQuestions`);
-            const simpleQuery = query(
-              questionsRef,
-              where('sessionKey', '==', currentSession)
-            );
-            
-            const querySnapshot = await getDocs(simpleQuery);
+            const questionsRef = db.collection(`users/${user.uid}/aiQuestions`);
+            const querySnapshot = await questionsRef
+              .where('sessionKey', '==', currentSession)
+              .get();
             
             // Get all documents and sort them in memory
             const history = querySnapshot.docs
@@ -1266,21 +1254,21 @@ export default function HomeScreen() {
       
       // Get the stored session from Firebase
       try {
-        const questionLimitDoc = await getDoc(doc(db, 'users', user.uid, 'aiQuestions', 'counter'));
+        const questionLimitDoc = await db.collection('users').doc(user.uid).collection('aiQuestions').doc('counter').get();
         
-        if (questionLimitDoc.exists()) {
+        if (questionLimitDoc.exists) {
           const data = questionLimitDoc.data();
           
           // If the current session differs from stored session, it means we've crossed noon
-          if (data.sessionKey !== currentSession) {
+          if (data?.sessionKey !== currentSession) {
             console.log('Noon reset detected, clearing conversation history');
             
             // Reset counter and conversation
-            await setDoc(doc(db, 'users', user.uid, 'aiQuestions', 'counter'), {
+            await db.collection('users').doc(user.uid).collection('aiQuestions').doc('counter').set({
               count: 0,
               sessionKey: currentSession,
               maxQuestions: 10,
-              lastReset: serverTimestamp()
+              lastReset: firestore.FieldValue.serverTimestamp()
             });
             
             // Clear local state
@@ -1360,25 +1348,25 @@ export default function HomeScreen() {
       if (user) {
         try {
           const currentSession = getCurrentChatSession();
-          const questionsRef = collection(db, `users/${user.uid}/aiQuestions`);
+          const questionsRef = db.collection(`users/${user.uid}/aiQuestions`);
           
-          await addDoc(questionsRef, {
+          await questionsRef.add({
             question: currentQuestion,
             response,
-            timestamp: serverTimestamp(),
+            timestamp: firestore.FieldValue.serverTimestamp(),
             sessionKey: currentSession
           });
 
           // Update the counter document directly rather than using increment
           // This ensures the count is always accurate
-          const counterRef = doc(db, 'users', user.uid, 'aiQuestions', 'counter');
+          const counterRef = db.collection('users').doc(user.uid).collection('aiQuestions').doc('counter');
           const newCount = questionCount + 1;
           
-          await setDoc(counterRef, {
+          await counterRef.set({
             count: newCount,
             sessionKey: currentSession,
             maxQuestions: maxQuestions,
-            lastReset: serverTimestamp()
+            lastReset: firestore.FieldValue.serverTimestamp()
           }, { merge: true });
 
           // Update local state
@@ -1503,24 +1491,24 @@ export default function HomeScreen() {
         const dateStr = format(date, 'yyyy-MM-dd');
         
         // Get recovery data for this day
-        const recoveryRef = doc(db, 'users', user.uid, 'recovery', dateStr);
-        const recoverySnap = await getDoc(recoveryRef);
+        const recoveryRef = db.collection('users').doc(user.uid).collection('recovery').doc(dateStr);
+        const recoverySnap = await recoveryRef.get();
         
         // Get recovery plan for this day to check completion status
-        const planRef = doc(db, 'users', user.uid, 'recoveryPlans', dateStr);
-        const planSnap = await getDoc(planRef);
+        const planRef = db.collection('users').doc(user.uid).collection('recoveryPlans').doc(dateStr);
+        const planSnap = await planRef.get();
         
         // Only include days where recovery data was submitted
-        if (recoverySnap.exists()) {
+        if (recoverySnap.exists) {
           const data = recoverySnap.data();
           
           // Get sleep quality (in our app, this is mapped to "Sleep duration last night")
           // Note that in the recovery data it's stored as "mood" due to the UI field mapping
-          const sleepQuality = data.sleep || 0;
+          const sleepQuality = data?.sleep || 0;
           
           // Check if a plan exists and was completed
-          const planExists = planSnap.exists();
-          const planCompleted = planExists ? planSnap.data().completed || false : false;
+          const planExists = planSnap.exists;
+          const planCompleted = planExists ? planSnap.data()?.completed || false : false;
           
           // Only calculate score if sleep data exists
           if (sleepQuality > 0) {
@@ -1561,15 +1549,15 @@ export default function HomeScreen() {
     
     // Set up a listener for changes to recovery data or plans
     if (user) {
-      const recoveryCollectionRef = collection(db, 'users', user.uid, 'recovery');
-      const plansCollectionRef = collection(db, 'users', user.uid, 'recoveryPlans');
+      const recoveryCollectionRef = db.collection('users').doc(user.uid).collection('recovery');
+      const plansCollectionRef = db.collection('users').doc(user.uid).collection('recoveryPlans');
       
-      const unsubscribeRecovery = onSnapshot(recoveryCollectionRef, () => {
+      const unsubscribeRecovery = recoveryCollectionRef.onSnapshot(() => {
         //console.log('DEBUG - Recovery data changed, recalculating adherence');
         fetchRecoveryAdherence();
       });
       
-      const unsubscribePlans = onSnapshot(plansCollectionRef, () => {
+      const unsubscribePlans = plansCollectionRef.onSnapshot(() => {
         //console.log('DEBUG - Recovery plans changed, recalculating adherence');
         fetchRecoveryAdherence();
       });

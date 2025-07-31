@@ -4,15 +4,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect, useRef } from 'react';
 import Slider from '@react-native-community/slider';
 import { format, differenceInHours, differenceInMinutes, parseISO, isSameDay, subDays, differenceInCalendarDays } from 'date-fns';
-import { doc, getDoc, setDoc, collection, Timestamp, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../config/firebase';
-import { useAuth } from '../context/AuthContext';
+import firestore from '@react-native-firebase/firestore';
+import { db } from '../../config/firebase';
+import { useAuth } from '../../context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import WeeklyOverview from '../components/WeeklyOverview';
 import Constants from 'expo-constants';
 import Animated, { FadeIn, FadeInDown, PinwheelIn, SlideInRight } from 'react-native-reanimated';
-import analyticsService from '../services/analytics';
+import analyticsService from '../../services/analytics';
 import RecoveryPlanGenerationLoader from '../components/RecoveryPlanGenerationLoader';
 
 // Add this line to get the API key from Constants.expoConfig.extra
@@ -87,11 +87,11 @@ export default function RecoveryScreen() {
       if (!user) return;
       
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
-      const recoveryRef = doc(db, 'users', user.uid, 'recovery', dateStr);
+      const recoveryRef = db.collection('users').doc(user.uid).collection('recovery').doc(dateStr);
       
       try {
-        const docSnap = await getDoc(recoveryRef);
-        if (docSnap.exists()) {
+        const docSnap = await recoveryRef.get();
+        if (docSnap.exists) {
           const data = docSnap.data() as RecoveryData & { tools?: RecoveryTool[] };
           setRecoveryData(data);
           setSelectedTools(data.tools || []);
@@ -151,16 +151,16 @@ export default function RecoveryScreen() {
     today.setHours(0, 0, 0, 0);
 
     try {
-      const dataRef = doc(db, 'users', user.uid, 'recoveryData', today.toISOString().split('T')[0]);
-      const dataSnap = await getDoc(dataRef);
+      const dataRef = db.collection('users').doc(user.uid).collection('recoveryData').doc(today.toISOString().split('T')[0]);
+      const dataSnap = await dataRef.get();
 
-      if (dataSnap.exists()) {
+      if (dataSnap.exists) {
         const data = dataSnap.data();
         setRecoveryData({
-          soreness: data.soreness || 5,
-          fatigue: data.fatigue || 5,
-          sleep: data.sleep || 5,
-          mood: data.mood || 5,
+          soreness: data?.soreness || 5,
+          fatigue: data?.fatigue || 5,
+          sleep: data?.sleep || 5,
+          mood: data?.mood || 5,
           submitted: true
         });
       }
@@ -173,12 +173,12 @@ export default function RecoveryScreen() {
     if (!user) return;
     
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
-    const recoveryRef = doc(db, 'users', user.uid, 'recovery', dateStr);
+    const recoveryRef = db.collection('users').doc(user.uid).collection('recovery').doc(dateStr);
     
     try {
       // First, get the current document to preserve any existing tools data and time data
-      const docSnap = await getDoc(recoveryRef);
-      const currentData: Partial<RecoveryData> = docSnap.exists() ? docSnap.data() as RecoveryData : {};
+      const docSnap = await recoveryRef.get();
+      const currentData: Partial<RecoveryData> = docSnap.exists ? docSnap.data() as RecoveryData : {};
       
       // Create the base data object with required fields that cannot be undefined
       const updatedData: Record<string, any> = {
@@ -205,7 +205,7 @@ export default function RecoveryScreen() {
       }
       
       console.log("Saving recovery data:", updatedData);
-      await setDoc(recoveryRef, updatedData);
+      await recoveryRef.set(updatedData);
       
       // Update local state to reflect submitted status and ensure it includes the same data we saved
       setRecoveryData({
@@ -238,15 +238,15 @@ export default function RecoveryScreen() {
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
     
     try {
-      const planRef = doc(db, 'users', user.uid, 'recoveryPlans', dateStr);
-      const planSnap = await getDoc(planRef);
+      const planRef = db.collection('users').doc(user.uid).collection('recoveryPlans').doc(dateStr);
+      const planSnap = await planRef.get();
       
-      if (planSnap.exists()) {
+      if (planSnap.exists) {
         const planData = planSnap.data();
-        setTodaysPlan(planData.plan);
+        setTodaysPlan(planData?.plan);
         setPlanExists(true);
-        setPlanCompleted(planData.completed || false);
-        console.log(`Loaded saved plan for ${dateStr}:`, planData.plan);
+        setPlanCompleted(planData?.completed || false);
+        console.log(`Loaded saved plan for ${dateStr}:`, planData?.plan);
       } else {
         setTodaysPlan(null);
         setPlanExists(false);
@@ -332,13 +332,13 @@ export default function RecoveryScreen() {
         const pastDate = subDays(today, i);
         const dateStr = format(pastDate, 'yyyy-MM-dd');
         
-        const planDoc = await getDoc(doc(db, 'users', user.uid, 'recoveryPlans', dateStr));
-        if (planDoc.exists()) {
+        const planDoc = await db.collection('users').doc(user.uid).collection('recoveryPlans').doc(dateStr).get();
+        if (planDoc.exists) {
           const planData = planDoc.data();
           last4DaysPlans.push({
             date: dateStr,
-            plan: planData.plan,
-            metrics: planData.metrics
+            plan: planData?.plan,
+            metrics: planData?.metrics
           });
         }
       }
@@ -531,9 +531,9 @@ IMPORTANT USAGE GUIDELINES:
         throw new Error('User not authenticated');
       }
       
-      await setDoc(doc(db, 'users', user.uid, 'recoveryPlans', dateStr), {
+      await db.collection('users').doc(user.uid).collection('recoveryPlans').doc(dateStr).set({
         plan: planText,
-        createdAt: Timestamp.now(),
+        createdAt: firestore.Timestamp.now(),
         metrics: metricsToSave,
         date: dateStr,
         completed: false
@@ -585,14 +585,14 @@ IMPORTANT USAGE GUIDELINES:
     }
     
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
-    const recoveryRef = doc(db, 'users', user.uid, 'recovery', dateStr);
+    const recoveryRef = db.collection('users').doc(user.uid).collection('recovery').doc(dateStr);
     
     try {
       // Get current data first to avoid overwriting other fields
-      const docSnap = await getDoc(recoveryRef);
+      const docSnap = await recoveryRef.get();
       let currentData = {};
-      if (docSnap.exists()) {
-        currentData = docSnap.data();
+      if (docSnap.exists) {
+        currentData = docSnap.data() || {};
       }
       
       const updatedData = {
@@ -601,7 +601,7 @@ IMPORTANT USAGE GUIDELINES:
         lastUpdated: new Date().toISOString(),
       };
       
-      await setDoc(recoveryRef, updatedData, { merge: true });
+      await recoveryRef.set(updatedData, { merge: true });
       setToolsConfirmed(true);
       
       // If recovery data is not yet submitted, remind the user
@@ -623,14 +623,14 @@ IMPORTANT USAGE GUIDELINES:
     }
     
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
-    const recoveryRef = doc(db, 'users', user.uid, 'recovery', dateStr);
+    const recoveryRef = db.collection('users').doc(user.uid).collection('recovery').doc(dateStr);
     
     try {
       // Get current data first to avoid overwriting other fields
-      const docSnap = await getDoc(recoveryRef);
+      const docSnap = await recoveryRef.get();
       let currentData = {};
-      if (docSnap.exists()) {
-        currentData = docSnap.data();
+      if (docSnap.exists) {
+        currentData = docSnap.data() || {};
       }
       
       const updatedData = {
@@ -639,7 +639,7 @@ IMPORTANT USAGE GUIDELINES:
         lastUpdated: new Date().toISOString(),
       };
       
-      await setDoc(recoveryRef, updatedData, { merge: true });
+      await recoveryRef.set(updatedData, { merge: true });
       setTimeConfirmed(true);
       
       // If recovery data is not yet submitted, remind the user
@@ -693,11 +693,11 @@ IMPORTANT USAGE GUIDELINES:
     if (!user || !planExists || planCompleted) return; // Early return if already completed
     
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
-    const planRef = doc(db, 'users', user.uid, 'recoveryPlans', dateStr);
+    const planRef = db.collection('users').doc(user.uid).collection('recoveryPlans').doc(dateStr);
     
     try {
       // Always mark as completed (no toggling back to incomplete)
-      await setDoc(planRef, {
+      await planRef.set({
         completed: true
       }, { merge: true });
       
@@ -721,8 +721,8 @@ IMPORTANT USAGE GUIDELINES:
         
         // Save to Firestore with today's date as lastCheckedDate
         const todayStr = format(today, 'yyyy-MM-dd');
-        const streakRef = doc(db, 'users', user.uid, 'recoveryStreak', 'current');
-        await setDoc(streakRef, {
+        const streakRef = db.collection('users').doc(user.uid).collection('recoveryStreak').doc('current');
+        await streakRef.set({
           count: newStreak,
           lastCheckedDate: todayStr,
           updatedAt: new Date().toISOString()
@@ -755,8 +755,8 @@ IMPORTANT USAGE GUIDELINES:
     if (!user) return;
     
     try {
-      const plansRef = collection(db, 'users', user.uid, 'recoveryPlans');
-      const plansSnapshot = await getDocs(plansRef);
+      const plansRef = db.collection('users').doc(user.uid).collection('recoveryPlans');
+      const plansSnapshot = await plansRef.get();
       
       if (!plansSnapshot.empty) {
         setHasEverGeneratedPlan(true);
@@ -936,16 +936,17 @@ IMPORTANT USAGE GUIDELINES:
       DEBUG && console.log(`Yesterday: ${yesterdayStr}`);
       
       // Get the streak data from Firestore
-      const streakRef = doc(db, 'users', user.uid, 'recoveryStreak', 'current');
-      const streakDoc = await getDoc(streakRef);
+      const streakRef = db.collection('users').doc(user.uid).collection('recoveryStreak').doc('current');
+      const streakDoc = await streakRef.get();
       
       // Log current streak before any changes
-      const currentStreak = streakDoc.exists() ? streakDoc.data().count || 0 : 0;
+      const currentStreak = streakDoc.exists ? streakDoc.data()?.count || 0 : 0;
       DEBUG && console.log(`Current streak before check: ${currentStreak}`);
       
       // If we already checked today, skip checking again
-      if (streakDoc.exists()) {
-        const { lastCheckedDate } = streakDoc.data();
+      if (streakDoc.exists) {
+        const streakData = streakDoc.data();
+        const lastCheckedDate = streakData?.lastCheckedDate;
         DEBUG && console.log(`Last checked date: ${lastCheckedDate}`);
         
         if (lastCheckedDate === todayStr) {
@@ -955,9 +956,9 @@ IMPORTANT USAGE GUIDELINES:
       }
       
       // Find the most recent completed plan
-      const plansRef = collection(db, 'users', user.uid, 'recoveryPlans');
-      const plansQuery = query(plansRef, where('completed', '==', true));
-      const plansSnapshot = await getDocs(plansQuery);
+      const plansRef = db.collection('users').doc(user.uid).collection('recoveryPlans');
+      const plansQuery = plansRef.where('completed', '==', true);
+      const plansSnapshot = await plansQuery.get();
       
       DEBUG && console.log(`Found ${plansSnapshot.size} completed plans in total`);
       
@@ -966,7 +967,7 @@ IMPORTANT USAGE GUIDELINES:
         DEBUG && console.log('No completed plans found, resetting streak to 0');
         
         // Reset streak to zero
-        await setDoc(streakRef, {
+        await streakRef.set({
           count: 0,
           lastCheckedDate: todayStr,
           updatedAt: new Date().toISOString()
@@ -1045,7 +1046,7 @@ IMPORTANT USAGE GUIDELINES:
           if (!normalizedDate) {
             DEBUG && console.warn(`Skipping plan ${plan.id} due to invalid date`);
             // If this is a one-time fix, we could add code here to repair the plan:
-            // await setDoc(doc(db, 'users', user.uid, 'recoveryPlans', plan.id), 
+            // await db.collection('users').doc(user.uid).collection('recoveryPlans').doc(plan.id).set( 
             //   { ...plan, date: new Date().toISOString() }, { merge: true });
             return null;
           }
@@ -1072,7 +1073,7 @@ IMPORTANT USAGE GUIDELINES:
         DEBUG && console.log('No completed plans with valid dates found after processing');
         
         // Reset streak to zero
-        await setDoc(streakRef, {
+        await streakRef.set({
           count: 0,
           lastCheckedDate: todayStr,
           updatedAt: new Date().toISOString()
@@ -1091,7 +1092,7 @@ IMPORTANT USAGE GUIDELINES:
         DEBUG && console.log('Most recent completion is today, no days missed');
         
         // Update lastCheckedDate to avoid checking again today
-        await setDoc(streakRef, {
+        await streakRef.set({
           count: currentStreak,
           lastCheckedDate: todayStr,
           updatedAt: new Date().toISOString()
@@ -1124,11 +1125,11 @@ IMPORTANT USAGE GUIDELINES:
         DEBUG && console.log(`Updating streak: ${currentStreak} - ${daysMissed} = ${newCount}`);
         
         // Update Firebase with new count and lastCheckedDate
-        await setDoc(streakRef, {
+        await streakRef.set({
           count: newCount,
           lastCheckedDate: todayStr,
           updatedAt: new Date().toISOString()
-        });
+        }, { merge: true });
         
         // Update local state
         setStreakCount(newCount);
@@ -1137,7 +1138,7 @@ IMPORTANT USAGE GUIDELINES:
         DEBUG && console.log('No days missed since last completed plan');
         
         // Still update lastCheckedDate to avoid checking again today
-        await setDoc(streakRef, {
+        await streakRef.set({
           count: currentStreak,
           lastCheckedDate: todayStr,
           updatedAt: new Date().toISOString()
@@ -1159,18 +1160,18 @@ IMPORTANT USAGE GUIDELINES:
     try {
       setIsLoadingStreak(true);
       console.log('Loading streak count from Firebase');
-      const streakRef = doc(db, 'users', user.uid, 'recoveryStreak', 'current');
-      const streakDoc = await getDoc(streakRef);
+      const streakRef = db.collection('users').doc(user.uid).collection('recoveryStreak').doc('current');
+      const streakDoc = await streakRef.get();
       
-      if (streakDoc.exists()) {
+      if (streakDoc.exists) {
         const data = streakDoc.data();
-        console.log(`Loaded streak count: ${data.count}`);
-        setStreakCount(data.count || 0);
+        console.log(`Loaded streak count: ${data?.count}`);
+        setStreakCount(data?.count || 0);
       } else {
         // Initialize with zero for new users
         console.log('No saved streak found, initializing with zero');
         setStreakCount(0);
-        await setDoc(streakRef, {
+        await streakRef.set({
           count: 0,
           lastCheckedDate: format(new Date(), 'yyyy-MM-dd'),
           updatedAt: new Date().toISOString()
@@ -1278,14 +1279,14 @@ IMPORTANT USAGE GUIDELINES:
     if (!user) return;
     
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
-    const recoveryRef = doc(db, 'users', user.uid, 'recovery', dateStr);
+    const recoveryRef = db.collection('users').doc(user.uid).collection('recovery').doc(dateStr);
     
     try {
       // Get current data first to avoid overwriting other fields
-      const docSnap = await getDoc(recoveryRef);
+      const docSnap = await recoveryRef.get();
       let currentData = {};
-      if (docSnap.exists()) {
-        currentData = docSnap.data();
+      if (docSnap.exists) {
+        currentData = docSnap.data() || {};
       }
       
       const updatedData = {
@@ -1295,7 +1296,7 @@ IMPORTANT USAGE GUIDELINES:
         lastUpdated: new Date().toISOString(),
       };
       
-      await setDoc(recoveryRef, updatedData, { merge: true });
+      await recoveryRef.set(updatedData, { merge: true });
       
       // Now generate the plan
       await generatePlan();

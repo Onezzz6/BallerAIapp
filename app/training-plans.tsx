@@ -2,7 +2,7 @@ import { View, Text, SafeAreaView, ScrollView, Pressable, StyleSheet, ActivityIn
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { useTraining } from './context/TrainingContext';
+import { useTraining } from '../context/TrainingContext';
 import Accordion from './components/Accordion';
 
 // Add type definition for TrainingPlan

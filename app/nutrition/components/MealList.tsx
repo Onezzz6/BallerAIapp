@@ -2,19 +2,19 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { auth, db } from '../../../config/firebase';
-import { collection, query, where, orderBy, getDocs, doc, deleteDoc, getDoc, updateDoc } from 'firebase/firestore';
+import firestore from '@react-native-firebase/firestore';
 
 // If you're using any additional imports, keep them here
 
-const MealList = ({ selectedDate, refreshTrigger, onDataChange }) => {
-  const [meals, setMeals] = useState([]);
+const MealList = ({ selectedDate, refreshTrigger, onDataChange }: any) => {
+  const [meals, setMeals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Function to fetch meals for the selected date
   const fetchMeals = async () => {
     try {
       setLoading(true);
-      const user = auth.currentUser;
+      const user = auth().currentUser;
       
       if (!user) {
         console.error("No user is signed in");
@@ -24,15 +24,13 @@ const MealList = ({ selectedDate, refreshTrigger, onDataChange }) => {
       const userId = user.uid;
       const formattedDate = selectedDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
       
-      const mealsRef = collection(db, 'users', userId, 'loggedMeals');
-      const q = query(
-        mealsRef,
-        where('date', '==', formattedDate),
-        orderBy('timestamp', 'desc')
-      );
+      const mealsRef = db.collection('users').doc(userId).collection('loggedMeals');
+      const q = mealsRef
+        .where('date', '==', formattedDate)
+        .orderBy('timestamp', 'desc');
       
-      const querySnapshot = await getDocs(q);
-      const fetchedMeals = [];
+      const querySnapshot = await q.get();
+      const fetchedMeals: any[] = [];
       
       querySnapshot.forEach((doc) => {
         fetchedMeals.push({
@@ -56,20 +54,20 @@ const MealList = ({ selectedDate, refreshTrigger, onDataChange }) => {
   };
   
   // Function to update nutrition progress after meal deletion
-  const updateNutritionProgress = async (formattedDate, mealData) => {
+  const updateNutritionProgress = async (formattedDate: any, mealData: any) => {
     try {
-      const user = auth.currentUser;
+      const user = auth().currentUser;
       if (!user) return;
       
       const userId = user.uid;
-      const nutritionProgressRef = doc(db, 'users', userId, 'nutritionProgress', formattedDate);
-      const progressSnapshot = await getDoc(nutritionProgressRef);
+      const nutritionProgressRef = db.collection('users').doc(userId).collection('nutritionProgress').doc(formattedDate);
+      const progressSnapshot = await nutritionProgressRef.get();
       
-      if (progressSnapshot.exists()) {
+      if (progressSnapshot.exists) {
         const progressData = progressSnapshot.data();
         
         // Subtract the deleted meal's nutrients from the progress
-        await updateDoc(nutritionProgressRef, {
+        await nutritionProgressRef.update({
           calories: Math.max(0, (progressData.calories || 0) - (mealData.calories || 0)),
           protein: Math.max(0, (progressData.protein || 0) - (mealData.protein || 0)),
           carbs: Math.max(0, (progressData.carbs || 0) - (mealData.carbs || 0)),
@@ -84,33 +82,33 @@ const MealList = ({ selectedDate, refreshTrigger, onDataChange }) => {
   };
 
   // Function to delete a meal
-  const deleteMeal = async (mealId) => {
+  const deleteMeal = async (mealId: any) => {
     try {
-      const user = auth.currentUser;
+      const user = auth().currentUser;
       if (!user) return;
       
       const userId = user.uid;
       
       // Get the meal data before deleting it (to update nutrition progress)
-      const mealRef = doc(db, 'users', userId, 'loggedMeals', mealId);
-      const mealSnapshot = await getDoc(mealRef);
+      const mealRef = db.collection('users').doc(userId).collection('loggedMeals').doc(mealId);
+      const mealSnapshot = await mealRef.get();
       
-      if (mealSnapshot.exists()) {
+      if (mealSnapshot.exists) {
         const mealData = mealSnapshot.data();
         const formattedDate = selectedDate.toISOString().split('T')[0];
         
         // Delete the meal
-        await deleteDoc(mealRef);
+        await mealRef.delete();
         
         // Update the nutrition progress to reflect the deleted meal
         await updateNutritionProgress(formattedDate, mealData);
         
         // Update the UI
-        setMeals(meals.filter(meal => meal.id !== mealId));
+        setMeals(meals.filter((meal: any) => meal.id !== mealId));
         
         // Trigger a refresh of other components if needed
         if (onDataChange) {
-          onDataChange(meals.filter(meal => meal.id !== mealId));
+          onDataChange(meals.filter((meal: any) => meal.id !== mealId));
         }
         
         Alert.alert("Success", "Meal deleted successfully.");
@@ -122,7 +120,7 @@ const MealList = ({ selectedDate, refreshTrigger, onDataChange }) => {
   };
 
   // Confirm deletion dialog
-  const confirmDelete = (mealId, mealName) => {
+  const confirmDelete = (mealId: any, mealName: any) => {
     Alert.alert(
       "Delete Meal",
       `Are you sure you want to delete ${mealName || 'this meal'}?`,
@@ -153,7 +151,7 @@ const MealList = ({ selectedDate, refreshTrigger, onDataChange }) => {
       ) : meals.length === 0 ? (
         <Text>No meals logged for this day</Text>
       ) : (
-        meals.map((meal) => (
+        meals.map((meal: any) => (
           <View key={meal.id} style={styles.mealItem}>
             <View style={styles.mealInfo}>
               <Text style={styles.mealName}>{meal.name}</Text>

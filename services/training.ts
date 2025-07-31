@@ -1,14 +1,4 @@
-import { 
-  doc, 
-  getDoc, 
-  getDocs, 
-  collection, 
-  query, 
-  where, 
-  onSnapshot,
-  Timestamp, 
-  orderBy
-} from 'firebase/firestore';
+import firestore from '@react-native-firebase/firestore';
 import { db } from '../config/firebase';
 import { format, subDays } from 'date-fns';
 
@@ -75,16 +65,13 @@ const trainingService = {
       today.setHours(0, 0, 0, 0);
       
       // Query for sessions starting from today and in the future
-      const sessionsQuery = query(
-        collection(db, 'trainingSessions'),
-        where('userId', '==', userId),
-        where('scheduledDate', '>=', today.toISOString()),
-        orderBy('scheduledDate', 'asc'),
-        // Limit to next 7 days
-        //limit(7)
-      );
+      const sessionsSnapshot = await db
+        .collection('trainingSessions')
+        .where('userId', '==', userId)
+        .where('scheduledDate', '>=', today.toISOString())
+        .orderBy('scheduledDate', 'asc')
+        .get();
       
-      const sessionsSnapshot = await getDocs(sessionsQuery);
       const sessions = sessionsSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -107,17 +94,16 @@ const trainingService = {
       const pastDays = subDays(today, 30); // Past 30 days
       
       // Query for completed sessions in the past 30 days
-      const sessionsQuery = query(
-        collection(db, 'trainingSessions'),
-        where('userId', '==', userId),
-        where('completed', '==', true),
-        where('scheduledDate', '>=', pastDays.toISOString()),
-        where('scheduledDate', '<', today.toISOString()),
-        orderBy('scheduledDate', 'desc')
-      );
+      const sessionsSnapshot = await db
+        .collection('trainingSessions')
+        .where('userId', '==', userId)
+        .where('completed', '==', true)
+        .where('scheduledDate', '>=', pastDays.toISOString())
+        .where('scheduledDate', '<', today.toISOString())
+        .orderBy('scheduledDate', 'desc')
+        .get();
       
-      const sessionsSnapshot = await getDocs(sessionsQuery);
-      const sessions = sessionsSnapshot.docs.map(doc => ({
+      const sessions = sessionsSnapshot.docs.map((doc: any) => ({
         id: doc.id,
         ...doc.data()
       }));
@@ -136,13 +122,11 @@ const trainingService = {
       const dateStr = formatDateId(date);
       
       // Query for session scheduled for today
-      const sessionQuery = query(
-        collection(db, 'trainingSessions'),
-        where('userId', '==', userId),
-        where('dateId', '==', dateStr)
-      );
+      const sessionQuery = db.collection('trainingSessions')
+        .where('userId', '==', userId)
+        .where('dateId', '==', dateStr);
       
-      const sessionSnapshot = await getDocs(sessionQuery);
+      const sessionSnapshot = await sessionQuery.get();
       
       if (sessionSnapshot.empty) {
         console.log(`No training session found for ${dateStr}`);
@@ -170,14 +154,12 @@ const trainingService = {
     
     try {
       // Query for session on specific date
-      const sessionQuery = query(
-        collection(db, 'trainingSessions'),
-        where('userId', '==', userId),
-        where('dateId', '==', dateStr)
-      );
+      const sessionQuery = db.collection('trainingSessions')
+        .where('userId', '==', userId)
+        .where('dateId', '==', dateStr);
       
       // Set up real-time listener for training session
-      const unsubscribe = onSnapshot(sessionQuery, (querySnapshot) => {
+      const unsubscribe = sessionQuery.onSnapshot((querySnapshot) => {
         if (!querySnapshot.empty) {
           const doc = querySnapshot.docs[0];
           const data = doc.data();

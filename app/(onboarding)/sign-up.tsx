@@ -3,23 +3,21 @@ import { View, Text, TextInput, Alert, StyleSheet, Pressable, Platform, Image, K
 import { useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import authService from '../services/auth';
-import { useOnboarding } from '../context/OnboardingContext';
+import authService from '../../services/auth';
+import { useOnboarding } from '../../context/OnboardingContext';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import Button from '../components/Button';
-import analyticsService from '../services/analytics';
+import analyticsService from '../../services/analytics';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import Constants from 'expo-constants';
-import { signInWithCredential, GoogleAuthProvider } from 'firebase/auth';
-import { auth } from '../config/firebase';
-import { doc, setDoc } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import auth from '@react-native-firebase/auth';
+import { db } from '../../config/firebase';
 import { runPostLoginSequence, markAuthenticationComplete } from './paywall';
 import { PAYWALL_RESULT } from 'react-native-purchases-ui';
 import { usePathname } from 'expo-router';
-import { colors, typography, spacing, borderRadius } from '../utils/theme';
-import { useHaptics } from '../utils/haptics';
+import { colors, typography, spacing, borderRadius } from '../../utils/theme';
+import { useHaptics } from '../../utils/haptics';
 
 // Get screen dimensions for responsive design
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -126,8 +124,8 @@ export default function SignUpScreen() {
     haptics.light();
     
     try {
-      const result = await authService.signUpWithApple(onboardingData as any);
-      if (result && result.user) {
+      const user = await authService.signUpWithApple(onboardingData as any);
+      if (user) {
         await analyticsService.logEvent('A0_34_signed_up_apple');
         
         // Mark authentication as complete after successful sign-up
@@ -138,7 +136,7 @@ export default function SignUpScreen() {
         
         // Run the definitive post-login sequence with current path and referral data
         await runPostLoginSequence(
-          result.user.uid,
+          user.uid,
           () => router.replace('/(tabs)/home'),
           () => router.replace('/(onboarding)/one-time-offer'),
           pathname,
@@ -175,8 +173,8 @@ export default function SignUpScreen() {
       
       if (userInfo.data?.idToken) {
         // Create Firebase credential from Google token
-        const googleCredential = GoogleAuthProvider.credential(userInfo.data.idToken);
-        const userCredential = await signInWithCredential(auth, googleCredential);
+        const googleCredential = auth.GoogleAuthProvider.credential(userInfo.data.idToken);
+        const userCredential = await auth().signInWithCredential(googleCredential);
         
         if (userCredential.user) {
           // Create user document in Firestore with onboarding data
@@ -189,8 +187,8 @@ export default function SignUpScreen() {
             username: onboardingData.username || userCredential.user.displayName || 'User',
           };
 
-          const userRef = doc(db, 'users', userCredential.user.uid);
-          await setDoc(userRef, userData);
+          const userRef = db.collection('users').doc(userCredential.user.uid);
+          await userRef.set(userData);
 
           await analyticsService.logEvent('A0_34_signed_up_google');
           

@@ -3,11 +3,11 @@ import { View, Text, Pressable, SafeAreaView, ScrollView, Platform } from 'react
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
-import { useOnboarding } from '../context/OnboardingContext';
-import analyticsService from '../services/analytics';
-import { colors, typography, spacing } from '../utils/theme';
-import { useHaptics } from '../utils/haptics';
-import { useOnboardingStep } from '../hooks/useOnboardingStep';
+import { useOnboarding } from '../../context/OnboardingContext';
+import analyticsService from '../../services/analytics';
+import { colors, typography, spacing } from '../../utils/theme';
+import { useHaptics } from '../../utils/haptics';
+import { useOnboardingStep } from '../../hooks/useOnboardingStep';
 
 export default function GenderScreen() {
   const haptics = useHaptics();

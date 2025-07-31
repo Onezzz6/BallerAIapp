@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { auth, db } from '../../../config/firebase';
-import { doc, getDoc, collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
+import firestore from '@react-native-firebase/firestore';
 
-const NutritionProgress = ({ selectedDate }) => {
+const NutritionProgress = ({ selectedDate }: any) => {
   const [nutritionData, setNutritionData] = useState({
     calories: 0,
     protein: 0,
@@ -14,10 +14,10 @@ const NutritionProgress = ({ selectedDate }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   // This function fetches nutrition data for the selected date
-  const fetchNutritionData = async (date) => {
+  const fetchNutritionData = async (date: any) => {
     try {
       setIsLoading(true);
-      const user = auth.currentUser;
+      const user = auth().currentUser;
       
       if (!user) {
         console.error("No user is signed in");
@@ -30,12 +30,12 @@ const NutritionProgress = ({ selectedDate }) => {
       console.log("Fetching nutrition data for date:", formattedDate);
       
       // Method 1: Try to get the nutrition progress document directly
-      const nutritionProgressRef = doc(db, 'users', userId, 'nutritionProgress', formattedDate);
-      const progressSnapshot = await getDoc(nutritionProgressRef);
+      const nutritionProgressRef = db.collection('users').doc(userId).collection('nutritionProgress').doc(formattedDate);
+      const progressSnapshot = await nutritionProgressRef.get();
       
       let dataFound = false;
       
-      if (progressSnapshot.exists()) {
+      if (progressSnapshot.exists) {
         // Document exists - use the stored progress data
         const progressData = progressSnapshot.data();
         console.log("Found progress document:", progressData);
@@ -50,9 +50,9 @@ const NutritionProgress = ({ selectedDate }) => {
       }
       
       // Always calculate from logged meals as a backup or to verify
-      const mealsRef = collection(db, 'users', userId, 'loggedMeals');
-      const mealsQuery = query(mealsRef, where('date', '==', formattedDate));
-      const mealsSnapshot = await getDocs(mealsQuery);
+      const mealsRef = db.collection('users').doc(userId).collection('loggedMeals');
+      const mealsQuery = mealsRef.where('date', '==', formattedDate);
+      const mealsSnapshot = await mealsQuery.get();
       
       // Log the number of meals found for debugging
       console.log(`Found ${mealsSnapshot.size} meals for date: ${formattedDate}`);
@@ -63,7 +63,7 @@ const NutritionProgress = ({ selectedDate }) => {
         let totalCarbs = 0;
         let totalFat = 0;
         
-        mealsSnapshot.forEach((mealDoc) => {
+        mealsSnapshot.forEach((mealDoc: any) => {
           const mealData = mealDoc.data();
           console.log("Meal data:", mealData);
           
@@ -103,7 +103,7 @@ const NutritionProgress = ({ selectedDate }) => {
             carbs: totalCarbs,
             fat: totalFat,
             date: formattedDate,
-            lastUpdated: Timestamp.now()
+            lastUpdated: firestore.Timestamp.now()
           });
           
           console.log("Updated nutrition progress document with calculated values");

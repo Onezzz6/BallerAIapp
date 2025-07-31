@@ -1,4 +1,4 @@
-import { getFirestore, collection, query, where, limit, getDocs } from '@react-native-firebase/firestore';
+import firestore from '@react-native-firebase/firestore';
 
 export interface ReferralCodeResult {
   isValid: boolean;
@@ -26,17 +26,14 @@ export const validateReferralCode = async (inputCode: string): Promise<ReferralC
     }
 
     // Get Firestore instance
-    const db = getFirestore();
+    const db = firestore();
     
     // Create query for the referral code
-    const q = query(
-      collection(db, 'referralCodes'),
-      where('code', '==', cleanCode),
-      limit(1)
-    );
-
-    // Execute the query
-    const querySnapshot = await getDocs(q);
+    const querySnapshot = await db
+      .collection('referralCodes')
+      .where('code', '==', cleanCode)
+      .limit(1)
+      .get();
 
     // Check if we found a valid referral code
     if (querySnapshot.empty) {

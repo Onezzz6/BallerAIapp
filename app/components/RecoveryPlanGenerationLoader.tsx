@@ -9,7 +9,7 @@ import Animated, {
 import { useEffect, useState, useRef } from 'react';
 import { ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useHaptics } from '../utils/haptics';
+import { useHaptics } from '../../utils/haptics';
 
 const GENERATION_STEPS = [
   { text: 'Analyzing your recovery metrics', checked: false },

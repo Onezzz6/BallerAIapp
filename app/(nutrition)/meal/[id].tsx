@@ -23,7 +23,7 @@
    import * as MediaLibrary from 'expo-media-library';
    import * as Sharing from 'expo-sharing';
    import * as Clipboard from 'expo-clipboard';
-   import { doc, getDoc, updateDoc } from 'firebase/firestore';
+   import firestore from '@react-native-firebase/firestore';
    import { db } from '../../../config/firebase';
    import MealEditModal from '../../components/MealEditModal';
    import { format } from 'date-fns';
@@ -95,8 +95,8 @@
      useEffect(() => {
        (async () => {
          try {
-           const snap = await getDoc(doc(db, 'meals', id));
-           if (!snap.exists()) throw new Error();
+           const snap = await db.collection('meals').doc(id).get();
+           if (!snap.exists) throw new Error();
            setMeal({ id: snap.id, ...snap.data() });
          } catch {
            Alert.alert('Error', 'Meal not found');
@@ -559,7 +559,7 @@
                updateData.combinedName = m.combinedName;
              }
              
-             await updateDoc(doc(db, 'meals', m.id), updateData);
+             await db.collection('meals').doc(m.id).update(updateData);
              setMeal(m);
              setEditOpen(false);
            }}

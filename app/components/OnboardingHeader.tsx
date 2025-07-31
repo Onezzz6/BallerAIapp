@@ -2,8 +2,8 @@ import { View, Text, Image, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import BackButton from './BackButton';
 import Animated, { FadeIn, FadeOut, PinwheelIn } from 'react-native-reanimated';
-import { colors, spacing } from '../utils/theme';
-import { getStepInfo } from '../(onboarding)/onboarding-flow';
+import { colors, spacing } from '../../utils/theme';
+import { getStepInfo } from '../(onboarding)/_onboarding-flow';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /**

@@ -3,19 +3,19 @@ import React, { useState, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { useOnboarding } from '../context/OnboardingContext';
-import { doc, getDoc, updateDoc, deleteDoc, collection, getDocs, writeBatch, query, where, onSnapshot } from 'firebase/firestore';
-import { deleteUser, signOut, reauthenticateWithCredential, EmailAuthProvider, OAuthProvider } from 'firebase/auth';
-import { db, auth } from '../config/firebase';
-import { useAuth } from '../context/AuthContext';
+import { useOnboarding } from '../../context/OnboardingContext';
+import firestore from '@react-native-firebase/firestore';
+import auth from '@react-native-firebase/auth';
+import { db, auth as authInstance } from '../../config/firebase';
+import { useAuth } from '../../context/AuthContext';
 import Button from '../components/Button';
-import { getStorage, ref, uploadBytes, getDownloadURL, listAll, deleteObject } from 'firebase/storage';
+import storage from '@react-native-firebase/storage';
 import { useRouter } from 'expo-router';
-import authService from '../services/auth';
+import authService from '../../services/auth';
 import { Picker } from '@react-native-picker/picker';
 import CustomButton from '../components/CustomButton';
 import * as AppleAuthentication from 'expo-apple-authentication';
-import { calculateNutritionGoals } from '../utils/nutritionCalculations';
+import { calculateNutritionGoals } from '../../utils/nutritionCalculations';
 import Animated, { PinwheelIn } from 'react-native-reanimated';
 
 type UserData = {
@@ -146,20 +146,19 @@ export default function ProfileScreen() {
       
       // Create unique filename with user ID in path
       const timestamp = new Date().getTime();
-      const storage = getStorage();
-      const storageRef = ref(storage, `profile_pictures/${user.uid}/profile_${timestamp}.jpg`);
+      const storageRef = storage().ref(`profile_pictures/${user.uid}/profile_${timestamp}.jpg`);
       
       // Upload to Firebase Storage
-      const uploadTask = await uploadBytes(storageRef, blob);
+      const uploadTask = await storageRef.put(blob);
       console.log('Upload successful:', uploadTask);
       
       // Get download URL
-      const downloadURL = await getDownloadURL(storageRef);
+      const downloadURL = await storageRef.getDownloadURL();
       console.log('Download URL:', downloadURL);
       
       // Update user profile in Firestore
-      const userRef = doc(db, 'users', user.uid);
-      await updateDoc(userRef, {
+      const userRef = db.collection('users').doc(user.uid);
+      await userRef.update({
         profilePicture: downloadURL
       });
       
@@ -211,7 +210,7 @@ export default function ProfileScreen() {
     
     try {
       console.log('🔄 Calculating new goals based on:', userData);
-      const userRef = doc(db, 'users', user.uid);
+      const userRef = db.collection('users').doc(user.uid);
       
       // Use the unified calculation utility
       const { calorieGoal, macroGoals } = calculateNutritionGoals(userData);
@@ -222,7 +221,7 @@ export default function ProfileScreen() {
       });
 
       // Update the goals in Firestore
-      await updateDoc(userRef, {
+      await userRef.update({
         calorieGoal,
         macroGoals
       });
@@ -236,9 +235,9 @@ export default function ProfileScreen() {
     if (!user) return;
 
     // Set up real-time listener for user data
-    const userRef = doc(db, 'users', user.uid);
-    const unsubscribe = onSnapshot(userRef, (doc) => {
-      if (doc.exists()) {
+    const userRef = db.collection('users').doc(user.uid);
+    const unsubscribe = userRef.onSnapshot((doc) => {
+      if (doc.exists) {
         const newUserData = doc.data() as UserData;
         
         // Only update if there are actual changes
@@ -285,7 +284,7 @@ export default function ProfileScreen() {
     try {
       console.log('🔄 Starting update process for field:', field, 'with value:', value);
       setIsSaving(true);
-      const userRef = doc(db, 'users', user.uid);
+      const userRef = db.collection('users').doc(user.uid);
       
       console.log('📝 Attempting to update Firebase document...');
 
@@ -297,7 +296,7 @@ export default function ProfileScreen() {
       // Race between the normal analysis and the timeout
       await Promise.race([
         // Update the specific field in Firebase immediately
-        updateDoc(userRef, { [field]: value }),
+        userRef.update({ [field]: value }),
         timeoutPromise
       ]);
 
@@ -749,7 +748,7 @@ export default function ProfileScreen() {
         // Save unit preference to user data
         setPreferMetricDisplay(value);
         if (user) {
-          updateDoc(doc(db, 'users', user.uid), {
+          db.collection('users').doc(user.uid).update({
             preferMetricUnits: value
           }).catch(error => console.error('Error updating unit preference:', error));
         }
@@ -902,7 +901,7 @@ export default function ProfileScreen() {
         // Save unit preference to user data
         setPreferMetricDisplay(value);
         if (user) {
-          updateDoc(doc(db, 'users', user.uid), {
+          db.collection('users').doc(user.uid).update({
             preferMetricUnits: value
           }).catch(error => console.error('Error updating unit preference:', error));
         }

@@ -2,13 +2,13 @@ import { View, Text, SafeAreaView, Platform, Alert } from 'react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
-import { useOnboarding } from '../context/OnboardingContext';
+import { useOnboarding } from '../../context/OnboardingContext';
 import { useState, useEffect } from 'react';
 import { Picker } from '@react-native-picker/picker';
-import { colors, typography } from '../utils/theme';
-import { useHaptics } from '../utils/haptics';
-import { useOnboardingStep } from '../hooks/useOnboardingStep';
-import analyticsService from '../services/analytics';
+import { colors, typography } from '../../utils/theme';
+import { useHaptics } from '../../utils/haptics';
+import { useOnboardingStep } from '../../hooks/useOnboardingStep';
+import analyticsService from '../../services/analytics';
 
 export default function SleepHoursScreen() {
   const haptics = useHaptics();

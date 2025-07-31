@@ -4,8 +4,8 @@ import Purchases, { LOG_LEVEL, CustomerInfo, PurchasesOfferings } from 'react-na
 import RevenueCatUI, { PAYWALL_RESULT } from "react-native-purchases-ui";
 import CustomButton from '../components/CustomButton';
 import { usePathname, useRouter } from 'expo-router';
-import { setReferralCode, configureRevenueCat, logInRevenueCatUser } from '../services/revenuecat';
-import { useOnboarding } from '../context/OnboardingContext';
+import { setReferralCode, configureRevenueCat, logInRevenueCatUser } from '../../services/revenuecat';
+import { useOnboarding } from '../../context/OnboardingContext';
 // Remove import from _layout to fix circular dependency
 // import { isOnOnboardingScreen } from '../_layout';
 

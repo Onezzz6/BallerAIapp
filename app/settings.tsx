@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Linking, Modal, Alert, TextInput, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from './context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import CustomButton from './components/CustomButton';
-import authService from './services/auth';
+import authService from '../services/auth';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as AppleAuthentication from 'expo-apple-authentication';
-import { reauthenticateWithCredential, EmailAuthProvider, OAuthProvider, deleteUser, signOut } from 'firebase/auth';
-import { auth, db } from './config/firebase';
-import { collection, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import auth from '@react-native-firebase/auth';
+import firestore from '@react-native-firebase/firestore';
+import { auth as authInstance, db } from '../config/firebase';
 import { resetAuthenticationStatus } from './(onboarding)/paywall';
 
 export default function SettingsScreen() {
@@ -99,13 +99,13 @@ export default function SettingsScreen() {
           }
           
           // Create Firebase credential
-          const provider = new OAuthProvider('apple.com');
+          const provider = new auth.OAuthProvider('apple.com');
           const authCredential = provider.credential({
             idToken: credential.identityToken,
           });
           
           // Reauthenticate with Firebase
-          await reauthenticateWithCredential(user, authCredential);
+          await auth().currentUser?.reauthenticateWithCredential(authCredential);
           return true;
         } catch (error: any) {
           console.error('Apple reauthentication error:', error);
@@ -121,8 +121,8 @@ export default function SettingsScreen() {
         // Email/password authentication
         if (!user.email) return false;
         
-        const credential = EmailAuthProvider.credential(user.email, password);
-        await reauthenticateWithCredential(user, credential);
+        const credential = auth.EmailAuthProvider.credential(user.email, password);
+        await auth().currentUser?.reauthenticateWithCredential(credential);
         return true;
       }
     } catch (error) {
@@ -147,30 +147,28 @@ export default function SettingsScreen() {
       // Try to delete account first
       try {
         // 1. Delete all user's meals
-        const mealsQuery = query(
-          collection(db, 'meals'),
-          where('userId', '==', user.uid)
-        );
-        const mealsSnapshot = await getDocs(mealsQuery);
+        const mealsQuery = db.collection('meals')
+          .where('userId', '==', user.uid);
+        const mealsSnapshot = await mealsQuery.get();
         const mealDeletions = mealsSnapshot.docs.map(doc => 
-          deleteDoc(doc.ref)
+          doc.ref.delete()
         );
         await Promise.all(mealDeletions);
 
         // 2. Delete all user's dailyMacros
-        const dailyMacrosRef = collection(db, `users/${user.uid}/dailyMacros`);
-        const dailyMacrosSnapshot = await getDocs(dailyMacrosRef);
+        const dailyMacrosRef = db.collection(`users/${user.uid}/dailyMacros`);
+        const dailyMacrosSnapshot = await dailyMacrosRef.get();
         const macroDeletions = dailyMacrosSnapshot.docs.map(doc => 
-          deleteDoc(doc.ref)
+          doc.ref.delete()
         );
         await Promise.all(macroDeletions);
 
         // 3. Delete user document and all its subcollections
-        await deleteDoc(doc(db, 'users', user.uid));
+        await db.collection('users').doc(user.uid).delete();
 
         // 4. Delete Firebase Auth user and sign out
-        await deleteUser(user);
-        await signOut(auth);
+        await auth().currentUser?.delete();
+        await auth().signOut();
 
         // Show success alert
         Alert.alert(

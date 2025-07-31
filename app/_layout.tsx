@@ -8,25 +8,25 @@ import { useEffect, useRef, useState } from 'react';
 import 'react-native-reanimated';
 import { ReducedMotionConfig, ReduceMotion } from 'react-native-reanimated';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import { OnboardingProvider } from './context/OnboardingContext';
+import { AuthProvider, useAuth } from '../context/AuthContext';
+import { OnboardingProvider } from '../context/OnboardingContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { NutritionProvider } from './context/NutritionContext';
-import { TrainingProvider } from './context/TrainingContext';
+import { NutritionProvider } from '../context/NutritionContext';
+import { TrainingProvider } from '../context/TrainingContext';
 import { Alert, Platform, AppState } from 'react-native';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import subscriptionService, { PRODUCT_IDS } from './services/subscription';
+import subscriptionService, { PRODUCT_IDS } from '../services/subscription';
 import axios from 'axios';
 
 import Purchases, { CustomerInfo } from 'react-native-purchases';
 import { PAYWALL_RESULT } from 'react-native-purchases-ui';
 
 import { initializeAppsFlyer, cleanupAppsFlyer } from './config/appsflyer';
-import { configureRevenueCat, logInRevenueCatUser, setReferralCode } from './services/revenuecat';
+import { configureRevenueCat, logInRevenueCatUser, setReferralCode } from '../services/revenuecat';
 import { checkSubscriptionOnForeground, resetPaywallPresentationFlag } from './(onboarding)/paywall';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from './config/firebase';
+import firestore from '@react-native-firebase/firestore';
+import { db } from '../config/firebase';
 
 // Create a context for subscription state
 type SubscriptionContextType = {
@@ -141,8 +141,8 @@ function SubscriptionProvider({ children }: { children: React.ReactNode }) {
           // Step 5: Load and sync existing referral code from Firestore to RevenueCat
           try {
             console.log("Step 5: Checking for existing referral code in Firestore...");
-            const userDoc = await getDoc(doc(db, 'users', user.uid));
-            if (userDoc.exists()) {
+            const userDoc = await db.collection('users').doc(user.uid).get();
+            if (userDoc.exists) {
               const userData = userDoc.data();
               if (userData.referralCode) {
                 console.log(`Found existing referral code: ${userData.referralCode}, syncing to RevenueCat`);

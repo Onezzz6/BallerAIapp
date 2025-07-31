@@ -13,10 +13,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useAuth } from '../context/AuthContext';
-import { useOnboarding } from '../context/OnboardingContext';
-import analyticsService from '../services/analytics';
-import { useHaptics } from '../utils/haptics';
+import { useAuth } from '../../context/AuthContext';
+import { useOnboarding } from '../../context/OnboardingContext';
+import analyticsService from '../../services/analytics';
+import { useHaptics } from '../../utils/haptics';
 import Purchases, { PurchasesPackage } from 'react-native-purchases';
 
 // Session-based event tracking to prevent duplicates (shared across paywall components)

@@ -17,10 +17,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { db } from '../config/firebase';
-import { useAuth } from '../context/AuthContext';
-import { calculateNutritionGoals } from '../utils/nutritionCalculations';
+import firestore from '@react-native-firebase/firestore';
+import { db } from '../../config/firebase';
+import { useAuth } from '../../context/AuthContext';
+import { calculateNutritionGoals } from '../../utils/nutritionCalculations';
 
 type GoalsEditModalProps = {
   visible: boolean;
@@ -66,10 +66,10 @@ export default function GoalsEditModal({ visible, onClose, onSave, currentGoals 
       setIsLoading(true);
       
       // Get user document to calculate suggested goals
-      const userDocRef = doc(db, 'users', user.uid);
-      const userDoc = await getDoc(userDocRef);
+      const userDocRef = db.collection('users').doc(user.uid);
+      const userDoc = await userDocRef.get();
       
-      if (userDoc.exists()) {
+      if (userDoc.exists) {
         const userData = userDoc.data();
         
         // Calculate suggested goals
@@ -155,7 +155,7 @@ export default function GoalsEditModal({ visible, onClose, onSave, currentGoals 
       }
       
       // Save to Firebase
-      const userDocRef = doc(db, 'users', user.uid);
+      const userDocRef = db.collection('users').doc(user.uid);
       
       if (useCustomGoals) {
         // Save custom goals
@@ -166,13 +166,13 @@ export default function GoalsEditModal({ visible, onClose, onSave, currentGoals 
           fats: parseInt(goals.fats)
         };
         
-        await updateDoc(userDocRef, {
+        await userDocRef.update({
           useCustomGoals: true,
           customGoals: customGoals
         });
       } else {
         // Use suggested goals - just set the flag
-        await updateDoc(userDocRef, {
+        await userDocRef.update({
           useCustomGoals: false
         });
       }

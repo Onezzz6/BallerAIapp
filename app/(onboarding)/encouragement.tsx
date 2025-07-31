@@ -19,10 +19,10 @@ import Svg, { Path, G, Circle } from 'react-native-svg';
 
 import Button from '../components/Button';
 import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
-import { colors, typography } from '../utils/theme';
-import { useHaptics } from '../utils/haptics';
-import analyticsService from '../services/analytics';
-import { useOnboardingStep } from '../hooks/useOnboardingStep';
+import { colors, typography } from '../../utils/theme';
+import { useHaptics } from '../../utils/haptics';
+import analyticsService from '../../services/analytics';
+import { useOnboardingStep } from '../../hooks/useOnboardingStep';
 
 /*─────────────────────  Elite Partnership Animation  ─────────────────────*/
 function ElitePartnership() {

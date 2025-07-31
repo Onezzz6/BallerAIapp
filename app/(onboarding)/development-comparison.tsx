@@ -12,10 +12,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
-import analyticsService from '../services/analytics';
-import { colors, typography } from '../utils/theme';
-import { useHaptics } from '../utils/haptics';
-import { useOnboardingStep } from '../hooks/useOnboardingStep';
+import analyticsService from '../../services/analytics';
+import { colors, typography } from '../../utils/theme';
+import { useHaptics } from '../../utils/haptics';
+import { useOnboardingStep } from '../../hooks/useOnboardingStep';
 import { useFocusEffect } from '@react-navigation/native';
 
 export default function DevelopmentComparisonScreen() {

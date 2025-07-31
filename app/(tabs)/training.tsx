@@ -1,15 +1,15 @@
 import { View, Text, SafeAreaView, StyleSheet, TextInput, Pressable, ScrollView, Alert, Image, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useAuth } from '../context/AuthContext';
-import { useTraining } from '../context/TrainingContext';
-import { doc, getDoc, setDoc, collection, query, where, getDocs, deleteDoc, orderBy, limit } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { useAuth } from '../../context/AuthContext';
+import { useTraining } from '../../context/TrainingContext';
+import firestore from '@react-native-firebase/firestore';
+import { db } from '../../config/firebase';
 import Constants from 'expo-constants';
 import Animated, { FadeIn, FadeInDown, PinwheelIn, SlideInRight, SlideOutLeft, FadeOut } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { format, addDays, getWeek } from 'date-fns';
-import analyticsService from '../services/analytics';
+import analyticsService from '../../services/analytics';
 import Accordion from '../components/Accordion';
 import TrainingPlanGenerationLoader from '../components/TrainingPlanGenerationLoader';
 
@@ -869,7 +869,7 @@ export default function TrainingScreen() {
 
       try {
         // Get the user document to check when they last generated a plan
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        const userDoc = await db.collection('users').doc(user.uid).get();
         const userData = userDoc.data();
 
         if (userData?.lastPlanGenerated && userData?.lastPlanWeek !== undefined) {
@@ -983,9 +983,9 @@ export default function TrainingScreen() {
     
     try {
       // Query the plans collection to get the most recent plan
-      const plansRef = collection(db, 'users', user.uid, 'plans');
-      const q = query(plansRef, orderBy('createdAt', 'desc'), limit(1));
-      const querySnapshot = await getDocs(q);
+      const plansRef = db.collection('users').doc(user.uid).collection('plans');
+      const q = plansRef.orderBy('createdAt', 'desc').limit(1);
+      const querySnapshot = await q.get();
       
       if (!querySnapshot.empty) {
         const lastPlanDoc = querySnapshot.docs[0];
@@ -1037,7 +1037,7 @@ export default function TrainingScreen() {
       // Load the last plan text before generating new one
       const lastPlan = await loadLastPlanText();
       
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const userDoc = await db.collection('users').doc(user.uid).get();
       const userData = userDoc.data();
 
       if (!userData) throw new Error('User data not found');
@@ -1273,13 +1273,13 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
 
       // Save the raw plan text to Firestore for future reference
       const planDate = format(now, 'yyyy-MM-dd');
-      await setDoc(doc(db, 'users', user.uid, 'plans', planDate), {
+      await db.collection('users').doc(user.uid).collection('plans').doc(planDate).set({
         planText: planText,
         createdAt: now
       });
 
       // Update lastPlanGenerated and lastPlanWeek in user document
-      await setDoc(doc(db, 'users', user.uid), {
+      await db.collection('users').doc(user.uid).set({
         lastPlanGenerated: now,
         lastPlanWeek: weekNumber,
       }, { merge: true });

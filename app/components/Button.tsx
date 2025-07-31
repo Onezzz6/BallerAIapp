@@ -1,5 +1,5 @@
 import { Text, Pressable, View, ViewStyle, TextStyle } from 'react-native';
-import { colors } from '../utils/theme';
+import { colors } from '../../utils/theme';
 
 type ButtonProps = {
   title: string;

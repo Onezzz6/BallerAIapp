@@ -6,10 +6,10 @@ import { useRouter } from 'expo-router';
 import * as StoreReview from 'expo-store-review';
 import Button from '../components/Button';
 import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
-import analyticsService from '../services/analytics';
-import { colors, typography } from '../utils/theme';
-import { useHaptics } from '../utils/haptics';
-import { useOnboardingStep } from '../hooks/useOnboardingStep';
+import analyticsService from '../../services/analytics';
+import { colors, typography } from '../../utils/theme';
+import { useHaptics } from '../../utils/haptics';
+import { useOnboardingStep } from '../../hooks/useOnboardingStep';
 
 export default function AppReviewScreen() {
   const router = useRouter();

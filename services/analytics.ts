@@ -1,6 +1,6 @@
 import analytics from '@react-native-firebase/analytics';
 import crashlytics from '@react-native-firebase/crashlytics';
-import { shouldDisableAnalytics, shouldDisableCrashlytics, logDisabledService } from '../config/development';
+import { shouldDisableAnalytics, shouldDisableCrashlytics, logDisabledService } from '../app/config/development';
 
 // Custom event names
 export const AnalyticsEvents = {

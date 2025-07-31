@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { InstructionStep } from './TabInstructions';
 import TabInstructions from './TabInstructions';
-import { hasShownInstructions, INSTRUCTION_KEYS } from '../utils/instructionManager';
+import { hasShownInstructions, INSTRUCTION_KEYS } from '../../utils/instructionManager';
 import { BackHandler } from 'react-native';
 
 type ProfileInstructionsProps = {

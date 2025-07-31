@@ -1,6 +1,6 @@
 import React, { useEffect, useContext } from 'react';
-import { NutritionContext } from '../context/NutritionContext';
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { NutritionContext } from '../../context/NutritionContext';
+import auth from '@react-native-firebase/auth';
 
 /**
  * This component doesn't render anything but initializes nutrition data 

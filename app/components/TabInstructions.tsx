@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, Modal, Dimensions, Platform, SafeAreaView, StatusBar, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import { markInstructionsAsShown } from '../utils/instructionManager';
+import { markInstructionsAsShown } from '../../utils/instructionManager';
 
 export type InstructionStep = {
   id: string;

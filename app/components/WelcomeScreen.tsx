@@ -10,19 +10,19 @@ import Animated, {
 import Button from './Button';
 import { useState, useEffect } from 'react';
 import React from 'react';
-import authService from '../services/auth';
+import authService from '../../services/auth';
 import { Ionicons } from '@expo/vector-icons';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { runPostLoginSequence, markAuthenticationComplete } from '../(onboarding)/paywall';
-import { requestAppTrackingPermission } from '../utils/tracking';
-import { colors, typography, spacing } from '../utils/theme';
-import { useHaptics } from '../utils/haptics';
-import analyticsService from '../services/analytics';
-import { useOnboardingStep } from '../hooks/useOnboardingStep';
+import { requestAppTrackingPermission } from '../../utils/tracking';
+import { colors, typography, spacing } from '../../utils/theme';
+import { useHaptics } from '../../utils/haptics';
+import analyticsService from '../../services/analytics';
+import { useOnboardingStep } from '../../hooks/useOnboardingStep';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import Constants from 'expo-constants';
-import { GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
-import { auth } from '../config/firebase';
+import auth from '@react-native-firebase/auth';
+import { auth as authInstance } from '../../config/firebase';
 
 // Default empty onboarding data
 const defaultOnboardingData = {

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, forwardRef, useImperativeHandle } f
 import { View, Dimensions, ScrollView, findNodeHandle, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { InstructionStep } from './TabInstructions';
 import TabInstructions from './TabInstructions';
-import { hasShownInstructions, INSTRUCTION_KEYS } from '../utils/instructionManager';
+import { hasShownInstructions, INSTRUCTION_KEYS } from '../../utils/instructionManager';
 import { BackHandler } from 'react-native';
 
 export type RecoveryInstructionsRef = {

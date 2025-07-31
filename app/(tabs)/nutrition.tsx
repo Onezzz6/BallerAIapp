@@ -9,19 +9,19 @@ import { Calendar } from 'react-native-calendars';
 import * as ImagePicker from 'expo-image-picker';
 import { Camera } from 'expo-camera';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { collection, doc, getDoc, getDocs, addDoc, deleteDoc, query, where, orderBy, setDoc, updateDoc, Timestamp, increment } from 'firebase/firestore';
-import { db } from '../config/firebase';
-import { useAuth } from '../context/AuthContext';
-import { useNutrition } from '../context/NutritionContext';
+// import storage from '@react-native-firebase/storage'; // Not installed
+import firestore from '@react-native-firebase/firestore';
+import { db } from '../../config/firebase';
+import { useAuth } from '../../context/AuthContext';
+import { useNutrition } from '../../context/NutritionContext';
 import { useNutritionDate } from './_layout';
 import Animated, { FadeIn, FadeInDown, PinwheelIn, FadeOut } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import CustomButton from '../components/CustomButton';
-import { calculateNutritionGoals } from '../utils/nutritionCalculations';
-import * as imageAnalysis from '../services/imageAnalysis';
+import { calculateNutritionGoals } from '../../utils/nutritionCalculations';
+import * as imageAnalysis from '../../services/imageAnalysis';
 import WeeklyOverview from '../components/WeeklyOverview';
-import analyticsService from '../services/analytics';
+import analyticsService from '../../services/analytics';
 import FoodCamera from '../components/FoodCamera';
 import FoodAnalysisScreen from '../components/FoodAnalysisScreen';
 import MealEditModal from '../components/MealEditModal';
@@ -2031,8 +2031,8 @@ export default function NutritionScreen() {
       const dateString = formatDateId(selectedDate);
       
       // Get the goals (these stay constant)
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      if (!userDoc.exists()) {
+      const userDoc = await db.collection('users').doc(user.uid).get();
+      if (!userDoc.exists) {
         console.error('User document not found');
         setLoggedMeals([]);
         updateMacros({
@@ -2048,7 +2048,7 @@ export default function NutritionScreen() {
       
       // Get goals from user document - prioritize custom goals if enabled
       let goals;
-      if (userData.useCustomGoals && userData.customGoals) {
+      if (userData?.useCustomGoals && userData?.customGoals) {
         // Use custom goals if user has enabled them
         goals = {
           calories: userData.customGoals.calories,
@@ -2057,7 +2057,7 @@ export default function NutritionScreen() {
           fats: userData.customGoals.fats
         };
         console.log('Using custom goals:', goals);
-      } else if (userData.calorieGoal && userData.macroGoals) {
+      } else if (userData?.calorieGoal && userData?.macroGoals) {
         // Fallback to legacy goals structure
         goals = {
           calories: userData.calorieGoal,
@@ -2084,15 +2084,13 @@ export default function NutritionScreen() {
 
       console.log(`Loading meals for ${dateString} from ${startOfDay.toISOString()} to ${endOfDay.toISOString()}`);
       
-      const q = query(
-        collection(db, 'meals'),
-        where('userId', '==', user.uid),
-        where('timestamp', '>=', startOfDay.toISOString()),
-        where('timestamp', '<=', endOfDay.toISOString()),
-        orderBy('timestamp', 'desc')
-      );
+      const q = db.collection('meals')
+        .where('userId', '==', user.uid)
+        .where('timestamp', '>=', startOfDay.toISOString())
+        .where('timestamp', '<=', endOfDay.toISOString())
+        .orderBy('timestamp', 'desc');
 
-      const mealsSnapshot = await getDocs(q);
+      const mealsSnapshot = await q.get();
       const meals = mealsSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -2120,15 +2118,15 @@ export default function NutritionScreen() {
       
       // Load macros for selected date - only if there are meals
       if (meals.length > 0) {
-        const dailyMacrosRef = doc(db, `users/${user.uid}/dailyMacros/${dateString}`);
-        const dailyMacrosDoc = await getDoc(dailyMacrosRef);
+        const dailyMacrosRef = db.collection(`users/${user.uid}/dailyMacros`).doc(dateString);
+        const dailyMacrosDoc = await dailyMacrosRef.get();
         
         // If this is today's date or the dailyMacros document doesn't exist, update it to match our computed totals
-        if (isToday || !dailyMacrosDoc.exists()) {
-          await setDoc(dailyMacrosRef, {
+        if (isToday || !dailyMacrosDoc.exists) {
+          await dailyMacrosRef.set({
             ...computedTotals,
             updatedAt: new Date().toISOString(),
-            createdAt: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().createdAt : new Date().toISOString()
+            createdAt: dailyMacrosDoc.exists ? dailyMacrosDoc.data().createdAt : new Date().toISOString()
           });
           
           // Update macros with computed totals
@@ -2251,7 +2249,7 @@ export default function NutritionScreen() {
 
       console.log('Saving meal data with photo:', mealData.photoUri ? 'YES' : 'NO');
 
-      await addDoc(collection(db, 'meals'), mealData);
+      await db.collection('meals').add(mealData);
       
       // Log analytics event after successful logging
       try {
@@ -2263,12 +2261,12 @@ export default function NutritionScreen() {
 
       // Update daily macros for selected date
       const dateString = formatDateId(selectedDate);
-      const dailyMacrosRef = doc(db, `users/${user.uid}/dailyMacros/${dateString}`);
-      const dailyMacrosDoc = await getDoc(dailyMacrosRef);
+      const dailyMacrosRef = db.collection(`users/${user.uid}/dailyMacros`).doc(dateString);
+      const dailyMacrosDoc = await dailyMacrosRef.get();
 
-      if (dailyMacrosDoc.exists()) {
+              if (dailyMacrosDoc.exists) {
         const currentMacros = dailyMacrosDoc.data();
-        await setDoc(dailyMacrosRef, {
+        await dailyMacrosRef.set({
           calories: currentMacros.calories + totalMacros.calories,
           protein: currentMacros.protein + totalMacros.protein,
           carbs: currentMacros.carbs + totalMacros.carbs,
@@ -2276,7 +2274,7 @@ export default function NutritionScreen() {
           updatedAt: new Date().toISOString()
         }, { merge: true });
       } else {
-        await setDoc(dailyMacrosRef, {
+        await dailyMacrosRef.set({
           calories: totalMacros.calories,
           protein: totalMacros.protein,
           carbs: totalMacros.carbs,
@@ -2352,14 +2350,14 @@ export default function NutritionScreen() {
           currentDate.setDate(startOfWeek.getDate() + i);
           const dateId = formatDateId(currentDate);
           
-          const dailyMacrosRef = doc(db, `users/${user.uid}/dailyMacros/${dateId}`);
-          const dailyMacrosDoc = await getDoc(dailyMacrosRef);
+          const dailyMacrosRef = db.collection(`users/${user.uid}/dailyMacros`).doc(dateId);
+          const dailyMacrosDoc = await dailyMacrosRef.get();
           
           weekData.push({
-            calories: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().calories : 0,
-            protein: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().protein : 0,
-            carbs: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().carbs : 0,
-            fats: dailyMacrosDoc.exists() ? dailyMacrosDoc.data().fats : 0,
+                    calories: dailyMacrosDoc.exists ? dailyMacrosDoc.data().calories : 0,
+        protein: dailyMacrosDoc.exists ? dailyMacrosDoc.data().protein : 0,
+        carbs: dailyMacrosDoc.exists ? dailyMacrosDoc.data().carbs : 0,
+        fats: dailyMacrosDoc.exists ? dailyMacrosDoc.data().fats : 0,
             date: dateId,
             dayOfWeek: currentDate.getDay()
           });
@@ -2405,16 +2403,16 @@ export default function NutritionScreen() {
       setLoggedMeals(prev => prev.filter(m => m.id !== mealId));
 
       // Get the meal data before deleting it
-      const mealRef = doc(db, 'meals', mealId);
-      const mealDoc = await getDoc(mealRef);
+      const mealRef = db.collection('meals').doc(mealId);
+      const mealDoc = await mealRef.get();
       
-      if (!mealDoc.exists()) {
+      if (!mealDoc.exists) {
         console.error('Meal not found');
         throw new Error('Meal not found');
       }
       
       // First delete the meal
-      await deleteDoc(mealRef);
+      await mealRef.delete();
       console.log('MEAL DELETED: Document removed from meals collection');
 
       // Then recalculate daily totals from remaining meals
@@ -2423,14 +2421,12 @@ export default function NutritionScreen() {
       const dateString = formatDateId(selectedDate);
 
       // Query all meals for the day
-      const mealsQuery = query(
-        collection(db, 'meals'),
-        where('userId', '==', user.uid),
-        where('timestamp', '>=', startOfDay.toISOString()),
-        where('timestamp', '<=', endOfDay.toISOString())
-      );
+      const mealsQuery = db.collection('meals')
+        .where('userId', '==', user.uid)
+        .where('timestamp', '>=', startOfDay.toISOString())
+        .where('timestamp', '<=', endOfDay.toISOString());
 
-      const mealsSnapshot = await getDocs(mealsQuery);
+      const mealsSnapshot = await mealsQuery.get();
       console.log(`Recalculating from ${mealsSnapshot.docs.length} remaining meals`);
       
       // Calculate new totals from remaining meals
@@ -2445,18 +2441,18 @@ export default function NutritionScreen() {
       }, { calories: 0, protein: 0, carbs: 0, fats: 0 });
 
       // Update daily macros document with new totals
-      const dailyMacrosRef = doc(db, `users/${user.uid}/dailyMacros/${dateString}`);
+      const dailyMacrosRef = db.collection(`users/${user.uid}/dailyMacros`).doc(dateString);
       
       if (mealsSnapshot.docs.length > 0) {
         // If there are still meals, update with new totals
-        await setDoc(dailyMacrosRef, {
+        await dailyMacrosRef.set({
           ...newTotals,
           updatedAt: new Date().toISOString()
         }, { merge: true });
         console.log('MEAL DELETED: Updated daily macros with new totals', newTotals);
       } else {
         // If no meals left, delete the daily macros document to avoid showing zeros
-        await deleteDoc(dailyMacrosRef);
+        await dailyMacrosRef.delete();
         console.log('MEAL DELETED: No meals left, removed daily macros document');
       }
 
@@ -2556,11 +2552,11 @@ export default function NutritionScreen() {
       // Only fetch the count if today is selected
       if (isTodaySelected) {
         const todayStr = formatDateId(today);
-        const analysisCountRef = doc(db, 'users', user?.uid || '', 'imageAnalysisUsage', todayStr);
+        const analysisCountRef = db.collection('users').doc(user?.uid || '').collection('imageAnalysisUsage').doc(todayStr);
         
         try {
-          const docSnap = await getDoc(analysisCountRef);
-          if (docSnap.exists()) {
+          const docSnap = await analysisCountRef.get();
+          if (docSnap.exists) {
             const count = docSnap.data().count || 0;
             setDailyAnalysisCount(count);
             setAnalysisLimitReached(count >= DAILY_ANALYSIS_LIMIT);
@@ -2591,12 +2587,12 @@ export default function NutritionScreen() {
       if (isTodaySelected) {
         // Get the latest count directly from Firestore to avoid race conditions
         const todayStr = formatDateId(today);
-        const analysisCountRef = doc(db, 'users', user?.uid || '', 'imageAnalysisUsage', todayStr);
+        const analysisCountRef = db.collection('users').doc(user?.uid || '').collection('imageAnalysisUsage').doc(todayStr);
         let currentCount = 0;
         
         try {
-          const docSnap = await getDoc(analysisCountRef);
-          if (docSnap.exists()) {
+          const docSnap = await analysisCountRef.get();
+          if (docSnap.exists) {
             currentCount = docSnap.data().count || 0;
           }
           
@@ -2695,15 +2691,15 @@ export default function NutritionScreen() {
         let photoDownloadUrl = null;
         try {
           if (user?.uid) {
-            const storage = getStorage();
-            const photoRef = ref(storage, `meal-photos/${user.uid}/${Date.now()}.jpg`);
+            const storageInstance = storage();
+            const photoRef = storageInstance.ref(`meal-photos/${user.uid}/${Date.now()}.jpg`);
             
             // Convert image to blob for upload
             const response = await fetch(imageUri);
             const blob = await response.blob();
             
-            await uploadBytes(photoRef, blob);
-            photoDownloadUrl = await getDownloadURL(photoRef);
+            await photoRef.put(blob);
+            photoDownloadUrl = await photoRef.getDownloadURL();
             console.log('Photo uploaded to Firebase Storage:', photoDownloadUrl);
           }
         } catch (photoError) {
@@ -2720,17 +2716,17 @@ export default function NutritionScreen() {
         // Increment the analysis count in Firebase using atomic operation
         if (isTodaySelected && user) {
           const todayStr = formatDateId(today);
-          const analysisCountRef = doc(db, 'users', user.uid, 'imageAnalysisUsage', todayStr);
+          const analysisCountRef = db.collection('users').doc(user.uid).collection('imageAnalysisUsage').doc(todayStr);
           
           try {
             // Use updateDoc with increment for atomic update
-            await updateDoc(analysisCountRef, {
-              count: increment(1),
+            await analysisCountRef.update({
+              count: firestore.FieldValue.increment(1),
               updatedAt: new Date().toISOString()
             }).catch(async (error) => {
               // Document might not exist yet, create it
               if (error.code === 'not-found') {
-                await setDoc(analysisCountRef, {
+                await analysisCountRef.set({
                   count: 1,
                   updatedAt: new Date().toISOString(),
                   createdAt: new Date().toISOString()
@@ -2741,8 +2737,8 @@ export default function NutritionScreen() {
             });
             
             // Refresh the count after successful update
-            const updatedDocSnap = await getDoc(analysisCountRef);
-            if (updatedDocSnap.exists()) {
+            const updatedDocSnap = await analysisCountRef.get();
+            if (updatedDocSnap.exists) {
               const newCount = updatedDocSnap.data().count || 1;
               setDailyAnalysisCount(newCount);
               setAnalysisLimitReached(newCount >= DAILY_ANALYSIS_LIMIT);
@@ -2797,15 +2793,15 @@ export default function NutritionScreen() {
       let photoDownloadUrl = null;
       try {
         if (user?.uid) {
-          const storage = getStorage();
-          const photoRef = ref(storage, `meal-photos/${user.uid}/${Date.now()}_failed.jpg`);
+          const storageInstance = storage();
+          const photoRef = storageInstance.ref(`meal-photos/${user.uid}/${Date.now()}_failed.jpg`);
           
           // Convert image to blob for upload
           const response = await fetch(imageUri);
           const blob = await response.blob();
           
-          await uploadBytes(photoRef, blob);
-          photoDownloadUrl = await getDownloadURL(photoRef);
+          await photoRef.put(blob);
+          photoDownloadUrl = await photoRef.getDownloadURL();
           console.log('Failed attempt photo uploaded to Firebase Storage:', photoDownloadUrl);
         }
       } catch (photoError) {
@@ -2832,7 +2828,7 @@ export default function NutritionScreen() {
         }
       };
 
-      await addDoc(collection(db, 'meals'), failedAttemptData);
+      await db.collection('meals').add(failedAttemptData);
       console.log('Failed attempt logged successfully:', failedAttemptData);
       
       // Refresh the data to show the failed attempt
@@ -2878,9 +2874,9 @@ export default function NutritionScreen() {
     
     try {
       const dateStr = formatDateId(selectedDate);
-      const adherenceRef = doc(db, 'users', user.uid, 'nutritionAdherence', dateStr);
+      const adherenceRef = db.collection('users').doc(user.uid).collection('nutritionAdherence').doc(dateStr);
       
-      await setDoc(adherenceRef, {
+      await adherenceRef.set({
         adherenceScore: score,
         date: dateStr,
         timestamp: new Date().toISOString()
@@ -2906,8 +2902,8 @@ export default function NutritionScreen() {
       if (!user) throw new Error('User not authenticated');
 
       // Update meal in Firestore
-      const mealRef = doc(db, 'meals', updatedMeal.id);
-      await updateDoc(mealRef, {
+      const mealRef = db.collection('meals').doc(updatedMeal.id);
+      await mealRef.update({
         items: updatedMeal.items,
         totalMacros: updatedMeal.totalMacros,
         updatedAt: new Date().toISOString()

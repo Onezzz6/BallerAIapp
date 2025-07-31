@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
-import { collection, getDocs, addDoc, query, orderBy, deleteDoc, doc, Timestamp } from 'firebase/firestore';
+import firestore from '@react-native-firebase/firestore';
 import { db } from '../config/firebase';
 
 type TrainingPlan = {
@@ -48,9 +48,9 @@ function TrainingProvider({ children }: { children: React.ReactNode }) {
     if (!user) return;
     
     try {
-      const plansRef = collection(db, 'users', user.uid, 'trainingPlans');
-      const q = query(plansRef, orderBy('createdAt', 'desc'));
-      const snapshot = await getDocs(q);
+      const plansRef = db.collection('users').doc(user.uid).collection('trainingPlans');
+      const q = plansRef.orderBy('createdAt', 'desc');
+      const snapshot = await q.get();
       
       const loadedPlans = snapshot.docs.map(doc => {
         const data = doc.data();
@@ -58,7 +58,7 @@ function TrainingProvider({ children }: { children: React.ReactNode }) {
           id: doc.id,
           name: data.name,
           schedule: data.schedule,
-          createdAt: data.createdAt instanceof Timestamp ? 
+          createdAt: data.createdAt instanceof firestore.Timestamp ? 
             data.createdAt.toDate() : 
             new Date(data.createdAt),
           startingDay: data.startingDay // If undefined, will show all days
@@ -77,10 +77,10 @@ function TrainingProvider({ children }: { children: React.ReactNode }) {
     if (!user) return;
     
     try {
-      const plansRef = collection(db, 'users', user.uid, 'trainingPlans');
-      await addDoc(plansRef, {
+      const plansRef = db.collection('users').doc(user.uid).collection('trainingPlans');
+      await plansRef.add({
         ...plan,
-        createdAt: Timestamp.fromDate(plan.createdAt)
+        createdAt: firestore.Timestamp.fromDate(plan.createdAt)
       });
       await loadPlans();
     } catch (error) {
@@ -93,7 +93,7 @@ function TrainingProvider({ children }: { children: React.ReactNode }) {
     if (!user) return;
     
     try {
-      await deleteDoc(doc(db, 'users', user.uid, 'trainingPlans', planId));
+      await db.collection('users').doc(user.uid).collection('trainingPlans').doc(planId).delete();
       await loadPlans();
     } catch (error) {
       console.error('Error deleting plan:', error);

@@ -1,4 +1,4 @@
-import { doc, getDoc, updateDoc, setDoc, Timestamp } from 'firebase/firestore';
+import firestore from '@react-native-firebase/firestore';
 import { db } from '../config/firebase';
 // import * as InAppPurchases from 'expo-in-app-purchases'; // Comment out InAppPurchases
 
@@ -64,10 +64,10 @@ const subscriptionService = {
       };
 
       // Update user document with subscription data
-      const userRef = doc(db, 'users', userId);
-      await updateDoc(userRef, {
+      const userRef = db.collection('users').doc(userId);
+      await userRef.update({
         subscription: subscriptionData,
-        updatedAt: Timestamp.now()
+        updatedAt: firestore.Timestamp.now()
       });
       
       console.log('Subscription data saved successfully');
@@ -85,10 +85,10 @@ const subscriptionService = {
     try {
       console.log('Getting subscription data for user:', userId);
       
-      const userRef = doc(db, 'users', userId);
-      const userDoc = await getDoc(userRef);
+      const userRef = db.collection('users').doc(userId);
+      const userDoc = await userRef.get();
       
-      if (userDoc.exists() && userDoc.data().subscription) {
+      if (userDoc.exists && userDoc.data().subscription) {
         let subscriptionData = userDoc.data().subscription as SubscriptionData;
 
         // Check if subscription has expired
@@ -123,10 +123,10 @@ const subscriptionService = {
     try {
       console.log(`Updating subscription status to ${status} for user:`, userId);
       
-      const userRef = doc(db, 'users', userId);
-      const userDoc = await getDoc(userRef);
+      const userRef = db.collection('users').doc(userId);
+      const userDoc = await userRef.get();
       
-      if (!userDoc.exists() || !userDoc.data().subscription) {
+      if (!userDoc.exists || !userDoc.data().subscription) {
         return false;
       }
       
@@ -143,9 +143,9 @@ const subscriptionService = {
       };
       
       // Update user document
-      await updateDoc(userRef, {
+      await userRef.update({
         subscription: updatedSubscriptionData,
-        updatedAt: Timestamp.now()
+        updatedAt: firestore.Timestamp.now()
       });
       
       console.log('Subscription status updated successfully');

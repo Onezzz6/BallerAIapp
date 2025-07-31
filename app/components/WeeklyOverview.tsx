@@ -2,9 +2,9 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { format, addDays, startOfWeek, isSameDay, getWeek, addWeeks, subWeeks } from 'date-fns';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
-import { db } from '../config/firebase';
-import { useAuth } from '../context/AuthContext';
-import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../config/firebase';
+import { useAuth } from '../../context/AuthContext';
+import firestore from '@react-native-firebase/firestore';
 import { usePathname } from 'expo-router';
 
 interface WeeklyOverviewProps {
@@ -63,24 +63,24 @@ export default function WeeklyOverview({ selectedDate, onDateSelect }: WeeklyOve
           if (dates[i].isDisabled) continue; // Skip future dates
           
           const dateStr = format(dates[i].date, 'yyyy-MM-dd');
-          const dailyMacrosRef = doc(db, 'users', user.uid, 'dailyMacros', dateStr);
+          const dailyMacrosRef = db.collection('users').doc(user.uid).collection('dailyMacros').doc(dateStr);
           
           try {
-            const docSnap = await getDoc(dailyMacrosRef);
+            const docSnap = await dailyMacrosRef.get();
             
-            if (docSnap.exists()) {
+            if (docSnap.exists) {
               const data = docSnap.data();
               
               // If the document has data, calculate the adherence score
               if (data.calories !== undefined || data.protein !== undefined || data.carbs !== undefined || data.fats !== undefined) {
                 // Get the user document to get the goals
-                const userDoc = await getDoc(doc(db, 'users', user.uid));
+                const userDoc = await db.collection('users').doc(user.uid).get();
                 let calorieGoal = 2000;
                 let proteinGoal = 150;
                 let carbsGoal = 200;
                 let fatsGoal = 55;
                 
-                if (userDoc.exists()) {
+                if (userDoc.exists) {
                   const userData = userDoc.data();
                   // If user has custom goals, use those
                   if (userData.nutritionGoals) {
@@ -105,7 +105,7 @@ export default function WeeklyOverview({ selectedDate, onDateSelect }: WeeklyOve
                   fatsScore * 0.15    // 15% weight on fats
                 );
                 
-                updatedDates[i].adherenceScore = adherenceScore;
+                updatedDates[i].adherenceScore = adherenceScore as any;
               }
             }
           } catch (error) {

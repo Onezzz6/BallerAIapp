@@ -2,14 +2,14 @@ import { View, Text, TextInput, Keyboard, TouchableWithoutFeedback, KeyboardAvoi
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
-import { useOnboarding } from '../context/OnboardingContext';
+import { useOnboarding } from '../../context/OnboardingContext';
 import { useState, useEffect, useRef } from 'react';
 import analytics from '@react-native-firebase/analytics';
-import { colors, typography, spacing } from '../utils/theme';
-import { useHaptics } from '../utils/haptics';
+import { colors, typography, spacing } from '../../utils/theme';
+import { useHaptics } from '../../utils/haptics';
 import { Animated as RNAnimated } from 'react-native';
-import { useOnboardingStep } from '../hooks/useOnboardingStep';
-import analyticsService from '../services/analytics';
+import { useOnboardingStep } from '../../hooks/useOnboardingStep';
+import analyticsService from '../../services/analytics';
 
 export default function UsernameScreen() {
   const haptics = useHaptics();

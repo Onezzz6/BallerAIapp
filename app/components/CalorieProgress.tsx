@@ -1,7 +1,7 @@
 import { View, Text, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
-import { useNutrition } from '../context/NutritionContext';
+import { useNutrition } from '../../context/NutritionContext';
 import { useEffect } from 'react';
 
 // Export the info alert function so it can be used by the parent component

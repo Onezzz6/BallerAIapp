@@ -1,15 +1,4 @@
-import { 
-  collection, 
-  doc, 
-  getDoc, 
-  getDocs, 
-  onSnapshot, 
-  query, 
-  setDoc, 
-  where, 
-  orderBy, 
-  Timestamp
-} from 'firebase/firestore';
+import firestore from '@react-native-firebase/firestore';
 import { db } from '../config/firebase';
 import { format, startOfDay, endOfDay, addDays, subDays } from 'date-fns';
 
@@ -70,8 +59,8 @@ const nutritionService = {
       const dateStr = formatDateId(date);
       
       // Get user's calorie and macro goals
-      const userDoc = await getDoc(doc(db, 'users', userId));
-      if (!userDoc.exists()) {
+      const userDoc = await db.collection('users').doc(userId).get();
+      if (!userDoc.exists) {
         console.error('User document not found');
         return null;
       }
@@ -85,8 +74,8 @@ const nutritionService = {
       };
       
       // Get daily macros for today
-      const dailyMacrosRef = doc(db, `users/${userId}/dailyMacros/${dateStr}`);
-      const dailyMacrosDoc = await getDoc(dailyMacrosRef);
+      const dailyMacrosRef = db.collection(`users/${userId}/dailyMacros`).doc(dateStr);
+      const dailyMacrosDoc = await dailyMacrosRef.get();
       
       let currentMacros = {
         calories: 0,
@@ -95,7 +84,7 @@ const nutritionService = {
         fats: 0
       };
       
-      if (dailyMacrosDoc.exists()) {
+      if (dailyMacrosDoc.exists) {
         const data = dailyMacrosDoc.data();
         currentMacros = {
           calories: data.calories || 0,
@@ -109,15 +98,13 @@ const nutritionService = {
       const startOfDay = getLocalStartOfDay(date);
       const endOfDay = getLocalEndOfDay(date);
       
-      const q = query(
-        collection(db, 'meals'),
-        where('userId', '==', userId),
-        where('timestamp', '>=', startOfDay.toISOString()),
-        where('timestamp', '<=', endOfDay.toISOString()),
-        orderBy('timestamp', 'desc')
-      );
+      const q = db.collection('meals')
+        .where('userId', '==', userId)
+        .where('timestamp', '>=', startOfDay.toISOString())
+        .where('timestamp', '<=', endOfDay.toISOString())
+        .orderBy('timestamp', 'desc');
       
-      const mealsSnapshot = await getDocs(q);
+      const mealsSnapshot = await q.get();
       const meals = mealsSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -157,13 +144,11 @@ const nutritionService = {
       };
       
       // Get all dailyMacros documents from the past week
-      const dailyMacrosQuery = query(
-        collection(db, `users/${userId}/dailyMacros`),
-        where('createdAt', '>=', pastWeekStart.toISOString()),
-        where('createdAt', '<', today.toISOString())
-      );
+      const dailyMacrosQuery = db.collection(`users/${userId}/dailyMacros`)
+        .where('createdAt', '>=', pastWeekStart.toISOString())
+        .where('createdAt', '<', today.toISOString());
       
-      const dailyMacrosSnapshot = await getDocs(dailyMacrosQuery);
+      const dailyMacrosSnapshot = await dailyMacrosQuery.get();
       const validDocs = dailyMacrosSnapshot.docs;
       
       console.log(`DEBUG - Found ${validDocs.length} dailyMacros documents in date range: ${formatDateId(pastWeekStart)} to ${formatDateId(subDays(today, 1))}`);
@@ -194,11 +179,11 @@ const nutritionService = {
     console.log(`DEBUG - Setting up real-time listener for date: ${dateStr} (isToday: true)`);
     
     try {
-      const dailyMacrosRef = doc(db, `users/${userId}/dailyMacros/${dateStr}`);
+      const dailyMacrosRef = db.collection(`users/${userId}/dailyMacros`).doc(dateStr);
       
       // Set up real-time listener for daily macros
-      const unsubscribe = onSnapshot(dailyMacrosRef, (docSnapshot) => {
-        if (docSnapshot.exists()) {
+      const unsubscribe = dailyMacrosRef.onSnapshot((docSnapshot) => {
+        if (docSnapshot.exists) {
           const data = docSnapshot.data();
           console.log(`DEBUG - Real-time update for date: ${dateStr}`, data);
         } else {

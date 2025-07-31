@@ -4,13 +4,13 @@ import Animated, { FadeInRight } from 'react-native-reanimated';
 import { Animated as RNAnimated } from 'react-native';
 import Button from '../components/Button';
 import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
-import { useOnboarding } from '../context/OnboardingContext';
-import analyticsService from '../services/analytics';
-import { colors, typography } from '../utils/theme';
-import { useHaptics } from '../utils/haptics';
-import { validateReferralCode, createSuccessMessage } from '../services/referralCode';
-import { setReferralCode } from '../services/revenuecat';
-import { useOnboardingStep } from '../hooks/useOnboardingStep';
+import { useOnboarding } from '../../context/OnboardingContext';
+import analyticsService from '../../services/analytics';
+import { colors, typography } from '../../utils/theme';
+import { useHaptics } from '../../utils/haptics';
+import { validateReferralCode, createSuccessMessage } from '../../services/referralCode';
+import { setReferralCode } from '../../services/revenuecat';
+import { useOnboardingStep } from '../../hooks/useOnboardingStep';
 
 export default function ReferralCodeScreen() {
   const haptics = useHaptics();

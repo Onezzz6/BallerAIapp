@@ -12,15 +12,15 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useRouter, usePathname } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useHaptics } from '../utils/haptics';
+import { useHaptics } from '../../utils/haptics';
 import Button from '../components/Button';
 import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
-import analyticsService from '../services/analytics';
-import { colors, typography } from '../utils/theme';
-import { useOnboardingStep } from '../hooks/useOnboardingStep';
-import { useOnboarding } from '../context/OnboardingContext';
+import analyticsService from '../../services/analytics';
+import { colors, typography } from '../../utils/theme';
+import { useOnboardingStep } from '../../hooks/useOnboardingStep';
+import { useOnboarding } from '../../context/OnboardingContext';
 import Purchases, { PurchasesOfferings } from 'react-native-purchases';
-import { configureRevenueCat, setReferralCode } from '../services/revenuecat';
+import { configureRevenueCat, setReferralCode } from '../../services/revenuecat';
 import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
 
 const ENTITLEMENT_ID = "BallerAISubscriptionGroup";

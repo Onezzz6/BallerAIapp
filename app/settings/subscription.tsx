@@ -2,11 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../context/AuthContext';
-import subscriptionService, { SubscriptionData, PRODUCT_IDS } from '../services/subscription';
+import { useAuth } from '../../context/AuthContext';
+import subscriptionService, { SubscriptionData, PRODUCT_IDS } from '../../services/subscription';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import firestore from '@react-native-firebase/firestore';
+import { db } from '../../config/firebase';
 
 export default function SubscriptionSettingsScreen() {
   const router = useRouter();
@@ -64,8 +64,8 @@ export default function SubscriptionSettingsScreen() {
             try {
               if (user) {
                 // Update the autoRenewing status in Firestore
-                const userRef = doc(db, 'users', user.uid);
-                await updateDoc(userRef, {
+                const userRef = db.collection('users').doc(user.uid);
+                await userRef.update({
                   autoRenewing: false
                 });
                 
@@ -112,8 +112,8 @@ export default function SubscriptionSettingsScreen() {
             try {
               if (user) {
                 // Update the autoRenewing status in Firestore
-                const userRef = doc(db, 'users', user.uid);
-                await updateDoc(userRef, {
+                const userRef = db.collection('users').doc(user.uid);
+                await userRef.update({
                   autoRenewing: true
                 });
                 

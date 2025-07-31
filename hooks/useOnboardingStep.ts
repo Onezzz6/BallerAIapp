@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useCallback } from 'react';
-import { getStepInfo } from '../(onboarding)/onboarding-flow';
+import { getStepInfo } from '../app/(onboarding)/_onboarding-flow';
 
 /**
  * Custom hook for onboarding screens

@@ -3,14 +3,14 @@ import { useRouter } from 'expo-router';
 import Button from '../components/Button';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import authService from '../services/auth';
+import authService from '../../services/auth';
 import { runPostLoginSequence } from '../(onboarding)/paywall';
 import { PAYWALL_RESULT } from 'react-native-purchases-ui';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import Constants from 'expo-constants';
-import { GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
-import { auth } from '../config/firebase';
+import auth from '@react-native-firebase/auth';
+import { auth as authInstance } from '../../config/firebase';
 
 export default function SignInScreen() {
   const router = useRouter();
@@ -168,10 +168,10 @@ export default function SignInScreen() {
 
       // Create Google credential for Firebase
       console.log('Creating Google credential...');
-      const credential = GoogleAuthProvider.credential(idToken);
+      const credential = auth.GoogleAuthProvider.credential(idToken);
 
       // Sign in with Firebase using Google credentials
-      const userCredential = await signInWithCredential(auth, credential);
+      const userCredential = await auth().signInWithCredential(credential);
       const user = userCredential.user;
       
       if (user) {

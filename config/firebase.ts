@@ -1,22 +1,19 @@
-import { initializeApp, getApps } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+// 🚀 INDUSTRY STANDARD: React Native Firebase
+// ✅ Built-in AsyncStorage persistence (automatic)
+// ✅ Better performance (native modules)
+// ✅ More reliable for React Native
+// ✅ Official Google recommendation for React Native
 
-const firebaseConfig = {
-  // your config here
-};
+import auth from '@react-native-firebase/auth';
+import firestore from '@react-native-firebase/firestore';
+import storage from '@react-native-firebase/storage'; // Commented out - not used by any files
 
-// Only initialize the app if it hasn't been initialized already
-let app;
-if (!getApps().length) {
-  app = initializeApp(firebaseConfig);
-} else {
-  app = getApps()[0];
-}
+// React Native Firebase automatically handles:
+// - App initialization using google-services.json / GoogleService-Info.plist
+// - AsyncStorage persistence (no configuration needed!)
+// - Proper React Native integration
 
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const storage = getStorage(app);
+export const db = firestore();
+export { auth };
 
-export default app; 
+export default auth; 

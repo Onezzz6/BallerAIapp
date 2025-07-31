@@ -30,10 +30,10 @@ import Svg, {
 } from 'react-native-svg';
 import OnboardingHeader, { useOnboardingHeaderHeight } from '../components/OnboardingHeader';
 import Button from '../components/Button';
-import { useOnboardingStep } from '../hooks/useOnboardingStep';
-import { colors, typography } from '../utils/theme';
-import { useHaptics } from '../utils/haptics';
-import analyticsService from '../services/analytics';
+import { useOnboardingStep } from '../../hooks/useOnboardingStep';
+import { colors, typography } from '../../utils/theme';
+import { useHaptics } from '../../utils/haptics';
+import analyticsService from '../../services/analytics';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 

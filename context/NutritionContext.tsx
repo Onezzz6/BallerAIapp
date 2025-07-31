@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
-import { doc, onSnapshot, collection, query, where, orderBy, getDoc, updateDoc } from 'firebase/firestore';
+import firestore from '@react-native-firebase/firestore';
 import { db } from '../config/firebase';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { calculateNutritionGoals, type ActivityLevel } from '../utils/nutritionCalculations';
@@ -66,11 +66,11 @@ export function NutritionProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!user) return;
 
-    const userRef = doc(db, 'users', user.uid);
-    const unsubscribe = onSnapshot(userRef, (doc) => {
-      if (doc.exists()) {
+    const userRef = db.collection('users').doc(user.uid);
+    const unsubscribe = userRef.onSnapshot((doc) => {
+      if (doc.exists) {
         const userData = doc.data();
-        if (userData.calorieGoal && userData.macroGoals) {
+        if (userData && userData.calorieGoal && userData.macroGoals) {
           // Update macros with new goals while preserving current values
           setMacros(prev => ({
             ...prev,
@@ -101,9 +101,9 @@ export function NutritionProvider({ children }: { children: React.ReactNode }) {
         const dateString = formatDateId(today);
         
         // Get user goals first
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (!userDoc.exists()) {
+        const userDocRef = db.collection('users').doc(user.uid);
+        const userDoc = await userDocRef.get();
+        if (!userDoc.exists) {
           //console.error('DEBUG - User document not found');
           setIsLoading(false);
           //console.log('DEBUG - NutritionContext: Setting loading state to false - user not found');
@@ -144,7 +144,7 @@ export function NutritionProvider({ children }: { children: React.ReactNode }) {
           if (goalsNeedSaving && goals.calories > 0) {
             try {
               console.log('DEBUG - Saving calculated goals to user document from NutritionContext');
-              await updateDoc(userDocRef, {
+              await userDocRef.update({
                 calorieGoal: goals.calories,
                 macroGoals: {
                   protein: goals.protein,
@@ -178,16 +178,14 @@ export function NutritionProvider({ children }: { children: React.ReactNode }) {
         const endOfDay = getLocalEndOfDay(today);
         
         try {
-          const mealsQuery = query(
-            collection(db, 'meals'),
-            where('userId', '==', user.uid),
-            where('timestamp', '>=', startOfDay.toISOString()),
-            where('timestamp', '<=', endOfDay.toISOString()),
-            orderBy('timestamp', 'desc')
-          );
+          const mealsQuery = db.collection('meals')
+            .where('userId', '==', user.uid)
+            .where('timestamp', '>=', startOfDay.toISOString())
+            .where('timestamp', '<=', endOfDay.toISOString())
+            .orderBy('timestamp', 'desc');
           
           // Set up real-time listener for today's meals
-          const unsubscribe = onSnapshot(mealsQuery, 
+          const unsubscribe = mealsQuery.onSnapshot(
             (snapshot) => {
               const meals = snapshot.docs.map(doc => ({
                 id: doc.id,

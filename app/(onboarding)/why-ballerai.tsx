@@ -3,12 +3,12 @@ import { View, Text, SafeAreaView } from 'react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import Button from '../components/Button';
 import OnboardingHeader from '../components/OnboardingHeader';
-import { useOnboarding } from '../context/OnboardingContext';
-import { colors } from '../utils/theme';
-import { useHaptics } from '../utils/haptics';
-import { BALLERAI_SOLUTIONS } from './helping-solutions';
-import { useOnboardingStep } from '../hooks/useOnboardingStep';
-import analyticsService from '../services/analytics';
+import { useOnboarding } from '../../context/OnboardingContext';
+import { colors } from '../../utils/theme';
+import { useHaptics } from '../../utils/haptics';
+import { BALLERAI_SOLUTIONS } from './_helping-solutions';
+import { useOnboardingStep } from '../../hooks/useOnboardingStep';
+import analyticsService from '../../services/analytics';
 
 export default function WhyBallerAIScreen() {
   const haptics = useHaptics();
