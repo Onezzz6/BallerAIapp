@@ -251,7 +251,7 @@ export default function SignUpScreen() {
 
               {/* Title Section */}
               <View style={styles.titleSection}>
-                <Text style={styles.title}>Create Your Account</Text>
+                <Text style={styles.title} allowFontScaling={false}>Create Your Account</Text>
               </View>
 
               {/* Email and Password Form */}

@@ -305,10 +305,10 @@ export default function WelcomeScreen() {
   const handleAppleSignIn = async () => {
     try {
       setIsLoading(true);
-      const { exists, user, wasCanceled } = await authService.checkAppleSignIn();
+      const { user, hasDocument, isValidDocument, wasCanceled } = await authService.authenticateWithApple();
       
-      if (exists && user && user.uid) {
-        const isValidUser = await authService.verifyCompleteUserAccount(user.uid);
+      if (hasDocument && user && user.uid) {
+        const isValidUser = await authService.verifyUserAccount(user);
         
         if (isValidUser) {
           haptics.success();
@@ -375,10 +375,10 @@ export default function WelcomeScreen() {
 
       // Create Google credential for Firebase
       console.log('Creating Google credential...');
-      const credential = GoogleAuthProvider.credential(idToken);
+      const credential = auth.GoogleAuthProvider.credential(idToken);
 
       // Sign in with Firebase using Google credentials
-      const userCredential = await signInWithCredential(auth, credential);
+      const userCredential = await auth().signInWithCredential(credential);
       const user = userCredential.user;
       
       if (user) {

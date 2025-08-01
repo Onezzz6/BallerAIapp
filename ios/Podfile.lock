@@ -1309,9 +1309,15 @@ PODS:
   - Firebase/Crashlytics (11.10.0):
     - Firebase/CoreOnly
     - FirebaseCrashlytics (~> 11.10.0)
+  - Firebase/Database (11.10.0):
+    - Firebase/CoreOnly
+    - FirebaseDatabase (~> 11.10.0)
   - Firebase/Firestore (11.10.0):
     - Firebase/CoreOnly
     - FirebaseFirestore (~> 11.10.0)
+  - Firebase/Storage (11.10.0):
+    - Firebase/CoreOnly
+    - FirebaseStorage (~> 11.10.0)
   - FirebaseAnalytics (11.10.0):
     - FirebaseAnalytics/AdIdSupport (= 11.10.0)
     - FirebaseCore (~> 11.10.0)
@@ -1358,6 +1364,12 @@ PODS:
     - GoogleUtilities/Environment (~> 8.0)
     - nanopb (~> 3.30910.0)
     - PromisesObjC (~> 2.4)
+  - FirebaseDatabase (11.10.0):
+    - FirebaseAppCheckInterop (~> 11.0)
+    - FirebaseCore (~> 11.10.0)
+    - FirebaseSharedSwift (~> 11.0)
+    - GoogleUtilities/UserDefaults (~> 8.0)
+    - leveldb-library (~> 1.22)
   - FirebaseFirestore (11.10.0):
     - FirebaseCore (~> 11.10.0)
     - FirebaseCoreExtension (~> 11.10.0)
@@ -1394,6 +1406,13 @@ PODS:
     - nanopb (~> 3.30910.0)
     - PromisesSwift (~> 2.1)
   - FirebaseSharedSwift (11.15.0)
+  - FirebaseStorage (11.10.0):
+    - FirebaseAppCheckInterop (~> 11.0)
+    - FirebaseAuthInterop (~> 11.0)
+    - FirebaseCore (~> 11.10.0)
+    - FirebaseCoreExtension (~> 11.10.0)
+    - GoogleUtilities/Environment (~> 8.0)
+    - GTMSessionFetcher/Core (< 5.0, >= 3.4)
   - fmt (11.0.2)
   - glog (0.3.5)
   - GoogleAppMeasurement (11.10.0):
@@ -3367,8 +3386,16 @@ PODS:
     - FirebaseCoreExtension
     - React-Core
     - RNFBApp
+  - RNFBDatabase (21.13.0):
+    - Firebase/Database (= 11.10.0)
+    - React-Core
+    - RNFBApp
   - RNFBFirestore (21.13.0):
     - Firebase/Firestore (= 11.10.0)
+    - React-Core
+    - RNFBApp
+  - RNFBStorage (21.13.0):
+    - Firebase/Storage (= 11.10.0)
     - React-Core
     - RNFBApp
   - RNGestureHandler (2.20.2):
@@ -3735,7 +3762,9 @@ DEPENDENCIES:
   - "RNFBApp (from `../node_modules/@react-native-firebase/app`)"
   - "RNFBAuth (from `../node_modules/@react-native-firebase/auth`)"
   - "RNFBCrashlytics (from `../node_modules/@react-native-firebase/crashlytics`)"
+  - "RNFBDatabase (from `../node_modules/@react-native-firebase/database`)"
   - "RNFBFirestore (from `../node_modules/@react-native-firebase/firestore`)"
+  - "RNFBStorage (from `../node_modules/@react-native-firebase/storage`)"
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
   - "RNGoogleSignin (from `../node_modules/@react-native-google-signin/google-signin`)"
   - RNPaywalls (from `../node_modules/react-native-purchases-ui`)
@@ -3762,12 +3791,14 @@ SPEC REPOS:
     - FirebaseCoreExtension
     - FirebaseCoreInternal
     - FirebaseCrashlytics
+    - FirebaseDatabase
     - FirebaseFirestore
     - FirebaseFirestoreInternal
     - FirebaseInstallations
     - FirebaseRemoteConfigInterop
     - FirebaseSessions
     - FirebaseSharedSwift
+    - FirebaseStorage
     - GoogleAppMeasurement
     - GoogleDataTransport
     - GoogleSignIn
@@ -4002,8 +4033,12 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-firebase/auth"
   RNFBCrashlytics:
     :path: "../node_modules/@react-native-firebase/crashlytics"
+  RNFBDatabase:
+    :path: "../node_modules/@react-native-firebase/database"
   RNFBFirestore:
     :path: "../node_modules/@react-native-firebase/firestore"
+  RNFBStorage:
+    :path: "../node_modules/@react-native-firebase/storage"
   RNGestureHandler:
     :path: "../node_modules/react-native-gesture-handler"
   RNGoogleSignin:
@@ -4070,12 +4105,14 @@ SPEC CHECKSUMS:
   FirebaseCoreExtension: 6f357679327f3614e995dc7cf3f2d600bdc774ac
   FirebaseCoreInternal: ef4505d2afb1d0ebbc33162cb3795382904b5679
   FirebaseCrashlytics: 84b073c997235740e6a951b7ee49608932877e5c
+  FirebaseDatabase: 229b4959145d197dab99ab9d7033b6d4fab897a1
   FirebaseFirestore: 3f1488ff7739cb3c5d10e572bc4e9fcd8e8cb4ac
   FirebaseFirestoreInternal: 97a2bb5f16951c77753c860d3519379702ab6f8a
   FirebaseInstallations: 9980995bdd06ec8081dfb6ab364162bdd64245c3
   FirebaseRemoteConfigInterop: 1c6135e8a094cc6368949f5faeeca7ee8948b8aa
   FirebaseSessions: 9b3b30947b97a15370e0902ee7a90f50ef60ead6
   FirebaseSharedSwift: e17c654ef1f1a616b0b33054e663ad1035c8fd40
+  FirebaseStorage: e83d1b9c8a5318d46ccfb2955f0d98095e0bf598
   fmt: 01b82d4ca6470831d1cc0852a1af644be019e8f6
   glog: 08b301085f15bcbb6ff8632a8ebaf239aae04e6a
   GoogleAppMeasurement: 36684bfb3ee034e2b42b4321eb19da3a1b81e65d
@@ -4167,7 +4204,9 @@ SPEC CHECKSUMS:
   RNFBApp: a438a9444c965b4b1053330f8e54217de2075823
   RNFBAuth: 6293803f7c8c6df475d6cc38e0bb2d3ef7fd8739
   RNFBCrashlytics: 4194c40a0c8f6d6bfe7af294fb3411d73925594b
+  RNFBDatabase: 6b64498dc2fbb92a111229226bc5c6a9e21d6ba2
   RNFBFirestore: cdb31ee092168f3e6535e80db18145b856118dea
+  RNFBStorage: 91224868977cc8914f31f9e762951a94e589b33d
   RNGestureHandler: de2b7ccdbf18766609fb9490c7f11c18805705a3
   RNGoogleSignin: 424a643b24c3dd69b74cf7f79b409647fca376c9
   RNPaywalls: 211c802fc645d13fd674f09e130315077e2bf112
