@@ -2,6 +2,7 @@ import { auth, db } from '../config/firebase';
 import firestore from '@react-native-firebase/firestore';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { resetPaywallPresentationFlag } from '../app/(onboarding)/paywall';
+import { Platform } from 'react-native';
 
 type UserOnboardingData = {
   username: string | null;
@@ -260,10 +261,25 @@ const authService = {
         fullName: credential.fullName
       };
       
+      // If no valid user document exists, sign out immediately (this is sign-in only)
+      if (!userDoc.exists || !this.isValidUserDocument(userDoc.data())) {
+        console.log("No valid user document found - signing out newly created auth user");
+        await auth().signOut();
+        
+        return { 
+          user: null, 
+          hasDocument: false, 
+          isValidDocument: false,
+          appleInfo,
+          wasCanceled: false
+        };
+      }
+      
+      console.log("Valid user document found");
       return { 
         user, 
-        hasDocument: userDoc.exists, 
-        isValidDocument: userDoc.exists && this.isValidUserDocument(userDoc.data()),
+        hasDocument: true, 
+        isValidDocument: true,
         appleInfo,
         wasCanceled: false
       };
@@ -273,6 +289,163 @@ const authService = {
         return { user: null, hasDocument: false, isValidDocument: false, appleInfo: null, wasCanceled: true };
       }
       throw error;
+    }
+  },
+
+  async checkAppleSignIn() {
+    try {
+      console.log("🍎 Starting Apple Sign-In check...");
+      
+      // Start Apple authentication request
+      const appleAuthRequestResponse = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      const { identityToken, email, fullName } = appleAuthRequestResponse;
+
+      if (identityToken) {
+        // Create Firebase credential
+        const appleCredential = auth.AppleAuthProvider.credential(identityToken);
+
+        // Sign in with credential to check if account exists
+        const result = await auth().signInWithCredential(appleCredential);
+        
+        console.log('✅ Apple Sign In successful');
+
+        // Check if user document exists in Firestore
+        const userDoc = await db.collection('users').doc(result.user.uid).get();
+        
+        if (userDoc.exists && this.isValidUserDocument(userDoc.data())) {
+          // Update user document with login timestamp
+          await db.collection('users').doc(result.user.uid).update({
+            lastLoginAt: firestore.FieldValue.serverTimestamp()
+          });
+
+          return { 
+            exists: true, 
+            user: result.user, 
+            wasCanceled: false 
+          };
+        } else {
+          // Account exists in Firebase Auth but no valid user document
+          // Sign out and return exists: false
+          await auth().signOut();
+          return { 
+            exists: false, 
+            user: null, 
+            wasCanceled: false 
+          };
+        }
+      } else {
+        throw new Error('No identity token received from Apple');
+      }
+    } catch (error: any) {
+      if (error.code === 'ERR_REQUEST_CANCELED') {
+        console.log('Apple Sign In was canceled');
+        return { 
+          exists: false, 
+          user: null, 
+          wasCanceled: true 
+        };
+      } else {
+        console.error('❌ Apple Sign In error:', error);
+        throw error;
+      }
+    }
+  },
+
+  async checkGoogleSignIn() {
+    try {
+      console.log("🔍 Starting Google Sign-In check...");
+      
+      // Check if Google Play Services are available (Android only)
+      if (Platform.OS === 'android') {
+        const { GoogleSignin } = require('@react-native-google-signin/google-signin');
+        await GoogleSignin.hasPlayServices();
+      }
+
+      // Sign in with Google
+      const { GoogleSignin } = require('@react-native-google-signin/google-signin');
+      const userInfo = await GoogleSignin.signIn();
+      
+      const idToken = userInfo.data?.idToken;
+      
+      if (!idToken) {
+        console.log('No ID token received - user likely cancelled Google sign-in');
+        return { 
+          exists: false, 
+          user: null, 
+          wasCanceled: true 
+        };
+      }
+
+      // Create Google credential for Firebase
+      const credential = auth.GoogleAuthProvider.credential(idToken);
+
+      // Sign in with Firebase using Google credentials
+      const userCredential = await auth().signInWithCredential(credential);
+      const user = userCredential.user;
+      
+      if (user) {
+        // Check if user document exists in Firestore
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        
+        if (userDoc.exists && this.isValidUserDocument(userDoc.data())) {
+          // Update user document with login timestamp
+          await db.collection('users').doc(user.uid).update({
+            lastLoginAt: firestore.FieldValue.serverTimestamp()
+          });
+
+          return { 
+            exists: true, 
+            user: user, 
+            wasCanceled: false 
+          };
+        } else {
+          // Account exists in Firebase Auth but no valid user document
+          // Sign out and return exists: false
+          await auth().signOut();
+          return { 
+            exists: false, 
+            user: null, 
+            wasCanceled: false 
+          };
+        }
+      }
+      
+      return { 
+        exists: false, 
+        user: null, 
+        wasCanceled: false 
+      };
+    } catch (error: any) {
+      console.error('Google Sign-In error:', error);
+      
+      // Check if user cancelled the sign-in process
+      const { statusCodes } = require('@react-native-google-signin/google-signin');
+      if (error.code === statusCodes.SIGN_IN_CANCELLED || 
+          error.code === 'SIGN_IN_CANCELLED' ||
+          error.code === statusCodes.IN_PROGRESS ||
+          error.message?.includes('SIGN_IN_CANCELLED') ||
+          error.message?.includes('cancelled') ||
+          error.message?.includes('canceled') ||
+          error.message?.includes('The user canceled') ||
+          error.message?.includes('User cancelled') ||
+          error.message?.includes('No identity token provided') ||
+          error.toString().includes('cancelled')) {
+        console.log('User cancelled Google Sign-In - returning cancellation status');
+        return { 
+          exists: false, 
+          user: null, 
+          wasCanceled: true 
+        };
+      } else {
+        // For actual errors (not cancellations), still throw
+        throw error;
+      }
     }
   },
 
@@ -336,6 +509,30 @@ const authService = {
       console.log('Password reset email sent');
     } catch (error) {
       console.error('Error sending password reset email:', error);
+      throw error;
+    }
+  },
+
+  async verifyCurrentUserPassword(password: string) {
+    try {
+      const currentUser = auth().currentUser;
+      if (!currentUser || !currentUser.email) {
+        throw new Error('No current user or email found');
+      }
+
+      // Create a credential with the current user's email and provided password
+      const credential = auth.EmailAuthProvider.credential(currentUser.email, password);
+      
+      // Re-authenticate the user with their credentials
+      await currentUser.reauthenticateWithCredential(credential);
+      
+      console.log('✅ Password verification successful');
+      return true;
+    } catch (error: any) {
+      console.error('❌ Password verification failed:', error);
+      if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        throw new Error('Invalid password');
+      }
       throw error;
     }
   },

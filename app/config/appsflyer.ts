@@ -24,19 +24,56 @@ export const initializeAppsFlyer = () => {
   const onInstallConversionDataCanceller = appsFlyer.onInstallConversionData((res) => {
     console.log('AppsFlyer conversion data:', res);
     
-    if (JSON.parse(res.data.is_first_launch) === true) {
-      if (res.data.af_status === 'Non-organic') {
-        console.log('This is a non-organic install. Media source:', res.data.media_source);
-        // Handle non-organic install (user came from an ad/campaign)
-        console.log('Campaign:', res.data.campaign);
-        console.log('Ad Set:', res.data.adset);
-        console.log('Ad:', res.data.ad);
-      } else if (res.data.af_status === 'Organic') {
-        console.log('This is an organic install.');
-        // Handle organic install (user found the app naturally)
+    try {
+      // Check if this is an error response
+      if (res.status === 'failure' || res.type === 'onInstallConversionFailure') {
+        console.log('AppsFlyer conversion data error:', res.data);
+        return;
       }
-    } else {
-      console.log('This is not a first launch.');
+      
+      // Check if data exists and has the expected structure
+      if (!res.data || typeof res.data !== 'object') {
+        console.log('AppsFlyer conversion data: invalid data structure');
+        return;
+      }
+      
+      // Safely parse is_first_launch
+      const isFirstLaunch = res.data.is_first_launch;
+      if (isFirstLaunch === undefined || isFirstLaunch === null) {
+        console.log('AppsFlyer conversion data: is_first_launch not available');
+        return;
+      }
+      
+      // Handle both boolean and string values
+      let firstLaunch = false;
+      if (typeof isFirstLaunch === 'boolean') {
+        firstLaunch = isFirstLaunch;
+      } else if (typeof isFirstLaunch === 'string') {
+        try {
+          firstLaunch = JSON.parse(isFirstLaunch) === true;
+        } catch (parseError) {
+          console.log('AppsFlyer conversion data: could not parse is_first_launch:', isFirstLaunch);
+          return;
+        }
+      }
+      
+      if (firstLaunch) {
+        if (res.data.af_status === 'Non-organic') {
+          console.log('This is a non-organic install. Media source:', res.data.media_source);
+          // Handle non-organic install (user came from an ad/campaign)
+          console.log('Campaign:', res.data.campaign);
+          console.log('Ad Set:', res.data.adset);
+          console.log('Ad:', res.data.ad);
+        } else if (res.data.af_status === 'Organic') {
+          console.log('This is an organic install.');
+          // Handle organic install (user found the app naturally)
+        }
+      } else {
+        console.log('This is not a first launch.');
+      }
+    } catch (error) {
+      console.error('AppsFlyer conversion data processing error:', error);
+      console.log('Raw AppsFlyer response:', JSON.stringify(res, null, 2));
     }
   });
 
@@ -44,10 +81,21 @@ export const initializeAppsFlyer = () => {
   const onDeepLinkCanceller = appsFlyer.onDeepLink((res) => {
     console.log('AppsFlyer deep link data:', res);
     
-    if (res.deepLinkStatus !== 'NOT_FOUND') {
-      console.log('Deep link found:', res.data);
-      // Handle deep link navigation here
-      // You can use your navigation system to route users based on deep link data
+    try {
+      // Check if this is an error response
+      if (res.deepLinkStatus === 'ERROR' || res.status === 'failure') {
+        console.log('AppsFlyer deep link error:', res.data);
+        return;
+      }
+      
+      if (res.deepLinkStatus !== 'NOT_FOUND') {
+        console.log('Deep link found:', res.data);
+        // Handle deep link navigation here
+        // You can use your navigation system to route users based on deep link data
+      }
+    } catch (error) {
+      console.error('AppsFlyer deep link processing error:', error);
+      console.log('Raw AppsFlyer deep link response:', JSON.stringify(res, null, 2));
     }
   });
 

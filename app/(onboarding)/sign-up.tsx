@@ -12,6 +12,7 @@ import Animated, { FadeInRight } from 'react-native-reanimated';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import Constants from 'expo-constants';
 import auth from '@react-native-firebase/auth';
+import firestore from '@react-native-firebase/firestore';
 import { db } from '../../config/firebase';
 import { runPostLoginSequence, markAuthenticationComplete } from './paywall';
 import { PAYWALL_RESULT } from 'react-native-purchases-ui';
@@ -80,7 +81,59 @@ export default function SignUpScreen() {
     haptics.light();
     
     try {
-      // Create new Firebase account directly  
+      // First check if user already exists by trying to get sign-in methods
+      const signInMethods = await auth().fetchSignInMethodsForEmail(email);
+      
+      if (signInMethods && signInMethods.length > 0) {
+        // Account already exists
+        console.log('Account already exists with email:', email);
+        haptics.error();
+        
+        Alert.alert(
+          'Account Already Exists',
+          `An account with this email already exists. Would you like to sign in to your existing account?`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Sign In', 
+              onPress: async () => {
+                try {
+                  // User wants to sign in - attempt to sign them in with provided credentials
+                  console.log('User chose to sign in to existing account with email');
+                  haptics.success();
+                  
+                  const user = await authService.signInWithEmail(email, password);
+                  if (user) {
+                    // Mark authentication as complete
+                    markAuthenticationComplete();
+                    
+                    // Run the sign-in sequence
+                    await runPostLoginSequence(
+                      user.uid,
+                      () => router.replace('/(tabs)/home'),
+                      () => router.replace('/'),
+                      pathname
+                    );
+                  }
+                } catch (signInError: any) {
+                  console.error('Error signing in with existing account:', signInError);
+                  haptics.error();
+                  
+                  if (signInError.code === 'auth/wrong-password' || 
+                      signInError.code === 'auth/invalid-credential') {
+                    Alert.alert('Incorrect Password', 'The password you entered is incorrect. Please try again or reset your password.');
+                  } else {
+                    Alert.alert('Sign In Error', signInError.message || 'Failed to sign in. Please try again.');
+                  }
+                }
+              }
+            }
+          ]
+        );
+        return;
+      }
+      
+      // No existing account, proceed with sign-up
       const user = await authService.signUpWithEmail(email, password, onboardingData as any);
       if (user) {
         await analyticsService.logEvent('A0_34_signed_up');
@@ -108,7 +161,53 @@ export default function SignUpScreen() {
       }
     } catch (error: any) {
       console.error('Error during email sign up:', error);
-      Alert.alert('Sign Up Error', error.message || 'An error occurred during sign up');
+      haptics.error();
+      
+      if (error.code === 'auth/email-already-in-use') {
+        Alert.alert(
+          'Account Already Exists',
+          'An account with this email already exists. Would you like to sign in to your existing account?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Sign In', 
+              onPress: async () => {
+                try {
+                  // User wants to sign in - attempt to sign them in with provided credentials
+                  console.log('User chose to sign in to existing account with email (from catch)');
+                  haptics.success();
+                  
+                  const user = await authService.signInWithEmail(email, password);
+                  if (user) {
+                    // Mark authentication as complete
+                    markAuthenticationComplete();
+                    
+                    // Run the sign-in sequence
+                    await runPostLoginSequence(
+                      user.uid,
+                      () => router.replace('/(tabs)/home'),
+                      () => router.replace('/'),
+                      pathname
+                    );
+                  }
+                } catch (signInError: any) {
+                  console.error('Error signing in with existing account:', signInError);
+                  haptics.error();
+                  
+                  if (signInError.code === 'auth/wrong-password' || 
+                      signInError.code === 'auth/invalid-credential') {
+                    Alert.alert('Incorrect Password', 'The password you entered is incorrect. Please try again or reset your password.');
+                  } else {
+                    Alert.alert('Sign In Error', signInError.message || 'Failed to sign in. Please try again.');
+                  }
+                }
+              }
+            }
+          ]
+        );
+      } else {
+        Alert.alert('Sign Up Error', error.message || 'An error occurred during sign up');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -124,8 +223,91 @@ export default function SignUpScreen() {
     haptics.light();
     
     try {
-      const user = await authService.signUpWithApple(onboardingData as any);
-      if (user) {
+      // First do Apple authentication to get user info
+      console.log('🍎 Starting Apple authentication...');
+      const appleAuthRequestResponse = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      const { identityToken, email, fullName } = appleAuthRequestResponse;
+      
+      if (!identityToken) {
+        throw new Error('No identity token received from Apple');
+      }
+
+      // Create Firebase credential and sign in
+      console.log('Creating Firebase credential and checking for existing account...');
+      const appleCredential = auth.AppleAuthProvider.credential(identityToken);
+      const result = await auth().signInWithCredential(appleCredential);
+      
+      if (result.user) {
+        // Check if user document exists in Firestore (this is the reliable way to detect existing accounts)
+        console.log('Checking if Firestore user document exists for user:', result.user.uid);
+        const userDoc = await db.collection('users').doc(result.user.uid).get();
+        
+        if (userDoc.exists && userDoc.data()) {
+          // Account already exists - ask if they want to sign in to existing account
+          console.log('Existing account found with user document - asking user if they want to sign in');
+          
+          haptics.error();
+          Alert.alert(
+            'Account Already Exists',
+            `You already have an account with this Apple ID. Would you like to sign in to your existing account?`,
+            [
+              { 
+                text: 'Cancel', 
+                style: 'cancel',
+                onPress: async () => {
+                  // User wants to cancel - sign them out and stay on sign-up screen
+                  await auth().signOut();
+                }
+              },
+              { 
+                text: 'Sign In', 
+                onPress: async () => {
+                  // User wants to sign in - proceed with existing account login
+                  console.log('User chose to sign in to existing account');
+                  haptics.success();
+                  
+                  // Mark authentication as complete
+                  markAuthenticationComplete();
+                  
+                  // Run the sign-in sequence with their existing account
+                  await runPostLoginSequence(
+                    result.user.uid,
+                    () => router.replace('/(tabs)/home'),
+                    () => router.replace('/'),
+                    pathname
+                  );
+                }
+              }
+            ]
+          );
+          return;
+        }
+
+        // No existing user document found, proceed with new account creation
+        console.log('No existing account found, proceeding with Apple sign-up');
+
+        // Prepare user data with Apple info and onboarding data
+        const userData = {
+          email: email || result.user.email || '',
+          displayName: fullName ? `${fullName.givenName || ''} ${fullName.familyName || ''}`.trim() : result.user.displayName || '',
+          ...onboardingData,
+          createdAt: firestore.FieldValue.serverTimestamp(),
+          lastLoginAt: firestore.FieldValue.serverTimestamp(),
+          isOnboardingComplete: true,
+          authProvider: 'apple'
+        };
+
+        // Save user data to Firestore
+        await db.collection('users').doc(result.user.uid).set(userData);
+        
+        console.log('✅ User data saved to Firestore');
+        
         await analyticsService.logEvent('A0_34_signed_up_apple');
         
         // Mark authentication as complete after successful sign-up
@@ -136,7 +318,7 @@ export default function SignUpScreen() {
         
         // Run the definitive post-login sequence with current path and referral data
         await runPostLoginSequence(
-          user.uid,
+          result.user.uid,
           () => router.replace('/(tabs)/home'),
           () => router.replace('/(onboarding)/one-time-offer'),
           pathname,
@@ -151,7 +333,30 @@ export default function SignUpScreen() {
       }
     } catch (error: any) {
       console.error('Error during Apple sign up:', error);
-      Alert.alert('Sign Up Error', error.message || 'An error occurred during sign up');
+      haptics.error();
+      
+      if (error.code === 'ERR_REQUEST_CANCELED') {
+        // User cancelled - don't show error
+        console.log('Apple sign-up cancelled by user');
+      } else if (error.message?.includes('Account Already Exists') || error.code === 'auth/email-already-in-use') {
+        Alert.alert(
+          'Account Already Exists',
+          'An account with this Apple ID already exists. Would you like to sign in to your existing account?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Sign In', 
+              onPress: () => {
+                // This case shouldn't happen with the new flow, but keeping for safety
+                console.log('Apple account exists error - should not reach here with new flow');
+                router.replace('/?openSignIn=true');
+              }
+            }
+          ]
+        );
+      } else {
+        Alert.alert('Sign Up Error', error.message || 'An error occurred during sign up');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -167,21 +372,72 @@ export default function SignUpScreen() {
     haptics.light();
     
     try {
-      // Sign in with Google
+      // Sign in with Google to get user info
       await GoogleSignin.hasPlayServices();
       const userInfo = await GoogleSignin.signIn();
       
-      if (userInfo.data?.idToken) {
-        // Create Firebase credential from Google token
+      if (userInfo.data?.idToken && userInfo.data?.user?.email) {
+        console.log('Google authentication successful, checking for existing account...');
+        
+        // Create Firebase credential from Google token and sign in
         const googleCredential = auth.GoogleAuthProvider.credential(userInfo.data.idToken);
         const userCredential = await auth().signInWithCredential(googleCredential);
         
         if (userCredential.user) {
+          // Check if user document exists in Firestore (this is the reliable way to detect existing accounts)
+          console.log('Checking if Firestore user document exists for user:', userCredential.user.uid);
+          const userDoc = await db.collection('users').doc(userCredential.user.uid).get();
+          
+          if (userDoc.exists && userDoc.data()) {
+            // Account already exists - ask if they want to sign in to existing account
+            console.log('Existing account found with user document - asking user if they want to sign in');
+            
+            haptics.error();
+            Alert.alert(
+              'Account Already Exists',
+              `You already have an account with this Google account. Would you like to sign in to your existing account?`,
+              [
+                { 
+                  text: 'Cancel', 
+                  style: 'cancel',
+                  onPress: async () => {
+                    // User wants to cancel - sign them out and stay on sign-up screen
+                    await auth().signOut();
+                    await GoogleSignin.signOut();
+                  }
+                },
+                { 
+                  text: 'Sign In', 
+                  onPress: async () => {
+                    // User wants to sign in - proceed with existing account login
+                    console.log('User chose to sign in to existing account');
+                    haptics.success();
+                    
+                    // Mark authentication as complete
+                    markAuthenticationComplete();
+                    
+                    // Run the sign-in sequence with their existing account
+                    await runPostLoginSequence(
+                      userCredential.user.uid,
+                      () => router.replace('/(tabs)/home'),
+                      () => router.replace('/'),
+                      pathname
+                    );
+                  }
+                }
+              ]
+            );
+            return;
+          }
+          
+          // No existing user document found, proceed with new account creation
+          console.log('No existing account found, proceeding with Google sign-up');
+          
           // Create user document in Firestore with onboarding data
           const userData = {
             email: userCredential.user.email,
-            createdAt: new Date(),
-            lastLoginAt: new Date(),
+            createdAt: firestore.FieldValue.serverTimestamp(),
+            lastLoginAt: firestore.FieldValue.serverTimestamp(),
             signUpMethod: 'google',
             ...onboardingData,
             username: onboardingData.username || userCredential.user.displayName || 'User',
@@ -216,7 +472,38 @@ export default function SignUpScreen() {
       }
     } catch (error: any) {
       console.error('Error during Google sign up:', error);
-      Alert.alert('Sign Up Error', error.message || 'An error occurred during Google sign up');
+      haptics.error();
+      
+      // Check if user cancelled the sign-in process
+      const { statusCodes } = require('@react-native-google-signin/google-signin');
+      if (error.code === statusCodes.SIGN_IN_CANCELLED || 
+          error.code === 'SIGN_IN_CANCELLED' ||
+          error.code === statusCodes.IN_PROGRESS ||
+          error.message?.includes('SIGN_IN_CANCELLED') ||
+          error.message?.includes('cancelled') ||
+          error.message?.includes('canceled') ||
+          error.message?.includes('The user canceled') ||
+          error.message?.includes('User cancelled') ||
+          error.toString().includes('cancelled')) {
+        console.log('Google sign-up cancelled by user');
+        // Don't show error - user cancelled intentionally
+      } else if (error.code === 'auth/email-already-in-use') {
+        Alert.alert(
+          'Account Already Exists',
+          'An account with this Google account already exists. Would you like to sign in to your existing account?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Sign In', 
+              onPress: () => {
+                router.replace('/?openSignIn=true');
+              }
+            }
+          ]
+        );
+      } else {
+        Alert.alert('Sign Up Error', error.message || 'An error occurred during sign up');
+      }
     } finally {
       setIsLoading(false);
     }

@@ -1,28 +1,46 @@
-import { Dimensions, View, Text, Image, Pressable, TextInput, Alert, Keyboard, TouchableWithoutFeedback, Modal, Platform } from 'react-native';
+import React from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  Pressable, 
+  Alert, 
+  TextInput, 
+  Modal, 
+  ScrollView, 
+  Image, 
+  Dimensions,
+  Platform,
+  KeyboardAvoidingView,
+  TouchableWithoutFeedback,
+  Keyboard,
+  SafeAreaView
+} from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
+import { useState, useEffect } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import authService from '../../services/auth';
+import { useOnboarding } from '../../context/OnboardingContext';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import Button from '../components/Button';
+import analyticsService from '../../services/analytics';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
-  withTiming,
-  withRepeat,
+  withTiming, 
+  withRepeat, 
   Easing,
+  FadeInRight
 } from 'react-native-reanimated';
-import Button from './Button';
-import { useState, useEffect } from 'react';
-import React from 'react';
-import authService from '../../services/auth';
-import { Ionicons } from '@expo/vector-icons';
-import * as AppleAuthentication from 'expo-apple-authentication';
 import { runPostLoginSequence, markAuthenticationComplete } from '../(onboarding)/paywall';
-import { requestAppTrackingPermission } from '../../utils/tracking';
-import { colors, typography, spacing } from '../../utils/theme';
+import { colors, typography, spacing, borderRadius } from '../../utils/theme';
 import { useHaptics } from '../../utils/haptics';
-import analyticsService from '../../services/analytics';
-import { useOnboardingStep } from '../../hooks/useOnboardingStep';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import Constants from 'expo-constants';
 import auth from '@react-native-firebase/auth';
-import { auth as authInstance } from '../../config/firebase';
+import { db } from '../../config/firebase';
+import { useOnboardingStep } from '../../hooks/useOnboardingStep';
+import { requestAppTrackingPermission } from '../../utils/tracking';
 
 // Default empty onboarding data
 const defaultOnboardingData = {
@@ -178,10 +196,8 @@ export default function WelcomeScreen() {
   // Use onboarding navigation system
   const { goToNext } = useOnboardingStep('welcome');
 
-
-
-  // Log welcome event when screen loads (but only after a delay to prevent logging for users being sorted)
   useEffect(() => {
+    // Log welcome event when screen loads (but only after a delay to prevent logging for users being sorted)
     const logWelcomeEvent = async () => {
       try {
         // Wait 1 second before logging to prevent analytics for users being immediately redirected
@@ -323,7 +339,6 @@ export default function WelcomeScreen() {
         } else {
           haptics.error();
           showNoAccountAlert();
-          router.replace('/(onboarding)/sign-up');
           return;
         }
       } else if (!wasCanceled) {
@@ -343,8 +358,19 @@ export default function WelcomeScreen() {
   const showNoAccountAlert = () => {
     Alert.alert(
       'Account Not Found',
-      'No account found with this Apple ID. You need to create one to continue.',
-      [{ text: 'OK', onPress: () => setShowSignIn(true) }]
+      'No account found with this Apple ID. Please create an account first.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Create Account', 
+          onPress: () => {
+            // Close sign-in modal and let them use the main "Get Started" flow
+            setShowSignIn(false);
+            setEmail('');
+            setPassword('');
+          }
+        }
+      ]
     );
   };
 
@@ -382,6 +408,38 @@ export default function WelcomeScreen() {
       const user = userCredential.user;
       
       if (user) {
+        console.log('Firebase auth successful, checking if user document exists...');
+        
+        // Check if user document exists in Firestore
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        
+        if (!userDoc.exists || !authService.isValidUserDocument(userDoc.data())) {
+          console.log('No valid user document found - this is sign-in only, not sign-up');
+          
+          // Sign out the newly created user immediately
+          await auth().signOut();
+          
+          haptics.error();
+          Alert.alert(
+            'Account Not Found', 
+            'No account found with this Google account. Please create an account first.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { 
+                text: 'Create Account', 
+                onPress: () => {
+                  // Close sign-in modal and let them use the main "Get Started" flow
+                  setShowSignIn(false);
+                  setEmail('');
+                  setPassword('');
+                }
+              }
+            ]
+          );
+          return;
+        }
+        
+        console.log('Valid user document found, proceeding with sign-in');
         haptics.success();
         markAuthenticationComplete();
         await runPostLoginSequence(
@@ -409,12 +467,7 @@ export default function WelcomeScreen() {
       } else {
         // Only show error for actual failures, not cancellations
         haptics.error();
-        
-        if (error.code === 'auth/user-not-found') {
-          Alert.alert('Account Not Found', 'No account found with this Google account. Please create an account first.');
-        } else {
-          Alert.alert('Error', error.message || 'Google Sign-In failed');
-        }
+        Alert.alert('Error', error.message || 'Google Sign-In failed');
       }
     } finally {
       setIsLoading(false);
