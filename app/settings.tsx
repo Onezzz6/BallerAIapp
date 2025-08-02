@@ -344,14 +344,14 @@ export default function SettingsScreen() {
           </Text>
           
           {/* Always show email authentication option */}
-          <View style={{ marginVertical: 8 }}>
+          <View style={{ marginVertical: 6 }}>
             <View style={styles.passwordInputContainer}>
               <TextInput
                 style={styles.modalInput}
                 placeholder={
                   user?.email 
-                    ? "Password for your email" 
-                    : "Enter password (email auth may not be available)"
+                    ? "Enter password" 
+                    : "Enter password (email may not be available)"
                 }
                 secureTextEntry={!showPassword}
                 value={password}
@@ -392,7 +392,7 @@ export default function SettingsScreen() {
                 }
               }}
               buttonStyle={{ ...styles.authButton, backgroundColor: '#4064F6' }}
-              textStyle={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}
+              textStyle={{ color: '#FFFFFF', fontSize: 15, fontWeight: '600', marginTop: -1 }}
             />
           </View>
           
@@ -408,7 +408,7 @@ export default function SettingsScreen() {
                 }
               }}
               buttonStyle={{ ...styles.authButton, backgroundColor: '#000000' }}
-              textStyle={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}
+              textStyle={{ color: '#FFFFFF', fontSize: 15, fontWeight: '600', marginTop: -1 }}
             />
           )}
           
@@ -429,11 +429,11 @@ export default function SettingsScreen() {
                 borderWidth: 1,
                 borderColor: '#E5E5E5'
               }}
-              textStyle={{ color: '#000000', fontSize: 16, fontWeight: '600' }}
+              textStyle={{ color: '#000000', fontSize: 15, fontWeight: '600', marginTop: -2 }}
             />
           )}
           
-          <View style={styles.modalButtons}>
+          <View style={{...styles.modalButtons, marginTop: 16}}>
             <CustomButton
               title="Cancel"
               onPress={() => {
@@ -441,7 +441,7 @@ export default function SettingsScreen() {
                 setPassword('');
               }}
               buttonStyle={{ ...styles.modalButton, backgroundColor: '#E5E5E7' }}
-              textStyle={{ color: '#000000', fontSize: 16, fontWeight: '600' }}
+              textStyle={{ color: '#000000', fontSize: 15, fontWeight: '600', marginTop: -2 }}
             />
           </View>
         </View>
@@ -568,7 +568,7 @@ export default function SettingsScreen() {
           <Text style={styles.modalSubtitle} allowFontScaling={false}>
             This action cannot be undone. All your data, including meals, progress, and account information will be permanently deleted.
           </Text>
-          <Text style={[styles.modalSubtitle, { fontWeight: '600', color: '#FF3B30', marginTop: 12 }]} allowFontScaling={false}>
+          <Text style={[styles.modalSubtitle, { fontWeight: '600', color: '#FF3B30', marginTop: 12, textAlign: 'center' }]} allowFontScaling={false}>
             Are you absolutely sure?
           </Text>
           
@@ -576,14 +576,14 @@ export default function SettingsScreen() {
             <CustomButton
               title="Cancel"
               onPress={() => setShowDeleteConfirmModal(false)}
-              buttonStyle={{ ...styles.modalButton, backgroundColor: '#E5E5E7' }}
-              textStyle={{ color: '#000000', fontSize: 16, fontWeight: '600' }}
+              buttonStyle={{ ...styles.modalButton, backgroundColor: '#E5E5E7', marginTop: 12 }}
+              textStyle={{ color: '#000000', fontSize: 15, fontWeight: '600', marginTop: -2 }}
             />
             <CustomButton
               title="Delete Forever"
               onPress={handleDeleteConfirmation}
               buttonStyle={{ ...styles.modalButton, backgroundColor: '#FF3B30', marginTop: 12 }}
-              textStyle={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}
+              textStyle={{ color: '#FFFFFF', fontSize: 15, fontWeight: '600', marginTop: -2 }}
               disabled={isSaving}
             />
           </View>
@@ -860,11 +860,11 @@ const styles = StyleSheet.create({
   },
   authButton: {
     width: '100%',
-    height: 50,
+    height: 52,
     borderRadius: 36,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 6,
   },
   modalButton: {
     width: '100%',

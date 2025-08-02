@@ -608,7 +608,7 @@ export default function SignUpScreen() {
                       source={{ uri: 'https://developers.google.com/identity/images/g-logo.png' }}
                       style={styles.googleIcon}
                     />
-                    <Text style={styles.googleButtonText}>
+                    <Text style={styles.googleButtonText} allowFontScaling={false}>
                       Continue with Google
                     </Text>
                   </Pressable>
