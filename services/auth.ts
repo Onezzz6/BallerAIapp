@@ -546,11 +546,21 @@ const authService = {
     }
     
     // For existing users, we only need to check that the document exists
-    // and has some basic info (email). Don't check specific onboarding fields
-    // since older users may not have gone through all the current onboarding questions.
-    const hasBasicInfo = userData.hasOwnProperty('email');
+    // and has some basic info. Don't be too strict since older users 
+    // may not have all current fields.
+    const hasBasicData = (
+      // Check if document has any meaningful content
+      Object.keys(userData).length > 0 &&
+      // Must have either email, displayName, or username
+      (userData.email !== undefined || 
+       userData.displayName !== undefined || 
+       userData.username !== undefined ||
+       // Or any onboarding completion indicator
+       userData.isOnboardingComplete !== undefined ||
+       userData.createdAt !== undefined)
+    );
     
-    if (hasBasicInfo) {
+    if (hasBasicData) {
       console.log("User document exists with basic info - validation passed");
       return true;
     } else {
