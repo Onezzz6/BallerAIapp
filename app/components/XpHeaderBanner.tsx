@@ -17,7 +17,16 @@ export const XpHeaderBanner: React.FC<XpHeaderBannerProps> = ({ onTap }) => {
 
   const progress = calculateLevelProgress(xpData.totalXp);
   const badgeColor = getBadgeColor(xpData.level);
+  const currentLevelXp = calculateXpForLevel(xpData.level);
   const nextLevelXp = calculateXpForLevel(xpData.level + 1);
+  
+  // Calculate progress within current level (not total lifetime XP)
+  // Handle edge case where user might be at max level
+  const xpInCurrentLevel = xpData.totalXp - currentLevelXp;
+  const xpNeededForCurrentLevel = nextLevelXp - currentLevelXp;
+  
+  // Check for max level edge case
+  const isMaxLevel = nextLevelXp === currentLevelXp;
   
   // Ensure progress is between 0 and 1, and calculate exact percentage
   const clampedProgress = Math.max(0, Math.min(1, progress));
@@ -28,10 +37,15 @@ export const XpHeaderBanner: React.FC<XpHeaderBannerProps> = ({ onTap }) => {
     console.log(`📊 XP Progress Debug:`, {
       totalXp: xpData.totalXp,
       level: xpData.level,
+      currentLevelXp,
       nextLevelXp,
+      xpInCurrentLevel,
+      xpNeededForCurrentLevel,
       rawProgress: progress,
       clampedProgress,
-      progressPercentage: `${progressPercentage}%`
+      progressPercentage: `${progressPercentage}%`,
+      displayFormat: isMaxLevel ? 'MAX LEVEL' : `${xpInCurrentLevel}/${xpNeededForCurrentLevel} XP`,
+      isMaxLevel
     });
   }
 
@@ -65,7 +79,7 @@ export const XpHeaderBanner: React.FC<XpHeaderBannerProps> = ({ onTap }) => {
           <View style={{ flex: 100 - progressPercentage, backgroundColor: 'transparent' }} /> */}
         </View>
         <Text style={styles.xpText}>
-          {xpData.totalXp.toLocaleString()} / {nextLevelXp.toLocaleString()} XP
+          {isMaxLevel ? 'MAX LEVEL' : `${xpInCurrentLevel.toLocaleString()} / ${xpNeededForCurrentLevel.toLocaleString()} XP`}
         </Text>
       </View>
     </Container>
