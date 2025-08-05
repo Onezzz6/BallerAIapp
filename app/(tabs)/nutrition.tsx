@@ -28,6 +28,8 @@ import MealEditModal from '../components/MealEditModal';
 import GoalsEditModal from '../components/GoalsEditModal';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useRouter } from 'expo-router';
+import { XpHeaderBanner } from '../components/XpHeaderBanner';
+import { useXp } from '../../context/XpContext';
 
 // Type definition for food analysis result
 type FoodAnalysisResult = {
@@ -1858,6 +1860,7 @@ export default function NutritionScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const { user } = useAuth();
+  const { awardXp } = useXp();
   const [isLogMealModalVisible, setIsLogMealModalVisible] = useState(false);
   const [selectedLoggingMethod, setSelectedLoggingMethod] = useState<'manual' | 'photo' | null>(null);
   const [foodItems, setFoodItems] = useState<FoodItem[]>([]);
@@ -2296,6 +2299,17 @@ export default function NutritionScreen() {
       
       // Refresh data to ensure UI is up-to-date
       await loadSelectedDayData();
+      
+      // Award XP for logging a meal
+      try {
+        const xpAward = await awardXp(50, 'meal'); // 50 XP for logging a meal
+        if (xpAward.eligible && xpAward.amount > 0) {
+          console.log(`🎉 Awarded ${xpAward.amount} XP for logging meal!`);
+        }
+      } catch (xpError) {
+        console.error('Error awarding XP for meal:', xpError);
+        // Don't fail the meal logging if XP fails
+      }
     } catch (error) {
       console.error('Error logging meal:', error);
       Alert.alert('Error', 'Failed to log a meal. Please try again.');
@@ -2990,6 +3004,9 @@ export default function NutritionScreen() {
             </View>
           </View>
         </View>
+
+        {/* XP Header Banner */}
+        <XpHeaderBanner />
 
         {/* Weekly Overview */}
         <View style={{ backgroundColor: '#FFFFFF' }}>

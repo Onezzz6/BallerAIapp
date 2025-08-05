@@ -12,6 +12,7 @@ import { format, addDays, getWeek } from 'date-fns';
 import analyticsService from '../../services/analytics';
 import Accordion from '../components/Accordion';
 import TrainingPlanGenerationLoader from '../components/TrainingPlanGenerationLoader';
+import { XpHeaderBanner } from '../components/XpHeaderBanner';
 
 type FocusArea = 'technique' | 'strength' | 'endurance' | 'speed' | 'overall';
 type GymAccess = 'yes' | 'no';
@@ -2469,6 +2470,9 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
               </View>
             </View>
           </View>
+
+          {/* XP Header Banner */}
+          <XpHeaderBanner />
 
           {/* Content */}
           {renderContent()}
