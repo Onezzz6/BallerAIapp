@@ -15,6 +15,7 @@ import Animated, { FadeIn, FadeInDown, PinwheelIn, SlideInRight } from 'react-na
 import analyticsService from '../../services/analytics';
 import RecoveryPlanGenerationLoader from '../components/RecoveryPlanGenerationLoader';
 import { XpHeaderBanner } from '../components/XpHeaderBanner';
+import { useXp } from '../../context/XpContext';
 
 // Add this line to get the API key from Constants.expoConfig.extra
 const OPENAI_API_KEY = Constants.expoConfig?.extra?.openaiApiKey;
@@ -42,6 +43,7 @@ type WorkflowStep = 'welcome' | 'tools' | 'time' | 'summary' | 'completed';
 
 export default function RecoveryScreen() {
   const { user } = useAuth();
+  const { awardXp } = useXp();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isEditing, setIsEditing] = useState(false);
   const [recoveryData, setRecoveryData] = useState<RecoveryData>({
@@ -706,6 +708,17 @@ IMPORTANT USAGE GUIDELINES:
       setPlanCompleted(true);
       
       console.log(`Plan marked as completed`);
+      
+      // Award XP for completing recovery plan
+      try {
+        const xpAward = await awardXp(300, 'recovery'); // 300 XP for completing recovery plan
+        if (xpAward.eligible && xpAward.amount > 0) {
+          console.log(`🎉 Awarded ${xpAward.amount} XP for completing recovery plan!`);
+        }
+      } catch (xpError) {
+        console.error('Error awarding XP for recovery completion:', xpError);
+        // Don't fail the completion if XP fails
+      }
       
       // Check if this is today's plan
       const today = new Date();
