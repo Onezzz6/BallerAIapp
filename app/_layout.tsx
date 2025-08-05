@@ -13,6 +13,8 @@ import { OnboardingProvider } from '../context/OnboardingContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NutritionProvider } from '../context/NutritionContext';
 import { TrainingProvider } from '../context/TrainingContext';
+import { XpProvider } from '../context/XpContext';
+import { XpLevelUpManager } from './components/XpLevelUpManager';
 import { Alert, Platform, AppState } from 'react-native';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -377,15 +379,18 @@ export default function RootLayout() {
       <ReducedMotionConfig mode={ReduceMotion.Never} />
       <AuthProvider>
         <SubscriptionProvider>
-          <AuthStateManager>
-            <NutritionProvider>
-              <OnboardingProvider>
-                <TrainingProvider>
-                  <RootLayoutContent />
-                </TrainingProvider>
-              </OnboardingProvider>
-            </NutritionProvider>
-          </AuthStateManager>
+          <XpProvider>
+            <AuthStateManager>
+              <NutritionProvider>
+                <OnboardingProvider>
+                  <TrainingProvider>
+                    <RootLayoutContent />
+                  </TrainingProvider>
+                </OnboardingProvider>
+              </NutritionProvider>
+            </AuthStateManager>
+            <XpLevelUpManager />
+          </XpProvider>
         </SubscriptionProvider>
       </AuthProvider>
     </GestureHandlerRootView>

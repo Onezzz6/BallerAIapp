@@ -32,7 +32,7 @@ export default function SignUpScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isAppleAvailable, setIsAppleAvailable] = useState(false);
   const [isGoogleAvailable, setIsGoogleAvailable] = useState(false);
-  const { onboardingData, clearOnboardingData } = useOnboarding();
+  const { onboardingData, clearOnboardingData, getInitialXpData } = useOnboarding();
 
   // Check if Apple authentication is available on this device
   useEffect(() => {
@@ -293,10 +293,12 @@ export default function SignUpScreen() {
         console.log('No existing account found, proceeding with Apple sign-up');
 
         // Prepare user data with Apple info and onboarding data
+        const xpData = getInitialXpData();
         const userData = {
           email: email || result.user.email || '',
           displayName: fullName ? `${fullName.givenName || ''} ${fullName.familyName || ''}`.trim() : result.user.displayName || '',
           ...onboardingData,
+          ...xpData, // Add XP system fields
           createdAt: firestore.FieldValue.serverTimestamp(),
           lastLoginAt: firestore.FieldValue.serverTimestamp(),
           isOnboardingComplete: true,
@@ -434,12 +436,14 @@ export default function SignUpScreen() {
           console.log('No existing account found, proceeding with Google sign-up');
           
           // Create user document in Firestore with onboarding data
+          const xpData = getInitialXpData();
           const userData = {
             email: userCredential.user.email,
             createdAt: firestore.FieldValue.serverTimestamp(),
             lastLoginAt: firestore.FieldValue.serverTimestamp(),
             signUpMethod: 'google',
             ...onboardingData,
+            ...xpData, // Add XP system fields
             username: onboardingData.username || userCredential.user.displayName || 'User',
           };
 

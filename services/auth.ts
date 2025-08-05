@@ -3,6 +3,8 @@ import firestore from '@react-native-firebase/firestore';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { resetPaywallPresentationFlag } from '../app/(onboarding)/paywall';
 import { Platform } from 'react-native';
+import { XpData } from '../types/xp';
+import { getDeviceTimezone } from '../utils/xpCalculations';
 
 type UserOnboardingData = {
   username: string | null;
@@ -36,6 +38,18 @@ type UserOnboardingData = {
   preferMetricUnits: boolean | null;
 };
 
+// Helper function to generate initial XP data for new users
+function getInitialXpData(): XpData {
+  return {
+    totalXp: 0,
+    xpToday: 0,
+    lastXpReset: Date.now(),
+    level: 1,
+    timezone: getDeviceTimezone(),
+    xpFeatureStart: Date.now(),
+  };
+}
+
 const authService = {
   async checkEmailExists(email: string) {
     try {
@@ -54,10 +68,14 @@ const authService = {
       
       console.log('✅ User created successfully, saving onboarding data...');
       
+      // Generate initial XP data for new user
+      const xpData = getInitialXpData();
+      
       // Save user data to Firestore
       await db.collection('users').doc(userCredential.user.uid).set({
         email: email,
         ...onboardingData,
+        ...xpData, // Add XP system fields
         createdAt: firestore.FieldValue.serverTimestamp(),
         lastLoginAt: firestore.FieldValue.serverTimestamp(),
         isOnboardingComplete: true
@@ -196,11 +214,15 @@ const authService = {
         
         console.log('✅ Apple Sign Up successful');
 
+        // Generate initial XP data for new user
+        const xpData = getInitialXpData();
+        
         // Prepare user data with Apple info and onboarding data
         const userData = {
           email: email || result.user.email || '',
           displayName: fullName ? `${fullName.givenName || ''} ${fullName.familyName || ''}`.trim() : result.user.displayName || '',
           ...onboardingData,
+          ...xpData, // Add XP system fields
           createdAt: firestore.FieldValue.serverTimestamp(),
           lastLoginAt: firestore.FieldValue.serverTimestamp(),
           isOnboardingComplete: true,

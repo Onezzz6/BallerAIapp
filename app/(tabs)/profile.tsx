@@ -17,6 +17,7 @@ import CustomButton from '../components/CustomButton';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { calculateNutritionGoals } from '../../utils/nutritionCalculations';
 import Animated, { PinwheelIn } from 'react-native-reanimated';
+import { XpHeaderBanner } from '../components/XpHeaderBanner';
 
 type UserData = {
   username?: string;
@@ -1172,6 +1173,9 @@ export default function ProfileScreen() {
               </View>
             </View>
           </View>
+
+          {/* XP Header Banner */}
+          <XpHeaderBanner />
 
           {/* Main content */}
           <View style={styles.content}>

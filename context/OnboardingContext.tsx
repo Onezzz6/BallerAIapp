@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { XpData } from '../types/xp';
+import { getDeviceTimezone } from '../utils/xpCalculations';
 
 type OnboardingData = {
   username: string | null;
@@ -35,12 +37,20 @@ type OnboardingData = {
   dominantFoot: string | null;
   hasGymAccess: boolean | null;
   preferMetricUnits: boolean | null;
+  // XP System fields - initialized during user creation
+  totalXp?: number;
+  xpToday?: number;
+  lastXpReset?: number;
+  level?: number;
+  timezone?: string;
+  xpFeatureStart?: number;
 };
 
 type OnboardingContextType = {
   onboardingData: OnboardingData;
   updateOnboardingData: (data: Partial<OnboardingData>) => Promise<void>;
   clearOnboardingData: () => Promise<void>;
+  getInitialXpData: () => XpData;
 };
 
 const defaultOnboardingData: OnboardingData = {
@@ -77,12 +87,27 @@ const defaultOnboardingData: OnboardingData = {
   dominantFoot: null,
   hasGymAccess: null,
   preferMetricUnits: null,
+  // XP fields will be initialized during user creation, not stored in AsyncStorage
+  totalXp: undefined,
+  xpToday: undefined,
+  lastXpReset: undefined,
+  level: undefined,
+  timezone: undefined,
+  xpFeatureStart: undefined,
 };
 
 const OnboardingContext = createContext<OnboardingContextType>({
   onboardingData: defaultOnboardingData,
   updateOnboardingData: async () => {},
   clearOnboardingData: async () => {},
+  getInitialXpData: () => ({
+    totalXp: 0,
+    xpToday: 0,
+    lastXpReset: Date.now(),
+    level: 1,
+    timezone: getDeviceTimezone(),
+    xpFeatureStart: Date.now(),
+  }),
 });
 
 export function OnboardingProvider({ children }: { children: React.ReactNode }) {
@@ -123,8 +148,17 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
+  const getInitialXpData = (): XpData => ({
+    totalXp: 0,
+    xpToday: 0,
+    lastXpReset: Date.now(),
+    level: 1,
+    timezone: getDeviceTimezone(),
+    xpFeatureStart: Date.now(),
+  });
+
   return (
-    <OnboardingContext.Provider value={{ onboardingData, updateOnboardingData, clearOnboardingData }}>
+    <OnboardingContext.Provider value={{ onboardingData, updateOnboardingData, clearOnboardingData, getInitialXpData }}>
       {children}
     </OnboardingContext.Provider>
   );

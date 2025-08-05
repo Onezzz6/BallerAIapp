@@ -9,6 +9,31 @@ service cloud.firestore {
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
+    
+    // XP System validation helper
+    function validateXpUpdate() {
+      let data = request.resource.data;
+      let existingData = resource.data;
+      
+      // If no XP fields are being updated, validation passes
+      if (!('totalXp' in data) && !('xpToday' in data) && !('level' in data) && !('lastXpReset' in data)) {
+        return true;
+      }
+      
+      // XP validation rules based on the roadmap
+      return (
+        // totalXp can only stay the same or increase
+        (!('totalXp' in data) || data.totalXp >= existingData.totalXp) &&
+        // xpToday can increase or reset to 0 (daily reset)
+        (!('xpToday' in data) || data.xpToday >= 0) &&
+        // xpToday cannot exceed 900 (daily cap)
+        (!('xpToday' in data) || data.xpToday <= 900) &&
+        // level must be consistent with totalXp (basic validation)
+        (!('level' in data) || data.level >= 1) &&
+        // lastXpReset can only move forward in time or stay the same
+        (!('lastXpReset' in data) || data.lastXpReset >= existingData.lastXpReset)
+      );
+    }
 
     // Root-level collections
     match /meals/{mealId} {
@@ -24,7 +49,7 @@ service cloud.firestore {
       allow delete: if isOwner(userId);
       allow create: if isSignedIn() && request.auth.uid == userId;
       
-      // Allow updates but protect subscription and referralCode fields
+      // Allow updates but protect subscription, referralCode, and XP fields
       allow update: if isOwner(userId) && 
         // Prevent clients from writing subscription field (webhook/admin only)
         (!('subscription' in request.resource.data) || 
@@ -33,7 +58,9 @@ service cloud.firestore {
         // Note: To allow referral code changes before purchase, modify this rule to check if subscription is null
         (!('referralCode' in request.resource.data) || 
          request.resource.data.referralCode == resource.data.referralCode ||
-         !('referralCode' in resource.data)); // Allow setting referralCode if it doesn't exist yet
+         !('referralCode' in resource.data)) && // Allow setting referralCode if it doesn't exist yet
+        // XP System validation rules
+        validateXpUpdate();
       
       // Allow batch operations for all subcollections
       match /{collection}/{doc} {

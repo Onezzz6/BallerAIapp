@@ -18,6 +18,7 @@ import Svg, { Circle } from 'react-native-svg';
 import ReanimatedAnimated, { PinwheelIn } from 'react-native-reanimated';
 import analytics from '@react-native-firebase/analytics'; // Add analytics import
 import ViewShot from 'react-native-view-shot';
+import { XpHeaderBanner } from '../components/XpHeaderBanner';
 
 // Animated Typing Indicator Component
 const TypingIndicator = () => {
@@ -1802,6 +1803,9 @@ export default function HomeScreen() {
             </View>
           </View>
 
+          {/* XP Header Banner */}
+          <XpHeaderBanner />
+
           <View style={{ padding: 16, gap: 24 }}>
             {/* Overview Section */}
             <View style={{ 
@@ -1819,6 +1823,8 @@ export default function HomeScreen() {
                 Today's Progress
               </Text>
             </View>
+
+
                     
             {/* First Row of Cards */}
             <View style={{ 

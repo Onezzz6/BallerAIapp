@@ -14,6 +14,7 @@ import Constants from 'expo-constants';
 import Animated, { FadeIn, FadeInDown, PinwheelIn, SlideInRight } from 'react-native-reanimated';
 import analyticsService from '../../services/analytics';
 import RecoveryPlanGenerationLoader from '../components/RecoveryPlanGenerationLoader';
+import { XpHeaderBanner } from '../components/XpHeaderBanner';
 
 // Add this line to get the API key from Constants.expoConfig.extra
 const OPENAI_API_KEY = Constants.expoConfig?.extra?.openaiApiKey;
@@ -1688,6 +1689,9 @@ IMPORTANT USAGE GUIDELINES:
       >
           {/* Header - Only render when not fixed */}
           {!FIXED_HEADER_FOR_SCREENSHOT && renderHeader()}
+
+          {/* XP Header Banner */}
+          <XpHeaderBanner />
 
           <View style={styles.contentContainer}>
             {/* Weekly Overview */}
