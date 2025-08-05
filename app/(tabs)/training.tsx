@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTraining } from '../../context/TrainingContext';
 import firestore from '@react-native-firebase/firestore';
 import { db } from '../../config/firebase';
-import Constants from 'expo-constants';
+import { auth } from '../../config/firebase';
 import Animated, { FadeIn, FadeInDown, PinwheelIn, SlideInRight, SlideOutLeft, FadeOut } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { format, addDays, getWeek } from 'date-fns';
@@ -31,9 +31,9 @@ type Schedule = {
 
 type WorkflowStep = 'welcome' | 'focus' | 'gym' | 'schedule' | 'summary' | 'plans';
 
-// Add these lines to access the API keys from Constants
-const OPENAI_API_KEY = Constants.expoConfig?.extra?.openaiApiKey;
-const DEEPSEEK_API_KEY = Constants.expoConfig?.extra?.deepseekApiKey;
+// Firebase Functions URL for OpenAI proxy
+const FIREBASE_PROJECT_ID = 'love-b6fe6';
+const OPENAI_PROXY_URL = `https://us-central1-${FIREBASE_PROJECT_ID}.cloudfunctions.net/openaiProxy`;
 
 const styles = StyleSheet.create({
   container: {
@@ -1224,18 +1224,21 @@ FORMAT INSTRUCTIONS:
 
 IMPORTANT: After the last day (Sunday), write a short summary section titled "NOTES:" that explains the weekly plan structure and why certain types of training were scheduled on specific days.`;
 
-      console.log('Making API request to OpenAI...');
+      console.log('Making API request to OpenAI via Firebase Functions proxy...');
       
-      // Validate API key
-      if (!OPENAI_API_KEY) {
-        throw new Error('OpenAI API key not found');
+      // Get the current user's ID token for authentication
+      const currentUser = auth().currentUser;
+      if (!currentUser) {
+        throw new Error('User not authenticated');
       }
+
+      const idToken = await currentUser.getIdToken();
       
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch(OPENAI_PROXY_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+          'Authorization': `Bearer ${idToken}`,
         },
         body: JSON.stringify({
           model: "o3",
