@@ -18,6 +18,22 @@ export const XpHeaderBanner: React.FC<XpHeaderBannerProps> = ({ onTap }) => {
   const progress = calculateLevelProgress(xpData.totalXp);
   const badgeColor = getBadgeColor(xpData.level);
   const nextLevelXp = calculateXpForLevel(xpData.level + 1);
+  
+  // Ensure progress is between 0 and 1, and calculate exact percentage
+  const clampedProgress = Math.max(0, Math.min(1, progress));
+  const progressPercentage = Math.round(clampedProgress * 100);
+  
+  // Debug logging (remove this later if needed)
+  if (__DEV__) {
+    console.log(`📊 XP Progress Debug:`, {
+      totalXp: xpData.totalXp,
+      level: xpData.level,
+      nextLevelXp,
+      rawProgress: progress,
+      clampedProgress,
+      progressPercentage: `${progressPercentage}%`
+    });
+  }
 
   const Container = onTap ? TouchableOpacity : View;
 
@@ -39,11 +55,14 @@ export const XpHeaderBanner: React.FC<XpHeaderBannerProps> = ({ onTap }) => {
             style={[
               styles.progressFill, 
               { 
-                width: `${Math.round(progress * 100)}%`,
+                width: `${progressPercentage}%`,
                 backgroundColor: badgeColor 
               }
             ]} 
           />
+          {/* Alternative flex-based approach - uncomment if percentage doesn't work */}
+          {/* <View style={{ flex: progressPercentage, backgroundColor: badgeColor, height: '100%' }} />
+          <View style={{ flex: 100 - progressPercentage, backgroundColor: 'transparent' }} /> */}
         </View>
         <Text style={styles.xpText}>
           {xpData.totalXp.toLocaleString()} / {nextLevelXp.toLocaleString()} XP
@@ -86,10 +105,15 @@ const styles = StyleSheet.create({
     borderRadius: 1.5,
     overflow: 'hidden',
     marginBottom: 2,
+    position: 'relative',
   },
   progressFill: {
     height: '100%',
     borderRadius: 1.5,
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    minWidth: 0, // Ensure it can be 0 width
   },
   xpText: {
     fontSize: 11,

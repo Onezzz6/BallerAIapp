@@ -1,16 +1,21 @@
 import axios from 'axios';
-import Constants from 'expo-constants';
+import { auth } from '../config/firebase';
 
-// Get the API key from environment variables via Expo's Constants
-const OPENAI_API_KEY = Constants.expoConfig?.extra?.openaiApiKey;
+// Firebase Functions URL - update this with your project ID
+const FIREBASE_PROJECT_ID = 'love-b6fe6'; // Your project ID from .env
+const OPENAI_PROXY_URL = `https://us-central1-${FIREBASE_PROJECT_ID}.cloudfunctions.net/openaiProxy`;
 
-// Function to call OpenAI API with conversation context
+// Function to call OpenAI API via Firebase Functions proxy
 export const askOpenAI = async (question: string, userContext: string, conversationHistory: Array<{question: string, response: string}> = []) => {
-  if (!OPENAI_API_KEY) {
-    throw new Error('OpenAI API key is missing');
-  }
-
   try {
+    // Get the current user's ID token for authentication
+    const currentUser = auth().currentUser;
+    if (!currentUser) {
+      throw new Error('User not authenticated');
+    }
+
+    const idToken = await currentUser.getIdToken();
+
     // Build messages array starting with system message
     const messages = [
       { 
@@ -19,52 +24,59 @@ export const askOpenAI = async (question: string, userContext: string, conversat
       }
     ];
 
-    // Add conversation history for context (limit to last 10 exchanges to manage token usage)
-    const recentHistory = conversationHistory.slice(-10);
-    recentHistory.forEach(exchange => {
-      messages.push({ role: 'user', content: exchange.question });
-      messages.push({ role: 'assistant', content: exchange.response });
+    // Add conversation history
+    conversationHistory.forEach(({ question, response }) => {
+      messages.push({ role: 'user', content: question });
+      messages.push({ role: 'assistant', content: response });
     });
 
     // Add the current question
     messages.push({ role: 'user', content: question });
 
+    console.log('Calling OpenAI via Firebase Functions proxy...');
+
+    // Call our Firebase Functions proxy instead of OpenAI directly
     const response = await axios.post(
-      'https://api.openai.com/v1/chat/completions',
+      OPENAI_PROXY_URL,
       {
-        model: 'gpt-4o',
-        messages: messages,
-        max_tokens: 100  // Roughly 300 characters
+        messages,
+        model: 'gpt-3.5-turbo',
+        max_tokens: 150,
+        temperature: 0.7
       },
       {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${OPENAI_API_KEY}`
-        }
+          'Authorization': `Bearer ${idToken}`
+        },
+        timeout: 30000 // 30 second timeout
       }
     );
+
+    if (response.data.choices && response.data.choices.length > 0) {
+      return response.data.choices[0].message.content.trim();
+    } else {
+      throw new Error('No response from OpenAI');
+    }
+
+  } catch (error: any) {
+    console.error('Error calling OpenAI proxy:', error);
     
-    // Log token usage for chat feature
-    const usage = response.data.usage;
-    if (usage) {
-      console.log('🤖 CHAT AI TOKEN USAGE:', {
-        prompt_tokens: usage.prompt_tokens,
-        completion_tokens: usage.completion_tokens,
-        total_tokens: usage.total_tokens,
-        model: 'gpt-4o',
-        feature: 'chat',
-        timestamp: new Date().toISOString()
-      });
+    if (error.response) {
+      console.error('Response data:', error.response.data);
+      console.error('Response status:', error.response.status);
+      
+      if (error.response.status === 401) {
+        throw new Error('Authentication failed. Please sign in again.');
+      } else if (error.response.data?.details) {
+        throw new Error(`OpenAI Error: ${error.response.data.details}`);
+      }
     }
     
-    return response.data.choices[0].message.content;
-  } catch (error) {
-    console.error('Error calling OpenAI API:', error);
-    throw error;
+    throw new Error('Failed to get response from AI assistant');
   }
 };
 
-// Create a default export with all utility functions
 const openAIUtils = {
   askOpenAI,
 };

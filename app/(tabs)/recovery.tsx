@@ -10,15 +10,16 @@ import { useAuth } from '../../context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import WeeklyOverview from '../components/WeeklyOverview';
-import Constants from 'expo-constants';
+import { auth } from '../../config/firebase';
 import Animated, { FadeIn, FadeInDown, PinwheelIn, SlideInRight } from 'react-native-reanimated';
 import analyticsService from '../../services/analytics';
 import RecoveryPlanGenerationLoader from '../components/RecoveryPlanGenerationLoader';
 import { XpHeaderBanner } from '../components/XpHeaderBanner';
 import { useXp } from '../../context/XpContext';
 
-// Add this line to get the API key from Constants.expoConfig.extra
-const OPENAI_API_KEY = Constants.expoConfig?.extra?.openaiApiKey;
+// Firebase Functions URL for OpenAI proxy
+const FIREBASE_PROJECT_ID = 'love-b6fe6';
+const OPENAI_PROXY_URL = `https://us-central1-${FIREBASE_PROJECT_ID}.cloudfunctions.net/openaiProxy`;
 
 // SCREENSHOT FEATURE: Toggle this to make header fixed for screenshots
 // When true: Header stays fixed at top when scrolling (perfect for screenshots)
@@ -360,7 +361,7 @@ export default function RecoveryScreen() {
     try {
       const toolsAvailable = selectedTools.length > 0 
         ? `Available recovery tools: ${selectedTools.join(', ')}`
-        : "No special recovery tools available. Suggest only bodyweight movements, walking, jogging, and other equipment-free activities.";
+        : "No special recovery tools available. Focus on physical activities like stretching, light movement, walking, jogging, bodyweight exercises, and other equipment-free physical activities.";
 
       // Load last 4 days of recovery plans for context
       const lastPlans = await loadLastRecoveryPlans();
@@ -376,6 +377,8 @@ Important guidelines for recovery tools:
 - If recommending Sauna, ALWAYS suggest a minimum of 10 minutes to get the benefits
 - If recommending Compression, ALWAYS suggest between 10-30 minutes (no more, no less)
 - DO NOT feel obligated to use all available tools - only suggest what is appropriate based on the metrics and time available
+- Focus ONLY on PHYSICAL activities - NO breathing exercises, meditation, or mental techniques
+- When no tools available, suggest physical movements like stretching, walking, light jogging, bodyweight exercises
       `.trim();
 
       const prompt = `Create a focused, concise recovery plan based on these metrics:
@@ -400,55 +403,62 @@ CRITICAL TOOL SELECTION RULES:
 - Prioritize tools based on recovery metrics (high soreness = foam rolling/massage, high fatigue = compression/cold exposure)
 - If multiple tools selected, ensure they complement each other
 
-Create a clean, scannable recovery plan with:
+Create a clean, scannable recovery plan focused ONLY on PHYSICAL activities with:
 1. MAXIMUM 5 activities total
-2. Focus on the most impactful recovery methods for today's metrics
+2. Focus on the most impactful PHYSICAL recovery methods for today's metrics
 3. All activities must be compatible and doable in sequence
 4. Progressive structure: light warm-up → main recovery → brief cool-down
 5. Fit within ${selectedTime} timeframe
 6. Avoid repeating exact activities from previous plans
+7. NO breathing exercises, meditation, or mental aspects - ONLY physical movements
 
 Format each activity as a clean two-line bullet point:
-"• [Activity] [Duration]
+"• [Activity] [Duration]  
 [Concise instruction]"
 
-Examples:
+Examples of PHYSICAL activities only:
 • Joint mobility 5min
 Gentle circles and stretches
 • Foam rolling 10min
 Focus on tight areas, slow pressure
 • Cold shower 3min
 Gradual temperature decrease
-• Deep breathing 5min
-4-7-8 breathing pattern
+• Light walking 8min
+Easy pace outdoors
+• Dynamic stretching 6min
+Leg swings and arm circles
 
 Keep instructions brief and actionable, under 8 words each.`;
 
-      console.log('Making recovery plan API request...');
+      console.log('Making recovery plan API request via Firebase Functions proxy...');
       
-      // Validate API key
-      if (!OPENAI_API_KEY) {
-        throw new Error('OpenAI API key not found');
+      // Get the current user's ID token for authentication
+      const currentUser = auth().currentUser;
+      if (!currentUser) {
+        throw new Error('User not authenticated');
       }
 
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const idToken = await currentUser.getIdToken();
+
+      const response = await fetch(OPENAI_PROXY_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+          'Authorization': `Bearer ${idToken}`,
         },
         body: JSON.stringify({
           model: 'o3',
           messages: [
             {
               role: 'system',
-              content: `You are a professional sports recovery specialist creating focused, concise recovery plans. Your job is to be SELECTIVE and choose only the most impactful tools for each athlete's specific needs.
+              content: `You are a professional sports recovery specialist creating focused, concise PHYSICAL recovery plans. Your job is to be SELECTIVE and choose only the most impactful PHYSICAL tools for each athlete's specific needs.
 
 CRITICAL SELECTION RULES:
 - Choose ONLY 1-2 recovery tools maximum per plan
 - Tools must be compatible and usable in the same location
 - Base selection on recovery metrics (high soreness = foam rolling/massage, high fatigue = compression/cold exposure)
 - Create SHORT, focused plans with 4-5 activities maximum
+- Focus EXCLUSIVELY on PHYSICAL activities - NO breathing exercises, meditation, or mental techniques
 
 IMPORTANT SAFETY GUIDELINES: 
 - Cold exposure must NEVER exceed 5 minutes in a row
@@ -459,7 +469,9 @@ IMPORTANT USAGE GUIDELINES:
 - Be highly selective - don't use all available tools
 - Prioritize impact over variety
 - Keep instructions brief but specific
-- Avoid repeating activities from previous plans`
+- Avoid repeating activities from previous plans
+- When no tools are available, suggest physical activities like stretching, walking, light jogging, bodyweight movements, joint mobility
+- NEVER suggest breathing exercises, meditation, mindfulness, or mental recovery techniques`
             },
             {
               role: 'user',
