@@ -1,5 +1,5 @@
 import { View, Text, SafeAreaView, StyleSheet, TextInput, Pressable, ScrollView, Alert, Image, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { useTraining } from '../../context/TrainingContext';
@@ -13,6 +13,7 @@ import analyticsService from '../../services/analytics';
 import Accordion from '../components/Accordion';
 import TrainingPlanGenerationLoader from '../components/TrainingPlanGenerationLoader';
 import { XpHeaderBanner } from '../components/XpHeaderBanner';
+import { useXp } from '../../context/XpContext';
 
 type FocusArea = 'technique' | 'strength' | 'endurance' | 'speed' | 'overall';
 type GymAccess = 'yes' | 'no';
@@ -755,11 +756,49 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     lineHeight: 20,
   },
+  // Completion styles (exact copy from recovery tab)
+  completedBadgeContainer: {
+    alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  completedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#99E86C',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  completedBadgeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  completionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 20,
+    paddingVertical: 12,
+    borderRadius: 36,
+  },
+  completeButton: {
+    backgroundColor: '#4064F6',
+  },
+  completionButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
 });
 
 export default function TrainingScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const { awardXp } = useXp();
   const { addPlan, plans, clearPlans, removePlanById } = useTraining();
   const [selectedFocus, setSelectedFocus] = useState<FocusArea | null>(null);
   const [gymAccess, setGymAccess] = useState<GymAccess | null>(null);
@@ -784,6 +823,50 @@ export default function TrainingScreen() {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [lastPlanText, setLastPlanText] = useState<string>('');
   const [completedDrills, setCompletedDrills] = useState<{ [key: string]: boolean }>({});
+  const [completedDays, setCompletedDays] = useState<{ [key: string]: boolean }>({});
+
+  // Load training day completion status from Firestore
+  const loadTrainingDayCompletion = useCallback(async (planId: string) => {
+    if (!user || !planId) return;
+
+    try {
+      const completionRef = db.collection('users').doc(user.uid).collection('trainingCompletions').doc(planId);
+      const completionSnap = await completionRef.get();
+      
+      if (completionSnap.exists) {
+        const completionData = completionSnap.data();
+        setCompletedDays(completionData?.completedDays || {});
+        console.log(`Loaded training completion data for plan ${planId}:`, completionData?.completedDays);
+      } else {
+        setCompletedDays({});
+        console.log(`No completion data found for plan ${planId}`);
+      }
+    } catch (error) {
+      console.error('Error loading training completion data:', error);
+      setCompletedDays({});
+    }
+  }, [user]);
+
+  // Save training day completion to Firestore
+  const saveTrainingDayCompletion = async (planId: string, dayKey: string) => {
+    if (!user || !planId) return;
+
+    try {
+      const completionRef = db.collection('users').doc(user.uid).collection('trainingCompletions').doc(planId);
+      
+      await completionRef.set({
+        completedDays: {
+          [dayKey]: true
+        },
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+
+      console.log(`Saved training completion for ${dayKey} in plan ${planId}`);
+    } catch (error) {
+      console.error('Error saving training completion:', error);
+      throw error;
+    }
+  };
   
   // Reference to the main ScrollView
   const scrollViewRef = useRef<ScrollView>(null);
@@ -810,6 +893,13 @@ export default function TrainingScreen() {
       }
     }
   }, [plans.length, currentStep]);
+
+  // Load completion data when selectedPlanId changes
+  useEffect(() => {
+    if (selectedPlanId) {
+      loadTrainingDayCompletion(selectedPlanId);
+    }
+  }, [selectedPlanId, loadTrainingDayCompletion]);
 
   // Function to calculate time until next generation is available
   const calculateTimeUntilNextGeneration = () => {
@@ -970,6 +1060,9 @@ export default function TrainingScreen() {
     if (planId === selectedPlanId) return; // Don't animate if same plan
     
     setIsTransitioning(true);
+    
+    // Load completion data for the new plan
+    loadTrainingDayCompletion(planId);
     
     // Short delay to show transition feedback
     setTimeout(() => {
@@ -1794,6 +1887,60 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
     }));
   };
 
+  // Check if a day is in the past or current day (not future)
+  const isDayEligibleForCompletion = (day: string) => {
+    const today = format(new Date(), 'EEEE').toLowerCase();
+    const dayOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const currentDayIndex = dayOrder.indexOf(today);
+    const targetDayIndex = dayOrder.indexOf(day.toLowerCase());
+    
+    // Can complete if it's today or in the past
+    return targetDayIndex <= currentDayIndex;
+  };
+
+  // Toggle day completion and award XP
+  const toggleDayCompletion = async (day: string, planId: string) => {
+    const key = `${planId}-${day}`;
+    const isCurrentlyCompleted = completedDays[key];
+    
+    // Only allow completion, not un-completion, and only for eligible days
+    if (isCurrentlyCompleted || !isDayEligibleForCompletion(day)) {
+      return;
+    }
+
+    try {
+      // Mark as completed locally
+      setCompletedDays(prev => ({
+        ...prev,
+        [key]: true
+      }));
+
+      // Save completion to Firestore
+      await saveTrainingDayCompletion(planId, key);
+
+      // Award XP for completing training day
+      try {
+        const xpAward = await awardXp(300, 'training'); // 300 XP for completing training day
+        if (xpAward.eligible && xpAward.amount > 0) {
+          console.log(`🎉 Awarded ${xpAward.amount} XP for completing ${day} training!`);
+        }
+      } catch (xpError) {
+        console.error('Error awarding XP for training completion:', xpError);
+        // Don't fail the completion if XP fails
+      }
+
+      console.log(`Training day ${day} marked as completed`);
+      
+    } catch (error) {
+      console.error('Error completing training day:', error);
+      // Revert the local state if save failed
+      setCompletedDays(prev => ({
+        ...prev,
+        [key]: false
+      }));
+    }
+  };
+
   const renderContent = () => {
     switch (currentStep) {
       case 'plans':
@@ -1896,6 +2043,10 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
                     const isGym = isGymDay(parsed);
                     const isRecovery = parsed.isRecovery || isRecoveryDay(parsed.drills);
                     const isGame = parsed.isGame || isGameDay(parsed.drills);
+                    
+                    const dayKey = `${selectedPlanId}-${day}`;
+                    const isDayCompleted = completedDays[dayKey];
+                    const canCompleteDay = isDayEligibleForCompletion(day);
                     
                     return (
                       <Accordion 
@@ -2003,6 +2154,37 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
                                 })}
                               </ScrollView>
                             </>
+                          )}
+                          
+                          {/* Day Completion Button - exact same as recovery plan completion */}
+                          {isDayCompleted ? (
+                            <View style={styles.completedBadgeContainer}>
+                              <View style={styles.completedBadge}>
+                                <Ionicons name="checkmark-outline" size={16} color="#FFFFFF" />
+                                <Text style={styles.completedBadgeText}>Completed</Text>
+                              </View>
+                            </View>
+                          ) : (
+                            // Only show button if day is eligible (same as recovery - no disabled state)
+                            canCompleteDay && (
+                              <Pressable
+                                style={({ pressed }) => [
+                                  styles.completionButton,
+                                  styles.completeButton,
+                                  pressed && { opacity: 0.8 }
+                                ]}
+                                onPress={() => selectedPlanId && toggleDayCompletion(day, selectedPlanId)}
+                              >
+                                <Text style={styles.completionButtonText}>
+                                  Mark as Completed
+                                </Text>
+                                <Ionicons 
+                                  name="checkmark-circle"
+                                  size={20} 
+                                  color="#FFFFFF" 
+                                />
+                              </Pressable>
+                            )
                           )}
                         </View>
                       </Accordion>
