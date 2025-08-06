@@ -1144,6 +1144,9 @@ export default function ProfileScreen() {
                 Profile
               </Text>
 
+              {/* Compact Level Indicator */}
+              <XpHeaderBanner compact={true} />
+
               <View style={{
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -1173,9 +1176,6 @@ export default function ProfileScreen() {
               </View>
             </View>
           </View>
-
-          {/* XP Header Banner */}
-          <XpHeaderBanner />
 
           {/* Main content */}
           <View style={styles.content}>

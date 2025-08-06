@@ -2626,6 +2626,9 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
                 Training
               </Text>
 
+              {/* Compact Level Indicator */}
+              <XpHeaderBanner compact={true} />
+
               <View style={{
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -2655,9 +2658,6 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
               </View>
             </View>
           </View>
-
-          {/* XP Header Banner */}
-          <XpHeaderBanner />
 
           {/* Content */}
           {renderContent()}

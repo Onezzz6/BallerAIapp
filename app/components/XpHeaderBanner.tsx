@@ -6,9 +6,10 @@ import { XP_CONSTANTS } from '../../types/xp';
 
 interface XpHeaderBannerProps {
   onTap?: () => void;
+  compact?: boolean; // New prop for compact mode
 }
 
-export const XpHeaderBanner: React.FC<XpHeaderBannerProps> = ({ onTap }) => {
+export const XpHeaderBanner: React.FC<XpHeaderBannerProps> = ({ onTap, compact = false }) => {
   const { xpData, isLoading, isCapReached } = useXp();
 
   if (isLoading || !xpData) {
@@ -51,6 +52,36 @@ export const XpHeaderBanner: React.FC<XpHeaderBannerProps> = ({ onTap }) => {
 
   const Container = onTap ? TouchableOpacity : View;
 
+  if (compact) {
+    // Compact version similar to Clash Royale
+    return (
+      <Container 
+        style={styles.compactContainer}
+        onPress={onTap}
+        activeOpacity={onTap ? 0.7 : 1}
+      >
+        {/* Level Badge */}
+        <View style={[styles.compactLevelBadge, { backgroundColor: '#4A90E2' }]}>
+          <Text style={styles.compactLevelText}>{xpData.level}</Text>
+        </View>
+        
+        {/* Progress Bar */}
+        <View style={styles.compactProgressBar}>
+          <View 
+            style={[
+              styles.compactProgressFill, 
+              { 
+                width: `${progressPercentage}%`,
+                backgroundColor: '#4A90E2'
+              }
+            ]} 
+          />
+        </View>
+      </Container>
+    );
+  }
+
+  // Original full version
   return (
     <Container 
       style={styles.container}
@@ -87,6 +118,7 @@ export const XpHeaderBanner: React.FC<XpHeaderBannerProps> = ({ onTap }) => {
 };
 
 const styles = StyleSheet.create({
+  // Original styles
   container: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -133,5 +165,48 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#495057',
     fontWeight: '500',
+  },
+  
+  // Compact styles (Clash Royale inspired)
+  compactContainer: {
+    alignItems: 'center',
+    width: 50,
+  },
+  compactLevelBadge: {
+    width: 40,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  compactLevelText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  compactProgressBar: {
+    width: 40,
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 2,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  compactProgressFill: {
+    height: '100%',
+    borderRadius: 2,
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    minWidth: 0,
   },
 }); 

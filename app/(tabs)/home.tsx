@@ -1773,6 +1773,9 @@ export default function HomeScreen() {
                 Home
               </Text>
 
+              {/* Compact Level Indicator */}
+              <XpHeaderBanner compact={true} />
+
               <View style={{
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -1802,9 +1805,6 @@ export default function HomeScreen() {
               </View>
             </View>
           </View>
-
-          {/* XP Header Banner */}
-          <XpHeaderBanner />
 
           <View style={{ padding: 16, gap: 24 }}>
             {/* Overview Section */}
