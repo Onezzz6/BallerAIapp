@@ -273,12 +273,12 @@ export default function ProfileCompleteScreen() {
         }
       } else if (hasReferralCode) {
         console.log('🎁 Showing DISCOUNT paywall for referral user');
-        const referralOffering = offeringsResult.all['ReferralOffering'];
+        const referralOffering = offeringsResult.all['NewReferralOffering'];
         offeringUsed = referralOffering;
         if (referralOffering) {
           paywallResult = await RevenueCatUI.presentPaywall({ offering: referralOffering });
         } else {
-          console.warn('ReferralOffering not found, falling back to StandardOffering');
+          console.warn('NewReferralOffering not found, falling back to StandardOffering');
           const standardOffering = offeringsResult.all['StandardOffering'];
           if (standardOffering) {
             paywallResult = await RevenueCatUI.presentPaywall({ offering: standardOffering });
