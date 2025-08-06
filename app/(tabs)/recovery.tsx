@@ -1654,6 +1654,9 @@ IMPORTANT USAGE GUIDELINES:
           Recovery
         </Text>
 
+        {/* Compact Level Indicator */}
+        <XpHeaderBanner compact={true} />
+
         <View style={{
           flexDirection: 'row',
           alignItems: 'center',
@@ -1715,8 +1718,7 @@ IMPORTANT USAGE GUIDELINES:
           {/* Header - Only render when not fixed */}
           {!FIXED_HEADER_FOR_SCREENSHOT && renderHeader()}
 
-          {/* XP Header Banner */}
-          <XpHeaderBanner />
+
 
           <View style={styles.contentContainer}>
             {/* Weekly Overview */}

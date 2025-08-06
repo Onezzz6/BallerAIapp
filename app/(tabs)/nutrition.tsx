@@ -2975,6 +2975,9 @@ export default function NutritionScreen() {
               Nutrition
             </Text>
 
+            {/* Compact Level Indicator */}
+            <XpHeaderBanner compact={true} />
+
             <View style={{
               flexDirection: 'row',
               alignItems: 'center',
@@ -3004,9 +3007,6 @@ export default function NutritionScreen() {
             </View>
           </View>
         </View>
-
-        {/* XP Header Banner */}
-        <XpHeaderBanner />
 
         {/* Weekly Overview */}
         <View style={{ backgroundColor: '#FFFFFF' }}>
