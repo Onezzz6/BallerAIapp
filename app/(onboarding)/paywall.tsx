@@ -453,15 +453,15 @@ export async function runPostLoginSequence(
       } else if (hasReferralCode) {
         // For discount referral users, show the referral offering with discounted products
         console.log("🎁 Presenting DISCOUNT paywall for discount referral user");
-        const referralOffering = offerings.all['ReferralOffering'];
+        const referralOffering = offerings.all['NewReferralOffering'];
         
         if (referralOffering) {
-          console.log("✅ ReferralOffering found, presenting with discount");
+          console.log("✅ NewReferralOffering found, presenting with discount");
           paywallResult = await RevenueCatUI.presentPaywall({
             offering: referralOffering
           });
         } else {
-          console.warn("⚠️ ReferralOffering not found, falling back to StandardOffering");
+          console.warn("⚠️ NewReferralOffering not found, falling back to StandardOffering");
           const standardOffering = offerings.all['StandardOffering'];
           if (standardOffering) {
             paywallResult = await RevenueCatUI.presentPaywall({
@@ -685,14 +685,14 @@ export function PaywallScreen() {
         }
       } else if (hasReferralCode) {
         console.log('🎁 Showing DISCOUNT paywall for referral user');
-        const referralOffering = offeringsResult.all['ReferralOffering'];
+        const referralOffering = offeringsResult.all['NewReferralOffering'];
         
         if (referralOffering) {
           paywallResult = await RevenueCatUI.presentPaywall({
             offering: referralOffering
           });
         } else {
-          console.warn('ReferralOffering not found, falling back to StandardOffering');
+          console.warn('NewReferralOffering not found, falling back to StandardOffering');
           const standardOffering = offeringsResult.all['StandardOffering'];
           if (standardOffering) {
             paywallResult = await RevenueCatUI.presentPaywall({
