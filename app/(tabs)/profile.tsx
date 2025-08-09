@@ -18,6 +18,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import { calculateNutritionGoals } from '../../utils/nutritionCalculations';
 import Animated, { PinwheelIn } from 'react-native-reanimated';
 import { XpHeaderBanner } from '../components/XpHeaderBanner';
+import { LevelProgressIndicator } from '../components/LevelProgressIndicator';
 
 type UserData = {
   username?: string;
@@ -1145,7 +1146,7 @@ export default function ProfileScreen() {
               </Text>
 
               {/* Compact Level Indicator */}
-              <XpHeaderBanner compact={true} />
+              <LevelProgressIndicator />
 
               <View style={{
                 flexDirection: 'row',

@@ -6,7 +6,7 @@ import { XP_CONSTANTS } from '../../types/xp';
 
 interface XpHeaderBannerProps {
   onTap?: () => void;
-  compact?: boolean; // New prop for compact mode
+  compact?: boolean;
 }
 
 export const XpHeaderBanner: React.FC<XpHeaderBannerProps> = ({ onTap, compact = false }) => {
@@ -53,29 +53,35 @@ export const XpHeaderBanner: React.FC<XpHeaderBannerProps> = ({ onTap, compact =
   const Container = onTap ? TouchableOpacity : View;
 
   if (compact) {
-    // Compact version similar to Clash Royale
+    // Enhanced compact version with better visibility
     return (
       <Container 
         style={styles.compactContainer}
         onPress={onTap}
         activeOpacity={onTap ? 0.7 : 1}
       >
-        {/* Level Badge */}
-        <View style={[styles.compactLevelBadge, { backgroundColor: '#4A90E2' }]}>
+        {/* Level Badge with better styling */}
+        <View style={[styles.compactLevelBadge, { backgroundColor: badgeColor }]}>
           <Text style={styles.compactLevelText}>{xpData.level}</Text>
         </View>
         
-        {/* Progress Bar */}
-        <View style={styles.compactProgressBar}>
-          <View 
-            style={[
-              styles.compactProgressFill, 
-              { 
-                width: `${progressPercentage}%`,
-                backgroundColor: '#4A90E2'
-              }
-            ]} 
-          />
+        {/* Progress Bar with XP info */}
+        <View style={styles.compactProgressContainer}>
+          <View style={styles.compactProgressBar}>
+            <View 
+              style={[
+                styles.compactProgressFill, 
+                { 
+                  width: `${progressPercentage}%`,
+                  backgroundColor: badgeColor
+                }
+              ]} 
+            />
+          </View>
+          {/* XP Text below progress bar */}
+          <Text style={styles.compactXpText}>
+            {isMaxLevel ? 'MAX' : `${xpInCurrentLevel}/${xpNeededForCurrentLevel}`}
+          </Text>
         </View>
       </Container>
     );
@@ -105,9 +111,6 @@ export const XpHeaderBanner: React.FC<XpHeaderBannerProps> = ({ onTap, compact =
               }
             ]} 
           />
-          {/* Alternative flex-based approach - uncomment if percentage doesn't work */}
-          {/* <View style={{ flex: progressPercentage, backgroundColor: badgeColor, height: '100%' }} />
-          <View style={{ flex: 100 - progressPercentage, backgroundColor: 'transparent' }} /> */}
         </View>
         <Text style={styles.xpText}>
           {isMaxLevel ? 'MAX LEVEL' : `${xpInCurrentLevel.toLocaleString()} / ${xpNeededForCurrentLevel.toLocaleString()} XP`}
@@ -167,46 +170,58 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   
-  // Compact styles (Clash Royale inspired)
+  // Enhanced compact styles
   compactContainer: {
     alignItems: 'center',
-    width: 50,
+    minWidth: 60, // Increased from 50 to accommodate text
+    paddingHorizontal: 4,
   },
   compactLevelBadge: {
-    width: 40,
-    height: 24,
-    borderRadius: 12,
+    width: 36,
+    height: 20,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 3,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 1,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
   },
   compactLevelText: {
     color: 'white',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
   },
+  compactProgressContainer: {
+    alignItems: 'center',
+    width: '100%',
+  },
   compactProgressBar: {
-    width: 40,
-    height: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    borderRadius: 2,
+    width: 36,
+    height: 3,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    borderRadius: 1.5,
     overflow: 'hidden',
     position: 'relative',
+    marginBottom: 2,
   },
   compactProgressFill: {
     height: '100%',
-    borderRadius: 2,
+    borderRadius: 1.5,
     position: 'absolute',
     left: 0,
     top: 0,
     minWidth: 0,
+  },
+  compactXpText: {
+    fontSize: 8,
+    color: '#666',
+    fontWeight: '500',
+    textAlign: 'center',
   },
 }); 

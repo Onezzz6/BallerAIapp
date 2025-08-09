@@ -15,6 +15,7 @@ import Animated, { FadeIn, FadeInDown, PinwheelIn, SlideInRight } from 'react-na
 import analyticsService from '../../services/analytics';
 import RecoveryPlanGenerationLoader from '../components/RecoveryPlanGenerationLoader';
 import { XpHeaderBanner } from '../components/XpHeaderBanner';
+import { LevelProgressIndicator } from '../components/LevelProgressIndicator';
 import { useXp } from '../../context/XpContext';
 
 // Firebase Functions URL for OpenAI proxy
@@ -1655,7 +1656,7 @@ IMPORTANT USAGE GUIDELINES:
         </Text>
 
         {/* Compact Level Indicator */}
-        <XpHeaderBanner compact={true} />
+                      <LevelProgressIndicator />
 
         <View style={{
           flexDirection: 'row',

@@ -19,6 +19,7 @@ import ReanimatedAnimated, { PinwheelIn } from 'react-native-reanimated';
 import analytics from '@react-native-firebase/analytics'; // Add analytics import
 import ViewShot from 'react-native-view-shot';
 import { XpHeaderBanner } from '../components/XpHeaderBanner';
+import { LevelProgressIndicator } from '../components/LevelProgressIndicator';
 
 // Animated Typing Indicator Component
 const TypingIndicator = () => {
@@ -1773,8 +1774,8 @@ export default function HomeScreen() {
                 Home
               </Text>
 
-              {/* Compact Level Indicator */}
-              <XpHeaderBanner compact={true} />
+              {/* Level Progress Indicator - New Component */}
+              <LevelProgressIndicator />
 
               <View style={{
                 flexDirection: 'row',
