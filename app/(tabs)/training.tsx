@@ -13,6 +13,7 @@ import analyticsService from '../../services/analytics';
 import Accordion from '../components/Accordion';
 import TrainingPlanGenerationLoader from '../components/TrainingPlanGenerationLoader';
 import { XpHeaderBanner } from '../components/XpHeaderBanner';
+import { LevelProgressIndicator } from '../components/LevelProgressIndicator';
 import { useXp } from '../../context/XpContext';
 
 type FocusArea = 'technique' | 'strength' | 'endurance' | 'speed' | 'overall';
@@ -2627,7 +2628,7 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
               </Text>
 
               {/* Compact Level Indicator */}
-              <XpHeaderBanner compact={true} />
+              <LevelProgressIndicator />
 
               <View style={{
                 flexDirection: 'row',

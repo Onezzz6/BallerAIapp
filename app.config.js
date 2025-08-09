@@ -29,9 +29,11 @@ export default {
       package: "com.ballerbizoy.ballerai",
       versionCode: 50,
       googleServicesFile: "./google-services.json",
+      icon: "./assets/images/icon.png",
       adaptiveIcon: {
-        foregroundImage: "./assets/images/adaptive-icon.png",
-        backgroundColor: "#ffffff"
+        foregroundImage: "./assets/images/adaptiveicon.png",
+        backgroundColor: "#ffffff",
+        monochromeImage: "./assets/images/adaptiveicon.png"
       },
       permissions: [
         "CAMERA",
