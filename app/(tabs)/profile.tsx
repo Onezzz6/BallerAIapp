@@ -1098,13 +1098,25 @@ export default function ProfileScreen() {
             paddingHorizontal: 24,
             backgroundColor: '#ffffff',
           }}>
+
+          {/* Header - Scrolls with content */}
+          <View style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            height: 28,
+          }}>
+            {/* Compact Level Indicator */}
+            <LevelProgressIndicator />
+
             {/* Settings Button - Above the header */}
             <View style={{
               flexDirection: 'row',
               justifyContent: 'flex-end',
               marginBottom: 0,
-              marginTop: 0,
-              height: 14,
+              marginRight: 0,
+              marginTop: -12,
+              height: 12,
             }}>
               <Pressable
                 style={{
@@ -1119,20 +1131,23 @@ export default function ProfileScreen() {
                   shadowOpacity: 0.15,
                   shadowRadius: 1,
                   elevation: 1,
+                  borderWidth: 1,
+                  borderColor: 'rgba(0, 0, 0, 0.15)',
                 }}
                 onPress={() => router.push('/settings')}
               >
                 <Ionicons name="settings-outline" size={18} color="#000000" />
               </Pressable>
             </View>
-            
+            </View>
+
             {/* Header with Logo */}
             <View style={{
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'space-between',
-              height: 72,
-              marginTop: 0,
+              height: 52,
+              marginTop: -4,
             }}>
               {/* Title */}
               <Text style={{
@@ -1144,9 +1159,6 @@ export default function ProfileScreen() {
               maxFontSizeMultiplier={1.2}>
                 Profile
               </Text>
-
-              {/* Compact Level Indicator */}
-              <LevelProgressIndicator />
 
               <View style={{
                 flexDirection: 'row',
@@ -1209,6 +1221,7 @@ export default function ProfileScreen() {
               <View style={styles.usernameContainer}>
                 <Text style={styles.username}>{userData?.username || "User"}</Text>
               </View>
+
             </View>
 
             {/* Profile Info Section */}

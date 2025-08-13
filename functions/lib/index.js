@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.revenuecatWebhook = exports.openaiProxy = void 0;
+exports.revenuecatWebhook = exports.revenuecatProxy = exports.openaiProxy = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
 const admin = __importStar(require("firebase-admin"));
@@ -163,6 +163,98 @@ exports.openaiProxy = (0, https_1.onRequest)({
         }
         catch (error) {
             console.error('Error in OpenAI proxy:', error);
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    });
+});
+// RevenueCat API Proxy Functions
+exports.revenuecatProxy = (0, https_1.onRequest)({
+    region: 'us-central1',
+    cors: true,
+}, async (req, res) => {
+    const corsHandler = cors({
+        origin: true,
+        methods: ['POST', 'GET'],
+        allowedHeaders: ['Content-Type', 'Authorization']
+    });
+    corsHandler(req, res, async () => {
+        try {
+            // Verify user is authenticated
+            const authHeader = req.headers.authorization;
+            if (!authHeader || !authHeader.startsWith('Bearer ')) {
+                res.status(401).json({ error: 'Unauthorized' });
+                return;
+            }
+            const idToken = authHeader.split('Bearer ')[1];
+            let decodedToken;
+            try {
+                // Verify the Firebase ID token
+                decodedToken = await admin.auth().verifyIdToken(idToken);
+            }
+            catch (error) {
+                res.status(401).json({ error: 'Invalid token' });
+                return;
+            }
+            const { action, platform, ...requestData } = req.body;
+            if (!action || !platform) {
+                res.status(400).json({ error: 'Missing action or platform' });
+                return;
+            }
+            // Get the appropriate RevenueCat API key based on platform
+            const functions = require('firebase-functions');
+            const apiKey = platform === 'ios'
+                ? functions.config().revenuecat?.ios_key
+                : functions.config().revenuecat?.android_key;
+            if (!apiKey) {
+                res.status(500).json({ error: `RevenueCat API key not configured for ${platform}` });
+                return;
+            }
+            let revenuecatUrl = '';
+            let method = 'GET';
+            let body = null;
+            // Handle different RevenueCat API actions
+            switch (action) {
+                case 'getCustomerInfo':
+                    revenuecatUrl = `https://api.revenuecat.com/v1/subscribers/${decodedToken.uid}`;
+                    method = 'GET';
+                    break;
+                case 'getOfferings':
+                    revenuecatUrl = `https://api.revenuecat.com/v1/subscribers/${decodedToken.uid}/offerings`;
+                    method = 'GET';
+                    break;
+                case 'updateAttributes':
+                    revenuecatUrl = `https://api.revenuecat.com/v1/subscribers/${decodedToken.uid}/attributes`;
+                    method = 'POST';
+                    body = JSON.stringify({ attributes: requestData.attributes });
+                    break;
+                default:
+                    res.status(400).json({ error: `Unknown action: ${action}` });
+                    return;
+            }
+            // Make the request to RevenueCat API
+            const revenuecatResponse = await fetch(revenuecatUrl, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`,
+                    'X-Platform': platform,
+                },
+                ...(body && { body }),
+            });
+            const data = await revenuecatResponse.json();
+            if (!revenuecatResponse.ok) {
+                console.error('RevenueCat API error:', data);
+                res.status(revenuecatResponse.status).json({
+                    error: 'RevenueCat API error',
+                    details: data.message || 'Unknown error'
+                });
+                return;
+            }
+            // Return the RevenueCat response to the client
+            res.json(data);
+        }
+        catch (error) {
+            console.error('Error in RevenueCat proxy:', error);
             res.status(500).json({ error: 'Internal server error' });
         }
     });

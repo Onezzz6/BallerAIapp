@@ -45,7 +45,7 @@ export function calculateLevelProgress(totalXp: number): number {
 export function getBadgeColor(level: number): string {
   const colorIndex = Math.floor((level - 1) / XP_CONSTANTS.BADGE_COLOR_INTERVAL);
   const colors = [
-    '#3B82F6', // Blue (levels 1-25)
+    '#3F63F6', // Blue (levels 1-25)
     '#10B981', // Green (levels 26-50)
     '#F59E0B', // Yellow (levels 51-75)
     '#EF4444', // Red (levels 76-100)

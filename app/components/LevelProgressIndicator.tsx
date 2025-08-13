@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { Bar as ProgressBar } from 'react-native-progress';
 import { useXp } from '../../context/XpContext';
 import { calculateLevelProgress, getBadgeColor, calculateXpForLevel } from '../../utils/xpCalculations';
@@ -14,6 +14,9 @@ export const LevelProgressIndicator: React.FC<LevelProgressIndicatorProps> = ({
   style 
 }) => {
   const { xpData, isLoading } = useXp();
+  const screenWidth = Dimensions.get('window').width;
+  const containerWidth = screenWidth * 0.4; // Background pill is 40% of screen width
+  const progressBarWidth = containerWidth - 50; // Progress bar fills background with margins for badge and padding
 
   if (isLoading || !xpData) {
     return (
@@ -23,7 +26,7 @@ export const LevelProgressIndicator: React.FC<LevelProgressIndicatorProps> = ({
         </View>
         <ProgressBar 
           progress={0}
-          width={60}
+          width={progressBarWidth}
           height={8}
           color="#e9ecef"
           unfilledColor="rgba(0,0,0,0.1)"
@@ -54,32 +57,34 @@ export const LevelProgressIndicator: React.FC<LevelProgressIndicatorProps> = ({
       activeOpacity={onTap ? 0.8 : 1}
     >
       {/* Level Badge */}
-      <View style={[styles.levelBadge, { backgroundColor: badgeColor }]}>
-        <Text style={styles.levelText}>{xpData.level}</Text>
+      <View style={[styles.levelBadge, { backgroundColor: '#3F63F6' }]}>
+        <Text style={styles.levelText} allowFontScaling={false}>{xpData.level}</Text>
       </View>
       
       {/* Progress Bar */}
       <View style={styles.progressContainer}>
-        <ProgressBar 
-          progress={clampedProgress}
-          width={60}
-          height={8}
-          color={badgeColor}
-          unfilledColor="rgba(0,0,0,0.1)"
-          borderWidth={0}
-          borderRadius={4}
-          animated={true}
-          animationType="timing"
-          animationConfig={{ duration: 500 }}
-        />
-        
-        {/* XP Text */}
-        <Text style={styles.xpText}>
-          {isMaxLevel 
-            ? 'MAX' 
-            : `${xpInCurrentLevel}/${xpNeededForCurrentLevel}`
-          }
-        </Text>
+        <View style={styles.progressBarContainer}>
+          <ProgressBar 
+            progress={clampedProgress}
+            width={progressBarWidth}
+            height={20}
+            color="#99E86C"
+            unfilledColor="#3F63F6"
+            borderWidth={0}
+            borderRadius={24}
+            animated={true}
+            animationType="timing"
+            animationConfig={{ duration: 500 }}
+          />
+          
+          {/* XP Text overlaid on progress bar */}
+          <Text style={styles.xpTextOverlay} allowFontScaling={false}>
+            {isMaxLevel 
+              ? 'MAX' 
+              : `${xpInCurrentLevel}/${xpNeededForCurrentLevel}`
+            }
+          </Text>
+        </View>
       </View>
     </Container>
   );
@@ -91,54 +96,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
     borderRadius: 20,
-    paddingHorizontal: 12,
+    marginLeft: -2,
+    marginRight: -32,
+    marginTop: 1,
+    paddingHorizontal: 7,
     paddingVertical: 8,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.05)',
-    minWidth: 120, // Consistent width
-    height: 40, // Consistent height
+    minWidth: Dimensions.get('window').width * 0.4, // 40% of screen width
+    height: 32, // Consistent height
   },
   levelBadge: {
-    width: 28,
-    height: 28,
+    height: 24,
+    minWidth: 24,
     borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
+    marginLeft: -1,
+    marginRight: 12,
   },
   levelText: {
     color: 'white',
     fontSize: 14,
     fontWeight: '700',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 1,
   },
   progressContainer: {
-    flex: 1,
+    alignItems: 'flex-start',
+  },
+  progressBarContainer: {
+    position: 'relative',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  xpText: {
-    fontSize: 9,
-    color: '#666',
-    fontWeight: '600',
-    textAlign: 'center',
-    marginTop: 2,
+  xpTextOverlay: {
+    position: 'absolute',
+    fontSize: 12,
+    color: 'white',
+    fontWeight: '700',
   },
 }); 
