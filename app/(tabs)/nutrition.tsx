@@ -29,7 +29,6 @@ import GoalsEditModal from '../components/GoalsEditModal';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useRouter } from 'expo-router';
 import { XpHeaderBanner } from '../components/XpHeaderBanner';
-import { LevelProgressIndicator } from '../components/LevelProgressIndicator';
 import { useXp } from '../../context/XpContext';
 
 // Type definition for food analysis result
@@ -2975,9 +2974,6 @@ export default function NutritionScreen() {
             maxFontSizeMultiplier={1.2}>
               Nutrition
             </Text>
-
-            {/* Compact Level Indicator */}
-                          <LevelProgressIndicator />
 
             <View style={{
               flexDirection: 'row',

@@ -52,9 +52,9 @@ export const configureRevenueCat = async (uid?: string): Promise<void> => {
       return;
     }
 
-    // Get RevenueCat API key using consistent method with other services  
+    // Get RevenueCat API key using consistent method with other services
     const apiKey = Platform.OS === 'ios' 
-      ? Constants.expoConfig?.extra?.revenueCatIosApiKey
+      ? Constants.expoConfig?.extra?.revenueCatIosApiKey 
       : Constants.expoConfig?.extra?.revenueCatAndroidApiKey;
 
     if (!apiKey) {
@@ -63,8 +63,9 @@ export const configureRevenueCat = async (uid?: string): Promise<void> => {
       throw new Error('RevenueCat API key is required for proper functionality');
     }
 
-    console.log(`Configuring RevenueCat SDK${uid ? ` with initial user: ${uid}` : ''}`);
-    
+  console.log(`✅ Configuring RevenueCat SDK for ${Platform.OS}${uid ? ` with initial user: ${uid}` : ' (anonymous)'}`);
+  console.log('=== REVENUECAT DEBUG SESSION END ===');
+      
     // Configure RevenueCat - optionally with initial user ID
     await Purchases.configure({ 
       apiKey,

@@ -201,6 +201,7 @@ export default function ProfileCompleteScreen() {
       
       // Check if this device already has an active subscription
       const customerInfo = await Purchases.getCustomerInfo();
+      
       const hasActiveSubscription = !!customerInfo.entitlements.active[ENTITLEMENT_ID];
 
       console.log('🔥 SUBSCRIPTION_DEBUG - Profile complete subscription check:', {
@@ -224,11 +225,14 @@ export default function ProfileCompleteScreen() {
       await analyticsService.logEvent('A0_31_no_subscription_showing_paywall');
       
       // Fetch offerings for paywall modal
+      console.log('🔍 DEBUG - About to call Purchases.getOfferings()...');
       const offeringsResult = await Purchases.getOfferings();
+      console.log('🔍 DEBUG - getOfferings() completed successfully');
       await presentPaywallModal(offeringsResult);
 
     } catch (error) {
       console.error('Error checking subscription status:', error);
+      
       console.log('Subscription check failed, defaulting to paywall flow');
       await analyticsService.logEvent('A0_31_profile_complete_error');
       router.replace('/(onboarding)/paywall');
@@ -239,6 +243,10 @@ export default function ProfileCompleteScreen() {
 
   const presentPaywallModal = async (offeringsResult: PurchasesOfferings) => {
     try {
+      console.log('🔍 DEBUG - presentPaywallModal called with offerings:', {
+        all: Object.keys(offeringsResult.all),
+        current: offeringsResult.current?.identifier,
+      });
       console.log('Showing paywall based on referral code status');
       
       // Prevent duplicate paywall presented events
@@ -260,12 +268,16 @@ export default function ProfileCompleteScreen() {
         const freeTrialOffering = offeringsResult.all['FreeTrialOffering'];
         offeringUsed = freeTrialOffering;
         if (freeTrialOffering) {
+          console.log('🔍 DEBUG - About to call RevenueCatUI.presentPaywall with FreeTrialOffering');
           paywallResult = await RevenueCatUI.presentPaywall({ offering: freeTrialOffering });
+          console.log('🔍 DEBUG - RevenueCatUI.presentPaywall (FreeTrialOffering) completed with result:', paywallResult);
         } else {
           console.warn('FreeTrialOffering not found, falling back to StandardOffering');
           const standardOffering = offeringsResult.all['StandardOffering'];
           if (standardOffering) {
+            console.log('🔍 DEBUG - About to call RevenueCatUI.presentPaywall with StandardOffering (fallback)');
             paywallResult = await RevenueCatUI.presentPaywall({ offering: standardOffering });
+            console.log('🔍 DEBUG - RevenueCatUI.presentPaywall (StandardOffering fallback) completed with result:', paywallResult);
           } else {
             console.warn('StandardOffering also not found, using presentPaywallIfNeeded');
             paywallResult = await RevenueCatUI.presentPaywallIfNeeded({ requiredEntitlementIdentifier: ENTITLEMENT_ID });
@@ -276,15 +288,21 @@ export default function ProfileCompleteScreen() {
         const referralOffering = offeringsResult.all['NewReferralOffering'];
         offeringUsed = referralOffering;
         if (referralOffering) {
+          console.log('🔍 DEBUG - About to call RevenueCatUI.presentPaywall with NewReferralOffering');
           paywallResult = await RevenueCatUI.presentPaywall({ offering: referralOffering });
+          console.log('🔍 DEBUG - RevenueCatUI.presentPaywall (NewReferralOffering) completed with result:', paywallResult);
         } else {
           console.warn('NewReferralOffering not found, falling back to StandardOffering');
           const standardOffering = offeringsResult.all['StandardOffering'];
           if (standardOffering) {
+            console.log('🔍 DEBUG - About to call RevenueCatUI.presentPaywall with StandardOffering (referral fallback)');
             paywallResult = await RevenueCatUI.presentPaywall({ offering: standardOffering });
+            console.log('🔍 DEBUG - RevenueCatUI.presentPaywall (StandardOffering referral fallback) completed with result:', paywallResult);
           } else {
             console.warn('StandardOffering also not found, using presentPaywallIfNeeded');
+            console.log('🔍 DEBUG - About to call RevenueCatUI.presentPaywallIfNeeded');
             paywallResult = await RevenueCatUI.presentPaywallIfNeeded({ requiredEntitlementIdentifier: ENTITLEMENT_ID });
+            console.log('🔍 DEBUG - RevenueCatUI.presentPaywallIfNeeded completed with result:', paywallResult);
           }
         }
       } else {
@@ -292,10 +310,14 @@ export default function ProfileCompleteScreen() {
         const regularOffering = offeringsResult.all['StandardOffering'] || offeringsResult.current;
         offeringUsed = regularOffering;
         if (regularOffering) {
+          console.log('🔍 DEBUG - About to call RevenueCatUI.presentPaywall with StandardOffering (regular user)');
           paywallResult = await RevenueCatUI.presentPaywall({ offering: regularOffering });
+          console.log('🔍 DEBUG - RevenueCatUI.presentPaywall (StandardOffering regular user) completed with result:', paywallResult);
         } else {
           console.warn('StandardOffering not found, using presentPaywallIfNeeded as final fallback');
+          console.log('🔍 DEBUG - About to call RevenueCatUI.presentPaywallIfNeeded (final fallback)');
           paywallResult = await RevenueCatUI.presentPaywallIfNeeded({ requiredEntitlementIdentifier: ENTITLEMENT_ID });
+          console.log('🔍 DEBUG - RevenueCatUI.presentPaywallIfNeeded (final fallback) completed with result:', paywallResult);
         }
       }
 
@@ -345,7 +367,15 @@ export default function ProfileCompleteScreen() {
         router.replace('/(onboarding)/one-time-offer');
       }
     } catch (error) {
-      console.error('Error presenting paywall:', error);
+      console.error('❌ PAYWALL ERROR DETAILS:');
+      console.error('❌ Error type:', typeof error);
+      console.error('❌ Error constructor:', (error as any)?.constructor?.name);
+      console.error('❌ Error message:', (error as any)?.message);
+      console.error('❌ Error code:', (error as any)?.code);
+      console.error('❌ Error userInfo:', (error as any)?.userInfo);
+      console.error('❌ Full error object:', JSON.stringify(error, null, 2));
+      console.error('❌ Error stack:', (error as any)?.stack);
+      
       router.replace('/(onboarding)/one-time-offer');
     }
   };

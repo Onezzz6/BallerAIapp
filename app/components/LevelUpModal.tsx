@@ -128,7 +128,6 @@ export const LevelUpModal: React.FC<LevelUpModalProps> = ({
             onPress={onClose}
           >
             <Text style={styles.continueButtonText}>Continue</Text>
-            <Ionicons name="arrow-forward" size={20} color="white" />
           </TouchableOpacity>
         </Animated.View>
       </View>
@@ -223,7 +222,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 16,
+    borderRadius: 32,
     gap: 8,
   },
   continueButtonText: {

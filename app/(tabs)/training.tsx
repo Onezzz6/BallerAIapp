@@ -13,7 +13,6 @@ import analyticsService from '../../services/analytics';
 import Accordion from '../components/Accordion';
 import TrainingPlanGenerationLoader from '../components/TrainingPlanGenerationLoader';
 import { XpHeaderBanner } from '../components/XpHeaderBanner';
-import { LevelProgressIndicator } from '../components/LevelProgressIndicator';
 import { useXp } from '../../context/XpContext';
 
 type FocusArea = 'technique' | 'strength' | 'endurance' | 'speed' | 'overall';
@@ -749,7 +748,7 @@ const styles = StyleSheet.create({
   infoTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#4064F6',
+    color: '#3F63F6',
   },
   infoText: {
     fontSize: 14,
@@ -787,7 +786,7 @@ const styles = StyleSheet.create({
     borderRadius: 36,
   },
   completeButton: {
-    backgroundColor: '#4064F6',
+    backgroundColor: '#3F63F6',
   },
   completionButtonText: {
     fontSize: 16,
@@ -1963,7 +1962,7 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
             <View style={{ marginBottom: 24 }}>
               {!canGeneratePlan && lastGeneratedDate ? (
                 <View style={styles.timerContainer}>
-                  <Text style={styles.timerText}>
+                  <Text style={styles.timerText} allowFontScaling={false}>
                     Next plan available {format(timeUntilNextGeneration.nextDate, 'EEEE, MMMM d')}
                   </Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, justifyContent: 'center', gap: 5 }}>
@@ -2179,7 +2178,7 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
                                 ]}
                                 onPress={() => selectedPlanId && toggleDayCompletion(day, selectedPlanId)}
                               >
-                                <Text style={styles.completionButtonText}>
+                                <Text style={styles.completionButtonText} allowFontScaling={false}>
                                   Mark as Completed
                                 </Text>
                                 <Ionicons 
@@ -2546,7 +2545,7 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
                   {/* Add countdown timer if plan already generated */}
                   {!canGeneratePlan && lastGeneratedDate && (
                     <View style={styles.timerContainer}>
-                      <Text style={styles.timerText}>
+                      <Text style={styles.timerText} allowFontScaling={false}>
                         Next plan available {format(timeUntilNextGeneration.nextDate, 'EEEE, MMMM d')}
                       </Text>
                       <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, justifyContent: 'center', gap: 5 }}>
@@ -2626,9 +2625,6 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
               maxFontSizeMultiplier={1.2}>
                 Training
               </Text>
-
-              {/* Compact Level Indicator */}
-              <LevelProgressIndicator />
 
               <View style={{
                 flexDirection: 'row',
