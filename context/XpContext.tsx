@@ -5,10 +5,10 @@ import { useAuth } from './AuthContext';
 import { XpData, XpAward, LevelUpEvent, XP_CONSTANTS } from '../types/xp';
 import {
   calculateLevelFromXp,
-  isNewDay,
+  formatDateForXp,
   isTargetDateEligibleForXp,
   calculateXpAwardForDate,
-  formatDateForXp,
+  getDeviceTimezone,
 } from '../utils/xpCalculations';
 import { migrateUserToXpSystem } from '../utils/xpMigration';
 
@@ -17,72 +17,88 @@ interface XpContextType {
   xpData: XpData | null;
   isLoading: boolean;
   
-  // Core method for awarding XP with target date
+  // Core method for awarding XP
   awardXp: (amount: number, reason: 'meal' | 'recovery' | 'training', targetDate: Date) => Promise<XpAward>;
   
-  // Level up events
-  onLevelUp: (callback: (event: LevelUpEvent) => void) => void;
+  // Level up event handling (RESTORED ORIGINAL SYSTEM)
+  levelUpEvent: LevelUpEvent | null;
+  clearLevelUpEvent: () => void;
   
-  // Manual refresh
+  // Utility methods
   refreshXpData: () => Promise<void>;
 }
 
-const XpContext = createContext<XpContextType | null>(null);
+const XpContext = createContext<XpContextType>({
+  xpData: null,
+  isLoading: true,
+  awardXp: async () => ({ reason: 'meal', amount: 0, timestamp: 0, eligible: false, targetDate: '' }),
+  levelUpEvent: null,
+  clearLevelUpEvent: () => {},
+  refreshXpData: async () => {},
+});
 
-export function XpProvider({ children }: { children: React.ReactNode }) {
+export const useXp = () => useContext(XpContext);
+
+export const XpProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [xpData, setXpData] = useState<XpData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const levelUpCallbacks = useRef<((event: LevelUpEvent) => void)[]>([]);
+  const [levelUpEvent, setLevelUpEvent] = useState<LevelUpEvent | null>(null); // RESTORED ORIGINAL STATE
 
-  // Load XP data from Firebase
-  const loadXpData = useCallback(async () => {
+  // Subscribe to user's XP data
+  useEffect(() => {
     if (!user?.uid) {
       setXpData(null);
       setIsLoading(false);
       return;
     }
 
-    try {
-      setIsLoading(true);
-      
-      // Ensure user has XP system set up (migrate if necessary)
-      await migrateUserToXpSystem(user.uid);
-      
-      // Load current XP data
-      const userDoc = await db.collection('users').doc(user.uid).get();
-      
-      if (userDoc.exists) {
-        const userData = userDoc.data();
-        if (userData) {
-          const loadedXpData: XpData = {
-            totalXp: userData.totalXp || 0,
-            xpPerDate: userData.xpPerDate || {},
-            xpPerDateByActivity: userData.xpPerDateByActivity || {},
-            lastXpReset: userData.lastXpReset || Date.now(),
-            level: userData.level || 1,
-            timezone: userData.timezone || 'UTC',
-            xpFeatureStart: userData.xpFeatureStart || Date.now(),
-            xpLimitsStart: userData.xpLimitsStart || Date.now(),
-          };
-          
-          setXpData(loadedXpData);
-          console.log('✅ XP data loaded:', {
-            totalXp: loadedXpData.totalXp,
-            level: loadedXpData.level,
-            xpFeatureStart: new Date(loadedXpData.xpFeatureStart).toISOString(),
-            xpLimitsStart: new Date(loadedXpData.xpLimitsStart).toISOString(),
-          });
+    console.log('🎯 XpContext: Subscribing to XP data for user:', user.uid);
+    
+    const unsubscribe = db.collection('users').doc(user.uid).onSnapshot(
+      async (doc) => {
+        if (!doc.exists) {
+          console.log('❌ User document does not exist');
+          setIsLoading(false);
+          return;
         }
+
+        const userData = doc.data();
+        
+        // Ensure user has XP system migration
+        const migrated = await migrateUserToXpSystem(user.uid);
+        if (!migrated) {
+          console.error('❌ Failed to migrate user to XP system');
+          setIsLoading(false);
+          return;
+        }
+
+        // Extract XP data with proper type safety
+        const currentXpData: XpData = {
+          totalXp: userData?.totalXp || 0,
+          xpPerDate: userData?.xpPerDate || {},
+          xpPerDateByActivity: userData?.xpPerDateByActivity || {},
+          lastXpReset: userData?.lastXpReset || Date.now(),
+          level: userData?.level || 1,
+          timezone: userData?.timezone || getDeviceTimezone(),
+          xpFeatureStart: userData?.xpFeatureStart || Date.now(),
+          xpLimitsStart: userData?.xpLimitsStart || Date.now(),
+        };
+
+        console.log('📊 XP Data updated:', currentXpData);
+        setXpData(currentXpData);
+        setIsLoading(false);
+      },
+      (error) => {
+        console.error('❌ Error subscribing to XP data:', error);
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('❌ Error loading XP data:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    );
+
+    return unsubscribe;
   }, [user?.uid]);
 
-  // Award XP for a specific activity on a target date
+  // Core method to award XP
   const awardXp = useCallback(async (
     amount: number, 
     reason: 'meal' | 'recovery' | 'training', 
@@ -136,7 +152,7 @@ export function XpProvider({ children }: { children: React.ReactNode }) {
         };
       }
 
-      // Update XP data
+      // Calculate new values
       const newTotalXp = xpData.totalXp + awardAmount;
       const newLevel = calculateLevelFromXp(newTotalXp);
       const previousLevel = xpData.level;
@@ -171,26 +187,20 @@ export function XpProvider({ children }: { children: React.ReactNode }) {
       };
       setXpData(updatedXpData);
 
-      // Check for level up
+      // Handle level up event (RESTORED ORIGINAL SYSTEM)
       if (newLevel > previousLevel) {
-        const levelUpEvent: LevelUpEvent = {
-          newLevel,
+        const levelUpData: LevelUpEvent = {
           previousLevel,
+          newLevel,
           totalXp: newTotalXp,
         };
         
-        // Notify all level up callbacks
-        levelUpCallbacks.current.forEach(callback => {
-          try {
-            callback(levelUpEvent);
-          } catch (error) {
-            console.error('Error in level up callback:', error);
-          }
-        });
+        setLevelUpEvent(levelUpData);
+        console.log(`🎊 LEVEL UP! ${levelUpData.previousLevel} → ${levelUpData.newLevel}`);
       }
 
       console.log(`🎉 Awarded ${awardAmount} XP for ${reason} on ${targetDateString}! Total: ${newTotalXp} XP, Level: ${newLevel}`);
-
+      
       return {
         reason,
         amount: awardAmount,
@@ -212,46 +222,42 @@ export function XpProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user?.uid, xpData]);
 
-  // Register level up callback
-  const onLevelUp = useCallback((callback: (event: LevelUpEvent) => void) => {
-    levelUpCallbacks.current.push(callback);
-    
-    // Return cleanup function
-    return () => {
-      const index = levelUpCallbacks.current.indexOf(callback);
-      if (index > -1) {
-        levelUpCallbacks.current.splice(index, 1);
-      }
-    };
-  }, []);
-
-  // Manual refresh
+  // Refresh XP data manually
   const refreshXpData = useCallback(async () => {
-    await loadXpData();
-  }, [loadXpData]);
-
-  // Load XP data when user changes
-  useEffect(() => {
-    loadXpData();
-  }, [loadXpData]);
-
-  // App state change handling (refresh when app comes to foreground)
-  useEffect(() => {
-    const handleAppStateChange = (nextAppState: AppStateStatus) => {
-      if (nextAppState === 'active' && user?.uid) {
-        refreshXpData();
+    if (!user?.uid) return;
+    
+    try {
+      const doc = await db.collection('users').doc(user.uid).get();
+      if (doc.exists) {
+        const userData = doc.data();
+        const currentXpData: XpData = {
+          totalXp: userData?.totalXp || 0,
+          xpPerDate: userData?.xpPerDate || {},
+          xpPerDateByActivity: userData?.xpPerDateByActivity || {},
+          lastXpReset: userData?.lastXpReset || Date.now(),
+          level: userData?.level || 1,
+          timezone: userData?.timezone || getDeviceTimezone(),
+          xpFeatureStart: userData?.xpFeatureStart || Date.now(),
+          xpLimitsStart: userData?.xpLimitsStart || Date.now(),
+        };
+        setXpData(currentXpData);
       }
-    };
+    } catch (error) {
+      console.error('❌ Error refreshing XP data:', error);
+    }
+  }, [user?.uid]);
 
-    const subscription = AppState.addEventListener('change', handleAppStateChange);
-    return () => subscription?.remove();
-  }, [user?.uid, refreshXpData]);
+  // Clear level up event (called after modal is dismissed) - RESTORED ORIGINAL FUNCTION
+  const clearLevelUpEvent = useCallback(() => {
+    setLevelUpEvent(null);
+  }, []);
 
   const contextValue: XpContextType = {
     xpData,
     isLoading,
     awardXp,
-    onLevelUp,
+    levelUpEvent, // RESTORED ORIGINAL STATE
+    clearLevelUpEvent, // RESTORED ORIGINAL FUNCTION
     refreshXpData,
   };
 
@@ -260,12 +266,4 @@ export function XpProvider({ children }: { children: React.ReactNode }) {
       {children}
     </XpContext.Provider>
   );
-}
-
-export function useXp(): XpContextType {
-  const context = useContext(XpContext);
-  if (!context) {
-    throw new Error('useXp must be used within an XpProvider');
-  }
-  return context;
-} 
+};
