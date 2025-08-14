@@ -6,8 +6,9 @@ import { XpData, XpAward, LevelUpEvent, XP_CONSTANTS } from '../types/xp';
 import {
   calculateLevelFromXp,
   isNewDay,
-  isActionEligibleForXp,
-  calculateXpAward,
+  isTargetDateEligibleForXp,
+  calculateXpAwardForDate,
+  formatDateForXp,
 } from '../utils/xpCalculations';
 import { migrateUserToXpSystem } from '../utils/xpMigration';
 
@@ -16,268 +17,242 @@ interface XpContextType {
   xpData: XpData | null;
   isLoading: boolean;
   
-  // Core method for awarding XP
-  awardXp: (amount: number, reason: 'meal' | 'recovery' | 'training') => Promise<XpAward>;
+  // Core method for awarding XP with target date
+  awardXp: (amount: number, reason: 'meal' | 'recovery' | 'training', targetDate: Date) => Promise<XpAward>;
   
-  // Level up event handling
-  levelUpEvent: LevelUpEvent | null;
-  clearLevelUpEvent: () => void;
+  // Level up events
+  onLevelUp: (callback: (event: LevelUpEvent) => void) => void;
   
-  // Utility methods
+  // Manual refresh
   refreshXpData: () => Promise<void>;
-  isCapReached: () => boolean;
-  getRemainingXpToday: () => number;
 }
 
-const XpContext = createContext<XpContextType>({
-  xpData: null,
-  isLoading: true,
-  awardXp: async () => ({ reason: 'meal', amount: 0, timestamp: 0, eligible: false }),
-  levelUpEvent: null,
-  clearLevelUpEvent: () => {},
-  refreshXpData: async () => {},
-  isCapReached: () => false,
-  getRemainingXpToday: () => 0,
-});
+const XpContext = createContext<XpContextType | null>(null);
 
-export const useXp = () => useContext(XpContext);
-
-export const XpProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export function XpProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [xpData, setXpData] = useState<XpData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [levelUpEvent, setLevelUpEvent] = useState<LevelUpEvent | null>(null);
-  
-  // Track app state to handle daily resets
-  const appState = useRef(AppState.currentState);
+  const levelUpCallbacks = useRef<((event: LevelUpEvent) => void)[]>([]);
 
-  // Subscribe to user's XP data
-  useEffect(() => {
+  // Load XP data from Firebase
+  const loadXpData = useCallback(async () => {
     if (!user?.uid) {
       setXpData(null);
       setIsLoading(false);
       return;
     }
 
-    console.log('🎯 XpContext: Subscribing to XP data for user:', user.uid);
-    
-    const unsubscribe = db.collection('users').doc(user.uid).onSnapshot(
-      async (doc) => {
-        if (!doc.exists) {
-          console.log('❌ User document does not exist');
-          setIsLoading(false);
-          return;
-        }
-
-        const userData = doc.data();
-        
-        // Check if user needs XP migration
-        if (!userData?.totalXp && userData?.totalXp !== 0) {
-          console.log('🔄 User needs XP migration, performing migration...');
-          const migrated = await migrateUserToXpSystem(user.uid);
-          if (!migrated) {
-            console.error('❌ Failed to migrate user to XP system');
-            setIsLoading(false);
-            return;
-          }
-          // Migration will trigger this snapshot again with XP data
-          return;
-        }
-
-        // Extract XP data
-        const currentXpData: XpData = {
-          totalXp: userData.totalXp || 0,
-          xpToday: userData.xpToday || 0,
-          lastXpReset: userData.lastXpReset || Date.now(),
-          level: userData.level || 1,
-          timezone: userData.timezone || 'UTC',
-          xpFeatureStart: userData.xpFeatureStart || Date.now(),
-        };
-
-        console.log('📊 XP Data updated:', currentXpData);
-        setXpData(currentXpData);
-        setIsLoading(false);
-      },
-      (error) => {
-        console.error('❌ Error subscribing to XP data:', error);
-        setIsLoading(false);
-      }
-    );
-
-    return unsubscribe;
-  }, [user?.uid]);
-
-  // Handle app state changes for daily reset
-  useEffect(() => {
-    const handleAppStateChange = async (nextAppState: AppStateStatus) => {
-      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-        console.log('🌅 App came to foreground, checking for daily reset...');
-        await checkAndPerformDailyReset();
-      }
-      appState.current = nextAppState;
-    };
-
-    const subscription = AppState.addEventListener('change', handleAppStateChange);
-    return () => subscription?.remove();
-  }, [user?.uid, xpData]);
-
-  // Check and perform daily reset if needed
-  const checkAndPerformDailyReset = useCallback(async () => {
-    if (!user?.uid || !xpData) return;
-
     try {
-      const needsReset = isNewDay(xpData.lastXpReset, xpData.timezone);
+      setIsLoading(true);
       
-      if (needsReset) {
-        console.log('🌅 Performing daily XP reset...');
-        
-        const now = Date.now();
-        const resetData = {
-          xpToday: 0,
-          lastXpReset: now,
-        };
-
-        await db.collection('users').doc(user.uid).update(resetData);
-        console.log('✅ Daily XP reset completed');
+      // Ensure user has XP system set up (migrate if necessary)
+      await migrateUserToXpSystem(user.uid);
+      
+      // Load current XP data
+      const userDoc = await db.collection('users').doc(user.uid).get();
+      
+      if (userDoc.exists) {
+        const userData = userDoc.data();
+        if (userData) {
+          const loadedXpData: XpData = {
+            totalXp: userData.totalXp || 0,
+            xpPerDate: userData.xpPerDate || {},
+            xpPerDateByActivity: userData.xpPerDateByActivity || {},
+            lastXpReset: userData.lastXpReset || Date.now(),
+            level: userData.level || 1,
+            timezone: userData.timezone || 'UTC',
+            xpFeatureStart: userData.xpFeatureStart || Date.now(),
+            xpLimitsStart: userData.xpLimitsStart || Date.now(),
+          };
+          
+          setXpData(loadedXpData);
+          console.log('✅ XP data loaded:', {
+            totalXp: loadedXpData.totalXp,
+            level: loadedXpData.level,
+            xpFeatureStart: new Date(loadedXpData.xpFeatureStart).toISOString(),
+            xpLimitsStart: new Date(loadedXpData.xpLimitsStart).toISOString(),
+          });
+        }
       }
     } catch (error) {
-      console.error('❌ Error performing daily reset:', error);
+      console.error('❌ Error loading XP data:', error);
+    } finally {
+      setIsLoading(false);
     }
-  }, [user?.uid, xpData]);
+  }, [user?.uid]);
 
-  // Core method to award XP
+  // Award XP for a specific activity on a target date
   const awardXp = useCallback(async (
     amount: number, 
-    reason: 'meal' | 'recovery' | 'training'
+    reason: 'meal' | 'recovery' | 'training', 
+    targetDate: Date
   ): Promise<XpAward> => {
     if (!user?.uid || !xpData) {
-      console.log('❌ Cannot award XP: No user or XP data');
-      return { reason, amount: 0, timestamp: Date.now(), eligible: false };
+      return {
+        reason,
+        amount: 0,
+        timestamp: Date.now(),
+        eligible: false,
+        targetDate: formatDateForXp(targetDate, xpData?.timezone || 'UTC'),
+      };
     }
 
-    const now = Date.now();
-    
     try {
-      // Check daily reset first
-      await checkAndPerformDailyReset();
+      const now = Date.now();
+      const targetDateString = formatDateForXp(targetDate, xpData.timezone);
       
-      // Check if action is eligible for XP
-      const eligible = isActionEligibleForXp(now, xpData.xpFeatureStart, xpData.timezone);
-      
-      if (!eligible) {
-        console.log('❌ Action not eligible for XP (not today or before feature start)');
-        return { reason, amount: 0, timestamp: now, eligible: false };
-      }
-
-      // Calculate actual XP to award (considering daily cap)
-      const actualAmount = calculateXpAward(amount, xpData.xpToday);
-      
-      if (actualAmount <= 0) {
-        console.log('❌ Daily XP cap reached, no XP awarded');
-        return { 
-          reason, 
-          amount: 0, 
-          timestamp: now, 
-          eligible: true,
-          cappedAmount: actualAmount 
+      // Check if target date is eligible for XP
+      if (!isTargetDateEligibleForXp(targetDate, xpData.xpFeatureStart, xpData.timezone)) {
+        console.log(`❌ Target date ${targetDateString} is before XP feature start date`);
+        return {
+          reason,
+          amount: 0,
+          timestamp: now,
+          eligible: false,
+          targetDate: targetDateString,
         };
       }
 
-      // Calculate new values
-      const newXpToday = xpData.xpToday + actualAmount;
-      const newTotalXp = xpData.totalXp + actualAmount;
+      // Calculate how much XP can be awarded considering per-activity limits
+      const { amount: awardAmount, activityLimitReached } = calculateXpAwardForDate(
+        reason,
+        amount,
+        targetDateString,
+        now, // Activity timestamp is now
+        xpData.xpPerDateByActivity,
+        xpData.xpLimitsStart
+      );
+
+      if (awardAmount === 0) {
+        console.log(`⚠️ No XP awarded for ${reason} on ${targetDateString} - ${activityLimitReached ? 'activity limit reached' : 'unknown reason'}`);
+        return {
+          reason,
+          amount: 0,
+          timestamp: now,
+          eligible: true,
+          targetDate: targetDateString,
+          activityLimitReached,
+        };
+      }
+
+      // Update XP data
+      const newTotalXp = xpData.totalXp + awardAmount;
       const newLevel = calculateLevelFromXp(newTotalXp);
-      
-      // Detect level up
-      const leveledUp = newLevel > xpData.level;
-      
-      // Update Firestore
-      await db.collection('users').doc(user.uid).update({
+      const previousLevel = xpData.level;
+
+      // Update xpPerDate
+      const newXpPerDate = { ...xpData.xpPerDate };
+      newXpPerDate[targetDateString] = (newXpPerDate[targetDateString] || 0) + awardAmount;
+
+      // Update xpPerDateByActivity
+      const newXpPerDateByActivity = { ...xpData.xpPerDateByActivity };
+      if (!newXpPerDateByActivity[targetDateString]) {
+        newXpPerDateByActivity[targetDateString] = { meals: 0, recovery: 0, training: 0 };
+      }
+      const activityKey = reason === 'meal' ? 'meals' : reason;
+      newXpPerDateByActivity[targetDateString][activityKey] += awardAmount;
+
+      // Prepare update data
+      const updateData = {
         totalXp: newTotalXp,
-        xpToday: newXpToday,
         level: newLevel,
-      });
+        xpPerDate: newXpPerDate,
+        xpPerDateByActivity: newXpPerDateByActivity,
+      };
 
-      console.log(`🎉 Awarded ${actualAmount} XP for ${reason}! Total: ${newTotalXp}`);
+      // Update Firebase
+      await db.collection('users').doc(user.uid).update(updateData);
 
-      // Handle level up event
-      if (leveledUp) {
-        const levelUpData: LevelUpEvent = {
-          previousLevel: xpData.level,
-          newLevel: newLevel,
+      // Update local state
+      const updatedXpData: XpData = {
+        ...xpData,
+        ...updateData,
+      };
+      setXpData(updatedXpData);
+
+      // Check for level up
+      if (newLevel > previousLevel) {
+        const levelUpEvent: LevelUpEvent = {
+          newLevel,
+          previousLevel,
           totalXp: newTotalXp,
         };
         
-        setLevelUpEvent(levelUpData);
-        console.log(`🎊 LEVEL UP! ${levelUpData.previousLevel} → ${levelUpData.newLevel}`);
-        
-        // TODO: Trigger level up modal/animation
-        // TODO: Fire analytics event
+        // Notify all level up callbacks
+        levelUpCallbacks.current.forEach(callback => {
+          try {
+            callback(levelUpEvent);
+          } catch (error) {
+            console.error('Error in level up callback:', error);
+          }
+        });
       }
 
-      // TODO: Fire XP awarded analytics event
+      console.log(`🎉 Awarded ${awardAmount} XP for ${reason} on ${targetDateString}! Total: ${newTotalXp} XP, Level: ${newLevel}`);
 
       return {
         reason,
-        amount: actualAmount,
+        amount: awardAmount,
         timestamp: now,
         eligible: true,
-        cappedAmount: actualAmount < amount ? actualAmount : undefined,
+        targetDate: targetDateString,
+        activityLimitReached,
       };
 
     } catch (error) {
       console.error('❌ Error awarding XP:', error);
-      return { reason, amount: 0, timestamp: now, eligible: false };
+      return {
+        reason,
+        amount: 0,
+        timestamp: Date.now(),
+        eligible: false,
+        targetDate: formatDateForXp(targetDate, xpData?.timezone || 'UTC'),
+      };
     }
-  }, [user?.uid, xpData, checkAndPerformDailyReset]);
+  }, [user?.uid, xpData]);
 
-  // Refresh XP data manually
-  const refreshXpData = useCallback(async () => {
-    if (!user?.uid) return;
+  // Register level up callback
+  const onLevelUp = useCallback((callback: (event: LevelUpEvent) => void) => {
+    levelUpCallbacks.current.push(callback);
     
-    try {
-      const doc = await db.collection('users').doc(user.uid).get();
-      if (doc.exists) {
-        const userData = doc.data();
-        const currentXpData: XpData = {
-          totalXp: userData?.totalXp || 0,
-          xpToday: userData?.xpToday || 0,
-          lastXpReset: userData?.lastXpReset || Date.now(),
-          level: userData?.level || 1,
-          timezone: userData?.timezone || 'UTC',
-          xpFeatureStart: userData?.xpFeatureStart || Date.now(),
-        };
-        setXpData(currentXpData);
+    // Return cleanup function
+    return () => {
+      const index = levelUpCallbacks.current.indexOf(callback);
+      if (index > -1) {
+        levelUpCallbacks.current.splice(index, 1);
       }
-    } catch (error) {
-      console.error('❌ Error refreshing XP data:', error);
-    }
-  }, [user?.uid]);
-
-  // Check if daily cap is reached
-  const isCapReached = useCallback(() => {
-    return xpData ? xpData.xpToday >= XP_CONSTANTS.DAILY_CAP : false;
-  }, [xpData]);
-
-  // Get remaining XP that can be earned today
-  const getRemainingXpToday = useCallback(() => {
-    return xpData ? Math.max(0, XP_CONSTANTS.DAILY_CAP - xpData.xpToday) : 0;
-  }, [xpData]);
-
-  // Clear level up event (called after modal is dismissed)
-  const clearLevelUpEvent = useCallback(() => {
-    setLevelUpEvent(null);
+    };
   }, []);
+
+  // Manual refresh
+  const refreshXpData = useCallback(async () => {
+    await loadXpData();
+  }, [loadXpData]);
+
+  // Load XP data when user changes
+  useEffect(() => {
+    loadXpData();
+  }, [loadXpData]);
+
+  // App state change handling (refresh when app comes to foreground)
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+      if (nextAppState === 'active' && user?.uid) {
+        refreshXpData();
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription?.remove();
+  }, [user?.uid, refreshXpData]);
 
   const contextValue: XpContextType = {
     xpData,
     isLoading,
     awardXp,
-    levelUpEvent,
-    clearLevelUpEvent,
+    onLevelUp,
     refreshXpData,
-    isCapReached,
-    getRemainingXpToday,
   };
 
   return (
@@ -285,4 +260,12 @@ export const XpProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       {children}
     </XpContext.Provider>
   );
-}; 
+}
+
+export function useXp(): XpContextType {
+  const context = useContext(XpContext);
+  if (!context) {
+    throw new Error('useXp must be used within an XpProvider');
+  }
+  return context;
+} 

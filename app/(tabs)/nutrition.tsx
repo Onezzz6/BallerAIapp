@@ -2300,11 +2300,15 @@ export default function NutritionScreen() {
       // Refresh data to ensure UI is up-to-date
       await loadSelectedDayData();
       
-      // Award XP for logging a meal
+      // Award XP for logging a meal (use selectedDate as target date)
       try {
-        const xpAward = await awardXp(50, 'meal'); // 50 XP for logging a meal
+        const xpAward = await awardXp(50, 'meal', selectedDate); // 50 XP for logging meal on selectedDate
         if (xpAward.eligible && xpAward.amount > 0) {
-          console.log(`🎉 Awarded ${xpAward.amount} XP for logging meal!`);
+          console.log(`🎉 Awarded ${xpAward.amount} XP for logging meal on ${xpAward.targetDate}!`);
+        } else if (xpAward.eligible && xpAward.amount === 0) {
+          console.log(`⚠️ XP cap reached for ${xpAward.targetDate}, no XP awarded for meal`);
+        } else {
+          console.log(`❌ Meal date ${xpAward.targetDate} not eligible for XP (before account creation)`);
         }
       } catch (xpError) {
         console.error('Error awarding XP for meal:', xpError);

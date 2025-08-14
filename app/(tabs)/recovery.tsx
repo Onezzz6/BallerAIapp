@@ -26,6 +26,16 @@ const OPENAI_PROXY_URL = `https://us-central1-${FIREBASE_PROJECT_ID}.cloudfuncti
 // When false: Header scrolls normally with content (default behavior)
 const FIXED_HEADER_FOR_SCREENSHOT = false; // Set to false to revert to normal behavior
 
+// Safe animation helper to prevent null pointer crashes in production
+const safeAnimation = (animation: any) => {
+  try {
+    return animation || undefined;
+  } catch (error) {
+    console.warn('Animation failed safely:', error);
+    return undefined;
+  }
+};
+
 type RecoveryData = {
   soreness: number;
   fatigue: number;
@@ -907,7 +917,7 @@ IMPORTANT USAGE GUIDELINES:
   const renderStreakCard = () => {
     return (
       <Animated.View 
-        entering={FadeIn.duration(300)}
+        entering={safeAnimation(FadeIn.duration(300))}
         style={styles.streakCardContainer}
       >
         <View style={styles.streakCardContent}>
@@ -1341,7 +1351,7 @@ IMPORTANT USAGE GUIDELINES:
       case 'welcome':
         return (
           <Animated.View 
-            entering={FadeIn.duration(300)}
+            entering={safeAnimation(FadeIn.duration(300))}
             style={styles.workflowCard}
           >
             <View style={styles.workflowIconContainer}>
@@ -1366,7 +1376,7 @@ IMPORTANT USAGE GUIDELINES:
       case 'tools':
         return (
           <Animated.View 
-            entering={SlideInRight.duration(300)}
+            entering={safeAnimation(SlideInRight.duration(300))}
             style={styles.workflowCard}
           >
             <View style={styles.navigationContainer}>
@@ -1461,7 +1471,7 @@ IMPORTANT USAGE GUIDELINES:
       case 'time':
         return (
           <Animated.View 
-            entering={SlideInRight.duration(300)}
+            entering={safeAnimation(SlideInRight.duration(300))}
             style={styles.workflowCard}
           >
             <View style={styles.navigationContainer}>
@@ -1559,7 +1569,7 @@ IMPORTANT USAGE GUIDELINES:
       case 'summary':
         return (
           <Animated.View 
-            entering={SlideInRight.duration(300)}
+            entering={safeAnimation(SlideInRight.duration(300))}
             style={styles.workflowCard}
           >
             <View style={styles.navigationContainer}>
@@ -1660,7 +1670,7 @@ IMPORTANT USAGE GUIDELINES:
           gap: 6,
         }}>
           <Animated.View 
-            entering={PinwheelIn.duration(500)}
+            entering={safeAnimation(PinwheelIn.duration(500))}
           >
           <Image 
             source={require('../../assets/images/BallerAILogo.png')}
@@ -1726,7 +1736,7 @@ IMPORTANT USAGE GUIDELINES:
 
             {/* Recovery Inputs - Always accessible for all days */}
             <Animated.View 
-              entering={FadeIn.duration(300)}
+              entering={safeAnimation(FadeIn.duration(300))}
               style={styles.inputsContainer}
             >
               <View style={{alignItems: 'center'}}>
@@ -1881,7 +1891,7 @@ IMPORTANT USAGE GUIDELINES:
                 {/* Recovery Tools Selection Card - Hidden when workflow is active or plan exists or not today */}
                 {!showWorkflow && !planExists && isToday && (
                   <Animated.View 
-                    entering={FadeIn.duration(300)}
+                    entering={safeAnimation(FadeIn.duration(300))}
                     style={[
                       styles.inputsContainer, 
                       planExists && styles.disabledContainer,
@@ -2031,7 +2041,7 @@ IMPORTANT USAGE GUIDELINES:
                 {!showWorkflow && !planExists && isToday && (
                   <Animated.View 
                     ref={recoveryTimeRef}
-                    entering={FadeIn.duration(300)}
+                    entering={safeAnimation(FadeIn.duration(300))}
                     style={[
                       styles.inputsContainer, 
                       planExists && styles.disabledContainer,
@@ -2249,7 +2259,7 @@ IMPORTANT USAGE GUIDELINES:
                 {/* Generate Plan Button or Status - Hidden when workflow is active or plan exists or not today */}
                 {!showWorkflow && !planExists && isToday && (
                   <Animated.View 
-                    entering={FadeIn.duration(300)}
+                    entering={safeAnimation(FadeIn.duration(300))}
                   >
                     <Pressable
                       ref={generateButtonRef}

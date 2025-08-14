@@ -43,7 +43,7 @@ export function calculateLevelProgress(totalXp: number): number {
  * Get badge color based on level (changes every 25 levels)
  */
 export function getBadgeColor(level: number): string {
-  const colorIndex = Math.floor((level - 1) / XP_CONSTANTS.BADGE_COLOR_INTERVAL);
+  const colorIndex = Math.floor((level - 1) / 25); // Every 25 levels
   const colors = [
     '#3F63F6', // Blue (levels 1-25)
     '#10B981', // Green (levels 26-50)
@@ -58,83 +58,99 @@ export function getBadgeColor(level: number): string {
 }
 
 /**
- * Check if it's a new day since last XP reset based on timezone
- */
-export function isNewDay(lastXpReset: number, timezone: string): boolean {
-  try {
-    const now = new Date();
-    const lastReset = new Date(lastXpReset);
-    
-    // Convert both dates to the user's timezone
-    const nowInTimezone = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
-    const lastResetInTimezone = new Date(lastReset.toLocaleString('en-US', { timeZone: timezone }));
-    
-    // Compare just the date parts
-    const nowDate = nowInTimezone.toDateString();
-    const lastResetDate = lastResetInTimezone.toDateString();
-    
-    return nowDate !== lastResetDate;
-  } catch (error) {
-    console.error('Error checking new day:', error);
-    // Fallback to UTC comparison if timezone parsing fails
-    const now = new Date();
-    const lastReset = new Date(lastXpReset);
-    return now.toDateString() !== lastReset.toDateString();
-  }
-}
-
-/**
- * Check if an action is eligible for XP based on timing rules
- */
-export function isActionEligibleForXp(
-  actionCreatedAt: number,
-  xpFeatureStart: number,
-  timezone: string
-): boolean {
-  // Rule 1: Action must be created on or after XP feature start
-  if (actionCreatedAt < xpFeatureStart) {
-    return false;
-  }
-  
-  // Rule 2: Action must be created "today" in user's timezone
-  try {
-    const now = new Date();
-    const actionDate = new Date(actionCreatedAt);
-    
-    // Convert both to user's timezone
-    const nowInTimezone = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
-    const actionInTimezone = new Date(actionDate.toLocaleString('en-US', { timeZone: timezone }));
-    
-    // Compare just the date parts
-    const nowDateStr = nowInTimezone.toDateString();
-    const actionDateStr = actionInTimezone.toDateString();
-    
-    return nowDateStr === actionDateStr;
-  } catch (error) {
-    console.error('Error checking action eligibility:', error);
-    // Fallback to UTC comparison
-    const now = new Date();
-    const actionDate = new Date(actionCreatedAt);
-    return now.toDateString() === actionDate.toDateString();
-  }
-}
-
-/**
- * Calculate actual XP to award considering daily cap
- */
-export function calculateXpAward(requestedAmount: number, currentXpToday: number): number {
-  const remainingCap = XP_CONSTANTS.DAILY_CAP - currentXpToday;
-  return Math.min(requestedAmount, Math.max(0, remainingCap));
-}
-
-/**
- * Get user's device timezone as IANA string
+ * Get device timezone
  */
 export function getDeviceTimezone(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
+
+/**
+ * Check if it's a new day in the user's timezone since last XP reset
+ */
+export function isNewDay(lastResetTimestamp: number, timezone: string): boolean {
+  const now = new Date();
+  const lastReset = new Date(lastResetTimestamp);
+  
+  // Convert to user's timezone for comparison using Intl.DateTimeFormat
+  const nowInUserTz = new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(now);
+  const lastResetInUserTz = new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(lastReset);
+  
+  return nowInUserTz !== lastResetInUserTz;
+}
+
+/**
+ * Format date for XP tracking (YYYY-MM-DD in user's timezone)
+ */
+export function formatDateForXp(date: Date, timezone: string): string {
   try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+    // Use Intl.DateTimeFormat which is more reliable for timezone conversion
+    // 'en-CA' format gives us YYYY-MM-DD directly
+    return new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(date);
   } catch (error) {
-    console.error('Error getting device timezone:', error);
-    return 'UTC'; // Fallback
+    console.error('Error formatting date for XP:', error, 'Date:', date, 'Timezone:', timezone);
+    // Fallback to UTC if timezone conversion fails
+    return date.toISOString().split('T')[0];
   }
+}
+
+/**
+ * Check if a target date is eligible for XP based on user's XP feature start date
+ */
+export function isTargetDateEligibleForXp(targetDate: Date, xpFeatureStart: number, timezone: string): boolean {
+  const targetDateString = formatDateForXp(targetDate, timezone);
+  const featureStartDateString = formatDateForXp(new Date(xpFeatureStart), timezone);
+  
+  return targetDateString >= featureStartDateString;
+}
+
+/**
+ * Check if an activity timestamp is eligible for the new XP limits system
+ * (only activities logged AFTER xpLimitsStart are subject to the new limits)
+ */
+export function isActivityEligibleForNewLimits(activityTimestamp: number, xpLimitsStart: number): boolean {
+  return activityTimestamp >= xpLimitsStart;
+}
+
+/**
+ * Calculate how much XP can be awarded for a specific activity on a target date
+ * Takes into account per-activity-type limits and existing XP for that date/activity
+ */
+export function calculateXpAwardForDate(
+  activityType: 'meal' | 'recovery' | 'training',
+  baseAmount: number,
+  targetDate: string,
+  activityTimestamp: number,
+  xpPerDateByActivity: { [dateString: string]: { meals: number; recovery: number; training: number } },
+  xpLimitsStart: number
+): { amount: number; activityLimitReached: boolean } {
+  
+  // If this activity was logged before the new limits started, award full XP (legacy behavior)
+  if (!isActivityEligibleForNewLimits(activityTimestamp, xpLimitsStart)) {
+    return { amount: baseAmount, activityLimitReached: false };
+  }
+  
+  // Get existing XP for this date and activity type
+  const dateActivity = xpPerDateByActivity[targetDate] || { meals: 0, recovery: 0, training: 0 };
+  const currentActivityXp = dateActivity[activityType === 'meal' ? 'meals' : activityType];
+  
+  // Get the limit for this activity type
+  let activityLimit: number;
+  switch (activityType) {
+    case 'meal':
+      activityLimit = XP_CONSTANTS.MEALS_XP_PER_DATE;
+      break;
+    case 'recovery':
+      activityLimit = XP_CONSTANTS.RECOVERY_XP_PER_DATE;
+      break;
+    case 'training':
+      activityLimit = XP_CONSTANTS.TRAINING_XP_PER_DATE;
+      break;
+  }
+  
+  // Calculate how much XP can still be awarded for this activity type
+  const remainingActivityXp = Math.max(0, activityLimit - currentActivityXp);
+  const awardAmount = Math.min(baseAmount, remainingActivityXp);
+  const activityLimitReached = awardAmount < baseAmount;
+  
+  return { amount: awardAmount, activityLimitReached };
 } 
