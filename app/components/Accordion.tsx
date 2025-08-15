@@ -55,7 +55,8 @@ const styles = StyleSheet.create({
   content: {
     borderTopWidth: 1,
     borderTopColor: '#E5E5E5',
-    maxHeight: 500,
+    // Remove maxHeight constraint to prevent button cutoff
+    paddingBottom: 16, // Ensure space for completion button
   },
 });
 
