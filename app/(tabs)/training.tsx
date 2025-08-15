@@ -1923,7 +1923,7 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
 
       // Award XP for completing training day
       try {
-        const xpAward = await awardXp(300, 'training'); // 300 XP for completing training day
+        const xpAward = await awardXp(300, 'training', new Date()); // 300 XP for completing training day
         if (xpAward.eligible && xpAward.amount > 0) {
           console.log(`🎉 Awarded ${xpAward.amount} XP for completing ${day} training!`);
         }
@@ -2116,7 +2116,7 @@ IMPORTANT: After the last day (Sunday), write a short summary section titled "NO
                           ) : (
                             <>
                               {/* Regular drills list */}
-                              <ScrollView style={{ maxHeight: 400, paddingHorizontal: 16, paddingBottom: 16 }}>
+                              <ScrollView style={{ maxHeight: 350, paddingHorizontal: 16, paddingBottom: 16 }}>
                                 {/* Drill items */}
                                 {parsed.drills.map((drill, index) => {
                                   const isCompleted = completedDrills[`${day}-${index}`];
