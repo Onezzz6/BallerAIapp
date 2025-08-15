@@ -78,7 +78,8 @@ export default {
       'expo-image-picker',
       'expo-file-system',
       'expo-notifications',
-      'expo-apple-authentication'
+      'expo-apple-authentication',
+      'expo-asset'
     ],
     web: {
       favicon: "./assets/favicon.png"
