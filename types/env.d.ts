@@ -13,4 +13,5 @@ declare module '@env' {
   export const GOOGLE_WEB_CLIENT_ID: string;
   export const EXPO_PUBLIC_REVENUECAT_IOS_API_KEY: string;
   export const EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY: string;
+  export const GOOGLE_TESTER_EMAILS: string;
 } 

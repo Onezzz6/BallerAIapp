@@ -22,6 +22,8 @@ import { useOnboarding } from '../../context/OnboardingContext';
 import Purchases, { PurchasesOfferings } from 'react-native-purchases';
 import { configureRevenueCat, setReferralCode } from '../../services/revenuecat';
 import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
+import { shouldHavePremiumAccess } from '../../services/testerAccounts';
+import { db } from '../../config/firebase';
 
 const ENTITLEMENT_ID = "BallerAISubscriptionGroup";
 
@@ -211,11 +213,25 @@ export default function ProfileCompleteScreen() {
         allPurchasedProductIdentifiers: customerInfo.allPurchasedProductIdentifiers,
       });
 
-      if (hasActiveSubscription) {
-        console.log('✅ Found existing subscription on device - skipping paywall');
-        console.log('🎯 DEBUG - This will go directly to sign-up, bypassing paywall');
-        console.log('User probably purchased but didn\'t complete sign-up, navigating directly to sign-up');
-        await analyticsService.logEvent('A0_31_existing_subscription_found');
+      // Get user email for tester check (we don't have userId yet, so use onboarding data)
+      const userEmail = onboardingData.email || '';
+      
+      // Check if user should have premium access (subscription OR tester status)
+      // Note: We pass empty userId since user hasn't been created yet
+      const hasPremiumAccess = await shouldHavePremiumAccess('', userEmail, hasActiveSubscription);
+
+      if (hasPremiumAccess) {
+        if (hasActiveSubscription) {
+          console.log('✅ Found existing subscription on device - skipping paywall');
+          console.log('🎯 DEBUG - This will go directly to sign-up, bypassing paywall');
+          console.log('User probably purchased but didn\'t complete sign-up, navigating directly to sign-up');
+          await analyticsService.logEvent('A0_31_existing_subscription_found');
+        } else {
+          console.log('✅ Tester account detected - skipping paywall');
+          console.log('🧪 Tester Email:', userEmail);
+          console.log('🎯 DEBUG - This will go directly to sign-up, bypassing paywall');
+          await analyticsService.logEvent('A0_31_tester_account_bypass');
+        }
         router.replace('/(onboarding)/sign-up');
         return;
       }
