@@ -1,4 +1,4 @@
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, Platform } from 'react-native';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -10,6 +10,16 @@ import { useEffect, useState, useRef } from 'react';
 import { ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useHaptics } from '../../utils/haptics';
+
+// Safe animation helper to prevent null pointer crashes in production
+const safeAnimation = (animation: any) => {
+  try {
+    return animation || undefined;
+  } catch (error) {
+    console.warn('Animation failed safely:', error);
+    return undefined;
+  }
+};
 
 const GENERATION_STEPS = [
   { text: 'Analyzing your recovery metrics', checked: false },
@@ -45,6 +55,26 @@ interface RecoveryPlanGenerationLoaderProps {
 export default function RecoveryPlanGenerationLoader({ onComplete, isComplete }: RecoveryPlanGenerationLoaderProps) {
   const haptics = useHaptics();
   const scrollViewRef = useRef<ScrollView>(null);
+  
+  // Animation gate to prevent Android release crashes
+  const isAndroidRelease = Platform.OS === 'android' && !__DEV__;
+  const [canAnimate, setCanAnimate] = useState(!isAndroidRelease);
+
+  useEffect(() => {
+    if (!isAndroidRelease) return;
+    // Two RAFs = after initial layout/measure
+    let id1: number, id2: number;
+    id1 = requestAnimationFrame(() => {
+      id2 = requestAnimationFrame(() => setCanAnimate(true));
+    });
+    return () => {
+      if (id1) cancelAnimationFrame(id1);
+      if (id2) cancelAnimationFrame(id2);
+    };
+  }, [isAndroidRelease]);
+
+  // Helper to defer animations on Android release
+  const enter = (anim: any) => (canAnimate ? safeAnimation(anim) : undefined);
   
   const progress = useSharedValue(0);
   const [currentPercentage, setCurrentPercentage] = useState(0);
@@ -211,7 +241,7 @@ export default function RecoveryPlanGenerationLoader({ onComplete, isComplete }:
         alignItems: 'center',
         zIndex: 1000,
       }}
-      entering={FadeIn.duration(300)}
+      entering={enter(FadeIn.duration(300))}
     >
       <Animated.View 
         style={{
@@ -222,7 +252,7 @@ export default function RecoveryPlanGenerationLoader({ onComplete, isComplete }:
           maxWidth: 400,
           alignItems: 'center',
         }}
-        entering={FadeInDown.duration(400).springify()}
+        entering={enter(FadeInDown.duration(400).springify())}
       >
         {/* Large Percentage Display */}
         <Text style={{

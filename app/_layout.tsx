@@ -29,17 +29,20 @@ import { configureRevenueCat, logInRevenueCatUser, setReferralCode } from '../se
 import { checkSubscriptionOnForeground, resetPaywallPresentationFlag } from './(onboarding)/paywall';
 import firestore from '@react-native-firebase/firestore';
 import { db } from '../config/firebase';
+import { shouldHavePremiumAccess } from '../services/testerAccounts';
 
 // Create a context for subscription state
 type SubscriptionContextType = {
   customerInfo: CustomerInfo | null;
   isSubscriptionActive: boolean;
+  hasPremiumAccess: boolean;
   refreshSubscriptionStatus: () => Promise<void>;
 };
 
 const SubscriptionContext = createContext<SubscriptionContextType>({
   customerInfo: null,
   isSubscriptionActive: false,
+  hasPremiumAccess: false,
   refreshSubscriptionStatus: async () => {}
 });
 
@@ -51,6 +54,7 @@ SplashScreen.preventAutoHideAsync();
 // Subscription provider component
 function SubscriptionProvider({ children }: { children: React.ReactNode }) {
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
+  const [hasPremiumAccess, setHasPremiumAccess] = useState<boolean>(false);
   const { user } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -67,8 +71,35 @@ function SubscriptionProvider({ children }: { children: React.ReactNode }) {
     if (!user) {
       // User logged out, reset listener setup for next login
       customerInfoListenerSetup.current = false;
+      setHasPremiumAccess(false);
     }
   }, [user]);
+
+  // Check tester status when user or customer info changes
+  useEffect(() => {
+    const checkTesterAccess = async () => {
+      if (user && customerInfo) {
+        try {
+          const userDoc = await db.collection('users').doc(user.uid).get();
+          const userEmail = userDoc.exists ? userDoc.data()?.email || '' : '';
+          const hasActiveSubscription = !!customerInfo.entitlements.active["BallerAISubscriptionGroup"];
+          const premiumAccess = await shouldHavePremiumAccess(user.uid, userEmail, hasActiveSubscription);
+          setHasPremiumAccess(premiumAccess);
+          
+          if (premiumAccess && !hasActiveSubscription) {
+            console.log(`🧪 Tester access granted for ${userEmail}`);
+          }
+        } catch (error) {
+          console.error("Error checking tester access:", error);
+          setHasPremiumAccess(!!customerInfo.entitlements.active["BallerAISubscriptionGroup"]);
+        }
+      } else {
+        setHasPremiumAccess(false);
+      }
+    };
+
+    checkTesterAccess();
+  }, [user, customerInfo]);
 
   // Check if the user has an active subscription
   const isSubscriptionActive = React.useMemo(() => {
@@ -80,10 +111,28 @@ function SubscriptionProvider({ children }: { children: React.ReactNode }) {
     try {
       const info = await Purchases.getCustomerInfo();
       setCustomerInfo(info);
-      console.log("Refreshed subscription data:", 
-        info.entitlements.active["BallerAISubscriptionGroup"] ? "ACTIVE" : "INACTIVE");
+      
+      const hasActiveSubscription = !!info.entitlements.active["BallerAISubscriptionGroup"];
+      console.log("Refreshed subscription data:", hasActiveSubscription ? "ACTIVE" : "INACTIVE");
+      
+      // Check for tester access if user is available
+      if (user) {
+        try {
+          const userDoc = await db.collection('users').doc(user.uid).get();
+          const userEmail = userDoc.exists ? userDoc.data()?.email || '' : '';
+          const premiumAccess = await shouldHavePremiumAccess(user.uid, userEmail, hasActiveSubscription);
+          setHasPremiumAccess(premiumAccess);
+          console.log("Premium access status:", premiumAccess ? "GRANTED" : "DENIED");
+        } catch (error) {
+          console.error("Error checking tester status:", error);
+          setHasPremiumAccess(hasActiveSubscription);
+        }
+      } else {
+        setHasPremiumAccess(hasActiveSubscription);
+      }
     } catch (error) {
       console.error("Error refreshing subscription data:", error);
+      setHasPremiumAccess(false);
     }
   };
 
@@ -270,7 +319,8 @@ function SubscriptionProvider({ children }: { children: React.ReactNode }) {
     <SubscriptionContext.Provider 
       value={{ 
         customerInfo, 
-        isSubscriptionActive, 
+        isSubscriptionActive,
+        hasPremiumAccess,
         refreshSubscriptionStatus 
       }}
     >

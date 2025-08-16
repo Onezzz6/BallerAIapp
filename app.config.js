@@ -3,7 +3,7 @@ export default {
     name: "BallerAI",
     slug: "ballerai",
     scheme: "ballerai",
-    version: "1.3.4",
+    version: "1.3.5",
     orientation: "portrait",
     // ... other config
     icon: "./assets/images/icon.png",
@@ -27,7 +27,7 @@ export default {
     },
     android: {
       package: "com.ballerbizoy.ballerai",
-              versionCode: 59,
+              versionCode: 60,
       googleServicesFile: "./google-services.json",
       icon: "./assets/images/icon.png",
       adaptiveIcon: {
@@ -105,6 +105,8 @@ export default {
       googleWebClientId: process.env.GOOGLE_WEB_CLIENT_ID,
       revenueCatIosApiKey: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY,
       revenueCatAndroidApiKey: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY,
+      // Comma-separated list of tester emails that should bypass paywall
+      testerEmails: process.env.GOOGLE_TESTER_EMAILS,
       eas: {
         projectId: "eca84105-519c-4832-902e-d87afe59e858"
       }

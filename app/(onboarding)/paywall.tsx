@@ -6,6 +6,9 @@ import CustomButton from '../components/CustomButton';
 import { usePathname, useRouter } from 'expo-router';
 import { setReferralCode, configureRevenueCat, logInRevenueCatUser } from '../../services/revenuecat';
 import { useOnboarding } from '../../context/OnboardingContext';
+import { shouldHavePremiumAccess } from '../../services/testerAccounts';
+import { useAuth } from '../../context/AuthContext';
+import { db } from '../../config/firebase';
 // Remove import from _layout to fix circular dependency
 // import { isOnOnboardingScreen } from '../_layout';
 
@@ -162,16 +165,37 @@ export async function checkSubscriptionOnForeground(
     console.log("\n======= FOREGROUND CHECK SUBSCRIPTION INFO =======");
     
     const entitlement = customerInfo.entitlements.active[ENTITLEMENT_ID];
+    const hasActiveSubscription = !!entitlement;
     
-    if (entitlement) {
-      console.log("✅ ACTIVE SUBSCRIPTION FOUND");
-      console.log("📅 Expiration Date:", entitlement.expirationDate);
-      console.log("🔄 Will Renew:", entitlement.willRenew ? "YES" : "NO");
-      console.log("🆔 Product ID:", entitlement.productIdentifier);
-      console.log("Subscription active - no paywall needed");
+    // Get user email for tester check
+    let userEmail = '';
+    try {
+      const userDoc = await db.collection('users').doc(userId).get();
+      if (userDoc.exists) {
+        userEmail = userDoc.data()?.email || '';
+      }
+    } catch (emailError) {
+      console.error('Error getting user email for tester check:', emailError);
+    }
+    
+    // Check if user should have premium access (subscription OR tester status)
+    const hasPremiumAccess = await shouldHavePremiumAccess(userId, userEmail, hasActiveSubscription);
+    
+    if (hasPremiumAccess) {
+      if (hasActiveSubscription) {
+        console.log("✅ ACTIVE SUBSCRIPTION FOUND");
+        console.log("📅 Expiration Date:", entitlement?.expirationDate);
+        console.log("🔄 Will Renew:", entitlement?.willRenew ? "YES" : "NO");
+        console.log("🆔 Product ID:", entitlement?.productIdentifier);
+      } else {
+        console.log("✅ TESTER ACCOUNT ACCESS GRANTED");
+        console.log(`🧪 Tester Email: ${userEmail}`);
+      }
+      console.log("Premium access confirmed - no paywall needed");
       return;
     } else {
-      console.log("❌ No active subscription found for entitlement:", ENTITLEMENT_ID);
+      console.log("❌ No active subscription or tester access found");
+      console.log(`📧 User Email: ${userEmail}`);
     }
     console.log("===============================================\n");
     
@@ -387,13 +411,31 @@ export async function runPostLoginSequence(
     console.log("=================================================================\n\n");
     
     // 6. Check if user has the required entitlement using the fresh data
-    console.log("STEP 6: Checking entitlement status with fresh data...");
+    console.log("STEP 6: Checking entitlement status and tester access...");
     const hasActiveSubscription = !!customerInfo.entitlements.active[ENTITLEMENT_ID];
     console.log(`Subscription status from server: ${hasActiveSubscription ? "ACTIVE ✓" : "INACTIVE ✗"}`);
     
-    if (hasActiveSubscription) {
-      // User already has subscription, navigate to home
-      console.log("SUCCESS: User has active subscription, navigating to home");
+    // Get user email for tester check
+    let userEmail = '';
+    try {
+      const userDoc = await db.collection('users').doc(userId).get();
+      if (userDoc.exists) {
+        userEmail = userDoc.data()?.email || '';
+      }
+    } catch (emailError) {
+      console.error('Error getting user email for tester check:', emailError);
+    }
+    
+    // Check if user should have premium access (subscription OR tester status)
+    const hasPremiumAccess = await shouldHavePremiumAccess(userId, userEmail, hasActiveSubscription);
+    
+    if (hasPremiumAccess) {
+      if (hasActiveSubscription) {
+        console.log("SUCCESS: User has active subscription, navigating to home");
+      } else {
+        console.log("SUCCESS: User has tester access, navigating to home");
+        console.log(`🧪 Tester Email: ${userEmail}`);
+      }
       navigateToHome();
       return;
     }

@@ -1,0 +1,33 @@
+--------- beginning of main
+08-15 19:52:18.097  5152  5152 I VRI[MainActivity]@d8be1b6: ViewPostIme pointer 0
+08-15 19:52:18.103  5152  5152 I VRI[MainActivity]@d8be1b6: call setFrameRateCategory for touch hint category=high hint, reason=touch, vri=VRI[MainActivity]@d8be1b6
+08-15 19:52:18.162  5152  5152 I VRI[MainActivity]@d8be1b6: ViewPostIme pointer 1
+08-15 19:52:21.164  5152  5152 I VRI[MainActivity]@d8be1b6: call setFrameRateCategory for touch hint category=no preference, reason=boost timeout, vri=VRI[MainActivity]@d8be1b6
+08-15 19:52:40.135  5152  5152 I VRI[MainActivity]@d8be1b6: ViewPostIme pointer 0
+08-15 19:52:40.140  5152  5152 I VRI[MainActivity]@d8be1b6: call setFrameRateCategory for touch hint category=high hint, reason=touch, vri=VRI[MainActivity]@d8be1b6
+08-15 19:52:40.225  5152  5152 I VRI[MainActivity]@d8be1b6: ViewPostIme pointer 1
+08-15 19:52:43.228  5152  5152 I VRI[MainActivity]@d8be1b6: call setFrameRateCategory for touch hint category=no preference, reason=boost timeout, vri=VRI[MainActivity]@d8be1b6
+08-15 19:53:01.643  5152  5152 I VRI[MainActivity]@d8be1b6: ViewPostIme pointer 0
+08-15 19:53:01.650  5152  5152 I VRI[MainActivity]@d8be1b6: call setFrameRateCategory for touch hint category=high hint, reason=touch, vri=VRI[MainActivity]@d8be1b6
+08-15 19:53:01.685  5152  5152 I VRI[MainActivity]@d8be1b6: ViewPostIme pointer 1
+08-15 19:53:04.686  5152  5152 I VRI[MainActivity]@d8be1b6: call setFrameRateCategory for touch hint category=no preference, reason=boost timeout, vri=VRI[MainActivity]@d8be1b6
+08-15 19:53:22.503  5152  5152 I VRI[MainActivity]@d8be1b6: ViewPostIme pointer 0
+08-15 19:53:22.511  5152  5152 I VRI[MainActivity]@d8be1b6: call setFrameRateCategory for touch hint category=high hint, reason=touch, vri=VRI[MainActivity]@d8be1b6
+08-15 19:53:22.550  5152  5152 I VRI[MainActivity]@d8be1b6: ViewPostIme pointer 1
+08-15 19:53:23.152  5152  5152 I VRI[MainActivity]@d8be1b6: ViewPostIme pointer 0
+08-15 19:53:23.267  5152  5152 I VRI[MainActivity]@d8be1b6: ViewPostIme pointer 1
+08-15 19:53:23.441  5152  5163 I rbizoy.ballerai: Background concurrent mark compact GC freed 12MB AllocSpace bytes, 11(344KB) LOS objects, 49% free, 13MB/26MB, paused 1.485ms,3.996ms total 113.999ms
+08-15 19:53:23.456  5152  5277 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22. Method called was `collection`. Please use `collection()` instead.
+08-15 19:53:23.456  5152  5277 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22. Method called was `doc`. Please use `doc()` instead.
+08-15 19:53:23.457  5152  5277 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22. Method called was `collection`. Please use `collection()` instead.
+08-15 19:53:23.457  5152  5277 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22. Method called was `doc`. Please use `doc()` instead.
+08-15 19:53:23.458  5152  5277 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22. Method called was `collection`. Please use `collection()` instead.
+08-15 19:53:23.458  5152  5277 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22. Method called was `doc`. Please use `doc()` instead.
+08-15 19:53:23.459  5152  5277 I ReactNativeJS: Loading streak count from Firebase
+08-15 19:53:23.459  5152  5277 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22. Method called was `collection`. Please use `collection()` instead.
+08-15 19:53:23.459  5152  5277 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22. Method called was `doc`. Please use `doc()` instead.
+08-15 19:53:23.460  5152  5277 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22. Method called was `collection`. Please use `collection()` instead.
+08-15 19:53:23.460  5152  5277 W ReactNativeJS: This method is deprecated (as well as all React Native Firebase namespaced API) and will be removed in the next major release as part of move to match Firebase Web modular SDK API. Please see migration guide for more details: https://rnfirebase.io/migrating-to-v22. Method called was `doc`. Please use `doc()` instead.
+08-15 19:53:23.483  5152  5152 D ScrollView: initGoToTop
+--------- beginning of crash
+08-15 19:53:24.176  5152  5152 F libc    : Fatal signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x0 in tid 5152 (rbizoy.ballerai), pid 5152 (rbizoy.ballerai)
