@@ -3,7 +3,7 @@ export default {
     name: "BallerAI",
     slug: "ballerai",
     scheme: "ballerai",
-    version: "1.3.5",
+    version: "1.5.2",
     orientation: "portrait",
     // ... other config
     icon: "./assets/images/icon.png",
@@ -27,7 +27,7 @@ export default {
     },
     android: {
       package: "com.ballerbizoy.ballerai",
-              versionCode: 60,
+              versionCode: 77,
       googleServicesFile: "./google-services.json",
       icon: "./assets/images/icon.png",
       adaptiveIcon: {
@@ -43,7 +43,7 @@ export default {
     },
     ios: {
       bundleIdentifier: "com.ballerbizoy.ballerai",
-      buildNumber: "59",
+      buildNumber: "61",
       googleServicesFile: "./GoogleService-Info.plist",
       supportsTablet: true,
       infoPlist: {
@@ -70,7 +70,7 @@ export default {
       [
         "@react-native-google-signin/google-signin",
         {
-          iosUrlScheme: "com.googleusercontent.apps.764862532296-fkvrcavkkultnmks81lbq7nqv4d4682i"
+          iosUrlScheme: "com.googleusercontent.apps.764862532296-erdilhdkatve342v2ca6ivd5mvjnefj9"
         }
       ],
       'expo-font',

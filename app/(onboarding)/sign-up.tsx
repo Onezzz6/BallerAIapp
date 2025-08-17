@@ -47,20 +47,33 @@ export default function SignUpScreen() {
   useEffect(() => {
     const configureGoogleSignIn = async () => {
       try {
-        const webClientId = Constants.expoConfig?.extra?.googleWebClientId;
-        console.log('🔍 Google Web Client ID:', webClientId ? 'Found' : 'Missing');
+        console.log('🔧 [GOOGLE_CONFIG] Starting Google Sign-In configuration...');
+        console.log('🔧 [GOOGLE_CONFIG] Platform:', Platform.OS);
+        console.log('🔧 [GOOGLE_CONFIG] Constants.expoConfig available:', !!Constants.expoConfig);
+        console.log('🔧 [GOOGLE_CONFIG] Constants.expoConfig.extra available:', !!Constants.expoConfig?.extra);
         
-        if (webClientId) {
-          await GoogleSignin.configure({
-            webClientId: webClientId,
-          });
-          setIsGoogleAvailable(true);
-          console.log('✅ Google Sign In configured successfully');
-        } else {
-          console.log('❌ Google Web Client ID not found');
-        }
+                // Use Web Client ID from environment configuration
+        const webClientId = Constants.expoConfig?.extra?.googleWebClientId;
+        console.log('🔧 [GOOGLE_CONFIG] Google Web Client ID Found in Config:', !!Constants.expoConfig?.extra?.googleWebClientId);
+        console.log('🔧 [GOOGLE_CONFIG] Using Web Client ID:', webClientId ? `${webClientId.substring(0, 20)}...` : 'MISSING');
+
+        // Configure Google Sign-In with proper Web Client ID
+        console.log('🔧 [GOOGLE_CONFIG] Calling GoogleSignin.configure with Web Client ID...');
+        await GoogleSignin.configure({
+          webClientId: webClientId,
+          offlineAccess: true,
+        });
+        console.log('🔧 [GOOGLE_CONFIG] GoogleSignin.configure completed successfully');
+        
+        // Test if GoogleSignin is properly configured
+        const currentUser = await GoogleSignin.getCurrentUser();
+        console.log('🔧 [GOOGLE_CONFIG] Current user:', !!currentUser);
+        
+        setIsGoogleAvailable(true);
+        console.log('✅ [GOOGLE_CONFIG] Google Sign In configured successfully with Web Client ID');
       } catch (error) {
-        console.error('❌ Google Sign In configuration error:', error);
+        console.error('❌ [GOOGLE_CONFIG] Google Sign In configuration error:', error);
+        console.error('❌ [GOOGLE_CONFIG] Error details:', JSON.stringify(error, null, 2));
         setIsGoogleAvailable(false);
       }
     };
@@ -364,8 +377,17 @@ export default function SignUpScreen() {
     }
   };
 
-  const handleGoogleSignUp = async () => {
+    const handleGoogleSignUp = async () => {
+    const webClientId = Constants.expoConfig?.extra?.googleWebClientId;
+
+    console.log('🚀 [GOOGLE_SIGNUP] Starting Google Sign-Up process...');
+    console.log('🚀 [GOOGLE_SIGNUP] isGoogleAvailable:', isGoogleAvailable);
+    console.log('🚀 [GOOGLE_SIGNUP] Web Client ID being used:', webClientId ? `${webClientId.substring(0, 20)}...` : 'MISSING');
+    console.log('🚀 [GOOGLE_SIGNUP] App Package Name:', 'com.ballerbizoy.ballerai');
+    console.log('🚀 [GOOGLE_SIGNUP] Registered SHA-1s: 6E:3D:A0:33 (dev), 6A:C5:85:29 (prod), DE:D7:E9:BE (play)');
+    
     if (!isGoogleAvailable) {
+      console.log('❌ [GOOGLE_SIGNUP] Google Sign-In not available - showing error');
       Alert.alert('Error', 'Google Sign In is not configured');
       return;
     }
@@ -374,21 +396,48 @@ export default function SignUpScreen() {
     haptics.light();
     
     try {
+      console.log('🔍 [GOOGLE_SIGNUP] Step 1: Checking Google Play Services...');
       // Sign in with Google to get user info
       await GoogleSignin.hasPlayServices();
+      console.log('✅ [GOOGLE_SIGNUP] Google Play Services available');
+      
+      console.log('🔍 [GOOGLE_SIGNUP] Step 2: Initiating Google Sign-In with HARDCODED Web Client ID...');
+      console.log('🔍 [GOOGLE_SIGNUP] About to call GoogleSignin.signIn()...');
       const userInfo = await GoogleSignin.signIn();
+      console.log('🔍 [GOOGLE_SIGNUP] GoogleSignin.signIn() completed');
+      console.log('🔍 [GOOGLE_SIGNUP] UserInfo structure:', {
+        hasData: !!userInfo.data,
+        hasIdToken: !!userInfo.data?.idToken,
+        hasUser: !!userInfo.data?.user,
+        hasEmail: !!userInfo.data?.user?.email,
+        email: userInfo.data?.user?.email ? `${userInfo.data.user.email.substring(0, 5)}...` : 'MISSING'
+      });
       
       if (userInfo.data?.idToken && userInfo.data?.user?.email) {
-        console.log('Google authentication successful, checking for existing account...');
+        console.log('✅ [GOOGLE_SIGNUP] Google authentication successful, checking for existing account...');
+        console.log('🔍 [GOOGLE_SIGNUP] ID Token length:', userInfo.data.idToken.length);
+        console.log('🔍 [GOOGLE_SIGNUP] User email:', userInfo.data.user.email);
         
+        console.log('🔍 [GOOGLE_SIGNUP] Step 3: Creating Firebase credential...');
         // Create Firebase credential from Google token and sign in
         const googleCredential = auth.GoogleAuthProvider.credential(userInfo.data.idToken);
+        console.log('✅ [GOOGLE_SIGNUP] Firebase credential created');
+        
+        console.log('🔍 [GOOGLE_SIGNUP] Step 4: Signing in with Firebase credential...');
         const userCredential = await auth().signInWithCredential(googleCredential);
+        console.log('✅ [GOOGLE_SIGNUP] Firebase authentication successful');
         
         if (userCredential.user) {
+          console.log('🔍 [GOOGLE_SIGNUP] Step 5: Checking for existing user document...');
+          console.log('🔍 [GOOGLE_SIGNUP] Firebase User ID:', userCredential.user.uid);
+          console.log('🔍 [GOOGLE_SIGNUP] Firebase User Email:', userCredential.user.email);
+          console.log('🔍 [GOOGLE_SIGNUP] Firebase User Display Name:', userCredential.user.displayName);
+          
           // Check if user document exists in Firestore (this is the reliable way to detect existing accounts)
-          console.log('Checking if Firestore user document exists for user:', userCredential.user.uid);
           const userDoc = await db.collection('users').doc(userCredential.user.uid).get();
+          console.log('🔍 [GOOGLE_SIGNUP] Firestore query completed');
+          console.log('🔍 [GOOGLE_SIGNUP] User document exists:', userDoc.exists);
+          console.log('🔍 [GOOGLE_SIGNUP] User document has data:', !!userDoc.data());
           
           if (userDoc.exists && userDoc.data()) {
             // Account already exists - ask if they want to sign in to existing account
@@ -473,13 +522,25 @@ export default function SignUpScreen() {
             }
           );
         }
+      } else {
+        console.log('❌ [GOOGLE_SIGNUP] No ID token or email received');
+        console.log('❌ [GOOGLE_SIGNUP] UserInfo data structure:', JSON.stringify(userInfo, null, 2));
       }
     } catch (error: any) {
-      console.error('Error during Google sign up:', error);
+      console.error('❌ [GOOGLE_SIGNUP] Error during Google sign up:', error);
+      console.error('❌ [GOOGLE_SIGNUP] Error code:', error.code);
+      console.error('❌ [GOOGLE_SIGNUP] Error message:', error.message);
+      console.error('❌ [GOOGLE_SIGNUP] Error stack:', error.stack);
+      console.error('❌ [GOOGLE_SIGNUP] Error toString:', error.toString());
+      console.error('❌ [GOOGLE_SIGNUP] Full error object:', JSON.stringify(error, null, 2));
       haptics.error();
       
       // Check if user cancelled the sign-in process
       const { statusCodes } = require('@react-native-google-signin/google-signin');
+      console.log('🔍 [GOOGLE_SIGNUP] Checking if error is cancellation...');
+      console.log('🔍 [GOOGLE_SIGNUP] statusCodes.SIGN_IN_CANCELLED:', statusCodes.SIGN_IN_CANCELLED);
+      console.log('🔍 [GOOGLE_SIGNUP] statusCodes.IN_PROGRESS:', statusCodes.IN_PROGRESS);
+      
       if (error.code === statusCodes.SIGN_IN_CANCELLED || 
           error.code === 'SIGN_IN_CANCELLED' ||
           error.code === statusCodes.IN_PROGRESS ||
@@ -489,9 +550,10 @@ export default function SignUpScreen() {
           error.message?.includes('The user canceled') ||
           error.message?.includes('User cancelled') ||
           error.toString().includes('cancelled')) {
-        console.log('Google sign-up cancelled by user');
+        console.log('✅ [GOOGLE_SIGNUP] Google sign-up cancelled by user - no error shown');
         // Don't show error - user cancelled intentionally
       } else if (error.code === 'auth/email-already-in-use') {
+        console.log('⚠️ [GOOGLE_SIGNUP] Email already in use error');
         Alert.alert(
           'Account Already Exists',
           'An account with this Google account already exists. Would you like to sign in to your existing account?',
@@ -506,11 +568,14 @@ export default function SignUpScreen() {
           ]
         );
       } else {
+        console.log('❌ [GOOGLE_SIGNUP] Unknown error - showing generic error');
         Alert.alert('Sign Up Error', error.message || 'An error occurred during sign up');
       }
     } finally {
+      console.log('🔚 [GOOGLE_SIGNUP] Finally block - setting isLoading to false');
       setIsLoading(false);
     }
+    console.log('🔚 [GOOGLE_SIGNUP] Google Sign-Up process completed');
   };
 
   return (

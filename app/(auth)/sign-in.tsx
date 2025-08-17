@@ -27,19 +27,33 @@ export default function SignInScreen() {
       
       // Configure Google Sign In
       try {
+        console.log('🔧 [GOOGLE_SIGNIN_CONFIG] Starting Google Sign-In configuration...');
+        console.log('🔧 [GOOGLE_SIGNIN_CONFIG] Platform:', Platform.OS);
+        console.log('🔧 [GOOGLE_SIGNIN_CONFIG] Constants.expoConfig available:', !!Constants.expoConfig);
+        console.log('🔧 [GOOGLE_SIGNIN_CONFIG] Constants.expoConfig.extra available:', !!Constants.expoConfig?.extra);
+        
+                // Use Web Client ID from environment configuration
         const webClientId = Constants.expoConfig?.extra?.googleWebClientId;
-        if (webClientId) {
-          GoogleSignin.configure({
-            webClientId: webClientId,
-          });
-          setIsGoogleAvailable(true);
-          console.log('Google Sign In configured successfully');
-        } else {
-          console.log('Google Web Client ID not found in configuration');
-          setIsGoogleAvailable(false);
-        }
+        console.log('🔧 [GOOGLE_SIGNIN_CONFIG] Google Web Client ID Found in Config:', !!Constants.expoConfig?.extra?.googleWebClientId);
+        console.log('🔧 [GOOGLE_SIGNIN_CONFIG] Using Web Client ID:', webClientId ? `${webClientId.substring(0, 20)}...` : 'MISSING');
+
+        // Configure Google Sign-In with proper Web Client ID
+        console.log('🔧 [GOOGLE_SIGNIN_CONFIG] Calling GoogleSignin.configure with Web Client ID...');
+        GoogleSignin.configure({
+          webClientId: webClientId,
+          offlineAccess: true,
+        });
+        console.log('🔧 [GOOGLE_SIGNIN_CONFIG] GoogleSignin.configure completed successfully');
+        
+        // Test if GoogleSignin is properly configured
+        const currentUser = await GoogleSignin.getCurrentUser();
+        console.log('🔧 [GOOGLE_SIGNIN_CONFIG] Current user:', !!currentUser);
+        
+        setIsGoogleAvailable(true);
+        console.log('✅ [GOOGLE_SIGNIN_CONFIG] Google Sign In configured successfully with Web Client ID');
       } catch (error) {
-        console.error('Error configuring Google Sign In:', error);
+        console.error('❌ [GOOGLE_SIGNIN_CONFIG] Error configuring Google Sign In:', error);
+        console.error('❌ [GOOGLE_SIGNIN_CONFIG] Error details:', JSON.stringify(error, null, 2));
         setIsGoogleAvailable(false);
       }
     };
@@ -116,35 +130,66 @@ export default function SignInScreen() {
   };
 
   const handleGoogleSignIn = async () => {
+    console.log('🚀 [GOOGLE_SIGNIN] Starting Google Sign-In process...');
+    console.log('🚀 [GOOGLE_SIGNIN] isGoogleAvailable:', isGoogleAvailable);
+    
     setIsLoading(true);
     try {
-      console.log("Starting Google Sign-In...");
+      console.log('🔍 [GOOGLE_SIGNIN] Step 1: Calling authService.checkGoogleSignIn()...');
       
       const result = await authService.checkGoogleSignIn();
+      console.log('🔍 [GOOGLE_SIGNIN] authService.checkGoogleSignIn() completed');
+      console.log('🔍 [GOOGLE_SIGNIN] Result structure:', {
+        hasResult: !!result,
+        exists: result?.exists,
+        hasUser: !!result?.user,
+        userUid: result?.user?.uid ? `${result.user.uid.substring(0, 10)}...` : 'MISSING',
+        wasCanceled: result?.wasCanceled
+      });
       
       if (result && result.exists && result.user && result.user.uid) {
-        console.log('✅ Google Sign-In successful, navigating to home');
+        console.log('✅ [GOOGLE_SIGNIN] Google Sign-In successful, navigating to home');
+        console.log('🔍 [GOOGLE_SIGNIN] User UID:', result.user.uid);
+        console.log('🔍 [GOOGLE_SIGNIN] User Email:', result.user.email);
+        
+        console.log('🔍 [GOOGLE_SIGNIN] Step 2: Running post-login sequence...');
         await runPostLoginSequence(
           result.user.uid,
           () => router.replace('/(tabs)/home'),
           () => router.replace('/')
         );
+        console.log('✅ [GOOGLE_SIGNIN] Post-login sequence completed');
       } else if (result && !result.wasCanceled) {
+        console.log('❌ [GOOGLE_SIGNIN] Account not found - showing alert');
         Alert.alert('Account Not Found', 'No account found with this Google account. Please create an account first.');
+      } else if (result && result.wasCanceled) {
+        console.log('✅ [GOOGLE_SIGNIN] User cancelled sign-in - no action needed');
+      } else {
+        console.log('❌ [GOOGLE_SIGNIN] Unexpected result structure');
       }
       // If wasCanceled is true, do nothing - user cancelled intentionally
     } catch (error: any) {
-      console.error('Google Sign-In error:', error);
+      console.error('❌ [GOOGLE_SIGNIN] Google Sign-In error:', error);
+      console.error('❌ [GOOGLE_SIGNIN] Error code:', error.code);
+      console.error('❌ [GOOGLE_SIGNIN] Error message:', error.message);
+      console.error('❌ [GOOGLE_SIGNIN] Error stack:', error.stack);
+      console.error('❌ [GOOGLE_SIGNIN] Full error object:', JSON.stringify(error, null, 2));
+      
       // Only show error for actual failures that aren't cancellations
       if (!error.message?.includes('cancelled') && 
           !error.message?.includes('canceled') &&
           !error.message?.includes('No identity token') &&
           error.code !== 'SIGN_IN_CANCELLED') {
+        console.log('❌ [GOOGLE_SIGNIN] Showing error alert to user');
         Alert.alert('Error', 'Google Sign-In failed. Please try again.');
+      } else {
+        console.log('✅ [GOOGLE_SIGNIN] Error is cancellation - no alert shown');
       }
     } finally {
+      console.log('🔚 [GOOGLE_SIGNIN] Finally block - setting isLoading to false');
       setIsLoading(false);
     }
+    console.log('🔚 [GOOGLE_SIGNIN] Google Sign-In process completed');
   };
 
   const dismissKeyboard = () => Keyboard.dismiss();

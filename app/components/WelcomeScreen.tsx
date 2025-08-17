@@ -238,19 +238,53 @@ export default function WelcomeScreen() {
 
       // Configure Google Sign In
       try {
+        // COMPREHENSIVE DIAGNOSTIC LOGGING - Remove after issue is resolved
+        console.log('🔍 [GOOGLE_DIAGNOSTIC] === COMPLETE ENVIRONMENT ANALYSIS ===');
+        console.log('🔍 [GOOGLE_DIAGNOSTIC] Platform:', Platform.OS);
+        console.log('🔍 [GOOGLE_DIAGNOSTIC] Constants.expoConfig exists:', !!Constants.expoConfig);
+        console.log('🔍 [GOOGLE_DIAGNOSTIC] Constants.expoConfig.extra exists:', !!Constants.expoConfig?.extra);
+        
+        // Log ALL extra config keys to see what's available
+        const extraKeys = Constants.expoConfig?.extra ? Object.keys(Constants.expoConfig.extra) : [];
+        console.log('🔍 [GOOGLE_DIAGNOSTIC] Available extra config keys:', extraKeys);
+        
+        // Get the Web Client ID and analyze it
         const webClientId = Constants.expoConfig?.extra?.googleWebClientId;
-        if (webClientId) {
-          GoogleSignin.configure({
-            webClientId: webClientId,
-          });
-          setIsGoogleAvailable(true);
-          console.log('Google Sign In configured successfully');
+        console.log('🔍 [GOOGLE_DIAGNOSTIC] googleWebClientId exists:', !!webClientId);
+        console.log('🔍 [GOOGLE_DIAGNOSTIC] googleWebClientId type:', typeof webClientId);
+        console.log('🔍 [GOOGLE_DIAGNOSTIC] googleWebClientId length:', webClientId?.length || 'N/A');
+        console.log('🔍 [GOOGLE_DIAGNOSTIC] FULL googleWebClientId:', webClientId);
+        
+        // Check if it contains the expected patterns
+        const isWorkingClientId = webClientId?.includes('erdilhdkatve342v2ca6ivd5mvjnefj9');
+        const isIOSClientId = webClientId?.includes('fkvrcavkkultnmks81lbq7nqv4d4682i');
+        console.log('🔍 [GOOGLE_DIAGNOSTIC] Contains WORKING client ID (erdilhd...):', isWorkingClientId);
+        console.log('🔍 [GOOGLE_DIAGNOSTIC] Contains iOS client ID (fkvrcav...):', isIOSClientId);
+        
+        // Log specific Firebase/Google related configs
+        console.log('🔍 [GOOGLE_DIAGNOSTIC] firebaseAppId:', Constants.expoConfig?.extra?.firebaseAppId);
+        console.log('🔍 [GOOGLE_DIAGNOSTIC] googleApiKey:', Constants.expoConfig?.extra?.googleApiKey ? 'EXISTS' : 'MISSING');
+        
+        // Final determination
+        console.log('🔍 [GOOGLE_DIAGNOSTIC] === CONCLUSION ===');
+        if (isWorkingClientId) {
+          console.log('✅ [GOOGLE_DIAGNOSTIC] Using CORRECT Web Client ID (erdilhd...)');
+        } else if (isIOSClientId) {
+          console.log('❌ [GOOGLE_DIAGNOSTIC] Using WRONG iOS Client ID (fkvrcav...)');
         } else {
-          console.log('Google Web Client ID not found in configuration');
-          setIsGoogleAvailable(false);
+          console.log('❓ [GOOGLE_DIAGNOSTIC] Using UNKNOWN Client ID:', webClientId);
         }
+        console.log('🔍 [GOOGLE_DIAGNOSTIC] === END ANALYSIS ===');
+        
+        GoogleSignin.configure({
+          webClientId: webClientId,
+          offlineAccess: true,
+        });
+        setIsGoogleAvailable(true);
+        console.log('✅ [WELCOME_GOOGLE_CONFIG] Google Sign In configured successfully');
       } catch (error) {
-        console.error('Error configuring Google Sign In:', error);
+        console.error('❌ [WELCOME_GOOGLE_CONFIG] Error configuring Google Sign In:', error);
+        console.error('❌ [WELCOME_GOOGLE_CONFIG] Error details:', JSON.stringify(error, null, 2));
         setIsGoogleAvailable(false);
       }
     };

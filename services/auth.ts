@@ -381,22 +381,37 @@ const authService = {
 
   async checkGoogleSignIn() {
     try {
-      console.log("🔍 Starting Google Sign-In check...");
+      console.log("🔍 [AUTH_SERVICE] Starting Google Sign-In check...");
+      console.log("🔍 [AUTH_SERVICE] Platform:", Platform.OS);
       
       // Check if Google Play Services are available (Android only)
       if (Platform.OS === 'android') {
+        console.log("🔍 [AUTH_SERVICE] Android detected - checking Google Play Services...");
         const { GoogleSignin } = require('@react-native-google-signin/google-signin');
         await GoogleSignin.hasPlayServices();
+        console.log("✅ [AUTH_SERVICE] Google Play Services available");
+      } else {
+        console.log("🔍 [AUTH_SERVICE] iOS detected - skipping Google Play Services check");
       }
 
       // Sign in with Google
+      console.log("🔍 [AUTH_SERVICE] Step 1: Calling GoogleSignin.signIn()...");
       const { GoogleSignin } = require('@react-native-google-signin/google-signin');
       const userInfo = await GoogleSignin.signIn();
+      console.log("🔍 [AUTH_SERVICE] GoogleSignin.signIn() completed");
+      console.log("🔍 [AUTH_SERVICE] UserInfo structure:", {
+        hasData: !!userInfo.data,
+        hasIdToken: !!userInfo.data?.idToken,
+        hasUser: !!userInfo.data?.user,
+        hasEmail: !!userInfo.data?.user?.email,
+        email: userInfo.data?.user?.email ? `${userInfo.data.user.email.substring(0, 5)}...` : 'MISSING'
+      });
       
       const idToken = userInfo.data?.idToken;
+      console.log("🔍 [AUTH_SERVICE] ID Token length:", idToken ? idToken.length : 'MISSING');
       
       if (!idToken) {
-        console.log('No ID token received - user likely cancelled Google sign-in');
+        console.log('❌ [AUTH_SERVICE] No ID token received - user likely cancelled Google sign-in');
         return { 
           exists: false, 
           user: null, 
@@ -404,38 +419,60 @@ const authService = {
         };
       }
 
+      console.log("🔍 [AUTH_SERVICE] Step 2: Creating Firebase credential...");
       // Create Google credential for Firebase
       const credential = auth.GoogleAuthProvider.credential(idToken);
+      console.log("✅ [AUTH_SERVICE] Firebase credential created");
 
+      console.log("🔍 [AUTH_SERVICE] Step 3: Signing in with Firebase credential...");
       // Sign in with Firebase using Google credentials
       const userCredential = await auth().signInWithCredential(credential);
+      console.log("✅ [AUTH_SERVICE] Firebase authentication successful");
       const user = userCredential.user;
+      console.log("🔍 [AUTH_SERVICE] Firebase User ID:", user?.uid);
+      console.log("🔍 [AUTH_SERVICE] Firebase User Email:", user?.email);
       
       if (user) {
+        console.log("🔍 [AUTH_SERVICE] Step 4: Checking user document in Firestore...");
         // Check if user document exists in Firestore
         const userDoc = await db.collection('users').doc(user.uid).get();
+        console.log("🔍 [AUTH_SERVICE] Firestore query completed");
+        console.log("🔍 [AUTH_SERVICE] User document exists:", userDoc.exists);
+        console.log("🔍 [AUTH_SERVICE] User document has data:", !!userDoc.data());
         
         if (userDoc.exists && this.isValidUserDocument(userDoc.data())) {
+          console.log("✅ [AUTH_SERVICE] Valid user document found");
+          console.log("🔍 [AUTH_SERVICE] Step 5: Updating login timestamp...");
           // Update user document with login timestamp
           await db.collection('users').doc(user.uid).update({
             lastLoginAt: firestore.FieldValue.serverTimestamp()
           });
+          console.log("✅ [AUTH_SERVICE] Login timestamp updated");
 
+          console.log("✅ [AUTH_SERVICE] Sign-in successful - returning user");
           return { 
             exists: true, 
             user: user, 
             wasCanceled: false 
           };
         } else {
+          console.log("❌ [AUTH_SERVICE] No valid user document found");
+          console.log("🔍 [AUTH_SERVICE] Document exists:", userDoc.exists);
+          console.log("🔍 [AUTH_SERVICE] Document is valid:", userDoc.exists ? this.isValidUserDocument(userDoc.data()) : 'N/A');
+          
           // Account exists in Firebase Auth but no valid user document
           // Sign out and return exists: false
+          console.log("🔍 [AUTH_SERVICE] Signing out user due to missing document...");
           await auth().signOut();
+          console.log("✅ [AUTH_SERVICE] User signed out");
           return { 
             exists: false, 
             user: null, 
             wasCanceled: false 
           };
         }
+      } else {
+        console.log("❌ [AUTH_SERVICE] No user returned from Firebase authentication");
       }
       
       return { 
@@ -444,10 +481,19 @@ const authService = {
         wasCanceled: false 
       };
     } catch (error: any) {
-      console.error('Google Sign-In error:', error);
+      console.error('❌ [AUTH_SERVICE] Google Sign-In error:', error);
+      console.error('❌ [AUTH_SERVICE] Error code:', error.code);
+      console.error('❌ [AUTH_SERVICE] Error message:', error.message);
+      console.error('❌ [AUTH_SERVICE] Error stack:', error.stack);
+      console.error('❌ [AUTH_SERVICE] Error toString:', error.toString());
+      console.error('❌ [AUTH_SERVICE] Full error object:', JSON.stringify(error, null, 2));
       
       // Check if user cancelled the sign-in process
       const { statusCodes } = require('@react-native-google-signin/google-signin');
+      console.log('🔍 [AUTH_SERVICE] Checking if error is cancellation...');
+      console.log('🔍 [AUTH_SERVICE] statusCodes.SIGN_IN_CANCELLED:', statusCodes.SIGN_IN_CANCELLED);
+      console.log('🔍 [AUTH_SERVICE] statusCodes.IN_PROGRESS:', statusCodes.IN_PROGRESS);
+      
       if (error.code === statusCodes.SIGN_IN_CANCELLED || 
           error.code === 'SIGN_IN_CANCELLED' ||
           error.code === statusCodes.IN_PROGRESS ||
@@ -458,17 +504,19 @@ const authService = {
           error.message?.includes('User cancelled') ||
           error.message?.includes('No identity token provided') ||
           error.toString().includes('cancelled')) {
-        console.log('User cancelled Google Sign-In - returning cancellation status');
+        console.log('✅ [AUTH_SERVICE] User cancelled Google Sign-In - returning cancellation status');
         return { 
           exists: false, 
           user: null, 
           wasCanceled: true 
         };
       } else {
+        console.log('❌ [AUTH_SERVICE] Unknown error - re-throwing');
         // For actual errors (not cancellations), still throw
         throw error;
       }
     }
+    console.log('🔚 [AUTH_SERVICE] checkGoogleSignIn completed');
   },
 
   // Verify a user has completed full onboarding and has a valid account
