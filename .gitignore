@@ -45,4 +45,18 @@ app-example
 # Android keystore properties
 android/keystore.properties
 
+# Build files
+*.aab
+*.apk
+*.apks
+universal.apk
+latest-build.*
+build-*.aab
+build-*.apks
+
+# Build artifacts
+android/.cxx/
+android/build/
+ios/build/
+
 eas.json
