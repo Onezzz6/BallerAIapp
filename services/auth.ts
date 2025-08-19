@@ -28,6 +28,8 @@ type UserOnboardingData = {
   triedOtherApps: string | null;
   hasGymAccess: boolean | null;
   referralCode: string | null;
+  teamCode: string | null;
+  teamName: string | null;
   referralDiscount: number | null;
   referralInfluencer: string | null;
   motivation: string | null;
@@ -71,15 +73,20 @@ const authService = {
       // Generate initial XP data for new user
       const xpData = getInitialXpData();
       
-      // Save user data to Firestore
-      await db.collection('users').doc(userCredential.user.uid).set({
+      // Map teamCode to referralCode for dashboard compatibility
+      const userData = {
         email: email,
         ...onboardingData,
+        // Ensure referralCode is set from teamCode for dashboard compatibility
+        referralCode: onboardingData.teamCode || onboardingData.referralCode,
         ...xpData, // Add XP system fields
         createdAt: firestore.FieldValue.serverTimestamp(),
         lastLoginAt: firestore.FieldValue.serverTimestamp(),
         isOnboardingComplete: true
-      });
+      };
+      
+      // Save user data to Firestore
+      await db.collection('users').doc(userCredential.user.uid).set(userData);
       
       console.log('✅ User data saved to Firestore');
       return userCredential.user;
