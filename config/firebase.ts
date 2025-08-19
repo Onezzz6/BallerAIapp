@@ -6,7 +6,7 @@
 
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
-import storage from '@react-native-firebase/storage'; // Commented out - not used by any files
+import storage from '@react-native-firebase/storage';
 
 // React Native Firebase automatically handles:
 // - App initialization using google-services.json / GoogleService-Info.plist
@@ -14,6 +14,7 @@ import storage from '@react-native-firebase/storage'; // Commented out - not use
 // - Proper React Native integration
 
 export const db = firestore();
-export { auth };
+export const storageInstance = storage();
+export { auth, storage };
 
 export default auth; 

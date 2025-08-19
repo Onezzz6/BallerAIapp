@@ -19,25 +19,8 @@ import analyticsService from '../../services/analytics';
 import { colors, typography } from '../../utils/theme';
 import { useOnboardingStep } from '../../hooks/useOnboardingStep';
 import { useOnboarding } from '../../context/OnboardingContext';
-import Purchases, { PurchasesOfferings } from 'react-native-purchases';
-import { configureRevenueCat, setReferralCode } from '../../services/revenuecat';
-import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
-import { shouldHavePremiumAccess } from '../../services/testerAccounts';
-import { db } from '../../config/firebase';
 
-const ENTITLEMENT_ID = "BallerAISubscriptionGroup";
 
-// Session-based event tracking to prevent duplicates
-let sessionEventTracker = {
-  paywallPresented: false,
-  paywallPurchased: false,
-  oneTimeOfferPurchased: false,
-  reset: () => {
-    sessionEventTracker.paywallPresented = false;
-    sessionEventTracker.paywallPurchased = false;
-    sessionEventTracker.oneTimeOfferPurchased = false;
-  }
-};
 
 // Phone Carousel Component
 const PhoneCarousel: React.FC = () => {
@@ -179,222 +162,21 @@ export default function ProfileCompleteScreen() {
     haptics.light();
     setIsCreatingAccount(true);
     
-    // Reset session event tracker for new onboarding session
-    sessionEventTracker.reset();
-    console.log('🔥 ANALYTICS: Session event tracker reset for new onboarding session');
-    
-    await analyticsService.logEvent('A0_31_profile_complete_get_started');
+    await analyticsService.logEvent('A0_31_profile_complete_get_started_dashboard');
     
     try {
-      console.log('Profile complete - checking if device already has subscription...');
-      
-      // Configure RevenueCat to check device subscription status
-      await configureRevenueCat();
-      
-      // CRITICAL: Clear cache to ensure fresh subscription data
-      console.log('🔥 SUBSCRIPTION_DEBUG - Clearing RevenueCat cache before subscription check');
-      try {
-        if (typeof Purchases.invalidateCustomerInfoCache === 'function') {
-          await Purchases.invalidateCustomerInfoCache();
-        }
-      } catch (cacheError) {
-        console.log('🔥 SUBSCRIPTION_DEBUG - Cache clear failed (non-critical):', cacheError);
-      }
-      
-      // Check if this device already has an active subscription
-      const customerInfo = await Purchases.getCustomerInfo();
-      
-      const hasActiveSubscription = !!customerInfo.entitlements.active[ENTITLEMENT_ID];
-
-      console.log('🔥 SUBSCRIPTION_DEBUG - Profile complete subscription check:', {
-        hasActiveSubscription,
-        originalAppUserId: customerInfo.originalAppUserId,
-        entitlements: Object.keys(customerInfo.entitlements.active),
-        allPurchasedProductIdentifiers: customerInfo.allPurchasedProductIdentifiers,
-      });
-
-      // Get user email for tester check (we don't have userId yet, so use onboarding data)
-      const userEmail = onboardingData.email || '';
-      
-      // Check if user should have premium access (subscription OR tester status)
-      // Note: We pass empty userId since user hasn't been created yet
-      const hasPremiumAccess = await shouldHavePremiumAccess('', userEmail, hasActiveSubscription);
-
-      if (hasPremiumAccess) {
-        if (hasActiveSubscription) {
-          console.log('✅ Found existing subscription on device - skipping paywall');
-          console.log('🎯 DEBUG - This will go directly to sign-up, bypassing paywall');
-          console.log('User probably purchased but didn\'t complete sign-up, navigating directly to sign-up');
-          await analyticsService.logEvent('A0_31_existing_subscription_found');
-        } else {
-          console.log('✅ Tester account detected - skipping paywall');
-          console.log('🧪 Tester Email:', userEmail);
-          console.log('🎯 DEBUG - This will go directly to sign-up, bypassing paywall');
-          await analyticsService.logEvent('A0_31_tester_account_bypass');
-        }
-        router.replace('/(onboarding)/sign-up');
-        return;
-      }
-
-      console.log('❌ No existing subscription found on device - showing paywall first');
-      console.log('🎯 DEBUG - This will show paywall for new purchase');
-      await analyticsService.logEvent('A0_31_no_subscription_showing_paywall');
-      
-      // Fetch offerings for paywall modal
-      console.log('🔍 DEBUG - About to call Purchases.getOfferings()...');
-      const offeringsResult = await Purchases.getOfferings();
-      console.log('🔍 DEBUG - getOfferings() completed successfully');
-      await presentPaywallModal(offeringsResult);
-
+      console.log('🎯 Dashboard version - going directly to sign-up (no paywall)');
+      router.replace('/(onboarding)/sign-up');
     } catch (error) {
-      console.error('Error checking subscription status:', error);
-      
-      console.log('Subscription check failed, defaulting to paywall flow');
-      await analyticsService.logEvent('A0_31_profile_complete_error');
-      router.replace('/(onboarding)/paywall');
+      console.error('Error navigating to sign-up:', error);
+      // Still navigate to sign-up even if there's an error
+      router.replace('/(onboarding)/sign-up');
     } finally {
       setIsCreatingAccount(false);
     }
   };
 
-  const presentPaywallModal = async (offeringsResult: PurchasesOfferings) => {
-    try {
-      console.log('🔍 DEBUG - presentPaywallModal called with offerings:', {
-        all: Object.keys(offeringsResult.all),
-        current: offeringsResult.current?.identifier,
-      });
-      console.log('Showing paywall based on referral code status');
-      
-      // Prevent duplicate paywall presented events
-      if (!sessionEventTracker.paywallPresented) {
-        await analyticsService.logEvent('A0_32_paywall_presented');
-        sessionEventTracker.paywallPresented = true;
-        console.log('🔥 ANALYTICS: A0_32_paywall_presented logged (first time this session)');
-      } else {
-        console.log('🔥 ANALYTICS: A0_32_paywall_presented SKIPPED (already logged this session)');
-      }
-      
-      const hasReferralCode = onboardingData.referralCode;
-      const paywallType = onboardingData.referralPaywallType;
-      let paywallResult;
-      let offeringUsed = null;
 
-      if (hasReferralCode && paywallType === 'freetrial') {
-        console.log('🎁 Showing FREE TRIAL paywall for referral user');
-        const freeTrialOffering = offeringsResult.all['FreeTrialOffering'];
-        offeringUsed = freeTrialOffering;
-        if (freeTrialOffering) {
-          console.log('🔍 DEBUG - About to call RevenueCatUI.presentPaywall with FreeTrialOffering');
-          paywallResult = await RevenueCatUI.presentPaywall({ offering: freeTrialOffering });
-          console.log('🔍 DEBUG - RevenueCatUI.presentPaywall (FreeTrialOffering) completed with result:', paywallResult);
-        } else {
-          console.warn('FreeTrialOffering not found, falling back to StandardOffering');
-          const standardOffering = offeringsResult.all['StandardOffering'];
-          if (standardOffering) {
-            console.log('🔍 DEBUG - About to call RevenueCatUI.presentPaywall with StandardOffering (fallback)');
-            paywallResult = await RevenueCatUI.presentPaywall({ offering: standardOffering });
-            console.log('🔍 DEBUG - RevenueCatUI.presentPaywall (StandardOffering fallback) completed with result:', paywallResult);
-          } else {
-            console.warn('StandardOffering also not found, using presentPaywallIfNeeded');
-            paywallResult = await RevenueCatUI.presentPaywallIfNeeded({ requiredEntitlementIdentifier: ENTITLEMENT_ID });
-          }
-        }
-      } else if (hasReferralCode) {
-        console.log('🎁 Showing DISCOUNT paywall for referral user');
-        const referralOffering = offeringsResult.all['NewReferralOffering'];
-        offeringUsed = referralOffering;
-        if (referralOffering) {
-          console.log('🔍 DEBUG - About to call RevenueCatUI.presentPaywall with NewReferralOffering');
-          paywallResult = await RevenueCatUI.presentPaywall({ offering: referralOffering });
-          console.log('🔍 DEBUG - RevenueCatUI.presentPaywall (NewReferralOffering) completed with result:', paywallResult);
-        } else {
-          console.warn('NewReferralOffering not found, falling back to StandardOffering');
-          const standardOffering = offeringsResult.all['StandardOffering'];
-          if (standardOffering) {
-            console.log('🔍 DEBUG - About to call RevenueCatUI.presentPaywall with StandardOffering (referral fallback)');
-            paywallResult = await RevenueCatUI.presentPaywall({ offering: standardOffering });
-            console.log('🔍 DEBUG - RevenueCatUI.presentPaywall (StandardOffering referral fallback) completed with result:', paywallResult);
-          } else {
-            console.warn('StandardOffering also not found, using presentPaywallIfNeeded');
-            console.log('🔍 DEBUG - About to call RevenueCatUI.presentPaywallIfNeeded');
-            paywallResult = await RevenueCatUI.presentPaywallIfNeeded({ requiredEntitlementIdentifier: ENTITLEMENT_ID });
-            console.log('🔍 DEBUG - RevenueCatUI.presentPaywallIfNeeded completed with result:', paywallResult);
-          }
-        }
-      } else {
-        console.log('💰 Showing STANDARD paywall for regular user');
-        const regularOffering = offeringsResult.all['StandardOffering'] || offeringsResult.current;
-        offeringUsed = regularOffering;
-        if (regularOffering) {
-          console.log('🔍 DEBUG - About to call RevenueCatUI.presentPaywall with StandardOffering (regular user)');
-          paywallResult = await RevenueCatUI.presentPaywall({ offering: regularOffering });
-          console.log('🔍 DEBUG - RevenueCatUI.presentPaywall (StandardOffering regular user) completed with result:', paywallResult);
-        } else {
-          console.warn('StandardOffering not found, using presentPaywallIfNeeded as final fallback');
-          console.log('🔍 DEBUG - About to call RevenueCatUI.presentPaywallIfNeeded (final fallback)');
-          paywallResult = await RevenueCatUI.presentPaywallIfNeeded({ requiredEntitlementIdentifier: ENTITLEMENT_ID });
-          console.log('🔍 DEBUG - RevenueCatUI.presentPaywallIfNeeded (final fallback) completed with result:', paywallResult);
-        }
-      }
-
-      if (paywallResult === PAYWALL_RESULT.PURCHASED || paywallResult === PAYWALL_RESULT.RESTORED) {
-        console.log('✅ Purchase/restore successful - navigating to sign-up');
-        
-        // Prevent duplicate purchase events
-        if (paywallResult === PAYWALL_RESULT.PURCHASED && !sessionEventTracker.paywallPurchased) {
-          try {
-            // Get fresh customer info to find the actual purchased product
-            const customerInfo = await Purchases.getCustomerInfo();
-            const activeEntitlements = customerInfo.entitlements.active;
-            
-            // Only log if user actually has active subscription (prevents false positives)
-            if (activeEntitlements[ENTITLEMENT_ID]) {
-              const purchasedProduct = activeEntitlements[ENTITLEMENT_ID].productIdentifier;
-              
-              // Determine paywall type based on offering used
-              let analyticsPaywallType = 'standard';
-              if (hasReferralCode && paywallType === 'freetrial') {
-                analyticsPaywallType = 'free_trial';
-              } else if (hasReferralCode) {
-                analyticsPaywallType = 'referral';
-              }
-              
-              await analyticsService.logEvent('A0_32_paywall_purchased', {
-                product_id: purchasedProduct,
-                paywall_type: analyticsPaywallType,
-                offering_identifier: offeringUsed?.identifier || 'default'
-              });
-              
-              sessionEventTracker.paywallPurchased = true;
-              console.log('🔥 ANALYTICS: A0_32_paywall_purchased logged (first time this session)');
-            } else {
-              console.log('🔥 ANALYTICS: A0_32_paywall_purchased SKIPPED (no active subscription found)');
-            }
-          } catch (error) {
-            console.error('Error logging paywall purchase:', error);
-          }
-        } else if (paywallResult === PAYWALL_RESULT.PURCHASED) {
-          console.log('🔥 ANALYTICS: A0_32_paywall_purchased SKIPPED (already logged this session)');
-        }
-        
-        router.replace('/(onboarding)/sign-up');
-      } else {
-        console.log('❌ Paywall cancelled - navigating to one-time offer');
-        router.replace('/(onboarding)/one-time-offer');
-      }
-    } catch (error) {
-      console.error('❌ PAYWALL ERROR DETAILS:');
-      console.error('❌ Error type:', typeof error);
-      console.error('❌ Error constructor:', (error as any)?.constructor?.name);
-      console.error('❌ Error message:', (error as any)?.message);
-      console.error('❌ Error code:', (error as any)?.code);
-      console.error('❌ Error userInfo:', (error as any)?.userInfo);
-      console.error('❌ Full error object:', JSON.stringify(error, null, 2));
-      console.error('❌ Error stack:', (error as any)?.stack);
-      
-      router.replace('/(onboarding)/one-time-offer');
-    }
-  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#ffffff' }}>

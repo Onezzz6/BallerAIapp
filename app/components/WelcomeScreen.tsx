@@ -32,7 +32,7 @@ import Animated, {
   Easing,
   FadeInRight
 } from 'react-native-reanimated';
-import { runPostLoginSequence, markAuthenticationComplete } from '../(onboarding)/paywall';
+// Dashboard version: No paywall logic needed
 import { colors, typography, spacing, borderRadius } from '../../utils/theme';
 import { useHaptics } from '../../utils/haptics';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
@@ -313,13 +313,9 @@ export default function WelcomeScreen() {
       const user = await authService.signInWithEmail(email, password);
       if (user) {
         haptics.success();
-        markAuthenticationComplete();
-        await runPostLoginSequence(
-          user.uid,
-          () => router.replace('/(tabs)/home'),
-          () => router.replace('/'),
-          pathname
-        );
+        // Dashboard version: Navigate directly to home
+        console.log('🎯 Dashboard version - sign-in successful, navigating to home');
+        router.replace('/(tabs)/home');
       }
     } catch (error: any) {
       haptics.error();
@@ -475,13 +471,9 @@ export default function WelcomeScreen() {
         
         console.log('Valid user document found, proceeding with sign-in');
         haptics.success();
-        markAuthenticationComplete();
-        await runPostLoginSequence(
-          user.uid,
-          () => router.replace('/(tabs)/home'),
-          () => router.replace('/'),
-          pathname
-        );
+        // Dashboard version: Navigate directly to home
+        console.log('🎯 Dashboard version - sign-in successful, navigating to home');
+        router.replace('/(tabs)/home');
       }
     } catch (error: any) {
       console.error('Google Sign-In error:', error);
@@ -813,7 +805,7 @@ export default function WelcomeScreen() {
               borderTopRightRadius: 20,
             }}>
                 <Text style={{ fontSize: 28, fontWeight: '700', textAlign: 'center', color: colors.black, lineHeight: 34, marginBottom: 16 }} allowFontScaling={false}>
-                  Living like the pros{'\n'}made easy!
+                  Welcome to the future of {'\n'} performance
                 </Text>
               <Button
                 title="Get Started"

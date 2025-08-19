@@ -10,7 +10,7 @@
     "web": "expo start --web",
     "test": "jest --watchAll",
     "lint": "expo lint",
-    "dev": "REACT_NATIVE_PACKAGER_HOSTNAME=$(ipconfig getifaddr en0) expo start --clear"
+    "dev": "REACT_NATIVE_PACKAGER_HOSTNAME=$(node scripts/get-local-ip.js) expo start --clear"
   },
   "jest": {
     "preset": "jest-expo"

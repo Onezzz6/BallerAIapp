@@ -12,7 +12,7 @@ import Constants from 'expo-constants';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import { auth as authInstance, db } from '../config/firebase';
-import { resetAuthenticationStatus } from './(onboarding)/paywall';
+// Dashboard version: No paywall logic needed
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -281,8 +281,7 @@ export default function SettingsScreen() {
                   await auth().signOut();
                   console.log('User signed out successfully');
                   
-                  // Reset authentication status
-                  resetAuthenticationStatus();
+                  // Dashboard version: No paywall authentication status to reset
                   
                   // Navigate to welcome screen
                   router.replace('/');

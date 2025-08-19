@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
 import authService from '../services/auth';
-import { resetAuthenticationStatus } from '../app/(onboarding)/paywall';
-import { resetRevenueCatState, logOutRevenueCatUser } from '../services/revenuecat';
+// Dashboard version: No paywall logic needed
+// Dashboard version: No RevenueCat functionality needed
 
 interface AuthContextType {
   user: FirebaseAuthTypes.User | null;
@@ -47,14 +47,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('AuthContext: Starting sign out process...');
       
-      // Reset RevenueCat first
-      await resetRevenueCatState();
-      await logOutRevenueCatUser();
-      console.log('AuthContext: RevenueCat state reset');
+      // Dashboard version: No RevenueCat state to reset
+      console.log('AuthContext: Dashboard version - signing out');
       
-      // Reset authentication status
-      resetAuthenticationStatus();
-      console.log('AuthContext: Authentication status reset');
+      // Dashboard version: No paywall authentication status to reset
+      console.log('AuthContext: User signed out (dashboard version)');
       
       // Sign out from Firebase - this will trigger onAuthStateChanged with null
       await auth().signOut();

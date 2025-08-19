@@ -12,26 +12,21 @@ service cloud.firestore {
     
     // XP System validation helper
     function validateXpUpdate() {
-      let data = request.resource.data;
-      let existingData = resource.data;
-      
-      // If no XP fields are being updated, validation passes
-      if (!('totalXp' in data) && !('xpToday' in data) && !('level' in data) && !('lastXpReset' in data)) {
-        return true;
-      }
-      
-      // XP validation rules based on the roadmap
       return (
-        // totalXp can only stay the same or increase
-        (!('totalXp' in data) || data.totalXp >= existingData.totalXp) &&
-        // xpToday can increase or reset to 0 (daily reset)
-        (!('xpToday' in data) || data.xpToday >= 0) &&
-        // xpToday cannot exceed 900 (daily cap)
-        (!('xpToday' in data) || data.xpToday <= 900) &&
-        // level must be consistent with totalXp (basic validation)
-        (!('level' in data) || data.level >= 1) &&
-        // lastXpReset can only move forward in time or stay the same
-        (!('lastXpReset' in data) || data.lastXpReset >= existingData.lastXpReset)
+        // If no XP fields are being updated, validation passes
+        (!('totalXp' in request.resource.data) && !('xpToday' in request.resource.data) && !('level' in request.resource.data) && !('lastXpReset' in request.resource.data)) ||
+        (
+          // totalXp can only stay the same or increase
+          (!('totalXp' in request.resource.data) || request.resource.data.totalXp >= resource.data.totalXp) &&
+          // xpToday can increase or reset to 0 (daily reset)
+          (!('xpToday' in request.resource.data) || request.resource.data.xpToday >= 0) &&
+          // xpToday cannot exceed 900 (daily cap)
+          (!('xpToday' in request.resource.data) || request.resource.data.xpToday <= 900) &&
+          // level must be consistent with totalXp (basic validation)
+          (!('level' in request.resource.data) || request.resource.data.level >= 1) &&
+          // lastXpReset can only move forward in time or stay the same
+          (!('lastXpReset' in request.resource.data) || request.resource.data.lastXpReset >= resource.data.lastXpReset)
+        )
       );
     }
 
@@ -118,6 +113,15 @@ service cloud.firestore {
     match /referralCodes/{codeId} {
       allow read: if true; // Allow anyone to read referral codes for validation
       allow write: if false; // Admin only via backend
+    }
+    
+    // Flagged messages - allow users to report inappropriate AI responses
+    match /flaggedMessages/{messageId} {
+      allow create: if isSignedIn() && 
+        request.resource.data.reportedBy == request.auth.uid &&
+        request.resource.data.userEmail == request.auth.token.email;
+      allow read, update: if false; // Admin only via backend
+      allow delete: if false; // Admin only via backend
     }
     
     // Teams functionality

@@ -164,21 +164,7 @@ export default function TabLayout() {
             ),
           }}
         />
-        <Tabs.Screen
-          name="training"
-          listeners={{
-            tabPress: (e) => {
-              e.preventDefault();
-              handleTabPress('training');
-            },
-          }}
-          options={{
-            title: 'Training',
-            tabBarIcon: ({ color, focused }) => (
-              <Ionicons name={focused ? 'football' : 'football-outline'} size={30} color={color} />
-            ),
-          }}
-        />
+
         <Tabs.Screen
           name="profile"
           listeners={{

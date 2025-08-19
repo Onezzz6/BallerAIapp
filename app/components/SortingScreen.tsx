@@ -3,24 +3,23 @@ import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import LoadingScreen from './LoadingScreen';
 import { useAuth } from '../../context/AuthContext';
-import { useSubscription } from '../_layout';
+import { useDashboard } from '../_layout';
 import authService from '../../services/auth';
 
 /**
- * SortingScreen - The invisible router that determines where users should go
+ * SortingScreen - Dashboard Version
  * 
  * This screen:
- * 1. Shows the loading screen while checking auth/subscription status
+ * 1. Shows the loading screen while checking auth status
  * 2. Routes users to the appropriate screen based on their status
  * 3. Prevents the welcome screen flash for existing users
- * 4. Prevents analytics events from being logged for users not starting onboarding
+ * 4. No subscription checks (dashboard version)
  */
 export default function SortingScreen() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
-  const { isSubscriptionActive, customerInfo, refreshSubscriptionStatus } = useSubscription();
   const [isInitializing, setIsInitializing] = useState(true);
-  const [hasCheckedSubscription, setHasCheckedSubscription] = useState(false);
+  const [hasCheckedUser, setHasCheckedUser] = useState(false);
   const [navigationReady, setNavigationReady] = useState(false);
   const [minLoadingComplete, setMinLoadingComplete] = useState(false);
   const [shouldFadeOut, setShouldFadeOut] = useState(false);
@@ -33,10 +32,10 @@ export default function SortingScreen() {
       minLoadingComplete,
       user: !!user,
       userUid: user?.uid || 'none',
-      hasCheckedSubscription,
+      hasCheckedUser,
       shouldFadeOut
     });
-  }, [authLoading, navigationReady, minLoadingComplete, user, hasCheckedSubscription, shouldFadeOut]);
+  }, [authLoading, navigationReady, minLoadingComplete, user, hasCheckedUser, shouldFadeOut]);
 
   // Ensure minimum loading time for smooth UX
   useEffect(() => {
@@ -112,8 +111,8 @@ export default function SortingScreen() {
           return;
         }
 
-        // Case 2: User exists - need to wait for RevenueCat to initialize
-        console.log('SortingScreen: User found, waiting for RevenueCat initialization...');
+        // Case 2: User exists - verify account completion (dashboard version: no subscription check)
+        console.log('SortingScreen: User found, verifying account...');
         
         // Verify user has a valid, complete account (not just a document)
         console.log('SortingScreen: Verifying user account completion for UID:', user.uid);
@@ -125,20 +124,10 @@ export default function SortingScreen() {
           return;
         }
         
-        console.log('SortingScreen: User account verified, proceeding with subscription check');
-
-        // Wait for RevenueCat to initialize and fetch fresh subscription status
-        // We'll wait a bit longer to ensure RevenueCat has time to sync
-        console.log('SortingScreen: Waiting for RevenueCat subscription sync...');
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        console.log('SortingScreen: User account verified, dashboard version - navigating to home');
         
-        // Force refresh subscription status to ensure we have the latest data
-        await refreshSubscriptionStatus();
-        
-        // Add small delay to ensure state is updated
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
-        setHasCheckedSubscription(true);
+        // Dashboard version: Skip subscription check, go directly to home
+        setHasCheckedUser(true);
 
       } catch (error) {
         console.error('Error in SortingScreen initialization:', error);
@@ -148,26 +137,19 @@ export default function SortingScreen() {
     };
 
     // Only run when dependencies change
-    if (!hasCheckedSubscription && navigationReady && minLoadingComplete) {
+    if (!hasCheckedUser && navigationReady && minLoadingComplete) {
       initializeApp();
     }
-  }, [user, authLoading, router, refreshSubscriptionStatus, hasCheckedSubscription, navigationReady, minLoadingComplete]);
+  }, [user, authLoading, router, hasCheckedUser, navigationReady, minLoadingComplete]);
 
-  // Separate effect to handle navigation after subscription status is determined
+  // Separate effect to handle navigation after user verification (dashboard version)
   useEffect(() => {
-    if (hasCheckedSubscription && user && !authLoading && navigationReady && minLoadingComplete) {
+    if (hasCheckedUser && user && !authLoading && navigationReady && minLoadingComplete) {
       console.log('SortingScreen: Making final routing decision...');
-      console.log('SortingScreen: Subscription active:', isSubscriptionActive);
-      
-      if (isSubscriptionActive) {
-        console.log('SortingScreen: User has active subscription, navigating to home');
-        performNavigation('/(tabs)/home');
-      } else {
-        console.log('SortingScreen: User has no active subscription, navigating to welcome screen');
-        performNavigation('/welcome');
-      }
+      console.log('SortingScreen: Dashboard version - user verified, navigating to home');
+      performNavigation('/(tabs)/home');
     }
-  }, [hasCheckedSubscription, isSubscriptionActive, user, authLoading, router, navigationReady, minLoadingComplete]);
+  }, [hasCheckedUser, user, authLoading, router, navigationReady, minLoadingComplete]);
 
   // Show loading screen while determining where to navigate
   const shouldShowLoading = isInitializing || authLoading || !navigationReady || !minLoadingComplete;
@@ -189,4 +171,4 @@ export default function SortingScreen() {
   // This should not be reached due to navigation, but just in case
   console.warn('SortingScreen: Reached end of component without navigation - this should not happen');
   return <LoadingScreen shouldFadeOut={shouldFadeOut} />;
-} 
+}

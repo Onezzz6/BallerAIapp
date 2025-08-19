@@ -8,18 +8,19 @@ import { useOnboarding } from '../../context/OnboardingContext';
 import analyticsService from '../../services/analytics';
 import { colors, typography } from '../../utils/theme';
 import { useHaptics } from '../../utils/haptics';
-import { validateReferralCode, createSuccessMessage } from '../../services/referralCode';
-import { setReferralCode } from '../../services/revenuecat';
+import { validateTeamCode, createTeamCodeSuccessMessage } from '../../services/teamCode';
+// Dashboard version: No RevenueCat functionality needed
 import { useOnboardingStep } from '../../hooks/useOnboardingStep';
 
 export default function ReferralCodeScreen() {
   const haptics = useHaptics();
   const { onboardingData, updateOnboardingData } = useOnboarding();
-  const [referralCode, setReferralCode] = useState(onboardingData.referralCode || '');
+  const [teamCode, setTeamCode] = useState(onboardingData.teamCode || '');
   const [isValidating, setIsValidating] = useState(false);
   const [validationMessage, setValidationMessage] = useState<string>('');
   const [isValid, setIsValid] = useState<boolean | null>(null);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [teamName, setTeamName] = useState<string>('');
   const headerHeight = useOnboardingHeaderHeight();
   // NEW: Use automatic onboarding step system
   const { goToNext } = useOnboardingStep('referral-code');
@@ -27,20 +28,18 @@ export default function ReferralCodeScreen() {
   // Animated value for button bottom position
   const buttonBottomPosition = useRef(new RNAnimated.Value(32)).current;
 
-  // Update local state when onboardingData changes and check if already validated
+  // Update local state when onboardingData changes
   useEffect(() => {
-    setReferralCode(onboardingData.referralCode || '');
+    setTeamCode(onboardingData.teamCode || '');
     
-    // If we have referral data with discount and influencer, it means it was previously validated
-    if (onboardingData.referralCode && onboardingData.referralDiscount && onboardingData.referralInfluencer) {
+    // If we have team code and team name, it means it was previously validated
+    if (onboardingData.teamCode && onboardingData.teamName) {
       setIsValid(true);
       setHasSubmitted(true);
-      setValidationMessage(createSuccessMessage(onboardingData.referralDiscount, onboardingData.referralInfluencer));
-      
-      // Ensure the referral code is also set in RevenueCat (idempotent operation)
-      setReferralCode(onboardingData.referralCode);
+      setTeamName(onboardingData.teamName);
+      setValidationMessage(createTeamCodeSuccessMessage(onboardingData.teamName));
     }
-  }, [onboardingData.referralCode, onboardingData.referralDiscount, onboardingData.referralInfluencer]);
+  }, [onboardingData.teamCode, onboardingData.teamName]);
 
   useEffect(() => {
     const keyboardWillShowListener = Keyboard.addListener(
@@ -74,7 +73,7 @@ export default function ReferralCodeScreen() {
   }, [buttonBottomPosition]);
 
   const handleSubmit = async () => {
-    if (!referralCode.trim()) return;
+    if (!teamCode.trim()) return;
     
     haptics.light();
     setIsValidating(true);
@@ -83,46 +82,42 @@ export default function ReferralCodeScreen() {
     setHasSubmitted(true);
 
     try {
-      const result = await validateReferralCode(referralCode);
+      const cleanedCode = teamCode.trim().toUpperCase();
       
-      if (result.isValid && result.discount && result.influencer) {
-        // Success - code is valid
+      // Validate team code against Firebase
+      const validationResult = await validateTeamCode(cleanedCode);
+      
+      if (validationResult.isValid && validationResult.teamName) {
+        // Success - team code is valid
         setIsValid(true);
-        setValidationMessage(createSuccessMessage(result.discount, result.influencer));
+        setTeamName(validationResult.teamName);
+        setValidationMessage(createTeamCodeSuccessMessage(validationResult.teamName));
         
-        const validatedCode = referralCode.trim().toUpperCase();
-        
-        await analyticsService.logEvent('A0_99_onboarding_referral_code_valid', {
-          code: validatedCode,
-          discount: result.discount,
-          influencer: result.influencer
+        await analyticsService.logEvent('A0_99_onboarding_team_code_valid', {
+          code: cleanedCode,
+          teamName: validationResult.teamName
         });
 
-        // Save the validated referral data to Firestore
+        // Save the validated team code and team name
         await updateOnboardingData({ 
-          referralCode: validatedCode,
-          referralDiscount: result.discount,
-          referralInfluencer: result.influencer,
-          referralPaywallType: result.paywallType
+          teamCode: cleanedCode,
+          teamName: validationResult.teamName
         });
-
-        // Set the referral code as a subscriber attribute in RevenueCat
-        await setReferralCode(validatedCode);
 
       } else {
-        // Error - code is invalid
+        // Error - team code is invalid
         setIsValid(false);
-        setValidationMessage(result.error || 'Invalid referral code');
+        setValidationMessage(validationResult.error || 'Invalid team code');
         
-        await analyticsService.logEvent('A0_99_onboarding_referral_code_invalid', {
-          code: referralCode.trim().toUpperCase(),
-          error: result.error
+        await analyticsService.logEvent('A0_99_onboarding_team_code_invalid', {
+          code: cleanedCode,
+          error: validationResult.error
         });
       }
     } catch (error) {
-      console.error('Referral validation error:', error);
+      console.error('Team code validation error:', error);
       setIsValid(false);
-      setValidationMessage('Unable to validate referral code. Please try again.');
+      setValidationMessage('Unable to validate team code. Please try again.');
     } finally {
       setIsValidating(false);
     }
@@ -131,13 +126,13 @@ export default function ReferralCodeScreen() {
   const handleSkip = async () => {
     console.log('Skip button pressed');
     haptics.light();
-    await analyticsService.logEvent('A0_26_referral_code_skip');
+    await analyticsService.logEvent('A0_26_team_code_skip');
     goToNext();
   };
 
   const handleContinue = async () => {
     haptics.light();
-    await analyticsService.logEvent('A0_26_referral_code_continue');
+    await analyticsService.logEvent('A0_26_team_code_continue');
     goToNext();
   };
 
@@ -171,7 +166,7 @@ export default function ReferralCodeScreen() {
                   marginBottom: 8,
                 }
               ]} allowFontScaling={false}>
-                Do you have a referral code?
+                Enter Team Code
               </Text>
               <Text style={[
                 typography.subtitle,
@@ -180,7 +175,7 @@ export default function ReferralCodeScreen() {
                   color: colors.mediumGray,
                 }
               ]}>
-                You can skip this step.
+                Join your team by entering the code provided by your club
               </Text>
             </View>
 
@@ -193,14 +188,14 @@ export default function ReferralCodeScreen() {
             }}>
               <View style={{ width: '100%' }}>
                 <TextInput
-                  value={referralCode}
+                  value={teamCode}
                   onChangeText={(text) => {
                     // Don't allow changes if code is already validated
                     if (isValid === true) return;
                     
                     // Force uppercase letters but allow numbers
                     const uppercaseText = text.toUpperCase().replace(/[^A-Z0-9]/g, '');
-                    setReferralCode(uppercaseText);
+                    setTeamCode(uppercaseText);
                     
                     // Clear validation state when user types
                     if (validationMessage) {
@@ -209,7 +204,7 @@ export default function ReferralCodeScreen() {
                       setHasSubmitted(false);
                     }
                   }}
-                  placeholder="REFERRAL CODE"
+                  placeholder="TEAM CODE"
                   autoCapitalize="characters"
                   editable={!isValidating && isValid !== true}
                   style={{
@@ -227,7 +222,7 @@ export default function ReferralCodeScreen() {
                 />
 
                 {/* Submit Button - Show when there's text and not yet successfully validated */}
-                {referralCode.trim() && isValid !== true && (
+                {teamCode.trim() && isValid !== true && (
                   <Button 
                     title={isValidating ? "Validating..." : "Submit"} 
                     onPress={handleSubmit}
@@ -266,7 +261,7 @@ export default function ReferralCodeScreen() {
                           color: colors.brandBlue,
                           flex: 1,
                         }}>
-                          Validating referral code...
+                          Validating team code...
                         </Text>
                       </>
                     ) : (

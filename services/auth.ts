@@ -1,7 +1,7 @@
 import { auth, db } from '../config/firebase';
 import firestore from '@react-native-firebase/firestore';
 import * as AppleAuthentication from 'expo-apple-authentication';
-import { resetPaywallPresentationFlag } from '../app/(onboarding)/paywall';
+// Dashboard version: No paywall logic needed
 import { Platform } from 'react-native';
 import { XpData } from '../types/xp';
 import { getDeviceTimezone } from '../utils/xpCalculations';

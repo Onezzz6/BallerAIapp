@@ -5,7 +5,7 @@ apply plugin: "com.facebook.react"
 def projectRoot = rootDir.getAbsoluteFile().getParentFile().getAbsolutePath()
 
 // NOTE: Keep these version numbers in sync with app.config.js
-// Current app.config.js: version: "1.5.2", versionCode: 77
+// Current app.config.js: version: "1.5.3", versionCode: 78
 
 /**
  * This is the configuration block to customize your React Native Android app.
@@ -89,13 +89,13 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.ballerbizoy.ballerai'
+    namespace 'com.ballerbizoy.ballerai.dashboard'
     defaultConfig {
-        applicationId 'com.ballerbizoy.ballerai'
+        applicationId 'com.ballerbizoy.ballerai.dashboard'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 77  // Must match app.config.js android.versionCode
-        versionName "1.5.2"  // Must match app.config.js version
+        versionCode 78  // Must match app.config.js android.versionCode
+        versionName "1.5.3"  // Must match app.config.js version
     }
     signingConfigs {
         debug {

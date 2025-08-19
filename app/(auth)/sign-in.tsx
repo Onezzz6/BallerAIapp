@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import authService from '../../services/auth';
-import { runPostLoginSequence } from '../(onboarding)/paywall';
+// Dashboard version: No paywall logic needed
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import Constants from 'expo-constants';
@@ -77,12 +77,9 @@ export default function SignInScreen() {
       await authService.verifyCurrentUserPassword(password);
       console.log('✅ Password verification successful');
       
-      // Password verified successfully - continue with the intended action
-      await runPostLoginSequence(
-        user.uid,
-        () => router.replace('/(tabs)/home'),
-        () => router.replace('/')
-      );
+      // Password verified successfully - navigate to home (dashboard version: no paywall)
+      console.log('🎯 Dashboard version - navigating directly to home');
+      router.replace('/(tabs)/home');
     } catch (error: any) {
       console.error('Password verification error:', error);
       if (error.message === 'Invalid password') {
@@ -106,11 +103,8 @@ export default function SignInScreen() {
       
       if (result && result.exists && result.user && result.user.uid) {
         console.log('✅ Apple Sign-In successful, navigating to home');
-        await runPostLoginSequence(
-          result.user.uid,
-          () => router.replace('/(tabs)/home'),
-          () => router.replace('/')
-        );
+        console.log('🎯 Dashboard version - navigating directly to home');
+        router.replace('/(tabs)/home');
       } else if (result && !result.wasCanceled) {
         Alert.alert('Account Not Found', 'No account found with this Apple ID. Please create an account first.');
       }
@@ -152,12 +146,8 @@ export default function SignInScreen() {
         console.log('🔍 [GOOGLE_SIGNIN] User UID:', result.user.uid);
         console.log('🔍 [GOOGLE_SIGNIN] User Email:', result.user.email);
         
-        console.log('🔍 [GOOGLE_SIGNIN] Step 2: Running post-login sequence...');
-        await runPostLoginSequence(
-          result.user.uid,
-          () => router.replace('/(tabs)/home'),
-          () => router.replace('/')
-        );
+        console.log('🔍 [GOOGLE_SIGNIN] Step 2: Dashboard version - navigating directly to home');
+        router.replace('/(tabs)/home');
         console.log('✅ [GOOGLE_SIGNIN] Post-login sequence completed');
       } else if (result && !result.wasCanceled) {
         console.log('❌ [GOOGLE_SIGNIN] Account not found - showing alert');

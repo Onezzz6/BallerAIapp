@@ -1,66 +1,40 @@
 {
   "project_info": {
-    "project_number": "764862532296",
-    "firebase_url": "https://love-b6fe6-default-rtdb.europe-west1.firebasedatabase.app",
-    "project_id": "love-b6fe6",
-    "storage_bucket": "love-b6fe6.firebasestorage.app"
+    "project_number": "97494324605",
+    "project_id": "balleraidashboard",
+    "storage_bucket": "balleraidashboard.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:764862532296:android:b446a9d4a4c514ef40f3fd",
+        "mobilesdk_app_id": "1:97494324605:android:65e6cf723423b52d6be814",
         "android_client_info": {
-          "package_name": "com.ballerbizoy.ballerai"
+          "package_name": "com.ballerbizoy.ballerai.dashboard"
         }
       },
       "oauth_client": [
         {
-          "client_id": "764862532296-5lfljtes370hcrmt3ni25kbv7rv3tr8d.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.ballerbizoy.ballerai",
-            "certificate_hash": "6e3da03391b5933513d79825221f8112a421edc4"
-          }
-        },
-        {
-          "client_id": "764862532296-bmbjb286m4urlinfsd94vsn2i7kn4in6.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.ballerbizoy.ballerai",
-            "certificate_hash": "6ac58529073ba09ad4ac7d3b8a9c14813f542b45"
-          }
-        },
-        {
-          "client_id": "764862532296-ekbluute74c67pm3enn4vdppmd2cerj4.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.ballerbizoy.ballerai",
-            "certificate_hash": "a8abbb4efb02eea92a8028e123be09a29c2b7e8e"
-          }
-        },
-        {
-          "client_id": "764862532296-erdilhdkatve342v2ca6ivd5mvjnefj9.apps.googleusercontent.com",
+          "client_id": "97494324605-kthn665oqvfdttgr0po25u8iuthev942.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyB1nlhRex0syuROZxLLgeTqAJHz7D5GwJQ"
+          "current_key": "AIzaSyD0oda-ErWMgSj6UaIax7yrq1F0qh_LDLM"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "764862532296-c1oavev62d62lu7j4peecmdvm1t9ls7k.apps.googleusercontent.com",
+              "client_id": "97494324605-kthn665oqvfdttgr0po25u8iuthev942.apps.googleusercontent.com",
               "client_type": 3
             },
             {
-              "client_id": "764862532296-fkvrcavkkultnmks81lbq7nqv4d4682i.apps.googleusercontent.com",
+              "client_id": "97494324605-64c2fkmkji775frdpqcnnr4pnv1s22d2.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.ballerbizoy.ballerai",
-                "app_store_id": "6742112516"
+                "bundle_id": "com.ballerbizoy.ballerai.dashboard"
               }
             }
           ]

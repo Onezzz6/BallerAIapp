@@ -3,21 +3,21 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>764862532296-fkvrcavkkultnmks81lbq7nqv4d4682i.apps.googleusercontent.com</string>
+	<string>97494324605-64c2fkmkji775frdpqcnnr4pnv1s22d2.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.764862532296-fkvrcavkkultnmks81lbq7nqv4d4682i</string>
+	<string>com.googleusercontent.apps.97494324605-64c2fkmkji775frdpqcnnr4pnv1s22d2</string>
 	<key>API_KEY</key>
-	<string>AIzaSyCjLnxnbXvn3k7oExNMsc7UYSGjw3V7To4</string>
+	<string>AIzaSyCzEFsjJngaPaENUXCsR-2LvCQrEptbls4</string>
 	<key>GCM_SENDER_ID</key>
-	<string>764862532296</string>
+	<string>97494324605</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.ballerbizoy.ballerai</string>
+	<string>com.ballerbizoy.ballerai.dashboard</string>
 	<key>PROJECT_ID</key>
-	<string>love-b6fe6</string>
+	<string>balleraidashboard</string>
 	<key>STORAGE_BUCKET</key>
-	<string>love-b6fe6.firebasestorage.app</string>
+	<string>balleraidashboard.firebasestorage.app</string>
 	<key>IS_ADS_ENABLED</key>
 	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -29,8 +29,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:764862532296:ios:97855f94d423d6ad40f3fd</string>
-	<key>DATABASE_URL</key>
-	<string>https://love-b6fe6-default-rtdb.europe-west1.firebasedatabase.app</string>
+	<string>1:97494324605:ios:3c339cf5eadbb04e6be814</string>
 </dict>
 </plist>

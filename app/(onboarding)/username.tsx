@@ -105,7 +105,7 @@ export default function UsernameScreen() {
                     marginBottom: 8,
                   }
                 ]} allowFontScaling={false}>
-                  What should we call you?
+                   Your Name?
                 </Text>
                 <Text style={[
                   typography.subtitle,
@@ -114,7 +114,7 @@ export default function UsernameScreen() {
                     color: colors.mediumGray,
                   }
                 ]}>
-                  This will be used to personalize your experience.
+                  Your club will use this name to identify you.
                 </Text>
               </View>
 

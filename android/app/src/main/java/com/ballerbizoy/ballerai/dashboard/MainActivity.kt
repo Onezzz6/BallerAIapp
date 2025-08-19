@@ -1,4 +1,4 @@
-package com.ballerbizoy.ballerai
+package com.ballerbizoy.ballerai.dashboard
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

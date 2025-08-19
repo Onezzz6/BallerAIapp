@@ -1,9 +1,9 @@
 export default {
   expo: {
-    name: "BallerAI",
-    slug: "ballerai",
-    scheme: "ballerai",
-    version: "1.5.2",
+    name: "BallerAIdashboard",
+    slug: "balleraidashboard",
+    scheme: "balleraidashboard",
+    version: "1.5.3",
     orientation: "portrait",
     // ... other config
     icon: "./assets/images/icon.png",
@@ -26,8 +26,8 @@ export default {
       }
     },
     android: {
-      package: "com.ballerbizoy.ballerai",
-              versionCode: 77,
+      package: "com.ballerbizoy.ballerai.dashboard",
+              versionCode: 78,
       googleServicesFile: "./google-services.json",
       icon: "./assets/images/icon.png",
       adaptiveIcon: {
@@ -42,7 +42,7 @@ export default {
       ]
     },
     ios: {
-      bundleIdentifier: "com.ballerbizoy.ballerai",
+      bundleIdentifier: "com.ballerbizoy.ballerai.dashboard",
       buildNumber: "61",
       googleServicesFile: "./GoogleService-Info.plist",
       supportsTablet: true,

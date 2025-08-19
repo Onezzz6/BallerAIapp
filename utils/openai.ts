@@ -2,7 +2,7 @@ import axios from 'axios';
 import { auth } from '../config/firebase';
 
 // Firebase Functions URL - update this with your project ID
-const FIREBASE_PROJECT_ID = 'love-b6fe6'; // Your project ID from .env
+const FIREBASE_PROJECT_ID = 'balleraidashboard'; // Your project ID from .env
 const OPENAI_PROXY_URL = `https://us-central1-${FIREBASE_PROJECT_ID}.cloudfunctions.net/openaiProxy`;
 
 // Function to call OpenAI API via Firebase Functions proxy

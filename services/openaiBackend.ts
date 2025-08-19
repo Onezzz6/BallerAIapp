@@ -1,7 +1,7 @@
 import { auth } from '../config/firebase';
 
 // Firebase Functions URL - update this with your project ID
-const FIREBASE_PROJECT_ID = 'love-b6fe6';
+const FIREBASE_PROJECT_ID = 'balleraidashboard';
 const OPENAI_PROXY_URL = `https://us-central1-${FIREBASE_PROJECT_ID}.cloudfunctions.net/openaiProxy`;
 
 // Base function to call OpenAI via Firebase Functions proxy

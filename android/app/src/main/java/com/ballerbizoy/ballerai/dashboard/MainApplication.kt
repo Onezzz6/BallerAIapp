@@ -1,4 +1,4 @@
-package com.ballerbizoy.ballerai
+package com.ballerbizoy.ballerai.dashboard
 
 import android.app.Application
 import android.content.res.Configuration

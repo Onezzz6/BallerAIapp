@@ -106,6 +106,33 @@ export default function HomeScreen() {
   // New state variables for recovery score
   const [recoveryAdherence, setRecoveryAdherence] = useState(0); // Weekly average recovery adherence
   const [showRecoveryInfo, setShowRecoveryInfo] = useState(false);
+
+  // Function to save daily scores to Firebase for dashboard
+  const saveDailyScoresToFirebase = useCallback(async (scores: {
+    readiness: number;
+    nutrition: number;
+    recovery: number;
+    date: string;
+  }) => {
+    if (!user) return;
+    
+    try {
+      const dailyScoresRef = db.collection('users').doc(user.uid).collection('dailyScores').doc(scores.date);
+      
+      await dailyScoresRef.set({
+        readiness: scores.readiness,
+        nutrition: scores.nutrition,
+        recovery: scores.recovery,
+        date: scores.date,
+        timestamp: new Date().toISOString(),
+        lastUpdated: firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+      
+      console.log(`✅ Daily scores saved for ${scores.date}:`, scores);
+    } catch (error) {
+      console.error('❌ Error saving daily scores:', error);
+    }
+  }, [user]);
   
   const [todayCalories, setTodayCalories] = useState({
     current: 0,
@@ -1569,6 +1596,32 @@ export default function HomeScreen() {
       };
     }
   }, [user, calculateRecoveryAdherence]);
+
+  // Save daily scores to Firebase whenever they change (for dashboard)
+  useEffect(() => {
+    const saveScores = async () => {
+      // Only save if we have meaningful data and user is authenticated
+      if (!user || (!readinessScore && !nutritionAdherence && !recoveryAdherence)) {
+        return;
+      }
+      
+      const today = new Date();
+      const todayStr = format(today, 'yyyy-MM-dd');
+      
+      // Save today's aggregated scores
+      await saveDailyScoresToFirebase({
+        readiness: readinessScore,
+        nutrition: nutritionAdherence,
+        recovery: recoveryAdherence,
+        date: todayStr,
+      });
+    };
+    
+    // Debounce the save operation to avoid excessive writes
+    const timeoutId = setTimeout(saveScores, 2000); // Wait 2 seconds after last change
+    
+    return () => clearTimeout(timeoutId);
+  }, [user, readinessScore, nutritionAdherence, recoveryAdherence, saveDailyScoresToFirebase]);
 
   const showInfoAlertReadiness = () => {
     Alert.alert(

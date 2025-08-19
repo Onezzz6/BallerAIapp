@@ -18,7 +18,7 @@ import { XpHeaderBanner } from '../components/XpHeaderBanner';
 import { useXp } from '../../context/XpContext';
 
 // Firebase Functions URL for OpenAI proxy
-const FIREBASE_PROJECT_ID = 'love-b6fe6';
+const FIREBASE_PROJECT_ID = 'balleraidashboard';
 const OPENAI_PROXY_URL = `https://us-central1-${FIREBASE_PROJECT_ID}.cloudfunctions.net/openaiProxy`;
 
 // SCREENSHOT FEATURE: Toggle this to make header fixed for screenshots

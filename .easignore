@@ -1,0 +1,58 @@
+# EAS Ignore File
+# Files and directories to exclude from EAS builds
+
+# Specific log files (being conservative to not exclude needed .txt files)
+*.log
+crash_logs.txt
+production_crash_logs.txt
+filtered_logs.txt
+react_native_logs.txt
+rec_crash_*.txt
+crash_tombstone.txt
+
+# Build artifacts (old builds only)
+build-*.aab
+latest-build.aab
+prod-build-*.aab
+build-*.apks
+latest-build.apks
+prod-base.apk
+universal.apk
+bundletool.jar
+extracted-*/
+toc.pb
+
+# Specific log file patterns
+runtime_webclient_check.log
+gms_signin.log
+app_signin.log
+prod_signin_*.log
+prod_google_signin_*.log
+
+# Development files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# iOS build artifacts
+ios/build/
+ios/DerivedData/
+
+# Android build artifacts (but keep gradle wrapper)
+android/build/
+android/app/build/
+
+# Temporary files
+tmp/
+temp/
